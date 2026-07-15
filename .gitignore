@@ -1,0 +1,18 @@
+.env
+.env.*
+!.env.example
+
+# Local outputs (may contain PHI; do not commit)
+out/
+output/
+outputs/
+
+# Combined output artifact
+*_combined.jsonl
+*.jsonl
+
+# Temporary extraction artifacts
+.pytest_cache/
+__pycache__/
+*.pyc
+
