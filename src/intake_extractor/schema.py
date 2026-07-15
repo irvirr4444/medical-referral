@@ -1,7 +1,7 @@
 """
 Pydantic schema for normalized referral/intake data.
 
-Design notes (see PROJECT_BRIEF.md field inventory for the full rationale):
+Design notes:
 - Fields are optional almost everywhere on purpose. Source documents vary
   widely in what they contain; a missing field is expected, not an error.
 - icd10_codes is a flat list regardless of whether the source presented a
@@ -14,9 +14,7 @@ Design notes (see PROJECT_BRIEF.md field inventory for the full rationale):
 - Sporadic fields seen in only 1-2 source layouts (allergies, guarantor,
   employer, emergency contact, homebound justification, etc.) are
   deliberately NOT modeled as structured fields yet — they fold into
-  `notes`. Promote one to a structured field only once a real downstream
-  consumer needs it; a schema that's mostly-null across every document type
-  is a maintenance cost, not a feature.
+  `notes`.
 """
 
 from pydantic import BaseModel, Field
