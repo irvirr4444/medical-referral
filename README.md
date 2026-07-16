@@ -53,6 +53,25 @@ cp .env.example .env
 # edit .env and set ANTHROPIC_API_KEY=...
 ```
 
+### Monday.com API (optional)
+
+Monday’s API is **GraphQL** over HTTPS. Put your key in `.env` as `MONDAY_DOT_COM_API_KEY` (see `.env.example`).
+
+Full endpoint cookbook + test runbook: [`src/monday.com/readme.md`](src/monday.com/readme.md)
+
+Smoke test:
+
+```bash
+PYTHONPATH=src python3.11 src/monday.com/monday_client.py --pretty
+```
+
+Unit + live smoke tests (live tests gated by env flags):
+
+```bash
+PYTHONPATH=src pytest -q src/monday.com/tests -k unit
+MONDAY_LIVE_TEST=1 PYTHONPATH=src pytest -q src/monday.com/tests -k live_readonly
+```
+
 ### How extraction works
 
 For a given PDF:
