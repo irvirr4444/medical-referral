@@ -1,0 +1,41 @@
+{
+  "pdf_name": "BUTLER, ALVA demo.json",
+  "review_status": "fixed",
+  "review_confidence": "medium",
+  "review_notes": "Confirmed from text-layer chart. This is not a clean referral form; medication list intentionally excluded from requested_services, and the provider street address was not treated as a facility name.",
+  "record": {
+    "patient_name": "BUTLER, ALVA",
+    "patient_dob": "10/04/1940",
+    "patient_sex": "M",
+    "patient_phone": "(260) 438-4646",
+    "patient_address": "5316 FISHERSOUND LN, APOLLO BEACH FL 33572",
+    "patient_mrn": "6227",
+    "referring_provider_name": "YVETTE GUZMAN, APRN DNP",
+    "referring_facility": null,
+    "referring_phone": "(813) 417-4767",
+    "referring_fax": null,
+    "diagnosis_text": "Atherosclerotic heart disease of native coronary artery without angina; Dilated cardiomyopathy; Paroxysmal atrial fibrillation; Chronic kidney disease stage 3A; Localized edema; Severe protein-calorie malnutrition; Urinary tract infection; Constipation; Type 2 diabetes mellitus with hyperglycemia; Hypothyroidism; Muscle wasting/atrophy of bilateral lower legs",
+    "icd10_codes": [
+      "I25.10",
+      "I42.0",
+      "I48.0",
+      "N18.31",
+      "R60.0",
+      "E43",
+      "N39.0",
+      "K59.00",
+      "E11.65",
+      "E03.9",
+      "M62.562",
+      "M62.561"
+    ],
+    "insurance_provider": "MEDICARE PART B",
+    "insurance_id": "4FM5A30MN88",
+    "insurance_group_number": null,
+    "requested_services": [],
+    "referral_date": null,
+    "notes": "Secondary insurance: FLORIDA BLUE, policy VNF651M57250. Additional prescriber: COLE, MELISSA, APRN DNP. G-tube feeding / thickened liquids noted. No known drug allergies documented.",
+    "source_file": "BUTLER, ALVA demo.pdf",
+    "pages_used": 3
+  }
+}

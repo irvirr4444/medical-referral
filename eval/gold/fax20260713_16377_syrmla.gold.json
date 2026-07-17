@@ -1,0 +1,51 @@
+{
+  "pdf_name": "fax20260713-16377-syrmla.json",
+  "review_status": "fixed",
+  "review_confidence": "medium",
+  "review_notes": "Re-audited against pages 1-2. Page 1 is the DNA fax cover with the agency phone/fax and the wound-care request; page 2 lists Referral Source / Primary Physician as ROJAS, ARBIS and shows the PT/Skilled Nursing assignments plus diagnosis list. Kept ROJAS as referring_provider_name and DNA Home Health Services as referring_facility/contact, which remains a sender-versus-provider split.",
+  "record": {
+    "patient_name": "FAY, WILLIAM",
+    "patient_dob": "12/06/1926",
+    "patient_sex": "Male",
+    "patient_phone": "(626) 379-1461",
+    "patient_address": "1295 SOLITA RD, Pasadena, CA 91103",
+    "patient_mrn": "MR202",
+    "referring_provider_name": "ROJAS, ARBIS",
+    "referring_facility": "DNA Home Health Services, Inc.",
+    "referring_phone": "818-938-9143",
+    "referring_fax": "818-938-9179",
+    "diagnosis_text": "Hypertensive heart disease with heart failure; Chronic diastolic (congestive) heart failure; Unspecified dementia without behavioral disturbance; Hyperlipidemia, unspecified; Polyneuropathy, unspecified; Unspecified osteoarthritis, unspecified site",
+    "icd10_codes": [
+      "I11.0",
+      "I50.32",
+      "F03.90",
+      "E78.5",
+      "G62.9",
+      "M19.90"
+    ],
+    "insurance_provider": "Medicare",
+    "insurance_id": "7GN2CP3UW06",
+    "insurance_group_number": null,
+    "requested_services": [
+      {
+        "service": "Wound care evaluation",
+        "frequency": "3m",
+        "instructions": "Please see patient for wound care eval of stage 2 coccyx wound."
+      },
+      {
+        "service": "Physical Therapy",
+        "frequency": null,
+        "instructions": "Assigned on 03/12/2026 (Omni, Therapy)."
+      },
+      {
+        "service": "Skilled Nursing",
+        "frequency": null,
+        "instructions": "Assigned clinicians: Martirosyan, David; Kolerova, Natalia; Kirakosyan, Lilit."
+      }
+    ],
+    "referral_date": "03/06/2026",
+    "notes": "No known allergies. SOC date 03/08/2026. Pharmacy: RX Boutique Pharmacy, phone (818) 514-6010. Fax cover sheet is directed to West Coast Wound Care regarding Fay William.",
+    "source_file": "fax20260713-16377-syrmla.pdf",
+    "pages_used": 3
+  }
+}

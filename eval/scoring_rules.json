@@ -1,0 +1,22 @@
+{
+  "patient_name": { "type": "normalized_exact", "weight": 3.0 },
+  "patient_dob": { "type": "date_exact", "weight": 3.0 },
+  "patient_sex": { "type": "normalized_exact", "weight": 1.0 },
+  "patient_phone": { "type": "phone_exact", "weight": 2.0 },
+  "patient_address": { "type": "normalized_string", "weight": 2.0 },
+  "patient_mrn": { "type": "normalized_exact", "weight": 1.5 },
+  "referring_provider_name": { "type": "normalized_string", "weight": 3.0 },
+  "referring_facility": { "type": "normalized_string", "weight": 2.5 },
+  "referring_phone": { "type": "phone_exact", "weight": 1.5 },
+  "referring_fax": { "type": "phone_exact", "weight": 1.0 },
+  "diagnosis_text": { "type": "token_overlap", "weight": 2.5 },
+  "icd10_codes": { "type": "set_f1", "weight": 2.5 },
+  "insurance_provider": { "type": "normalized_string", "weight": 2.0 },
+  "insurance_id": { "type": "normalized_exact", "weight": 3.0 },
+  "insurance_group_number": { "type": "normalized_exact", "weight": 1.0 },
+  "requested_services": { "type": "service_list_match", "weight": 4.0 },
+  "referral_date": { "type": "date_exact", "weight": 2.5 },
+  "notes": { "type": "optional_text", "weight": 0.5 },
+  "source_file": { "type": "ignored", "weight": 0.0 },
+  "pages_used": { "type": "ignored", "weight": 0.0 }
+}

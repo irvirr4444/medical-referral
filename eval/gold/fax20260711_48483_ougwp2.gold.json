@@ -1,0 +1,78 @@
+{
+  "pdf_name": "fax20260711-48483-ougwp2.json",
+  "review_status": "fixed",
+  "review_confidence": "medium",
+  "review_notes": "Confirmed from encounter sheet, outpatient referral form, insurance page, and discharge summary. Used the handwritten recuperative-care address as the active discharge destination and moved the crossed-out San Pedro address into notes.",
+  "record": {
+    "patient_name": "Gonzalez, Eric",
+    "patient_dob": "08/31/1973",
+    "patient_sex": "Male",
+    "patient_phone": "424-450-5249",
+    "patient_address": "Golden State Recuperative Care, 153 E 110th St, Los Angeles, CA 90061",
+    "patient_mrn": "20005877162",
+    "referring_provider_name": "Rudo Benjamin, MD",
+    "referring_facility": "Providence Little Company of Mary Medical Center San Pedro",
+    "referring_phone": "310-303-6859",
+    "referring_fax": "310-303-6834",
+    "diagnosis_text": "Cellulitis of right groin; Pressure sore of hip, right, unstageable; S/P AKA (above knee amputation), unilateral, right",
+    "icd10_codes": [
+      "L03.314",
+      "L89.210",
+      "Z89.611"
+    ],
+    "insurance_provider": "LA CARE HLTH PLAN MEDICAID HMO",
+    "insurance_id": "91440693A",
+    "insurance_group_number": "MWLLNMEG21",
+    "requested_services": [
+      {
+        "service": "Skilled Nursing (Home Health)",
+        "frequency": null,
+        "instructions": "Home safety eval and needs assessment; assess/instruct wound care/incision care; assess/instruct disease."
+      },
+      {
+        "service": "Physical Therapy (Home Health)",
+        "frequency": null,
+        "instructions": "Mobility, home safety/fall prevention, durable medical equipment needs/training, caregiver training."
+      },
+      {
+        "service": "Durable Medical Equipment - Wheelchair",
+        "frequency": null,
+        "instructions": "Provided for home use; patient dependent on wheelchair."
+      },
+      {
+        "service": "Right above-knee prosthesis reassessment referral",
+        "frequency": null,
+        "instructions": "Hold off wearing prosthesis until wound resurfaced/healed."
+      },
+      {
+        "service": "Wound care",
+        "frequency": "Daily",
+        "instructions": "Cleanse with normal saline, pat dry, apply collagenase (Santyl), pack with saline-moistened gauze, cover with Mepilex Border Flex."
+      },
+      {
+        "service": "Medication - collagenase (SANTYL) ointment",
+        "frequency": "Daily",
+        "instructions": "Apply topically daily to wound."
+      },
+      {
+        "service": "Medication - linezolid (ZYVOX) 600 mg",
+        "frequency": "Every 12 hours",
+        "instructions": "Oral antibiotic at discharge for cellulitis."
+      },
+      {
+        "service": "Medication - mupirocin (BACTROBAN) 2% ointment",
+        "frequency": "3 times daily",
+        "instructions": "Apply topically to left knee pustules."
+      },
+      {
+        "service": "Medication - HYDROcodone-acetaminophen (NORCO) 5-325 mg",
+        "frequency": "Every 6 hours as needed",
+        "instructions": "For pain."
+      }
+    ],
+    "referral_date": "07/10/2026",
+    "notes": "Original home address on intake page was crossed out: 661 N Harbor Blvd Apt 74, San Pedro, CA 90731. Discharged to Golden State Recuperative Care. Emergency contact: Michel Leonor (Friend), 424-339-4452. HIV stable on Biktarvy. High fall risk. Prosthesis use held pending wound healing.",
+    "source_file": "fax20260711-48483-ougwp2.pdf",
+    "pages_used": 23
+  }
+}

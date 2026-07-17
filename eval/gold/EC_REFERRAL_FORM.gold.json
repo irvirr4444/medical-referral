@@ -1,0 +1,34 @@
+{
+  "pdf_name": "EC - REFERRAL FORM.json",
+  "review_status": "fixed",
+  "review_confidence": "high",
+  "review_notes": "Confirmed from handwritten West Coast referral form. Laurie Peercy is PCP contact, not the referring provider; the referring source is Accent Care Home Health.",
+  "record": {
+    "patient_name": "Cruz Pagan, Eliut",
+    "patient_dob": "02/09/1964",
+    "patient_sex": "Male",
+    "patient_phone": "773-500-6400",
+    "patient_address": "5345 N Natchez Ave, Chicago, IL 60656",
+    "patient_mrn": null,
+    "referring_provider_name": null,
+    "referring_facility": "Accent Care Home Health",
+    "referring_phone": "312-604-3740",
+    "referring_fax": "312-492-7404",
+    "diagnosis_text": "Need wound care eval",
+    "icd10_codes": [],
+    "insurance_provider": "Zing Health",
+    "insurance_id": "6TX4F45XH02",
+    "insurance_group_number": null,
+    "requested_services": [
+      {
+        "service": "Wound Care",
+        "frequency": null,
+        "instructions": "Need wound care eval"
+      }
+    ],
+    "referral_date": "07/08/2026",
+    "notes": "PCP: Laurie Peercy, phone 773-245-1198, fax 708-741-1014. Emergency contact: Lino Alvarez (Friend), phone 773-875-3242. Patient location type: Home.",
+    "source_file": "EC - REFERRAL FORM.pdf",
+    "pages_used": 1
+  }
+}

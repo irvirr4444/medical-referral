@@ -1,0 +1,46 @@
+{
+  "pdf_name": "fax20260710-1422744-nkqbp2.json",
+  "review_status": "fixed",
+  "review_confidence": "medium",
+  "review_notes": "Re-audited against pages 3, 5, and 6. Page 3 confirms the demographics, clinic, Pedram Shawn Abdian signature, DME order, and the 90044-5608 address normalization. Pages 5-6 show the cough/XR chest and GERD/H. pylori stool orders in the same outpatient packet, so they remain in requested_services.",
+  "record": {
+    "patient_name": "Rodriguez Hernandez, Anita Berenice",
+    "patient_dob": "05/17/1981",
+    "patient_sex": "Female",
+    "patient_phone": "(323) 271-8445",
+    "patient_address": "608 W 94TH ST, LOS ANGELES, CA 90044-5608",
+    "patient_mrn": "100133226",
+    "referring_provider_name": "Pedram Shawn Abdian, MD",
+    "referring_facility": "Hubert H. Humphrey CHC Primary Care",
+    "referring_phone": "(323) 897-6260",
+    "referring_fax": "323-233-0958",
+    "diagnosis_text": "History of abdominal hernia (status post recurrent ventral hernia repair)",
+    "icd10_codes": [
+      "Z87.19"
+    ],
+    "insurance_provider": "Medi-Cal Managed Care Molina",
+    "insurance_id": "99703761D",
+    "insurance_group_number": null,
+    "requested_services": [
+      {
+        "service": "DME Wound Care Supplies",
+        "frequency": "For one month",
+        "instructions": "Abdominal wound, minimal drainage, surgical, non-debrided. Long abdominal pads - 60 monthly; 4x4 gauzes - 200 monthly; paper tape - 4 monthly. Requested start date/time: 07/08/26 8:44:00 PDT."
+      },
+      {
+        "service": "XR Chest 2 Views",
+        "frequency": "Order for future visit",
+        "instructions": "Routine; reason: cough after ventral hernia repair, no fever, no dyspnea; ambulatory transport."
+      },
+      {
+        "service": "H Pylori Antigen Stool test",
+        "frequency": "Order for future visit",
+        "instructions": "Routine stool collection; nurse collect; GERD workup / trial of Pepcid."
+      }
+    ],
+    "referral_date": "07/08/2026",
+    "notes": "Allergies: penicillin, morphine, peanuts, Reglan. Emergency contact: Socorro Hernandez (Mother), (323) 403-1785. Recently hospitalized 06/15/2026-06/29/2026 after ventral hernia repair with JP drain. Height 165 cm, weight 167.0 kg. PCP: Peter Farouk Samaan.",
+    "source_file": "fax20260710-1422744-nkqbp2.pdf",
+    "pages_used": 10
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "pdf_name": "fax20260713-620-tw3x6v.json",
+  "review_status": "fixed",
+  "review_confidence": "medium",
+  "review_notes": "Corrected the patient first name to Khojagul and set the facility from the fax header. The clinician/aide lines were not treated as requested services because this one-page fax does not contain an explicit service order.",
+  "record": {
+    "patient_name": "Zadran, Khojagul",
+    "patient_dob": "01/01/1946",
+    "patient_sex": "Male",
+    "patient_phone": "(720) 324-3242",
+    "patient_address": "17950 E Dorado Dr, Aurora, CO 80015",
+    "patient_mrn": "10236",
+    "referring_provider_name": "Heather Krohn",
+    "referring_facility": "Ay Home Health Care LLC",
+    "referring_phone": "(303) 993-1330",
+    "referring_fax": "(303) 647-3647",
+    "diagnosis_text": "Pressure ulcer of sacral region, unstageable; Pressure ulcer of left hip, unstageable",
+    "icd10_codes": [],
+    "insurance_provider": "CGS Medicare",
+    "insurance_id": "4AM7D62MN20",
+    "insurance_group_number": null,
+    "requested_services": [],
+    "referral_date": "06/02/2026",
+    "notes": "WellSky ID: 8394-651-899. Current episode 06/03/2026-08/01/2026; Start of Care 06/03/2026; Triage Code 2. Emergency contact: Helay Zadran (Daughter), phone (720) 324-3242. Comments: NONE.",
+    "source_file": "fax20260713-620-tw3x6v.pdf",
+    "pages_used": 1
+  }
+}

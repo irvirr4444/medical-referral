@@ -1,0 +1,324 @@
+{
+  "reviewed_at": "2026-07-16",
+  "reviewer": "Codex",
+  "record_count": 7,
+  "records": [
+    {
+      "pdf_name": "BUTLER, ALVA demo.json",
+      "review_status": "fixed",
+      "review_confidence": "medium",
+      "review_notes": "Confirmed from text-layer chart. This is not a clean referral form; medication list intentionally excluded from requested_services, and the provider street address was not treated as a facility name.",
+      "candidate_record": {
+        "patient_name": "BUTLER, ALVA",
+        "patient_dob": "10/04/1940",
+        "patient_sex": "M",
+        "patient_phone": "(260) 438-4646",
+        "patient_address": "5316 FISHERSOUND LN, APOLLO BEACH FL 33572",
+        "patient_mrn": "6227",
+        "referring_provider_name": "YVETTE GUZMAN, APRN DNP",
+        "referring_facility": null,
+        "referring_phone": "(813) 417-4767",
+        "referring_fax": null,
+        "diagnosis_text": "Atherosclerotic heart disease of native coronary artery without angina; Dilated cardiomyopathy; Paroxysmal atrial fibrillation; Chronic kidney disease stage 3A; Localized edema; Severe protein-calorie malnutrition; Urinary tract infection; Constipation; Type 2 diabetes mellitus with hyperglycemia; Hypothyroidism; Muscle wasting/atrophy of bilateral lower legs",
+        "icd10_codes": [
+          "I25.10",
+          "I42.0",
+          "I48.0",
+          "N18.31",
+          "R60.0",
+          "E43",
+          "N39.0",
+          "K59.00",
+          "E11.65",
+          "E03.9",
+          "M62.562",
+          "M62.561"
+        ],
+        "insurance_provider": "MEDICARE PART B",
+        "insurance_id": "4FM5A30MN88",
+        "insurance_group_number": null,
+        "requested_services": [],
+        "referral_date": null,
+        "notes": "Secondary insurance: FLORIDA BLUE, policy VNF651M57250. Additional prescriber: COLE, MELISSA, APRN DNP. G-tube feeding / thickened liquids noted. No known drug allergies documented.",
+        "source_file": "BUTLER, ALVA demo.pdf",
+        "pages_used": 3
+      }
+    },
+    {
+      "pdf_name": "EC - REFERRAL FORM.json",
+      "review_status": "fixed",
+      "review_confidence": "high",
+      "review_notes": "Confirmed from handwritten West Coast referral form. Laurie Peercy is PCP contact, not the referring provider; the referring source is Accent Care Home Health.",
+      "candidate_record": {
+        "patient_name": "Cruz Pagan, Eliut",
+        "patient_dob": "02/09/1964",
+        "patient_sex": "Male",
+        "patient_phone": "773-500-6400",
+        "patient_address": "5345 N Natchez Ave, Chicago, IL 60656",
+        "patient_mrn": null,
+        "referring_provider_name": null,
+        "referring_facility": "Accent Care Home Health",
+        "referring_phone": "312-604-3740",
+        "referring_fax": "312-492-7404",
+        "diagnosis_text": "Need wound care eval",
+        "icd10_codes": [],
+        "insurance_provider": "Zing Health",
+        "insurance_id": "6TX4F45XH02",
+        "insurance_group_number": null,
+        "requested_services": [
+          {
+            "service": "Wound Care",
+            "frequency": null,
+            "instructions": "Need wound care eval"
+          }
+        ],
+        "referral_date": "07/08/2026",
+        "notes": "PCP: Laurie Peercy, phone 773-245-1198, fax 708-741-1014. Emergency contact: Lino Alvarez (Friend), phone 773-875-3242. Patient location type: Home.",
+        "source_file": "EC - REFERRAL FORM.pdf",
+        "pages_used": 1
+      }
+    },
+    {
+      "pdf_name": "fax20260710-1422744-nkqbp2.json",
+      "review_status": "fixed",
+      "review_confidence": "medium",
+      "review_notes": "Re-audited against pages 3, 5, and 6. Page 3 confirms the demographics, clinic, Pedram Shawn Abdian signature, DME order, and the 90044-5608 address normalization. Pages 5-6 show the cough/XR chest and GERD/H. pylori stool orders in the same outpatient packet, so they remain in requested_services.",
+      "candidate_record": {
+        "patient_name": "Rodriguez Hernandez, Anita Berenice",
+        "patient_dob": "05/17/1981",
+        "patient_sex": "Female",
+        "patient_phone": "(323) 271-8445",
+        "patient_address": "608 W 94TH ST, LOS ANGELES, CA 90044-5608",
+        "patient_mrn": "100133226",
+        "referring_provider_name": "Pedram Shawn Abdian, MD",
+        "referring_facility": "Hubert H. Humphrey CHC Primary Care",
+        "referring_phone": "(323) 897-6260",
+        "referring_fax": "323-233-0958",
+        "diagnosis_text": "History of abdominal hernia (status post recurrent ventral hernia repair)",
+        "icd10_codes": [
+          "Z87.19"
+        ],
+        "insurance_provider": "Medi-Cal Managed Care Molina",
+        "insurance_id": "99703761D",
+        "insurance_group_number": null,
+        "requested_services": [
+          {
+            "service": "DME Wound Care Supplies",
+            "frequency": "For one month",
+            "instructions": "Abdominal wound, minimal drainage, surgical, non-debrided. Long abdominal pads - 60 monthly; 4x4 gauzes - 200 monthly; paper tape - 4 monthly. Requested start date/time: 07/08/26 8:44:00 PDT."
+          },
+          {
+            "service": "XR Chest 2 Views",
+            "frequency": "Order for future visit",
+            "instructions": "Routine; reason: cough after ventral hernia repair, no fever, no dyspnea; ambulatory transport."
+          },
+          {
+            "service": "H Pylori Antigen Stool test",
+            "frequency": "Order for future visit",
+            "instructions": "Routine stool collection; nurse collect; GERD workup / trial of Pepcid."
+          }
+        ],
+        "referral_date": "07/08/2026",
+        "notes": "Allergies: penicillin, morphine, peanuts, Reglan. Emergency contact: Socorro Hernandez (Mother), (323) 403-1785. Recently hospitalized 06/15/2026-06/29/2026 after ventral hernia repair with JP drain. Height 165 cm, weight 167.0 kg. PCP: Peter Farouk Samaan.",
+        "source_file": "fax20260710-1422744-nkqbp2.pdf",
+        "pages_used": 10
+      }
+    },
+    {
+      "pdf_name": "fax20260711-48483-ougwp2.json",
+      "review_status": "fixed",
+      "review_confidence": "medium",
+      "review_notes": "Confirmed from encounter sheet, outpatient referral form, insurance page, and discharge summary. Used the handwritten recuperative-care address as the active discharge destination and moved the crossed-out San Pedro address into notes.",
+      "candidate_record": {
+        "patient_name": "Gonzalez, Eric",
+        "patient_dob": "08/31/1973",
+        "patient_sex": "Male",
+        "patient_phone": "424-450-5249",
+        "patient_address": "Golden State Recuperative Care, 153 E 110th St, Los Angeles, CA 90061",
+        "patient_mrn": "20005877162",
+        "referring_provider_name": "Rudo Benjamin, MD",
+        "referring_facility": "Providence Little Company of Mary Medical Center San Pedro",
+        "referring_phone": "310-303-6859",
+        "referring_fax": "310-303-6834",
+        "diagnosis_text": "Cellulitis of right groin; Pressure sore of hip, right, unstageable; S/P AKA (above knee amputation), unilateral, right",
+        "icd10_codes": [
+          "L03.314",
+          "L89.210",
+          "Z89.611"
+        ],
+        "insurance_provider": "LA CARE HLTH PLAN MEDICAID HMO",
+        "insurance_id": "91440693A",
+        "insurance_group_number": "MWLLNMEG21",
+        "requested_services": [
+          {
+            "service": "Skilled Nursing (Home Health)",
+            "frequency": null,
+            "instructions": "Home safety eval and needs assessment; assess/instruct wound care/incision care; assess/instruct disease."
+          },
+          {
+            "service": "Physical Therapy (Home Health)",
+            "frequency": null,
+            "instructions": "Mobility, home safety/fall prevention, durable medical equipment needs/training, caregiver training."
+          },
+          {
+            "service": "Durable Medical Equipment - Wheelchair",
+            "frequency": null,
+            "instructions": "Provided for home use; patient dependent on wheelchair."
+          },
+          {
+            "service": "Right above-knee prosthesis reassessment referral",
+            "frequency": null,
+            "instructions": "Hold off wearing prosthesis until wound resurfaced/healed."
+          },
+          {
+            "service": "Wound care",
+            "frequency": "Daily",
+            "instructions": "Cleanse with normal saline, pat dry, apply collagenase (Santyl), pack with saline-moistened gauze, cover with Mepilex Border Flex."
+          },
+          {
+            "service": "Medication - collagenase (SANTYL) ointment",
+            "frequency": "Daily",
+            "instructions": "Apply topically daily to wound."
+          },
+          {
+            "service": "Medication - linezolid (ZYVOX) 600 mg",
+            "frequency": "Every 12 hours",
+            "instructions": "Oral antibiotic at discharge for cellulitis."
+          },
+          {
+            "service": "Medication - mupirocin (BACTROBAN) 2% ointment",
+            "frequency": "3 times daily",
+            "instructions": "Apply topically to left knee pustules."
+          },
+          {
+            "service": "Medication - HYDROcodone-acetaminophen (NORCO) 5-325 mg",
+            "frequency": "Every 6 hours as needed",
+            "instructions": "For pain."
+          }
+        ],
+        "referral_date": "07/10/2026",
+        "notes": "Original home address on intake page was crossed out: 661 N Harbor Blvd Apt 74, San Pedro, CA 90731. Discharged to Golden State Recuperative Care. Emergency contact: Michel Leonor (Friend), 424-339-4452. HIV stable on Biktarvy. High fall risk. Prosthesis use held pending wound healing.",
+        "source_file": "fax20260711-48483-ougwp2.pdf",
+        "pages_used": 23
+      }
+    },
+    {
+      "pdf_name": "fax20260713-16377-syrmla.json",
+      "review_status": "fixed",
+      "review_confidence": "medium",
+      "review_notes": "Re-audited against pages 1-2. Page 1 is the DNA fax cover with the agency phone/fax and the wound-care request; page 2 lists Referral Source / Primary Physician as ROJAS, ARBIS and shows the PT/Skilled Nursing assignments plus diagnosis list. Kept ROJAS as referring_provider_name and DNA Home Health Services as referring_facility/contact, which remains a sender-versus-provider split.",
+      "candidate_record": {
+        "patient_name": "FAY, WILLIAM",
+        "patient_dob": "12/06/1926",
+        "patient_sex": "Male",
+        "patient_phone": "(626) 379-1461",
+        "patient_address": "1295 SOLITA RD, Pasadena, CA 91103",
+        "patient_mrn": "MR202",
+        "referring_provider_name": "ROJAS, ARBIS",
+        "referring_facility": "DNA Home Health Services, Inc.",
+        "referring_phone": "818-938-9143",
+        "referring_fax": "818-938-9179",
+        "diagnosis_text": "Hypertensive heart disease with heart failure; Chronic diastolic (congestive) heart failure; Unspecified dementia without behavioral disturbance; Hyperlipidemia, unspecified; Polyneuropathy, unspecified; Unspecified osteoarthritis, unspecified site",
+        "icd10_codes": [
+          "I11.0",
+          "I50.32",
+          "F03.90",
+          "E78.5",
+          "G62.9",
+          "M19.90"
+        ],
+        "insurance_provider": "Medicare",
+        "insurance_id": "7GN2CP3UW06",
+        "insurance_group_number": null,
+        "requested_services": [
+          {
+            "service": "Wound care evaluation",
+            "frequency": "3m",
+            "instructions": "Please see patient for wound care eval of stage 2 coccyx wound."
+          },
+          {
+            "service": "Physical Therapy",
+            "frequency": null,
+            "instructions": "Assigned on 03/12/2026 (Omni, Therapy)."
+          },
+          {
+            "service": "Skilled Nursing",
+            "frequency": null,
+            "instructions": "Assigned clinicians: Martirosyan, David; Kolerova, Natalia; Kirakosyan, Lilit."
+          }
+        ],
+        "referral_date": "03/06/2026",
+        "notes": "No known allergies. SOC date 03/08/2026. Pharmacy: RX Boutique Pharmacy, phone (818) 514-6010. Fax cover sheet is directed to West Coast Wound Care regarding Fay William.",
+        "source_file": "fax20260713-16377-syrmla.pdf",
+        "pages_used": 3
+      }
+    },
+    {
+      "pdf_name": "fax20260713-2485963-94q8kc.json",
+      "review_status": "fixed",
+      "review_confidence": "medium",
+      "review_notes": "Re-audited against pages 1, 3, 4, 5, and 8. Page 3 explicitly labels GEVORGIAN HRANT as the referring physician; page 4 shows a HOME HLTH case-management order annotated \"wound care\"; page 5 contains the daily wound-care order; page 8 supports case-management / post-hospitalization planning. The placeholder phone number and homeless Barstow address both appear verbatim in the source.",
+      "candidate_record": {
+        "patient_name": "SARDINA, FRANK",
+        "patient_dob": "01/24/1999",
+        "patient_sex": "Male",
+        "patient_phone": "(999)999-9999",
+        "patient_address": "Homeless, Barstow, CA 92311",
+        "patient_mrn": "435589",
+        "referring_provider_name": "GEVORGIAN HRANT",
+        "referring_facility": "Barstow Community Hospital",
+        "referring_phone": "(760) 957-3223",
+        "referring_fax": "(760) 957-3377",
+        "diagnosis_text": "UTI / urinary tract infection, site not specified; bilateral ischial pressure wounds/ulcers due to chronic paraplegia",
+        "icd10_codes": [],
+        "insurance_provider": "MEDI-CAL",
+        "insurance_id": "92562565H46188",
+        "insurance_group_number": null,
+        "requested_services": [
+          {
+            "service": "Home Health",
+            "frequency": null,
+            "instructions": "Case management order / HOME HLTH order with wound care annotation."
+          },
+          {
+            "service": "Wound Care",
+            "frequency": "Daily",
+            "instructions": "Remove all dressings. Wash wounds with normal saline. Pack with moist gauze. Cover with pink foam dressing. Change daily."
+          }
+        ],
+        "referral_date": "07/13/2026",
+        "notes": "Patient is homeless and unemployed. No next of kin listed (states none). Chronic paraplegia after prior pedestrian-versus-car injury. Source also lists attending/admitting physician names from hospitalization pages.",
+        "source_file": "fax20260713-2485963-94q8kc.pdf",
+        "pages_used": 8
+      }
+    },
+    {
+      "pdf_name": "fax20260713-620-tw3x6v.json",
+      "review_status": "fixed",
+      "review_confidence": "medium",
+      "review_notes": "Corrected the patient first name to Khojagul and set the facility from the fax header. The clinician/aide lines were not treated as requested services because this one-page fax does not contain an explicit service order.",
+      "candidate_record": {
+        "patient_name": "Zadran, Khojagul",
+        "patient_dob": "01/01/1946",
+        "patient_sex": "Male",
+        "patient_phone": "(720) 324-3242",
+        "patient_address": "17950 E Dorado Dr, Aurora, CO 80015",
+        "patient_mrn": "10236",
+        "referring_provider_name": "Heather Krohn",
+        "referring_facility": "Ay Home Health Care LLC",
+        "referring_phone": "(303) 993-1330",
+        "referring_fax": "(303) 647-3647",
+        "diagnosis_text": "Pressure ulcer of sacral region, unstageable; Pressure ulcer of left hip, unstageable",
+        "icd10_codes": [],
+        "insurance_provider": "CGS Medicare",
+        "insurance_id": "4AM7D62MN20",
+        "insurance_group_number": null,
+        "requested_services": [],
+        "referral_date": "06/02/2026",
+        "notes": "WellSky ID: 8394-651-899. Current episode 06/03/2026-08/01/2026; Start of Care 06/03/2026; Triage Code 2. Emergency contact: Helay Zadran (Daughter), phone (720) 324-3242. Comments: NONE.",
+        "source_file": "fax20260713-620-tw3x6v.pdf",
+        "pages_used": 1
+      }
+    }
+  ]
+}
