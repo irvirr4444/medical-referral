@@ -1,0 +1,22 @@
+{
+  "board_id": 5100688681,
+  "group_id": "topics",
+  "item_name_mode": "patient_name",
+  "insurance_provider_mode": "text",
+  "columns": {
+    "patient_name": "text_mm5ehf0",
+    "patient_dob": "date_mm5ev28f",
+    "patient_phone": "text_mm5edahc",
+    "referring_facility": "text_mm5e3dbt",
+    "referral_date": "date_mm5e99nn",
+    "insurance_provider": "text_mm5e13w",
+    "requested_services": "text_mm5ea5se",
+    "extraction_status": "color_mm5ey0j4",
+    "review_status": "color_mm5e6mgp",
+    "source_pdf_file": "file_mm5eafaw"
+  },
+  "status_defaults": {
+    "extraction_status": "Extracted",
+    "review_status": "Not Reviewed"
+  }
+}

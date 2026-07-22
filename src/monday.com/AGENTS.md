@@ -53,6 +53,9 @@ Read `src/monday.com/readme.md` before changing or calling the Monday.com integr
 
 - `src/monday.com/monday_api.py`: reusable GraphQL and multipart file-upload transport
 - `src/monday.com/monday_client.py`: command-line GraphQL client
+- `src/monday.com/push_referral.py`: referral extractor -> Monday item bridge with upsert behavior
+- `src/monday.com/referral_board_config.py`: board/group/column mapping config loader
+- `src/monday.com/referral_board_config.example.json`: example config for the current referral board
 - `src/monday.com/tests/`: unit and live endpoint tests
 - `src/monday.com/webhook_receiver.py`: webhook challenge/event receiver
 - `src/monday.com/readme.md`: complete endpoint cookbook and runbook

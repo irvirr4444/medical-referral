@@ -19,6 +19,9 @@ These PDFs contain **PHI**.
 - `src/intake_extractor/postprocess.py`: deterministic normalization / cleanup
 - `src/intake_extractor/repair.py`: gated repair / merge rules for weak fields
 - `src/intake_extractor/review*.py`: optional second-pass reviewer + audit flow
+- `src/monday.com/push_referral.py`: extract one PDF and upsert it into a Monday board item
+- `src/monday.com/referral_board_config.py`: typed config loader for board/group/column mapping
+- `src/monday.com/referral_board_config.example.json`: example mapping for the current demo board
 - `tests/`: focused extractor, repair, reviewer, and evaluator tests
 - `out/`: local outputs (gitignored)
 
@@ -82,6 +85,17 @@ Unit + live smoke tests (live tests gated by env flags):
 ```bash
 PYTHONPATH=src pytest -q src/monday.com/tests -k unit
 MONDAY_LIVE_TEST=1 PYTHONPATH=src pytest -q src/monday.com/tests -k live_readonly
+```
+
+Referral push smoke test (extract locally, print the would-be Monday payload, do not write to Monday):
+
+```bash
+PYTHONPATH=src python3.11 src/monday.com/push_referral.py \
+  "samples/EC - REFERRAL FORM.pdf" \
+  --config src/monday.com/referral_board_config.example.json \
+  --input-mode image \
+  --write-out-dir out/monday-smoke \
+  --dry-run
 ```
 
 ### How extraction works
@@ -184,6 +198,48 @@ Key reports:
 - `out/eval-reports/per_document_scores.csv`
 - `out/eval-reports/mismatches.csv`
 - `out/eval-reports/stability_by_field.csv`
+
+### Monday referral push
+
+The repo also includes a small bridge from `ReferralIntake` JSON into a Monday board row.
+
+What it does:
+
+- extracts one referral PDF with the same intake pipeline
+- maps selected fields into configured Monday columns
+- creates a new item when no match exists
+- otherwise reuses an existing item by attached PDF filename first, then exact item name
+- optionally uploads the source PDF into a Monday files column
+
+The mapping is driven by `src/monday.com/referral_board_config.example.json`.
+
+Dry run:
+
+```bash
+PYTHONPATH=src python3.11 src/monday.com/push_referral.py \
+  "samples/EC - REFERRAL FORM.pdf" \
+  --config src/monday.com/referral_board_config.example.json \
+  --input-mode image \
+  --write-out-dir out/monday-smoke \
+  --dry-run
+```
+
+Live write:
+
+```bash
+PYTHONPATH=src python3.11 src/monday.com/push_referral.py \
+  "samples/EC - REFERRAL FORM.pdf" \
+  --config src/monday.com/referral_board_config.example.json \
+  --input-mode image \
+  --write-out-dir out/monday-smoke
+```
+
+Notes:
+
+- progress logs go to `stderr` unless `--quiet` is used
+- insurance can be mapped as either a text field or a dropdown via `insurance_provider_mode`
+- placeholder all-same-digit phone numbers are skipped before writing to Monday
+- reruns are upserts, not blind creates, as long as the configured files column or item name matches
 
 ### Tests
 

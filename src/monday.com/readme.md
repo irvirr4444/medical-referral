@@ -31,6 +31,9 @@ This project uses Monday.com via its **GraphQL API**, with a dedicated multipart
 | --- | --- |
 | `src/monday.com/monday_api.py` | GraphQL + file-upload helpers (`monday_graphql`, `monday_file_upload`) |
 | `src/monday.com/monday_client.py` | CLI for ad-hoc queries |
+| `src/monday.com/push_referral.py` | Extract one referral PDF and create/update a mapped Monday item |
+| `src/monday.com/referral_board_config.py` | Typed config loader for board/group/column mapping |
+| `src/monday.com/referral_board_config.example.json` | Example mapping for the current referral demo board |
 | `src/monday.com/webhook_receiver.py` | Local webhook receiver for live webhook tests |
 | `src/monday.com/tests/` | Unit + live endpoint smoke tests |
 | `src/monday.com/readme.md` | This document |
@@ -82,6 +85,34 @@ PYTHONPATH=src python3.11 src/monday.com/monday_client.py \
   --pretty --data-only \
   --query '{ boards(limit: 5) { id name } }'
 ```
+
+Referral push dry run:
+
+```bash
+PYTHONPATH=src python3.11 src/monday.com/push_referral.py \
+  "samples/EC - REFERRAL FORM.pdf" \
+  --config src/monday.com/referral_board_config.example.json \
+  --input-mode image \
+  --write-out-dir out/monday-smoke \
+  --dry-run
+```
+
+Referral push live write:
+
+```bash
+PYTHONPATH=src python3.11 src/monday.com/push_referral.py \
+  "samples/EC - REFERRAL FORM.pdf" \
+  --config src/monday.com/referral_board_config.example.json \
+  --input-mode image \
+  --write-out-dir out/monday-smoke
+```
+
+Behavior summary:
+- extracts via the main intake pipeline, then maps selected fields into Monday columns
+- supports text or dropdown insurance columns via `insurance_provider_mode`
+- upserts by attached PDF filename first, then exact item name fallback
+- skips duplicate PDF uploads when the item already has that same file attached
+- writes progress logs to `stderr` unless `--quiet` is used
 
 ---
 
