@@ -18,7 +18,7 @@ This project uses Monday.com via its **GraphQL API**, with a dedicated multipart
 - **File upload endpoint**: `POST https://api.monday.com/v2/file` (multipart)
 - **Auth header**: `Authorization: <MONDAY_DOT_COM_API_KEY>`
 - **Body (GraphQL)**: JSON with `query` and optional `variables`
-- **Optional version pin**: `API-Version: 2023-10`
+- **Working version pin**: `API-Version: 2026-07`
 
 #### Environment setup
 - Put your key in `.env` as:
@@ -54,7 +54,7 @@ Who am I:
 curl -sS https://api.monday.com/v2 \
   -H "Authorization: $MONDAY_DOT_COM_API_KEY" \
   -H "Content-Type: application/json" \
-  -H "API-Version: 2023-10" \
+  -H "API-Version: 2026-07" \
   --data '{"query":"{ me { id name email } }"}'
 ```
 
@@ -106,6 +106,60 @@ PYTHONPATH=src python3.11 src/monday.com/push_referral.py \
   --input-mode image \
   --write-out-dir out/monday-smoke
 ```
+
+---
+
+### Master Sheet discovery export (read-only)
+
+Use this before designing a production mapping. It exports every Master Sheet row,
+the schema-derived metadata, and each board directly connected by a relation column.
+The output can contain PHI and belongs under the Git-ignored `tmp/` directory.
+
+```powershell
+$env:PYTHONPATH = 'src'
+.\.venv\Scripts\python.exe src/monday.com/export_monday_boards.py `
+  --board-id 5815942462 `
+  --include-related `
+  --output-dir tmp/monday-exports/master-sheet-$(Get-Date -Format yyyyMMdd)
+```
+
+The default exports each record's displayed Monday value (`text`) and type. Use
+`--include-raw-values` only when relation/value internals are specifically needed;
+it makes the snapshot much larger and more likely to run into API capacity waits.
+
+Generate the workflow map and real-data examples after the export:
+
+```powershell
+$env:PYTHONPATH = 'src'
+.\.venv\Scripts\python.exe src/monday.com/analyze_master_sheet_export.py `
+  tmp/monday-exports/master-sheet-YYYYMMDD `
+  --flow-file 'Flow written down and questions.md'
+```
+
+If an older export lacks `schema.json`, refresh only the lightweight schemas and metadata without downloading its rows again:
+
+```powershell
+$env:PYTHONPATH = 'src'
+.\.venv\Scripts\python.exe src/monday.com/refresh_monday_export_metadata.py `
+  tmp/monday-exports/master-sheet-YYYYMMDD
+```
+
+Generate PHI-free guides for sharing with technical stakeholders:
+
+```powershell
+$env:PYTHONPATH = 'src'
+.\.venv\Scripts\python.exe src/monday.com/generate_master_sheet_guides.py `
+  tmp/monday-exports/master-sheet-YYYYMMDD `
+  --output-dir .
+```
+
+Outputs:
+- `boards/<board-name>/records.json`: exported records for one board
+- `boards/<board-name>/schema.json`: raw board schema and column settings
+- `boards/<board-name>/metadata.json`: columns, allowed statuses, relation targets, and population rates
+- `manifest.json`: accessible-board and record-count summary
+- `flow_to_monday_map.md`: workflow-stage to Master Sheet column map
+- `scenario_examples.json`: local real-record examples for intake, handoff, scheduling, seen, hold, and discharge
 
 Behavior summary:
 - extracts via the main intake pipeline, then maps selected fields into Monday columns

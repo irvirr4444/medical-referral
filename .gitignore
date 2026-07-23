@@ -12,6 +12,7 @@ outputs/
 *.jsonl
 
 # Temporary extraction artifacts
+tmp/
 .pytest_cache/
 __pycache__/
 *.pyc

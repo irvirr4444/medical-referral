@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 
 MONDAY_API_URL = "https://api.monday.com/v2"
 MONDAY_FILE_API_URL = "https://api.monday.com/v2/file"
-DEFAULT_API_VERSION = "2023-10"
+DEFAULT_API_VERSION = "2026-07"
 DEFAULT_TIMEOUT_S = 30
 
 
