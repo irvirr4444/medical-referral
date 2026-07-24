@@ -1,15 +1,15 @@
 import json
 from pathlib import Path
 
-from intake_extractor.review_audit import build_document_audit, write_document_audit, write_folder_audit_summary
-from intake_extractor.review_patch import (
+from intake_extractor.review_tools.audit import build_document_audit, write_document_audit, write_folder_audit_summary
+from intake_extractor.review_tools.patch import (
     apply_review_patches_with_decisions,
     patch_confidence_threshold,
 )
-from intake_extractor.review_schema import PredictionReview, ReviewIssue
-from intake_extractor.review_signals import collect_field_signals
-from intake_extractor.review_targets import TARGETED_REVIEW_FIELDS, get_field_policy
-from intake_extractor.schema import ReferralIntake, RequestedService
+from intake_extractor.models.review_schema import PredictionReview, ReviewIssue
+from intake_extractor.review_tools.signals import collect_field_signals
+from intake_extractor.review_tools.targets import TARGETED_REVIEW_FIELDS, get_field_policy
+from intake_extractor.models.schema import ReferralIntake, RequestedService
 
 
 def test_targeted_fields_cover_known_weak_areas() -> None:

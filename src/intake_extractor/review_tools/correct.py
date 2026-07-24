@@ -8,15 +8,15 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from .pdf_inputs import PDF_INPUT_MODE_CHOICES, PdfInputMode
-from .postprocess import normalize_referral
+from ..models.review_schema import PredictionReview
+from ..models.schema import ReferralIntake
+from ..pdf.inputs import PDF_INPUT_MODE_CHOICES, PdfInputMode
+from ..core.postprocess import normalize_referral
+from .audit import AuditDocument, build_document_audit, write_document_audit, write_folder_audit_summary
+from .patch import AppliedPatch, apply_review_patches_with_decisions
 from .review import load_candidate_json, review_prediction
-from .review_audit import AuditDocument, build_document_audit, write_document_audit, write_folder_audit_summary
-from .review_patch import AppliedPatch, apply_review_patches_with_decisions
-from .review_schema import PredictionReview
-from .review_signals import FieldSignal
-from .review_targets import TARGETED_REVIEW_FIELDS
-from .schema import ReferralIntake
+from .signals import FieldSignal
+from .targets import TARGETED_REVIEW_FIELDS
 
 
 logger = logging.getLogger(__name__)
@@ -78,11 +78,7 @@ def correct_prediction_detailed(
         logger.info("Applied %s review patch(es) to %s: %s", len(applied_patches), Path(pdf_path).name, fields)
 
     normalized = normalize_referral(referral)
-    reviewed_fields = (
-        [check.field for check in review.field_checks]
-        if review.field_checks
-        else list(TARGETED_REVIEW_FIELDS)
-    )
+    reviewed_fields = [check.field for check in review.field_checks] if review.field_checks else list(TARGETED_REVIEW_FIELDS)
     audit = build_document_audit(
         source_file=Path(pdf_path).name,
         candidate=candidate_json,
@@ -183,3 +179,4 @@ def main() -> None:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     main()
+

@@ -10,15 +10,12 @@ from typing import Any
 from pydantic import ValidationError
 
 from .anthropic_json import AnthropicJsonError, build_client, call_model_for_json
-from .extraction_evidence import (
+from .evidence import (
     apply_evidence_guide,
     extract_evidence_guide,
     needs_exact_field_evidence,
     prepend_evidence_guide,
 )
-from .pdf_inputs import PDF_INPUT_MODE_CHOICES, PdfInputMode, build_pdf_input_payload, coerce_input_mode
-from .pdf_payloads import vision_user_content
-from .postprocess import normalize_referral
 from .repair import (
     merge_contact_repair_payload,
     merge_header_payload,
@@ -27,8 +24,19 @@ from .repair import (
     should_repair_header_fields,
     should_repair_requested_services,
 )
-from .schema import ReferralIntake
-from .selection import DEFAULT_SELECTION_CONFIG, select_image_pages, select_text_pages
+from ..models.schema import ReferralIntake
+from ..pdf.inputs import (
+    EXTRACTION_PROFILE_CHOICES,
+    PDF_INPUT_MODE_CHOICES,
+    ExtractionProfile,
+    PdfInputMode,
+    build_pdf_input_payload,
+    coerce_input_mode,
+    profile_to_input_mode,
+)
+from ..pdf.payloads import vision_user_content
+from ..pdf.selection import DEFAULT_SELECTION_CONFIG, select_image_pages, select_text_pages
+from ..core.postprocess import normalize_referral
 
 # By default, evaluate the full document. Use --max-pages to cap pages deliberately.
 DEFAULT_MAX_PAGES: int | None = None
@@ -241,12 +249,18 @@ def _requested_services_user_content(
 def extract_direct_from_pdf(
     pdf_path: str | Path,
     *,
+    profile: ExtractionProfile | None = None,
     input_mode: PdfInputMode = "auto",
     prefer_text: bool | None = None,
     max_pages: int | None = DEFAULT_MAX_PAGES,
 ) -> DirectExtractionOutput:
     p = Path(pdf_path)
-    requested_mode = coerce_input_mode(input_mode, prefer_text=bool(prefer_text))
+    if profile is not None:
+        # Profiles are a user-facing policy layer on top of PdfInputMode.
+        # They intentionally do not support prefer_text (profile implies the strategy).
+        requested_mode = profile_to_input_mode(profile)
+    else:
+        requested_mode = coerce_input_mode(input_mode, prefer_text=bool(prefer_text))
     payload = build_pdf_input_payload(
         p,
         input_mode=requested_mode,
@@ -418,6 +432,16 @@ def main() -> None:
         help="Force text extraction (otherwise auto-detect via pdffonts)",
     )
     parser.add_argument(
+        "--profile",
+        choices=EXTRACTION_PROFILE_CHOICES,
+        default=None,
+        help=(
+            "Higher-level extraction strategy: "
+            "balanced (auto), accurate (hybrid), fax (image). "
+            "Mutually exclusive with --prefer-text and --input-mode."
+        ),
+    )
+    parser.add_argument(
         "--input-mode",
         choices=PDF_INPUT_MODE_CHOICES,
         default="auto",
@@ -439,9 +463,12 @@ def main() -> None:
 
     if args.prefer_text and args.input_mode != "auto":
         raise SystemExit("Use either --prefer-text or --input-mode, not both.")
+    if args.profile is not None and (args.prefer_text or args.input_mode != "auto"):
+        raise SystemExit("Use either --profile, or (--input-mode / --prefer-text), not both.")
 
     result = extract_direct_from_pdf(
         pdf,
+        profile=args.profile,
         input_mode=args.input_mode,
         prefer_text=(True if args.prefer_text else None),
         max_pages=args.max_pages,
@@ -459,3 +486,4 @@ def main() -> None:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     main()
+

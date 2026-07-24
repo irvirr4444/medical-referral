@@ -206,9 +206,7 @@ def _score_requested_services(expected: list[dict[str, Any]], actual: list[dict[
             pair_score, service_sim, frequency_sim, instructions_sim = _service_pair_score(exp, act)
             if service_sim <= 0.0:
                 continue
-            candidates.append(
-                (pair_score, service_sim, exp.index, act.index, frequency_sim, instructions_sim)
-            )
+            candidates.append((pair_score, service_sim, exp.index, act.index, frequency_sim, instructions_sim))
 
     # Deterministic greedy assignment: best pair first, each index used at most once.
     candidates.sort(key=lambda row: (-row[0], -row[1], row[2], row[3]))
@@ -243,9 +241,7 @@ def _score_requested_services(expected: list[dict[str, Any]], actual: list[dict[
 
     avg_service = sum(match_service) / len(match_service) if match_service else 0.0
     avg_frequency = sum(match_frequency) / len(match_frequency) if match_frequency else 0.0
-    avg_instructions = (
-        sum(match_instructions) / len(match_instructions) if match_instructions else 0.0
-    )
+    avg_instructions = sum(match_instructions) / len(match_instructions) if match_instructions else 0.0
     detail = (
         f"matched={len(match_scores)}/{len(expected_items)}; "
         f"precision={precision:.3f}; recall={recall:.3f}; "
@@ -341,11 +337,7 @@ def _materialize_gold(gold_payload: dict[str, Any], eval_dir: Path) -> list[dict
 def _discover_predictions(predictions_root: Path, gold_names: set[str]) -> dict[str, dict[str, Path]]:
     predictions: dict[str, dict[str, Path]] = {}
 
-    root_level = {
-        path.name: path
-        for path in predictions_root.glob("*.json")
-        if path.name in gold_names
-    }
+    root_level = {path.name: path for path in predictions_root.glob("*.json") if path.name in gold_names}
     if root_level:
         predictions["baseline-root"] = root_level
 
@@ -449,9 +441,7 @@ def _evaluate(
                     )
 
                 if result.metric != "ignored":
-                    field_value_tracker[pdf_name][field][
-                        json.dumps(actual, ensure_ascii=False, sort_keys=True)
-                    ] += 1
+                    field_value_tracker[pdf_name][field][json.dumps(actual, ensure_ascii=False, sort_keys=True)] += 1
 
             weighted_score = total_score / total_weight if total_weight else 0.0
             failures = _critical_failures(gold_data, prediction)
@@ -512,9 +502,7 @@ def _evaluate(
         "gold_record_count": len(gold_records),
         "run_count": len(per_run_rows),
         "prediction_sources": sorted(prediction_index),
-        "average_run_score": round(
-            sum(row["average_score"] for row in per_run_rows) / len(per_run_rows), 4
-        )
+        "average_run_score": round(sum(row["average_score"] for row in per_run_rows) / len(per_run_rows), 4)
         if per_run_rows
         else 0.0,
         "best_run": max(per_run_rows, key=lambda row: row["average_score"], default=None),
@@ -586,9 +574,7 @@ def main() -> None:
 
     manifest_rows = _materialize_gold(gold_payload, args.eval_dir)
     rules = _load_rules(args.rules_path)
-    per_run_rows, per_document_rows, mismatch_rows, extra_payload = _evaluate(
-        gold_payload, rules, args.predictions_root
-    )
+    per_run_rows, per_document_rows, mismatch_rows, extra_payload = _evaluate(gold_payload, rules, args.predictions_root)
 
     _write_csv(args.reports_dir / "per_run_scores.csv", per_run_rows)
     _write_csv(args.reports_dir / "per_document_scores.csv", per_document_rows)
@@ -617,3 +603,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

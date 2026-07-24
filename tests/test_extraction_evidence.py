@@ -1,10 +1,10 @@
-from intake_extractor.extraction_evidence import (
+from intake_extractor.llm.evidence import (
     ExtractionEvidenceGuide,
     apply_evidence_guide,
     needs_exact_field_evidence,
     prepend_evidence_guide,
 )
-from intake_extractor.schema import ReferralIntake
+from intake_extractor.models.schema import ReferralIntake
 
 
 def test_prepend_evidence_guide_adds_grounding_block() -> None:

@@ -1,4 +1,4 @@
-from intake_extractor.evaluate import (
+from intake_extractor.eval.evaluate import (
     _normalize_date,
     _normalize_phone,
     _score_requested_services,

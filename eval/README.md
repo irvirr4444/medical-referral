@@ -12,7 +12,7 @@ What lives here:
 
 ```powershell
 $env:PYTHONPATH = "src"
-python -m intake_extractor.evaluate
+python -m intake_extractor.eval.evaluate
 ```
 
 Defaults:
@@ -31,7 +31,7 @@ Example with explicit paths:
 
 ```powershell
 $env:PYTHONPATH = "src"
-python -m intake_extractor.evaluate `
+python -m intake_extractor.eval.evaluate `
   --gold-set out/gold-set-2026-07-16/gold_set_reviewed.json `
   --eval-dir eval `
   --rules-path eval/scoring_rules.json `

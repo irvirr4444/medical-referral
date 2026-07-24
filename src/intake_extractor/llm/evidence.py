@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from pydantic import ValidationError
 
 from .anthropic_json import AnthropicJsonError, call_model_for_json
-from .schema import ReferralIntake
+from ..models.schema import ReferralIntake
 
 
 EVIDENCE_MODEL_MAX_TOKENS = 1800
@@ -243,7 +243,7 @@ def _needs_single_phone_value(value: str | None) -> bool:
     if len(digits) != 10:
         return True
     lowered = str(value).lower()
-    if any(token in lowered for token in ("home", "mobile", "cell", "work", "/", ";", ",")):
+    if any(token in lowered for token in ("home", "mobile", "cell", "work", "/", ";", ",",)):
         return True
     return len(set(digits)) == 1
 
@@ -253,3 +253,4 @@ def _looks_uncertain_identifier(value: str | None) -> bool:
         return True
     cleaned = str(value).strip()
     return any(ch in cleaned for ch in "#?*") or not any(ch.isdigit() for ch in cleaned)
+

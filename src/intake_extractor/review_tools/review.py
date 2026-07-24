@@ -6,11 +6,11 @@ import json
 import logging
 from pathlib import Path
 
-from .anthropic_json import AnthropicJsonError, build_client, call_model_for_json
-from .pdf_inputs import PDF_INPUT_MODE_CHOICES, PdfInputMode, build_pdf_input_payload
-from .review_schema import PredictionReview
-from .review_signals import FieldSignal, collect_field_signals, format_signals_for_prompt
-from .review_targets import TARGETED_REVIEW_FIELDS, build_targeted_field_guidance
+from ..llm.anthropic_json import AnthropicJsonError, build_client, call_model_for_json
+from ..models.review_schema import PredictionReview
+from ..pdf.inputs import PDF_INPUT_MODE_CHOICES, PdfInputMode, build_pdf_input_payload
+from .signals import FieldSignal, collect_field_signals, format_signals_for_prompt
+from .targets import TARGETED_REVIEW_FIELDS, build_targeted_field_guidance
 
 
 logger = logging.getLogger(__name__)
@@ -84,9 +84,7 @@ requested_services vigilance:
 
 
 def _message_review(candidate_json: dict[str, object], signals: list[FieldSignal]) -> str:
-    priority_snapshot = {
-        field: candidate_json.get(field) for field in TARGETED_REVIEW_FIELDS if field in candidate_json
-    }
+    priority_snapshot = {field: candidate_json.get(field) for field in TARGETED_REVIEW_FIELDS if field in candidate_json}
     checklist = ", ".join(TARGETED_REVIEW_FIELDS)
     return (
         "Review this candidate extraction against the source PDF.\n"
@@ -172,9 +170,7 @@ def review_folder(
         review, signals = review_prediction(pdf, prediction_path, input_mode=input_mode, max_pages=max_pages)
         out_path = output_root / f"{pdf.stem}.review.json"
         payload = review.model_dump(mode="json")
-        payload["suspicious_fields"] = [
-            {"field": signal.field, "reason": signal.reason} for signal in signals
-        ]
+        payload["suspicious_fields"] = [{"field": signal.field, "reason": signal.reason} for signal in signals]
         out_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
 
         summary_lines.append(f"## {pdf.name}")
@@ -182,8 +178,7 @@ def review_folder(
         summary_lines.append(f"- Summary: {review.summary}")
         if signals:
             summary_lines.append(
-                "- Suspicious fields: "
-                + ", ".join(f"`{signal.field}` ({signal.reason})" for signal in signals)
+                "- Suspicious fields: " + ", ".join(f"`{signal.field}` ({signal.reason})" for signal in signals)
             )
         if review.correct_highlights:
             summary_lines.append(f"- Correct highlights: {'; '.join(review.correct_highlights)}")
@@ -253,3 +248,4 @@ def main() -> None:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     main()
+

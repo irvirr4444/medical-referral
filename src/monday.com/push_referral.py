@@ -7,8 +7,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from intake_extractor.llm_direct import extract_direct_from_pdf
-from intake_extractor.schema import ReferralIntake
+from intake_extractor.llm.direct import extract_direct_from_pdf
+from intake_extractor.models.schema import ReferralIntake
 from monday_api import monday_file_upload, monday_graphql
 from referral_board_config import ReferralBoardConfig, load_referral_board_config
 

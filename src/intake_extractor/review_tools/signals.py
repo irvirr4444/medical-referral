@@ -10,7 +10,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from .review_targets import TARGETED_REVIEW_FIELDS
+from .targets import TARGETED_REVIEW_FIELDS
 
 
 ADDRESS_LIKE_RE = re.compile(
@@ -163,7 +163,12 @@ def _detect_referring_facility(value: Any, candidate: dict[str, Any]) -> list[Fi
         return []
     text = str(value)
     if ADDRESS_LIKE_RE.search(text):
-        return [FieldSignal("referring_facility", "value looks like a street address; facility should be an organization name or null.")]
+        return [
+            FieldSignal(
+                "referring_facility",
+                "value looks like a street address; facility should be an organization name or null.",
+            )
+        ]
     return []
 
 
@@ -178,7 +183,12 @@ def _detect_referring_phone(value: Any, candidate: dict[str, Any]) -> list[Field
         return [FieldSignal("referring_phone", "null despite referring_facility being set; check referrer contact block.")]
     phone_digits = _digits(value)
     if phone_digits and phone_digits == _digits(candidate.get("patient_phone")):
-        return [FieldSignal("referring_phone", "matches patient_phone; verify this is not the wrong contact section.")]
+        return [
+            FieldSignal(
+                "referring_phone",
+                "matches patient_phone; verify this is not the wrong contact section.",
+            )
+        ]
     return []
 
 
@@ -198,7 +208,12 @@ def _detect_referral_date(value: Any, _candidate: dict[str, Any]) -> list[FieldS
     if _is_missing(value):
         return [FieldSignal("referral_date", "null/empty; look for order/referral/signature date (not fax timestamp).")]
     if not DATE_LIKE_RE.match(str(value)):
-        return [FieldSignal("referral_date", "value is not a simple date; confirm it is the clinical referral/order date.")]
+        return [
+            FieldSignal(
+                "referral_date",
+                "value is not a simple date; confirm it is the clinical referral/order date.",
+            )
+        ]
     return []
 
 
@@ -212,3 +227,4 @@ _DETECTORS = {
     "patient_address": _detect_patient_address,
     "referral_date": _detect_referral_date,
 }
+

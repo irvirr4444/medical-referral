@@ -38,7 +38,7 @@ class PageSelectionConfig:
             "dob": 1.5,
             "mrn": 1.5,
             "phone": 1.0,
-            "fax": 1.0
+            "fax": 1.0,
         }
     )
 
@@ -99,3 +99,4 @@ def select_image_pages(
         selected = pages[: cap - 1] + [pages[-1]]
         return sorted(selected, key=lambda page: page.page_number)
     return pages[:cap]
+

@@ -142,3 +142,4 @@ def text_user_content(pages: list[TextPage]) -> list[dict[str, Any]]:
     for page in pages:
         chunks.append(f"\n--- PAGE {page.page_number} ---\n{page.text}\n")
     return [{"type": "text", "text": "\n".join(chunks)}]
+

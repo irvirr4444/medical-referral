@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-from .pdf_payloads import (
+from .payloads import (
     PageImage,
     TextPage,
     extract_images,
@@ -15,10 +15,26 @@ from .pdf_payloads import (
 )
 from .selection import DEFAULT_SELECTION_CONFIG, PageSelectionConfig, select_image_pages, select_text_pages
 
-
 PdfInputMode = Literal["auto", "text", "image", "hybrid"]
 ResolvedPdfInputMode = Literal["text", "image", "hybrid"]
 PDF_INPUT_MODE_CHOICES: tuple[PdfInputMode, ...] = ("auto", "text", "image", "hybrid")
+
+# A higher-level user-facing policy for how to pass PDFs to the model.
+# - balanced: cost-aware default; auto-picks text vs image
+# - accurate: prioritize correctness; use hybrid (text + images)
+# - fax: known scanned packet; force image
+ExtractionProfile = Literal["balanced", "accurate", "fax"]
+EXTRACTION_PROFILE_CHOICES: tuple[ExtractionProfile, ...] = ("balanced", "accurate", "fax")
+
+
+def profile_to_input_mode(profile: ExtractionProfile) -> PdfInputMode:
+    if profile == "balanced":
+        return "auto"
+    if profile == "accurate":
+        return "hybrid"
+    if profile == "fax":
+        return "image"
+    raise ValueError(f"Unknown extraction profile: {profile}")
 
 
 @dataclass(frozen=True)
@@ -134,3 +150,4 @@ def _ordered_unique(values: list[int] | tuple[int, ...] | object) -> list[int]:
         seen.add(value)
         ordered.append(value)
     return ordered
+

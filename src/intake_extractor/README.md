@@ -48,14 +48,36 @@ Defined in `schema.py`.
 - **`image`**: renders pages with `pdftoppm` and sends images.
 - **`hybrid`**: sends both extracted text + rendered images for the same pages.
 
+### Recommended policy (profiles)
+
+For most callers, prefer **profiles** (a higher-level policy layer) instead of hardcoding an input mode:
+
+- **`balanced`** → `auto` (default; good for mixed traffic)
+- **`accurate`** → `hybrid` (best correctness; higher token/cost)
+- **`fax`** → `image` (best for scanned faxes/packets)
+
+CLI examples:
+
+```bash
+# default cost-aware behavior
+PYTHONPATH=src python3.11 -m intake_extractor.llm.direct "samples/EC - REFERRAL FORM.pdf" --profile balanced
+
+# highest accuracy (text + images)
+PYTHONPATH=src python3.11 -m intake_extractor.llm.direct "samples/EC - REFERRAL FORM.pdf" --profile accurate
+
+# known scanned fax packet
+PYTHONPATH=src python3.11 -m intake_extractor.llm.direct "samples/fax20260710-1422744-nkqbp2.pdf" --profile fax
+```
+
 ### Important: “text layer” detection
 
-`pdf_payloads.has_text_layer(...)` first checks `pdffonts`, then verifies there is a **minimum amount of extractable alphanumeric text**.
-This avoids misclassifying scanned faxes that have tiny header artifacts as “text PDFs”.
+`pdf.payloads.has_text_layer(...)` currently uses Poppler `pdffonts` as a heuristic: if the PDF contains fonts, `auto` will treat it as a text PDF.
+
+Some scanned faxes include tiny text artifacts (headers/banners) that can trigger `pdffonts` even when the patient data is image-only. If you see missing fields when using `balanced`/`auto` on faxes, use `--profile fax` (forces image) or `--profile accurate` (hybrid) instead.
 
 ## Main entrypoint
 
-`llm_direct.py` → `extract_direct_from_pdf(...)`
+`llm/direct.py` → `extract_direct_from_pdf(...)`
 
 Pipeline highlights:
 - Enforces strict JSON output matching `ReferralIntake`.
@@ -63,10 +85,10 @@ Pipeline highlights:
   - header / sender-block fields (common on faxes)
   - missing referring contacts
   - requested-services extraction (avoid “med list == requested services”)
-- Normalizes the final record in `postprocess.normalize_referral(...)`.
+- Normalizes the final record in `core.postprocess.normalize_referral(...)`.
 
 ## Optional reviewer (QA)
 
-`review.py` compares a candidate JSON against the PDF and proposes focused patches with evidence.
-It prioritizes historically weak fields (see `review_targets.py`).
+`review_tools/review.py` compares a candidate JSON against the PDF and proposes focused patches with evidence.
+It prioritizes historically weak fields (see `review_tools/targets.py`).
 

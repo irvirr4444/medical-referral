@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from .schema import ReferralIntake
+from ..models.schema import ReferralIntake
 
 
 GENERIC_SERVICE_RE = re.compile(
@@ -227,3 +227,4 @@ def _looks_ambiguous_phone(value: str | None) -> bool:
         return True
     digits = "".join(ch for ch in str(value) if ch.isdigit())
     return len(digits) > 10
+

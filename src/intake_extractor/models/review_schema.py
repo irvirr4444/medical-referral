@@ -32,3 +32,4 @@ class PredictionReview(BaseModel):
     correct_highlights: list[str] = Field(default_factory=list)
     field_checks: list[FieldCheck] = Field(default_factory=list)
     issues: list[ReviewIssue] = Field(default_factory=list)
+

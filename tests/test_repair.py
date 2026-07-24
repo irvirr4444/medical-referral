@@ -1,4 +1,4 @@
-from intake_extractor.repair import (
+from intake_extractor.llm.repair import (
     merge_contact_repair_payload,
     merge_header_payload,
     merge_repair_payload,
@@ -7,7 +7,7 @@ from intake_extractor.repair import (
     should_repair_contacts,
     should_repair_requested_services,
 )
-from intake_extractor.schema import ReferralIntake, RequestedService
+from intake_extractor.models.schema import ReferralIntake, RequestedService
 
 
 def test_should_not_repair_requested_services_for_sparse_multi_page_packet() -> None:

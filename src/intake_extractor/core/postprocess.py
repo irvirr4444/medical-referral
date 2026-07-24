@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from .schema import ReferralIntake
+from ..models.schema import ReferralIntake
 
 
 DATE_RE = re.compile(r"^\s*(\d{1,2})/(\d{1,2})/(\d{2}|\d{4})\s*$")
@@ -307,3 +307,4 @@ def _truncate_notes(value: str | None, *, limit: int = 500) -> str | None:
 
 def _norm_key(value: str | None) -> str | None:
     return None if value is None else re.sub(r"[^a-z0-9]+", " ", value.lower()).strip()
+

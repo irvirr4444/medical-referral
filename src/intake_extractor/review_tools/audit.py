@@ -8,9 +8,9 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-from .review_patch import PatchDecision
-from .review_schema import PredictionReview
-from .review_signals import FieldSignal
+from ..models.review_schema import PredictionReview
+from .patch import PatchDecision
+from .signals import FieldSignal
 
 
 @dataclass(frozen=True)
@@ -70,10 +70,7 @@ def build_document_audit(
             }
         )
 
-    field_checks = [
-        {"field": check.field, "status": check.status, "note": check.note}
-        for check in review.field_checks
-    ]
+    field_checks = [{"field": check.field, "status": check.status, "note": check.note} for check in review.field_checks]
     applied_count = sum(1 for row in decision_rows if row["applied"])
     rejected_count = sum(1 for row in decision_rows if not row["applied"])
     return AuditDocument(
@@ -168,3 +165,4 @@ def write_folder_audit_summary(audit_dir: Path, audits: list[AuditDocument]) -> 
         writer = csv.DictWriter(handle, fieldnames=list(rows[0].keys()))
         writer.writeheader()
         writer.writerows(rows)
+

@@ -1,7 +1,7 @@
-from intake_extractor.review_patch import apply_review_patches, patch_confidence_threshold
-from intake_extractor.repair import merge_repair_payload
-from intake_extractor.review_schema import PredictionReview, ReviewIssue
-from intake_extractor.schema import ReferralIntake, RequestedService
+from intake_extractor.review_tools.patch import apply_review_patches, patch_confidence_threshold
+from intake_extractor.llm.repair import merge_repair_payload
+from intake_extractor.models.review_schema import PredictionReview, ReviewIssue
+from intake_extractor.models.schema import ReferralIntake, RequestedService
 
 
 def test_apply_review_patches_updates_flexible_field_with_high_confidence() -> None:

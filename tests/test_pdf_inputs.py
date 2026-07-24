@@ -1,5 +1,5 @@
-from intake_extractor.pdf_inputs import build_user_content_for_mode, resolve_input_mode
-from intake_extractor.pdf_payloads import PageImage, TextPage
+from intake_extractor.pdf.inputs import build_user_content_for_mode, resolve_input_mode
+from intake_extractor.pdf.payloads import PageImage, TextPage
 
 
 def test_resolve_input_mode_prefers_text_when_auto_and_text_layer_exists() -> None:

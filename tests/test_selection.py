@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from intake_extractor.selection import PageSelectionConfig, select_image_pages, select_text_pages
+from intake_extractor.pdf.selection import PageSelectionConfig, select_image_pages, select_text_pages
 
 
 @dataclass(frozen=True)

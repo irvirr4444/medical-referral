@@ -7,9 +7,9 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from .review_schema import PredictionReview, ReviewIssue
-from .review_targets import get_field_policy
-from .schema import ReferralIntake
+from ..models.review_schema import PredictionReview, ReviewIssue
+from ..models.schema import ReferralIntake
+from .targets import get_field_policy
 
 
 IMMUTABLE_FIELDS = {
@@ -235,3 +235,4 @@ def _values_equivalent(left: Any, right: Any) -> bool:
 
 def _stable_json(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True)
+

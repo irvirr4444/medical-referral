@@ -4,7 +4,7 @@ import sys
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
-from intake_extractor.schema import ReferralIntake, RequestedService
+from intake_extractor.models.schema import ReferralIntake, RequestedService
 
 
 _ROOT = Path(__file__).resolve().parents[1]

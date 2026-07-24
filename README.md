@@ -116,7 +116,7 @@ Current default behavior is intentionally conservative:
 
 Schema:
 
-- Claude is instructed to output JSON matching `ReferralIntake` (see `src/intake_extractor/schema.py`).
+- Claude is instructed to output JSON matching `ReferralIntake` (see `src/intake_extractor/models/schema.py`).
 - Output is parsed as JSON and then validated with Pydantic. If JSON parsing fails, the runner retries once asking Claude to re-output strict JSON.
 
 ### Run: single PDF (prints JSON to terminal)
@@ -124,38 +124,38 @@ Schema:
 Example (auto-detect text vs vision):
 
 ```bash
-PYTHONPATH=src python3.11 -m intake_extractor.llm_direct "samples/EC - REFERRAL FORM.pdf"
+PYTHONPATH=src python3.11 -m intake_extractor.llm.direct "samples/EC - REFERRAL FORM.pdf"
 ```
 
 Force image mode (recommended for the scanned fax-style fixtures):
 
 ```bash
-PYTHONPATH=src python3.11 -m intake_extractor.llm_direct "samples/EC - REFERRAL FORM.pdf" --input-mode image
+PYTHONPATH=src python3.11 -m intake_extractor.llm.direct "samples/EC - REFERRAL FORM.pdf" --input-mode image
 ```
 
 Optional: cap pages sent (useful for long fax packets):
 
 ```bash
-PYTHONPATH=src python3.11 -m intake_extractor.llm_direct "samples/fax20260711-48483-ougwp2.pdf" --max-pages 6
+PYTHONPATH=src python3.11 -m intake_extractor.llm.direct "samples/fax20260711-48483-ougwp2.pdf" --max-pages 6
 ```
 
 Force text extraction (useful for known text-layer PDFs):
 
 ```bash
-PYTHONPATH=src python3.11 -m intake_extractor.llm_direct "samples/BUTLER, ALVA demo.pdf" --prefer-text
+PYTHONPATH=src python3.11 -m intake_extractor.llm.direct "samples/BUTLER, ALVA demo.pdf" --prefer-text
 ```
 
 Send both text and images:
 
 ```bash
-PYTHONPATH=src python3.11 -m intake_extractor.llm_direct "samples/fax20260711-48483-ougwp2.pdf" --input-mode hybrid
+PYTHONPATH=src python3.11 -m intake_extractor.llm.direct "samples/fax20260711-48483-ougwp2.pdf" --input-mode hybrid
 ```
 
 Write output to disk (still prints to stdout):
 
 ```bash
 mkdir -p out
-PYTHONPATH=src python3.11 -m intake_extractor.llm_direct "samples/EC - REFERRAL FORM.pdf" --write-out out
+PYTHONPATH=src python3.11 -m intake_extractor.llm.direct "samples/EC - REFERRAL FORM.pdf" --write-out out
 ```
 
 ### Run: all fixtures (manual loop)
@@ -166,7 +166,7 @@ This will produce **PHI output in your terminal**.
 mkdir -p out
 for f in samples/*.pdf; do
   echo "=== $f ==="
-  PYTHONPATH=src python3.11 -m intake_extractor.llm_direct "$f" --write-out out
+  PYTHONPATH=src python3.11 -m intake_extractor.llm.direct "$f" --write-out out
 done
 ```
 
@@ -182,7 +182,7 @@ The repo includes a lightweight evaluator (see `eval/README.md` for flags and sc
 Run it with:
 
 ```bash
-PYTHONPATH=src python3.11 -m intake_extractor.evaluate
+PYTHONPATH=src python3.11 -m intake_extractor.eval.evaluate
 ```
 
 This will:
@@ -256,7 +256,7 @@ This covers page selection, input modes, postprocess cleanup, repair merges, rev
 After a first-pass extraction folder exists, run a targeted patch-based reviewer:
 
 ```bash
-PYTHONPATH=src python3.11 -m intake_extractor.review_correct samples out/2026-07-17-run2 --out-dir out/2026-07-17-run2-reviewed
+PYTHONPATH=src python3.11 -m intake_extractor.review_tools.correct samples out/2026-07-17-run2 --out-dir out/2026-07-17-run2-reviewed
 ```
 
 This writes corrected JSON under `--out-dir` and audit sidecars under `--out-dir/audit/` (`.review.json`, `.applied_patches.json`, `.audit.json`, plus folder `audit_summary.*`). The reviewer focuses on known weak fields (`requested_services`, diagnosis, referring contacts, address, referral date) and only applies gated patches.

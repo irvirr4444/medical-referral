@@ -1,5 +1,5 @@
-from intake_extractor.postprocess import normalize_referral
-from intake_extractor.schema import ReferralIntake, RequestedService
+from intake_extractor.core.postprocess import normalize_referral
+from intake_extractor.models.schema import ReferralIntake, RequestedService
 
 
 def test_normalize_referral_formats_contact_fields() -> None:
