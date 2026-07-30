@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from drk_emr.redaction import mask_sensitive_headers, normalize_url_pattern, redact_json_payload
+from drk_emr.common.redaction import mask_sensitive_headers, normalize_url_pattern, redact_json_payload
 
 
 def test_mask_sensitive_headers_masks_cookie_and_tokens() -> None:

@@ -7,7 +7,9 @@ from pathlib import Path
 from intake_extractor.schema import ReferralIntake, RequestedService
 
 
-_ROOT = Path(__file__).resolve().parents[1]
+_ROOT = Path(__file__).resolve()
+while _ROOT != _ROOT.parent and not (_ROOT / "pyproject.toml").exists():
+    _ROOT = _ROOT.parent
 _SRC = _ROOT / "src"
 _MONDAY_DIR = _SRC / "monday.com"
 if str(_SRC) not in sys.path:

@@ -3,7 +3,14 @@ from __future__ import annotations
 import gzip
 import zlib
 
-from drk_emr.cli import _build_urls, _decode_response_body, _is_json_response, _run_lifetime_probe
+from drk_emr.read_patient.cli import (
+    _build_urls,
+    _decode_response_body,
+    _extract_patient_id_from_url,
+    _is_json_response,
+    _run_lifetime_probe,
+    _safe_patient_folder_name,
+)
 
 
 class _Resp:
@@ -55,7 +62,7 @@ def test_lifetime_probe_uses_interval_deltas(monkeypatch) -> None:
         def get(self, *_args, **_kwargs):
             return FakeResp()
 
-    monkeypatch.setattr("drk_emr.cli.time.sleep", fake_sleep)
+    monkeypatch.setattr("drk_emr.read_patient.cli.time.sleep", fake_sleep)
     obs = _run_lifetime_probe(FakeSession(), "https://drkemr.com/api/x", {}, [5, 10, 15])
     assert [item["minutes_after_login"] for item in obs] == [5, 10, 15]
     assert sleeps == [300, 300, 300]
@@ -74,16 +81,11 @@ def test_build_urls_without_patient_id_returns_home() -> None:
 
 
 def test_extract_patient_id_from_url() -> None:
-    from drk_emr.cli import _extract_patient_id_from_url
-
     assert _extract_patient_id_from_url("https://drkemr.com/PatientDashboard/Index?patientId=4565") == "4565"
     assert _extract_patient_id_from_url("https://drkemr.com/PatientDashboard/Index/?patientId=4565&x=1") == "4565"
     assert _extract_patient_id_from_url("https://drkemr.com/Dashboard") is None
 
 
 def test_safe_patient_folder_name() -> None:
-    from drk_emr.cli import _safe_patient_folder_name
-
     assert _safe_patient_folder_name("Alva Butler") == "Alva_Butler"
     assert _safe_patient_folder_name(None, "55125") == "patient_55125"
-

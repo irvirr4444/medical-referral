@@ -23,8 +23,8 @@ from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
 from seleniumwire import webdriver
 
-from drk_emr.models import DirectReplayResult, EndpointRecord, utc_timestamp_compact
-from drk_emr.redaction import (
+from drk_emr.common.models import DirectReplayResult, EndpointRecord, utc_timestamp_compact
+from drk_emr.common.redaction import (
     mask_sensitive_headers,
     normalize_url_pattern,
 )
