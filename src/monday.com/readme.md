@@ -161,6 +161,71 @@ Outputs:
 - `flow_to_monday_map.md`: workflow-stage to Master Sheet column map
 - `scenario_examples.json`: local real-record examples for intake, handoff, scheduling, seen, hold, and discharge
 
+### Master Sheet operational reads (read-only)
+
+Use these commands for narrow, operational questions without exporting a new
+full-board JSON snapshot. They paginate the board and write timestamped JSON
+and CSV reports under `tmp/monday-reports/` by default. The reports contain PHI
+and are ignored by Git; do not move them into tracked folders.
+
+Find patient candidates by name and DOB:
+
+```powershell
+$env:PYTHONPATH = 'src'
+python src/monday.com/find_master_sheet_patient.py `
+  --name 'BUTLER, ALVA' `
+  --dob '10/04/1940' `
+  --include-full-row
+```
+
+List a confirmed status value. Use `summary` first when the exact labels are
+unknown; do not treat `not-equals Seen` as a reliable "not seen" population.
+
+```powershell
+python src/monday.com/list_master_sheet_status.py `
+  --field visit_status `
+  --equals 'Seen' `
+  --all `
+  --report-name seen-patients
+
+python src/monday.com/read_master_sheet.py summary --field scheduled_status
+```
+
+List the current intake marker:
+
+```powershell
+python src/monday.com/list_master_sheet_intake.py --stage 'In intake' --max-results 25
+```
+
+The shared CLI also supports `find`, `status`, `intake`, and `summary` subcommands.
+Field aliases include `visit_status`, `scheduled_status`, `scheduling_complete`,
+`case_manager`, `sent_to_cm`, `appointment_date`, and `stage`. Use
+`python src/monday.com/read_master_sheet.py --help` for the complete list.
+Use `--include-full-row` when the JSON report must include the complete Monday
+item payload for each matched result. CSV reports then include that payload in
+a `monday_item_json` column. Use `--all` only when the full matching set is
+needed; otherwise reports are capped at 50 rows.
+
+`find`, `status`, and `intake` use Monday's server-side filtering for fast
+targeted reports. Patient lookup first retrieves a narrow partial-name candidate
+set, then matches the complete normalized name and optional DOB locally. These
+commands fetch only `--max-results` rows unless `--all` is specified; a capped
+report records `"truncated": true`. `summary` intentionally scans the full board
+to produce complete value counts, so it can take several minutes on the live
+Master Sheet.
+
+To build reports from an existing full local export without a new API request,
+add its Master Sheet `records.json` path:
+
+```powershell
+python src/monday.com/list_master_sheet_status.py `
+  --field visit_status `
+  --not-equals 'Seen' `
+  --all `
+  --records-file tmp/monday-exports/wcw-master-sheet-export-2026-07-23/boards/master-sheet/records.json `
+  --report-name not-seen-snapshot-20260723
+```
+
 Behavior summary:
 - extracts via the main intake pipeline, then maps selected fields into Monday columns
 - supports text or dropdown insurance columns via `insurance_provider_mode`
