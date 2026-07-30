@@ -98,6 +98,43 @@ PYTHONPATH=src python3.11 src/monday.com/push_referral.py \
   --dry-run
 ```
 
+### Synthetic inbox-to-Monday rehearsal
+
+The synthetic inbox fixtures contain no real patient data. They exercise four cases:
+complete, missing threshold fields, incomplete supporting fields, and an exact duplicate.
+The default flow only writes local artifacts under `tmp/`; it does not change Monday.
+
+```powershell
+$env:PYTHONPATH='src'
+python src/monday.com/generate_synthetic_referrals.py
+$eml = Get-ChildItem tmp/synthetic-referrals/emails/*.eml | Select-Object -ExpandProperty FullName
+python src/monday.com/run_inbound_intake.py `
+  --eml $eml `
+  --monday-mode snapshot `
+  --monday-records-file tmp/synthetic-referrals/monday-snapshots/master_sheet_records.json `
+  --agency-mode snapshot `
+  --agency-records-file tmp/synthetic-referrals/monday-snapshots/accounts_records.json `
+  --output-dir tmp/synthetic-inbox-run
+python src/monday.com/evaluate_synthetic_replay.py `
+  --fixture-dir tmp/synthetic-referrals `
+  --run-dir tmp/synthetic-inbox-run
+```
+
+To connect a test Outlook mailbox, create an Entra application with **read-only**
+Microsoft Graph `Mail.Read` application permission and mailbox-scoped access, then
+set these values in `.env`: `OUTLOOK_TENANT_ID`, `OUTLOOK_CLIENT_ID`,
+`OUTLOOK_CLIENT_SECRET`, and `OUTLOOK_MAILBOX`. The poller accepts only attachments
+whose filename ends in `.pdf` and whose file bytes contain a PDF signature:
+
+```powershell
+python src/monday.com/run_inbound_intake.py --outlook-poll --max-messages 10
+```
+
+`--master-sheet-mode apply --confirm-master-sheet-write` is deliberately required
+before any Master Sheet item can be created. Do not use it against WCW's live board
+until an owner approves a controlled synthetic smoke test, because item-creation
+automations fan out to related boards.
+
 ### How extraction works
 
 For a given PDF:
