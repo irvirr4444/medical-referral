@@ -40,6 +40,7 @@ class ReferralIntake(BaseModel):
     patient_dob: str | None = Field(None, description="MM/DD/YYYY if the source format is unambiguous, else as written")
     patient_sex: str | None = None
     patient_phone: str | None = None
+    patient_email: str | None = None
     patient_address: str | None = None
     patient_mrn: str | None = Field(
         None, description="MRN, patient ID, or account # — whichever identifier the source uses"
@@ -50,6 +51,13 @@ class ReferralIntake(BaseModel):
     referring_facility: str | None = None
     referring_phone: str | None = None
     referring_fax: str | None = None
+    agency_contact_name: str | None = None
+    agency_email: str | None = None
+    current_home_health_or_hospice: str | None = None
+
+    # --- Intake routing facts explicitly documented by the source ---
+    place_of_service: str | None = None
+    wound_order_included: bool | None = None
 
     # --- Clinical ---
     diagnosis_text: str | None = Field(None, description="Free-text diagnosis or reason for referral")

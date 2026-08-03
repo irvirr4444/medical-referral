@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Protocol
 
-from inbound_mail import InboundPdfAttachment
 from intake_duplicate_check import check_duplicates_disabled, check_duplicates_from_snapshot, check_duplicates_live
 from intake_plan import build_intake_plan
 from intake_extractor.aligned_intake import to_master_sheet_referral
 from intake_extractor.drk_pdf_schema import DrkPdfExtraction
-from intake_extractor.llm.direct import extract_direct_from_pdf
+from intake_extractor.monday_pdf import extract_monday_from_pdf, to_referral_intake
+from intake_extractor.monday_pdf_schema import MondayPdfIntakeContract
 from intake_extractor.models.schema import ReferralIntake
 from master_sheet_agency_lookup import find_agency_matches_from_snapshot, find_agency_matches_live
 from master_sheet_writer import (
@@ -21,6 +21,16 @@ from master_sheet_writer import (
 )
 
 Extractor = Callable[..., Any]
+
+
+class InboundPdfAttachment(Protocol):
+    source: str
+    message_id: str
+    attachment_id: str
+    sha256: str
+    received_at: str
+    subject: str
+    filename: str
 
 
 def process_inbound_pdf(
@@ -38,7 +48,8 @@ def process_inbound_pdf(
     agency_records_file: str | Path | None = None,
     master_sheet_mode: str = "dry-run",
     confirm_master_sheet_write: bool = False,
-    extractor: Extractor = extract_direct_from_pdf,
+    sent_by: str | None = None,
+    extractor: Extractor | None = None,
 ) -> dict[str, Any]:
     """Extract, plan, duplicate-check, and preview or apply a Master Sheet create.
 
@@ -51,7 +62,11 @@ def process_inbound_pdf(
         raise ValueError("Applying a Master Sheet write requires explicit confirmation.")
 
     pdf = Path(pdf_path)
-    result = extractor(pdf, input_mode=input_mode, max_pages=max_pages)
+    if extractor is None:
+        result = extract_monday_from_pdf(pdf, sent_by=sent_by)
+    else:
+        # Retain the injection seam for legacy extractors and isolated unit tests.
+        result = extractor(pdf, input_mode=input_mode, max_pages=max_pages)
     referral = _referral_from_extraction(result)
     duplicate = _duplicate_check(
         referral,
@@ -69,11 +84,18 @@ def process_inbound_pdf(
         "attachment_sha256": attachment.sha256,
         "received_at": attachment.received_at,
         "subject": attachment.subject,
+        "sent_by": sent_by,
     }
 
     config = load_master_sheet_write_config(write_config_path)
     agency_matches = _agency_matches(
-        referral,
+        referral.referring_facility,
+        mode=agency_mode,
+        records_file=agency_records_file,
+        accounts_board_id=config.accounts_board_id,
+    )
+    current_hh_matches = _agency_matches(
+        referral.current_home_health_or_hospice,
         mode=agency_mode,
         records_file=agency_records_file,
         accounts_board_id=config.accounts_board_id,
@@ -82,6 +104,7 @@ def process_inbound_pdf(
         plan,
         config=config,
         agency_matches=agency_matches,
+        current_hh_matches=current_hh_matches,
     )
     preview["mode"] = master_sheet_mode
 
@@ -89,6 +112,12 @@ def process_inbound_pdf(
     output.mkdir(parents=True, exist_ok=True)
     plan_path = output / "intake-plan.json"
     preview_path = output / "master-sheet-preview.json"
+    contract_path = output / "monday-intake.json"
+    if isinstance(result, MondayPdfIntakeContract):
+        contract_path.write_text(
+            json.dumps(result.model_dump(mode="json"), indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
     plan_path.write_text(json.dumps(plan, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     preview_path.write_text(json.dumps(preview, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
@@ -105,6 +134,7 @@ def process_inbound_pdf(
         "filename": attachment.filename,
         "plan_path": str(plan_path),
         "preview_path": str(preview_path),
+        "monday_contract_path": str(contract_path) if isinstance(result, MondayPdfIntakeContract) else None,
         "outcome": plan["outcome"],
         "duplicate_status": plan["monday_duplicate_check"]["status"],
         "master_sheet_blocked": preview["blocked"],
@@ -117,6 +147,8 @@ def process_inbound_pdf(
 
 def _referral_from_extraction(result: Any) -> ReferralIntake:
     referral = getattr(result, "referral", result)
+    if isinstance(referral, MondayPdfIntakeContract):
+        return to_referral_intake(referral)
     if isinstance(referral, DrkPdfExtraction):
         return to_master_sheet_referral(referral)
     if isinstance(referral, ReferralIntake):
@@ -145,20 +177,20 @@ def _duplicate_check(
 
 
 def _agency_matches(
-    referral: ReferralIntake,
+    facility: str | None,
     *,
     mode: str,
     records_file: str | Path | None,
     accounts_board_id: str | None,
 ) -> list[dict[str, str]]:
-    if not referral.referring_facility or mode == "disabled":
+    if not facility or mode == "disabled":
         return []
     if mode == "snapshot":
         if records_file is None:
             raise ValueError("agency_records_file is required when agency_mode is snapshot")
-        return find_agency_matches_from_snapshot(referral.referring_facility, records_file=records_file)
+        return find_agency_matches_from_snapshot(facility, records_file=records_file)
     if mode == "live-readonly":
         if not accounts_board_id:
             raise ValueError("The write config needs an Accounts board ID for live agency lookup")
-        return find_agency_matches_live(referral.referring_facility, board_id=accounts_board_id)
+        return find_agency_matches_live(facility, board_id=accounts_board_id)
     raise ValueError("agency_mode must be disabled, snapshot, or live-readonly")

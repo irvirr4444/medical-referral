@@ -280,21 +280,32 @@ name-plus-DOB duplicate check returned `no_candidates_found`; duplicate or
 review-required plans are blocked, never updated.
 
 The verified mapping creates an item with `Name`, `Patient DoB`, `Pt Phone`,
-`Date/Time Referral Received`, `Agency Phone Number`, `Comments`, and
-`Stage = In intake`. It can also link a **single exact** agency match to the
-`Referring Agency` relation, route an approved partial referral to a configured
-case manager, and create an item update containing the same intake context.
-The aligned PDF orchestrator also preserves `Sent By`; it writes that value only
-when `columns.sent_by` is explicitly configured with the verified Master Sheet
-column ID.
+`Pt Email`, `Date/Time Referral Received`, agency contact/phone/email,
+`POS`, explicit `Wx Order Included? = YES`, `Comments`, and
+`Stage = In intake`. It can also link a **single exact** account match to each
+of the `Referring Agency` and `Current HH/Hospice` relations, route an approved
+partial referral to a configured case manager, and create an item update
+containing the same intake context. `Sent By` is a People column: writing it
+requires both `columns.sent_by` and an exact label-to-Monday-person-ID entry in
+`sent_by_people`; an unconfigured label remains preserved in `Comments`.
 
-`Comments` is the explicit current destination for patient address, document
-referral date, insurance, clinical information, requested services, and notes.
+`Comments` is the explicit fallback destination for patient address, document
+referral date, insurance, clinical information, current agency details without
+an exact account match, unsupported status values, requested services, and notes.
 The Master Sheet has no dedicated columns for insurance, clinical information,
 requested services, or a source PDF. Extracted facts therefore remain visible in
 `Comments` and the item update rather than being silently dropped. The inbound
 PDF remains in the local run artifacts for a future DRK integration and is not
 uploaded to the Master Sheet.
+
+`inbound_intake_pipeline.process_inbound_pdf(...)` now defaults to the focused
+two-call Opus Monday extractor. Pass `sent_by` explicitly; the extractor never
+infers it from the PDF. The pipeline writes the evidence-backed
+`monday-intake.json`, converts it to the planner record, performs the configured
+duplicate and agency lookups, builds the exact Master Sheet column payload, and
+only calls `create_item` when apply mode and explicit confirmation are both set.
+The older extractor injection remains available for isolated tests and legacy
+callers.
 
 Patient address is preserved in the update, but is not written to the Master
 Sheet location column because that requires approved geocoding coordinates.

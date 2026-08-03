@@ -97,8 +97,7 @@ def _duplicate_check(args: argparse.Namespace, bundle: AlignedIntakeBundle):
     return check_duplicates_live(referral, include_full_row=args.include_full_row)
 
 
-def _agency_matches(args: argparse.Namespace, bundle: AlignedIntakeBundle, *, accounts_board_id: str | None):
-    facility = bundle.master_sheet_referral.referring_facility
+def _agency_matches(args: argparse.Namespace, facility: str | None, *, accounts_board_id: str | None):
     if args.agency_mode == "disabled" or not facility:
         return []
     if args.agency_mode == "snapshot":
@@ -154,8 +153,22 @@ def main(argv: list[str] | None = None) -> int:
         }
 
     config = load_master_sheet_write_config(args.config)
-    agency_matches = _agency_matches(args, bundle, accounts_board_id=config.accounts_board_id)
-    preview = build_master_sheet_create_preview(plan, config=config, agency_matches=agency_matches)
+    agency_matches = _agency_matches(
+        args,
+        bundle.master_sheet_referral.referring_facility,
+        accounts_board_id=config.accounts_board_id,
+    )
+    current_hh_matches = _agency_matches(
+        args,
+        bundle.master_sheet_referral.current_home_health_or_hospice,
+        accounts_board_id=config.accounts_board_id,
+    )
+    preview = build_master_sheet_create_preview(
+        plan,
+        config=config,
+        agency_matches=agency_matches,
+        current_hh_matches=current_hh_matches,
+    )
     preview["mode"] = "apply" if args.apply_master_sheet else "dry-run"
     preview["correlation_id"] = bundle.correlation_id
 

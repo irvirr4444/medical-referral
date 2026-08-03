@@ -16,6 +16,8 @@ These PDFs contain **PHI**.
 - `src/intake_extractor/llm_direct.py`: main extraction runner
 - `src/intake_extractor/drk_pdf.py`: highest-accuracy native-PDF to DRK-card extractor
 - `src/intake_extractor/drk_pdf_schema.py`: evidence-backed PDF extraction and DRK mapping schemas
+- `src/intake_extractor/monday_pdf.py`: focused two-call PDF extraction for Monday intake
+- `src/intake_extractor/monday_pdf_schema.py`: focused Master Sheet PDF facts plus `sent_by` contract
 - `src/intake_extractor/aligned_intake.py`: canonical extraction adapters for Monday and DRK
 - `docs/PDF_TRANSPORT.md`: Files API primary policy, inline fallback, PHI lifecycle, and troubleshooting
 - `src/monday.com/build_aligned_intake.py`: preview-first Monday/DRK handoff orchestrator
@@ -137,6 +139,36 @@ PYTHONPATH=src python3.11 -m intake_extractor.drk_pdf \
 
 Fallback is explicit rather than automatic so a Files API permission or cleanup failure is not hidden and nine
 expensive model calls are not silently repeated.
+
+### Focused two-call PDF → Monday contract
+
+When only Monday intake is needed, do not wait for the full DRK clinical record. The focused contract uses two
+sequential Opus calls: one complete PDF reading and one independent source verification. It covers every
+intake-relevant Master Sheet fact that can reasonably come from a referral PDF:
+
+- patient name, date of birth, phone, email, and address
+- referring agency and its contact name, phone, and email
+- current home-health/hospice and its contact details, kept distinct from the referring agency
+- place of service and whether a wound order is explicitly included
+- concise wound/referral-relevant clinical information
+- every actual insurance policy
+- an explicit clinical referral/order/signature date
+
+`sent_by` is supplied by the info-box/email workflow rather than inferred from the PDF. Scheduling, case-manager,
+territory, contact-outcome, and status columns remain downstream workflow data. Both calls use the same focused
+strict schema. The verifier corrects the first candidate against the source but does not expand the result into
+complete medication or historical diagnosis lists.
+
+```bash
+PYTHONPATH=src python3.11 -m intake_extractor.monday_pdf \
+  "samples/BUTLER, ALVA demo.pdf" \
+  --sent-by "Intake Info Box" \
+  --output-dir output/pdf-monday-intake
+```
+
+The command writes PHI-protected `monday-intake.json`, the existing-pipeline-compatible
+`referral-intake.json`, and `_manifest.json`. It does not call Monday or create an item. The manifest records
+the source hash, model, transport, and the two-call contract.
 
 ### Aligned PDF → parallel Monday + DRK handoffs
 

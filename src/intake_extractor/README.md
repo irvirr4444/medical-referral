@@ -87,6 +87,24 @@ Pipeline highlights:
   - requested-services extraction (avoid “med list == requested services”)
 - Normalizes the final record in `core.postprocess.normalize_referral(...)`.
 
+## Focused Monday-only contract
+
+`monday_pdf.py` extracts the small `MondayPdfIntakeContract` defined in
+`monday_pdf_schema.py`. It uses the native PDF and exactly two Opus calls:
+
+1. focused extraction of all PDF facts used by the Master Sheet intake path;
+2. source verification and correction of the first candidate.
+
+The focused facts cover patient identity/contact, separate referring and current
+HH/hospice agencies, agency contacts, place of service, explicit wound-order
+presence, clinical summary, insurance policies, and clinical referral/order date.
+`sent_by` must be supplied by the caller because it identifies the info-box/email
+workflow actor and is not a document fact. The contract can be converted to the
+existing `ReferralIntake` planner shape with `monday_pdf.to_referral_intake(...)`.
+
+This path intentionally excludes complete diagnosis and medication histories.
+Use `drk_pdf.py` when building the full DRK-compatible record.
+
 ## Optional reviewer (QA)
 
 `review_tools/review.py` compares a candidate JSON against the PDF and proposes focused patches with evidence.

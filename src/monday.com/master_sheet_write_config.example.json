@@ -6,12 +6,18 @@
   "columns": {
     "patient_dob": "date12",
     "patient_phone": "phone",
+    "patient_email": "email2",
     "referral_received": "date7",
     "agency_phone": "text41__1",
+    "agency_contact": "text6__1",
+    "agency_email": "email61__1",
+    "place_of_service": "status_1__1",
+    "wound_order_included": "color_mkzdev37",
     "comments": "text00__1",
-    "sent_by": null,
+    "sent_by": "people0",
     "stage": "deal_stage",
     "agency_relation": "connect_boards8",
+    "current_hh_relation": "connect_boards__1",
     "case_manager": "deal_owner",
     "sent_to_case_manager": "status7__1",
     "time_sent_to_case_manager": "time_sent_to_cm__1"
@@ -21,5 +27,6 @@
   },
   "routing": {
     "default_case_manager_id": null
-  }
+  },
+  "sent_by_people": {}
 }

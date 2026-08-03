@@ -7,7 +7,7 @@ whose Master Sheet destination and Monday value format are currently verified.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -26,15 +26,22 @@ class MasterSheetWriteConfig:
     patient_phone_column: str
     stage_column: str
     referral_received_column: str | None = None
+    patient_email_column: str | None = None
     agency_phone_column: str | None = None
+    agency_contact_column: str | None = None
+    agency_email_column: str | None = None
+    place_of_service_column: str | None = None
+    wound_order_included_column: str | None = None
     comments_column: str | None = None
     sent_by_column: str | None = None
     agency_relation_column: str | None = None
+    current_hh_relation_column: str | None = None
     accounts_board_id: str | None = None
     case_manager_column: str | None = None
     sent_to_case_manager_column: str | None = None
     time_sent_to_case_manager_column: str | None = None
     default_case_manager_id: str | None = None
+    sent_by_person_ids: dict[str, str] = field(default_factory=dict)
 
 
 def load_master_sheet_write_config(path: str | Path) -> MasterSheetWriteConfig:
@@ -43,6 +50,7 @@ def load_master_sheet_write_config(path: str | Path) -> MasterSheetWriteConfig:
     columns = payload.get("columns") or {}
     agency = payload.get("agency_relation") or {}
     routing = payload.get("routing") or {}
+    sent_by_people = payload.get("sent_by_people") or {}
     return MasterSheetWriteConfig(
         board_id=int(payload["board_id"]),
         group_id=str(payload["group_id"]),
@@ -52,15 +60,22 @@ def load_master_sheet_write_config(path: str | Path) -> MasterSheetWriteConfig:
         patient_phone_column=str(columns["patient_phone"]),
         stage_column=str(columns["stage"]),
         referral_received_column=_optional_string(columns.get("referral_received")),
+        patient_email_column=_optional_string(columns.get("patient_email")),
         agency_phone_column=_optional_string(columns.get("agency_phone")),
+        agency_contact_column=_optional_string(columns.get("agency_contact")),
+        agency_email_column=_optional_string(columns.get("agency_email")),
+        place_of_service_column=_optional_string(columns.get("place_of_service")),
+        wound_order_included_column=_optional_string(columns.get("wound_order_included")),
         comments_column=_optional_string(columns.get("comments")),
         sent_by_column=_optional_string(columns.get("sent_by")),
         agency_relation_column=_optional_string(columns.get("agency_relation")),
+        current_hh_relation_column=_optional_string(columns.get("current_hh_relation")),
         accounts_board_id=_optional_string(agency.get("accounts_board_id")),
         case_manager_column=_optional_string(columns.get("case_manager")),
         sent_to_case_manager_column=_optional_string(columns.get("sent_to_case_manager")),
         time_sent_to_case_manager_column=_optional_string(columns.get("time_sent_to_case_manager")),
         default_case_manager_id=_optional_string(routing.get("default_case_manager_id")),
+        sent_by_person_ids={str(name).casefold(): str(person_id) for name, person_id in sent_by_people.items()},
     )
 
 
@@ -69,6 +84,7 @@ def build_master_sheet_create_preview(
     *,
     config: MasterSheetWriteConfig,
     agency_matches: list[dict[str, str]] | None = None,
+    current_hh_matches: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
     """Build a create request or an explicit reason why it is blocked."""
     referral = ReferralIntake.model_validate(plan.get("referral") or {})
@@ -80,6 +96,7 @@ def build_master_sheet_create_preview(
         source=plan.get("source") or {},
         config=config,
         agency_matches=agency_matches or [],
+        current_hh_matches=current_hh_matches or [],
         route_to_case_manager=route_to_case_manager,
     )
     post_create_actions = _post_create_actions(referral)
@@ -165,6 +182,7 @@ def _mapped_columns(
     source: dict[str, Any],
     config: MasterSheetWriteConfig,
     agency_matches: list[dict[str, str]],
+    current_hh_matches: list[dict[str, str]],
     route_to_case_manager: bool,
 ) -> tuple[dict[str, Any], list[dict[str, str]]]:
     columns: dict[str, Any] = {config.stage_column: {"label": config.stage_label}}
@@ -182,6 +200,11 @@ def _mapped_columns(
     elif referral.patient_phone:
         notes.append({"field": "patient_phone", "reason": "not_written_unrecognized_phone_format"})
 
+    if config.patient_email_column and referral.patient_email:
+        columns[config.patient_email_column] = {"email": referral.patient_email, "text": referral.patient_email}
+    elif referral.patient_email:
+        notes.append({"field": "patient_email", "reason": "stored_in_comments_column_not_configured"})
+
     received_value = _source_received_value(source)
     if config.referral_received_column and received_value:
         columns[config.referral_received_column] = received_value
@@ -191,8 +214,43 @@ def _mapped_columns(
     if config.agency_phone_column and referral.referring_phone:
         columns[config.agency_phone_column] = referral.referring_phone
 
+    if config.agency_contact_column and referral.agency_contact_name:
+        columns[config.agency_contact_column] = referral.agency_contact_name
+    elif referral.agency_contact_name:
+        notes.append({"field": "agency_contact_name", "reason": "stored_in_comments_column_not_configured"})
+
+    if config.agency_email_column and referral.agency_email:
+        columns[config.agency_email_column] = {"email": referral.agency_email, "text": referral.agency_email}
+    elif referral.agency_email:
+        notes.append({"field": "agency_email", "reason": "stored_in_comments_column_not_configured"})
+
+    pos_label = _place_of_service_label(referral.place_of_service)
+    if config.place_of_service_column and pos_label:
+        columns[config.place_of_service_column] = {"label": pos_label}
+    elif referral.place_of_service:
+        notes.append({"field": "place_of_service", "reason": "stored_in_comments_unrecognized_or_column_not_configured"})
+
+    if config.wound_order_included_column and referral.wound_order_included is True:
+        columns[config.wound_order_included_column] = {"label": "YES"}
+    elif referral.wound_order_included is not None:
+        notes.append({"field": "wound_order_included", "reason": "stored_in_comments_no_safe_matching_status_label"})
+
     if referral.referring_facility:
-        _map_agency_relation(columns, notes, config=config, matches=agency_matches)
+        _map_agency_relation(
+            columns,
+            notes,
+            column_id=config.agency_relation_column,
+            field_name="referring_facility",
+            matches=agency_matches,
+        )
+    if referral.current_home_health_or_hospice:
+        _map_agency_relation(
+            columns,
+            notes,
+            column_id=config.current_hh_relation_column,
+            field_name="current_home_health_or_hospice",
+            matches=current_hh_matches,
+        )
 
     if route_to_case_manager and config.default_case_manager_id:
         if config.case_manager_column:
@@ -210,10 +268,13 @@ def _mapped_columns(
             columns[config.comments_column] = summary
 
     sent_by = _optional_string(source.get("sent_by"))
-    if config.sent_by_column and sent_by:
-        columns[config.sent_by_column] = sent_by
+    sent_by_person_id = config.sent_by_person_ids.get(sent_by.casefold()) if sent_by else None
+    if config.sent_by_column and sent_by_person_id:
+        columns[config.sent_by_column] = {
+            "personsAndTeams": [{"id": int(sent_by_person_id), "kind": "person"}]
+        }
     elif sent_by:
-        notes.append({"field": "sent_by", "reason": "not_written_master_sheet_sent_by_column_not_configured"})
+        notes.append({"field": "sent_by", "reason": "stored_in_comments_people_column_or_person_id_not_configured"})
 
     # Monday's location field needs coordinates. Do not send PHI to a third-party
     # geocoder without approval; the raw address is instead retained in Comments.
@@ -232,17 +293,18 @@ def _map_agency_relation(
     columns: dict[str, Any],
     notes: list[dict[str, str]],
     *,
-    config: MasterSheetWriteConfig,
+    column_id: str | None,
+    field_name: str,
     matches: list[dict[str, str]],
 ) -> None:
-    if not config.agency_relation_column:
-        notes.append({"field": "referring_facility", "reason": "preserved_in_item_update_agency_relation_not_configured"})
+    if not column_id:
+        notes.append({"field": field_name, "reason": "preserved_in_item_update_agency_relation_not_configured"})
     elif len(matches) == 1 and matches[0].get("id"):
-        columns[config.agency_relation_column] = {"item_ids": [matches[0]["id"]]}
+        columns[column_id] = {"item_ids": [matches[0]["id"]]}
     elif len(matches) > 1:
-        notes.append({"field": "referring_facility", "reason": "preserved_in_item_update_multiple_agency_matches"})
+        notes.append({"field": field_name, "reason": "preserved_in_item_update_multiple_agency_matches"})
     else:
-        notes.append({"field": "referring_facility", "reason": "preserved_in_item_update_no_exact_agency_match"})
+        notes.append({"field": field_name, "reason": "preserved_in_item_update_no_exact_agency_match"})
 
 
 def _route_to_case_manager(plan: dict[str, Any]) -> bool:
@@ -261,7 +323,13 @@ def _format_intake_context(referral: ReferralIntake) -> str:
     rows = [
         "<p><strong>Automated intake context - pending human review</strong></p>",
         _html_row("Patient address", referral.patient_address),
+        _html_row("Patient email", referral.patient_email),
         _html_row("Referring agency", referral.referring_facility),
+        _html_row("Agency contact", referral.agency_contact_name),
+        _html_row("Agency email", referral.agency_email),
+        _html_row("Current HH/Hospice", referral.current_home_health_or_hospice),
+        _html_row("Place of service", referral.place_of_service),
+        _html_row("Wound order included", _yes_no(referral.wound_order_included)),
         _html_row("Referral date", referral.referral_date),
         _html_row("Insurance", _join_values(referral.insurance_provider, referral.insurance_id, referral.insurance_group_number)),
         _html_row("Clinical information", _join_values(referral.diagnosis_text, ", ".join(referral.icd10_codes))),
@@ -279,7 +347,13 @@ def _format_intake_summary(referral: ReferralIntake) -> str | None:
     )
     values = (
         ("Patient address", referral.patient_address),
+        ("Patient email", referral.patient_email),
         ("Referring agency", referral.referring_facility),
+        ("Agency contact", referral.agency_contact_name),
+        ("Agency email", referral.agency_email),
+        ("Current HH/Hospice", referral.current_home_health_or_hospice),
+        ("Place of service", referral.place_of_service),
+        ("Wound order included", _yes_no(referral.wound_order_included)),
         ("Referral date", referral.referral_date),
         ("Insurance", _join_values(referral.insurance_provider, referral.insurance_id, referral.insurance_group_number)),
         ("Clinical information", _join_values(referral.diagnosis_text, ", ".join(referral.icd10_codes))),
@@ -300,6 +374,30 @@ def _html_row(label: str, value: str | None) -> str:
 def _join_values(*values: str | None) -> str | None:
     result = " | ".join(value for value in values if value)
     return result or None
+
+
+def _yes_no(value: bool | None) -> str | None:
+    if value is None:
+        return None
+    return "Yes" if value else "No"
+
+
+def _place_of_service_label(value: str | None) -> str | None:
+    normalized = " ".join((value or "").lower().split())
+    aliases = {
+        "snf": "SNF",
+        "skilled nursing facility": "SNF",
+        "alf": "ALF",
+        "assisted living facility": "ALF",
+        "home": "HOME",
+        "patient home": "HOME",
+        "fresno clinic": "Fresno clinic",
+        "northridge clinic": "Northridge clinic",
+        "inglewood clinic": "Inglewood clinic",
+        "visalia clinic": "Visalia Clinic",
+        "austin clinic": "Austin Clinic",
+    }
+    return aliases.get(normalized)
 
 
 def _create_item_update(*, item_id: str, body: str) -> dict[str, Any]:
