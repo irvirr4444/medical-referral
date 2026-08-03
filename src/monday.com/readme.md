@@ -226,12 +226,83 @@ python src/monday.com/list_master_sheet_status.py `
   --report-name not-seen-snapshot-20260723
 ```
 
-Behavior summary:
-- extracts via the main intake pipeline, then maps selected fields into Monday columns
-- supports text or dropdown insurance columns via `insurance_provider_mode`
-- upserts by attached PDF filename first, then exact item name fallback
-- skips duplicate PDF uploads when the item already has that same file attached
-- writes progress logs to `stderr` unless `--quiet` is used
+### Advisory intake plans (no Monday or DRK writes)
+
+`plan_referral_intake.py` turns a referral into an auditable action plan before
+any system write is enabled. It validates the four-field intake threshold
+(name, DOB, phone, address), identifies the remaining agency/clinical/insurance
+gaps, and optionally checks for a name-plus-DOB duplicate.
+
+All modes are non-mutating:
+
+- `disabled`: no Monday call.
+- `snapshot`: check a local Master Sheet `records.json` export.
+- `live-readonly`: query Monday only to retrieve same-name candidates and
+  confirm them locally by DOB.
+
+Replay a known extraction against the saved snapshot without a new LLM call:
+
+```powershell
+$env:PYTHONPATH = 'src'
+python src/monday.com/plan_referral_intake.py `
+  --referral-json 'out/2026-07-17-run7-image-surgical/BUTLER, ALVA demo.json' `
+  --monday-mode snapshot `
+  --monday-records-file 'tmp/monday-exports/wcw-master-sheet-export-2026-07-23/boards/master-sheet/records.json'
+```
+
+Run extraction and planning from a PDF instead:
+
+```powershell
+python src/monday.com/plan_referral_intake.py `
+  --pdf 'samples/BUTLER, ALVA demo.pdf' `
+  --input-mode image `
+  --monday-mode snapshot `
+  --monday-records-file 'tmp/monday-exports/wcw-master-sheet-export-2026-07-23/boards/master-sheet/records.json'
+```
+
+Plans are saved beneath `tmp/intake-plans/`, which is ignored by Git because it
+contains PHI. A duplicate is always a **candidate**, not an automatic merge or
+record update. This planner does not import or invoke `push_referral.py`.
+
+### Master Sheet create preview (dry-run by default)
+
+`push_master_sheet_plan.py` consumes an intake plan and builds a conservative
+Master Sheet create request. It defaults to dry-run and does not call Monday in
+that mode. It creates only when the plan is `ready_for_human_approval` and its
+name-plus-DOB duplicate check returned `no_candidates_found`; duplicate or
+review-required plans are blocked, never updated.
+
+The verified mapping creates an item with `Name`, `Patient DoB`, `Pt Phone`,
+`Date/Time Referral Received`, `Agency Phone Number`, `Comments`, and
+`Stage = In intake`. It can also link a **single exact** agency match to the
+`Referring Agency` relation, route an approved partial referral to a configured
+case manager, and create an item update containing the same intake context.
+
+`Comments` is the explicit current destination for patient address, document
+referral date, insurance, clinical information, requested services, and notes.
+The Master Sheet has no dedicated columns for insurance, clinical information,
+requested services, or a source PDF. Extracted facts therefore remain visible in
+`Comments` and the item update rather than being silently dropped. The inbound
+PDF remains in the local run artifacts for a future DRK integration and is not
+uploaded to the Master Sheet.
+
+Patient address is preserved in the update, but is not written to the Master
+Sheet location column because that requires approved geocoding coordinates.
+No agency relation is created for zero or multiple exact matches. The preview's
+`mapping_notes` records these decisions instead of silently guessing.
+
+```powershell
+$env:PYTHONPATH = 'src'
+python src/monday.com/push_master_sheet_plan.py `
+  --plan 'tmp/intake-plans/example.intake-plan.json' `
+  --agency-mode snapshot `
+  --agency-records-file 'tmp/monday-exports/wcw-master-sheet-export-2026-07-23/boards/accounts/records.json' `
+  --dry-run
+```
+
+The target mapping is [master_sheet_write_config.example.json](master_sheet_write_config.example.json).
+`--apply --confirm-master-sheet-write` is the only way to invoke the create
+mutation. Use it only with WCW's explicit approval and an unblocked preview.
 
 ---
 
