@@ -288,13 +288,13 @@ Notes:
 
 ### Tests
 
-Run the intake extractor test suite with:
-
 ```bash
+PYTHONPATH=src pytest -q tests/test_intake_extractor
+# or everything under tests/
 PYTHONPATH=src pytest -q tests
 ```
 
-This covers page selection, input modes, postprocess cleanup, repair merges, reviewer patch policy, and evaluator behavior.
+This covers page selection, input modes, postprocess cleanup, repair merges, reviewer patch policy, and evaluator behavior. See [`tests/README.md`](tests/README.md).
 
 ### Second-pass review (optional)
 
