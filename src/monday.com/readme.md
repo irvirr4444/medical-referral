@@ -168,6 +168,152 @@ Behavior summary:
 - skips duplicate PDF uploads when the item already has that same file attached
 - writes progress logs to `stderr` unless `--quiet` is used
 
+### Master Sheet operational reads (read-only)
+
+Use these commands for narrow, operational questions without exporting a new
+full-board JSON snapshot. They paginate the board and write timestamped JSON
+and CSV reports under `tmp/monday-reports/` by default. The reports contain PHI
+and are ignored by Git; do not move them into tracked folders.
+
+Find patient candidates by name and DOB:
+
+```powershell
+$env:PYTHONPATH = 'src'
+python src/monday.com/find_master_sheet_patient.py `
+  --name 'BUTLER, ALVA' `
+  --dob '10/04/1940' `
+  --include-full-row
+```
+
+List a confirmed status value. Use `summary` first when the exact labels are
+unknown; do not treat `not-equals Seen` as a reliable "not seen" population.
+
+```powershell
+python src/monday.com/list_master_sheet_status.py `
+  --field visit_status `
+  --equals 'Seen' `
+  --all `
+  --report-name seen-patients
+
+python src/monday.com/read_master_sheet.py summary --field scheduled_status
+```
+
+List the current intake marker:
+
+```powershell
+python src/monday.com/list_master_sheet_intake.py --stage 'In intake' --max-results 25
+```
+
+The shared CLI also supports `find`, `status`, `intake`, and `summary` subcommands.
+Field aliases include `visit_status`, `scheduled_status`, `scheduling_complete`,
+`case_manager`, `sent_to_cm`, `appointment_date`, and `stage`. Use
+`python src/monday.com/read_master_sheet.py --help` for the complete list.
+Use `--include-full-row` when the JSON report must include the complete Monday
+item payload for each matched result. CSV reports then include that payload in
+a `monday_item_json` column. Use `--all` only when the full matching set is
+needed; otherwise reports are capped at 50 rows.
+
+`find`, `status`, and `intake` use Monday's server-side filtering for fast
+targeted reports. Patient lookup first retrieves a narrow partial-name candidate
+set, then matches the complete normalized name and optional DOB locally. These
+commands fetch only `--max-results` rows unless `--all` is specified; a capped
+report records `"truncated": true`. `summary` intentionally scans the full board
+to produce complete value counts, so it can take several minutes on the live
+Master Sheet.
+
+To build reports from an existing full local export without a new API request,
+add its Master Sheet `records.json` path:
+
+```powershell
+python src/monday.com/list_master_sheet_status.py `
+  --field visit_status `
+  --not-equals 'Seen' `
+  --all `
+  --records-file tmp/monday-exports/wcw-master-sheet-export-2026-07-23/boards/master-sheet/records.json `
+  --report-name not-seen-snapshot-20260723
+```
+
+### Advisory intake plans (no Monday or DRK writes)
+
+`plan_referral_intake.py` turns a referral into an auditable action plan before
+any system write is enabled. It validates the four-field intake threshold
+(name, DOB, phone, address), identifies the remaining agency/clinical/insurance
+gaps, and optionally checks for a name-plus-DOB duplicate.
+
+All modes are non-mutating:
+
+- `disabled`: no Monday call.
+- `snapshot`: check a local Master Sheet `records.json` export.
+- `live-readonly`: query Monday only to retrieve same-name candidates and
+  confirm them locally by DOB.
+
+Replay a known extraction against the saved snapshot without a new LLM call:
+
+```powershell
+$env:PYTHONPATH = 'src'
+python src/monday.com/plan_referral_intake.py `
+  --referral-json 'out/2026-07-17-run7-image-surgical/BUTLER, ALVA demo.json' `
+  --monday-mode snapshot `
+  --monday-records-file 'tmp/monday-exports/wcw-master-sheet-export-2026-07-23/boards/master-sheet/records.json'
+```
+
+Run extraction and planning from a PDF instead:
+
+```powershell
+python src/monday.com/plan_referral_intake.py `
+  --pdf 'samples/BUTLER, ALVA demo.pdf' `
+  --input-mode image `
+  --monday-mode snapshot `
+  --monday-records-file 'tmp/monday-exports/wcw-master-sheet-export-2026-07-23/boards/master-sheet/records.json'
+```
+
+Plans are saved beneath `tmp/intake-plans/`, which is ignored by Git because it
+contains PHI. A duplicate is always a **candidate**, not an automatic merge or
+record update. This planner does not import or invoke `push_referral.py`.
+
+### Master Sheet create preview (dry-run by default)
+
+`push_master_sheet_plan.py` consumes an intake plan and builds a conservative
+Master Sheet create request. It defaults to dry-run and does not call Monday in
+that mode. It creates only when the plan is `ready_for_human_approval` and its
+name-plus-DOB duplicate check returned `no_candidates_found`; duplicate or
+review-required plans are blocked, never updated.
+
+The verified mapping creates an item with `Name`, `Patient DoB`, `Pt Phone`,
+`Date/Time Referral Received`, `Agency Phone Number`, `Comments`, and
+`Stage = In intake`. It can also link a **single exact** agency match to the
+`Referring Agency` relation, route an approved partial referral to a configured
+case manager, and create an item update containing the same intake context.
+The aligned PDF orchestrator also preserves `Sent By`; it writes that value only
+when `columns.sent_by` is explicitly configured with the verified Master Sheet
+column ID.
+
+`Comments` is the explicit current destination for patient address, document
+referral date, insurance, clinical information, requested services, and notes.
+The Master Sheet has no dedicated columns for insurance, clinical information,
+requested services, or a source PDF. Extracted facts therefore remain visible in
+`Comments` and the item update rather than being silently dropped. The inbound
+PDF remains in the local run artifacts for a future DRK integration and is not
+uploaded to the Master Sheet.
+
+Patient address is preserved in the update, but is not written to the Master
+Sheet location column because that requires approved geocoding coordinates.
+No agency relation is created for zero or multiple exact matches. The preview's
+`mapping_notes` records these decisions instead of silently guessing.
+
+```powershell
+$env:PYTHONPATH = 'src'
+python src/monday.com/push_master_sheet_plan.py `
+  --plan 'tmp/intake-plans/example.intake-plan.json' `
+  --agency-mode snapshot `
+  --agency-records-file 'tmp/monday-exports/wcw-master-sheet-export-2026-07-23/boards/accounts/records.json' `
+  --dry-run
+```
+
+The target mapping is [master_sheet_write_config.example.json](master_sheet_write_config.example.json).
+`--apply --confirm-master-sheet-write` is the only way to invoke the create
+mutation. Use it only with WCW's explicit approval and an unblocked preview.
+
 ---
 
 ### Test harness (field-ready for tomorrow)

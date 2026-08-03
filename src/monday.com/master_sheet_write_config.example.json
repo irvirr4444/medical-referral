@@ -1,0 +1,25 @@
+{
+  "board_id": 5815942462,
+  "group_id": "topics",
+  "stage_label": "In intake",
+  "phone_country_code": "US",
+  "columns": {
+    "patient_dob": "date12",
+    "patient_phone": "phone",
+    "referral_received": "date7",
+    "agency_phone": "text41__1",
+    "comments": "text00__1",
+    "sent_by": null,
+    "stage": "deal_stage",
+    "agency_relation": "connect_boards8",
+    "case_manager": "deal_owner",
+    "sent_to_case_manager": "status7__1",
+    "time_sent_to_case_manager": "time_sent_to_cm__1"
+  },
+  "agency_relation": {
+    "accounts_board_id": 5886538756
+  },
+  "routing": {
+    "default_case_manager_id": null
+  }
+}
