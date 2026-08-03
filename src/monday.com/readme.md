@@ -273,8 +273,10 @@ name-plus-DOB duplicate check returned `no_candidates_found`; duplicate or
 review-required plans are blocked, never updated.
 
 The verified mapping creates an item with `Name`, `Patient DoB`, `Pt Phone`,
-`Date/Time Referral Received`, `Agency Phone Number`, `Comments`, and
-`Stage = In intake`. It can also link a **single exact** agency match to the
+`Agency Phone Number`, and `Comments`. Existing Monday automation sets
+`Stage = In intake`. The API user's direct write to `Date/Time Referral
+Received` is currently restricted, so the inbox timestamp is preserved in
+`Comments` and the item update instead. The writer can also link a **single exact** agency match to the
 `Referring Agency` relation, route an approved partial referral to a configured
 case manager, and create an item update containing the same intake context.
 
@@ -303,6 +305,33 @@ python src/monday.com/push_master_sheet_plan.py `
 The target mapping is [master_sheet_write_config.example.json](master_sheet_write_config.example.json).
 `--apply --confirm-master-sheet-write` is the only way to invoke the create
 mutation. Use it only with WCW's explicit approval and an unblocked preview.
+
+### Simplified Outlook intake CLI
+
+`intake.py` provides safe operational defaults without requiring PowerShell
+variables or manual plan-path discovery. It processes only the newest inbox message,
+uses image extraction, performs live read-only duplicate and agency lookups, writes
+timestamped audit artifacts beneath `tmp/inbox-runs/`, and defaults to dry-run:
+
+```powershell
+python src/monday.com/intake.py outlook --dry-run
+python src/monday.com/intake.py apply --confirm-master-sheet-write
+```
+
+The apply command uses the exact preview from the latest successful dry run. It
+refuses blocked, ambiguous, and already-applied previews. A controlled one-command
+smoke test is also available:
+
+```powershell
+python src/monday.com/intake.py outlook --apply --confirm-master-sheet-write
+```
+
+Useful overrides include `--max-messages`, `--input-mode`, `--max-pages`,
+`--monday-mode`, `--agency-mode`, `--output-root`, `--state-db`, `--force`, and
+`--quiet`. Progress and extractor INFO logs are shown by default.
+Use `python src/monday.com/intake.py outlook --help` for all options. The existing
+`run_inbound_intake.py` and `push_master_sheet_plan.py` commands remain the lower-level
+debug and batch interfaces.
 
 ---
 

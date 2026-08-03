@@ -29,6 +29,7 @@ def test_cli_dry_run_writes_preview_without_monday_call(tmp_path, capsys) -> Non
                 "stage_label": "In intake",
                 "phone_country_code": "US",
                 "columns": {"patient_dob": "dob", "patient_phone": "phone", "stage": "stage"},
+                "writes": {"stage": True},
             }
         )
     )

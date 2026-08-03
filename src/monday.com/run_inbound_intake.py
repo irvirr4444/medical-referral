@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 from pathlib import Path
 
 from inbound_intake_pipeline import process_inbound_pdf
@@ -35,6 +36,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--force", action="store_true", help="Reprocess an attachment even when its hash is already marked completed.")
     parser.add_argument("--output-dir", type=Path, default=Path("tmp") / "inbox-runs")
     parser.add_argument("--state-db", type=Path, default=Path("tmp") / "inbox-state.sqlite")
+    parser.add_argument("--verbose", action="store_true", help="Print pipeline progress and enable extractor INFO logs.")
     return parser.parse_args(argv)
 
 
@@ -48,13 +50,20 @@ def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     if args.master_sheet_mode == "apply" and not args.confirm_master_sheet_write:
         raise ValueError("--master-sheet-mode apply requires --confirm-master-sheet-write")
+    if args.verbose:
+        logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s:%(message)s")
 
     state = InboxState(args.state_db)
     summaries: list[dict] = []
-    for attachment, pdf_path in materialize_attachments(_attachments(args), args.output_dir):
+    _progress(args, "Reading configured email source")
+    attachments = _attachments(args)
+    _progress(args, f"Found {len(attachments)} genuine PDF attachment(s)")
+    for attachment, pdf_path in materialize_attachments(attachments, args.output_dir):
         if not args.force and state.is_completed(attachment):
+            _progress(args, f"Skipping completed attachment: {attachment.filename}")
             summaries.append({"filename": attachment.filename, "status": "skipped_already_completed"})
             continue
+        _progress(args, f"Processing attachment: {attachment.filename}")
         try:
             manifest = process_inbound_pdf(
                 attachment,
@@ -73,9 +82,17 @@ def main(argv: list[str] | None = None) -> int:
             )
         except Exception as error:
             state.mark(attachment, status="failed")
+            _progress(args, f"Failed: {attachment.filename} ({error})")
             summaries.append({"filename": attachment.filename, "status": "failed", "error": str(error)})
             continue
         state.mark(attachment, status="completed")
+        if manifest["created_item_id"]:
+            _progress(args, f"Created Monday item: {manifest['created_item_id']}")
+        else:
+            _progress(
+                args,
+                f"Preview complete: outcome={manifest['outcome']}, blocked={manifest['master_sheet_blocked']}",
+            )
         summaries.append({"filename": attachment.filename, "status": "completed", **manifest})
 
     summary_path = args.output_dir / "run-summary.json"
@@ -83,6 +100,11 @@ def main(argv: list[str] | None = None) -> int:
     summary_path.write_text(json.dumps(summaries, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(json.dumps({"attachment_count": len(summaries), "summary": str(summary_path), "results": summaries}, indent=2))
     return 1 if any(result["status"] == "failed" for result in summaries) else 0
+
+
+def _progress(args: argparse.Namespace, message: str) -> None:
+    if args.verbose:
+        print(f"[intake] {message}", flush=True)
 
 
 if __name__ == "__main__":

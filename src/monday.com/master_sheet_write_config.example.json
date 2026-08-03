@@ -20,5 +20,9 @@
   },
   "routing": {
     "default_case_manager_id": null
+  },
+  "writes": {
+    "stage": false,
+    "referral_received": false
   }
 }

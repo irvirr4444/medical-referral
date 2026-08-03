@@ -127,13 +127,21 @@ set these values in `.env`: `OUTLOOK_TENANT_ID`, `OUTLOOK_CLIENT_ID`,
 whose filename ends in `.pdf` and whose file bytes contain a PDF signature:
 
 ```powershell
-python src/monday.com/run_inbound_intake.py --outlook-poll --max-messages 10
+python src/monday.com/intake.py outlook --dry-run
+python src/monday.com/intake.py apply --confirm-master-sheet-write
 ```
 
-`--master-sheet-mode apply --confirm-master-sheet-write` is deliberately required
-before any Master Sheet item can be created. Do not use it against WCW's live board
-until an owner approves a controlled synthetic smoke test, because item-creation
-automations fan out to related boards.
+The first command processes the newest message, performs read-only Monday and agency
+lookups, and saves an exact Master Sheet preview. The second command applies that
+latest unblocked preview without rerunning extraction. For a controlled one-command
+smoke test, use `outlook --apply --confirm-master-sheet-write`. The CLI creates its
+own timestamped directory under `tmp/inbox-runs/`, remembers processed PDF hashes,
+and prints progress by default. Add `--quiet` when only the final JSON summary is needed.
+
+`run_inbound_intake.py` and `push_master_sheet_plan.py` remain available for debugging
+and batch/snapshot overrides. An explicit confirmation flag is deliberately required
+before any Master Sheet item can be created. Do not apply against WCW's live board
+without approval because item-creation automations fan out to related boards.
 
 ### How extraction works
 

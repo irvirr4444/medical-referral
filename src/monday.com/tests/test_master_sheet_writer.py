@@ -15,6 +15,7 @@ def _config() -> MasterSheetWriteConfig:
         stage_column="stage",
         agency_relation_column="agency",
         accounts_board_id="2",
+        write_stage=True,
     )
 
 
@@ -61,6 +62,7 @@ def test_preview_maps_intake_columns_with_a_confirmed_inbound_timestamp() -> Non
             "referral_received_column": "received",
             "agency_phone_column": "agency_phone",
             "comments_column": "comments",
+            "write_referral_received": True,
         }
     )
     plan = _plan()
@@ -72,6 +74,29 @@ def test_preview_maps_intake_columns_with_a_confirmed_inbound_timestamp() -> Non
     assert preview["column_values"]["received"] == {"date": "2026-07-30", "time": "15:00:00"}
     assert preview["column_values"]["agency_phone"] == "555-555-0199"
     assert "Patient address: 1 Example Street" in preview["column_values"]["comments"]
+
+
+def test_preview_leaves_automation_and_restricted_columns_unwritten() -> None:
+    config = MasterSheetWriteConfig(
+        **{
+            **_config().__dict__,
+            "comments_column": "comments",
+            "referral_received_column": "received",
+            "write_stage": False,
+            "write_referral_received": False,
+        }
+    )
+    plan = _plan()
+    plan["source"] = {"received_at": "2026-07-30T15:00:00+00:00"}
+
+    preview = build_master_sheet_create_preview(plan, config=config)
+
+    assert "stage" not in preview["column_values"]
+    assert "received" not in preview["column_values"]
+    assert "Inbox received at: 2026-07-30T15:00:00+00:00" in preview["column_values"]["comments"]
+    reasons = {note["reason"] for note in preview["mapping_notes"]}
+    assert "managed_by_existing_monday_automation" in reasons
+    assert "stored_in_comments_and_item_update_column_write_not_enabled" in reasons
 
 
 def test_duplicate_or_nonapproved_plan_is_blocked() -> None:
