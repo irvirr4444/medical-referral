@@ -463,14 +463,13 @@ requested services, or a source PDF. Extracted facts therefore remain visible in
 PDF remains in the local run artifacts for a future DRK integration and is not
 uploaded to the Master Sheet.
 
-`inbound_intake_pipeline.process_inbound_pdf(...)` now defaults to the focused
-two-call Opus Monday extractor. Pass `sent_by` explicitly; the extractor never
-infers it from the PDF. The pipeline writes the evidence-backed
-`monday-intake.json`, converts it to the planner record, performs the configured
+`inbound_intake_pipeline.process_inbound_pdf(...)` defaults to the repository's
+single two-call canonical extractor. Pass `sent_by` explicitly; it is operational
+metadata and is never inferred from the PDF. The pipeline writes the complete
+`canonical-referral.json`, projects it to the planner record, performs the configured
 duplicate and agency lookups, builds the exact Master Sheet column payload, and
 only calls `create_item` when apply mode and explicit confirmation are both set.
-The older extractor injection remains available for isolated tests and legacy
-callers.
+Monday and DRK never independently interpret the PDF.
 
 Patient address is preserved in the update, but is not written to the Master
 Sheet location column because that requires approved geocoding coordinates.

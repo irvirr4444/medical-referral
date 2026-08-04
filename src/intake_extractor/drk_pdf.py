@@ -377,98 +377,20 @@ def extract_drk_from_pdf(
     pdf_transport: str | None = None,
     progress: Callable[[str], None] | None = None,
 ) -> DrkPdfExtraction:
-    pdf = Path(pdf_path)
-    if not pdf.is_file():
-        raise DrkPdfExtractionError(f"PDF not found: {pdf}")
-    if pdf.suffix.lower() != ".pdf":
-        raise DrkPdfExtractionError(f"Expected a PDF file: {pdf}")
-    if passes not in {1, 3}:
-        raise DrkPdfExtractionError("passes must be 1 or 3")
-    selected_transport = pdf_transport or os.getenv("ANTHROPIC_PDF_TRANSPORT", DEFAULT_PDF_TRANSPORT)
-    if selected_transport not in {"inline", "files-api"}:
-        raise DrkPdfExtractionError("pdf_transport must be inline or files-api")
+    """Compatibility projection; PDF interpretation is owned by canonical_referral."""
+    from .aligned_intake import _legacy_projection
+    from .canonical_referral import extract_referral_pdf
 
-    selected_model = model or os.getenv("ANTHROPIC_PDF_MODEL", DEFAULT_MODEL)
-    selected_effort = effort or os.getenv("ANTHROPIC_PDF_EFFORT", DEFAULT_EFFORT)
-    selected_max_tokens = max_tokens or int(os.getenv("ANTHROPIC_PDF_MAX_TOKENS", str(DEFAULT_MAX_TOKENS)))
-    api_client = client or build_client()
-
-    def execute(pdf_block: dict[str, Any]) -> DrkPdfExtraction:
-        supplemental_text, text_truncated = _supplemental_text(pdf) if passes == 3 else (None, False)
-
-        def run_domain(domain_name: str, output_format: type[StructuredOutput]) -> StructuredOutput:
-            return _extract_domain(
-                api_client,
-                domain_name=domain_name,
-                output_format=output_format,
-                pdf_block=pdf_block,
-                supplemental_text=supplemental_text,
-                model=selected_model,
-                effort=selected_effort,
-                max_tokens=selected_max_tokens,
-                passes=passes,
-                parallel_readings=parallel_readings,
-                progress=progress,
-            )
-
-        if parallel_domains:
-            if progress:
-                progress("Running identity/referral, clinical, and insurance domains concurrently")
-            with ThreadPoolExecutor(max_workers=3, thread_name_prefix="drk-pdf") as executor:
-                identity_future = executor.submit(run_domain, "identity/referral", IdentityReferralExtraction)
-                clinical_future = executor.submit(run_domain, "clinical", ClinicalExtraction)
-                insurance_future = executor.submit(run_domain, "insurance", InsuranceExtraction)
-                identity = identity_future.result()
-                clinical = clinical_future.result()
-                insurance = insurance_future.result()
-        else:
-            identity = run_domain("identity/referral", IdentityReferralExtraction)
-            clinical = run_domain("clinical", ClinicalExtraction)
-            insurance = run_domain("insurance", InsuranceExtraction)
-        final = DrkPdfExtraction(
-            document_type=identity.document_type,
-            patient=identity.patient,
-            referring_source=identity.referring_source,
-            admission=identity.admission,
-            diagnoses_section_present=clinical.diagnoses_section_present,
-            diagnoses=clinical.diagnoses,
-            medications_section_present=clinical.medications_section_present,
-            medications=clinical.medications,
-            allergies_section_present=clinical.allergies_section_present,
-            no_known_allergies_explicit=clinical.no_known_allergies_explicit,
-            allergies=clinical.allergies,
-            insurance_section_present=insurance.insurance_section_present,
-            insurances=insurance.insurances,
-            requested_services=identity.requested_services,
-            other_clinical_notes=identity.other_clinical_notes,
-            evidence=[*identity.evidence, *clinical.evidence, *insurance.evidence],
-            warnings=[*identity.warnings, *clinical.warnings, *insurance.warnings],
-        )
-        if text_truncated:
-            final.warnings.append(
-                f"Supplemental machine text was truncated at {MAX_SUPPLEMENTAL_TEXT_CHARS} characters; "
-                "all passes still received the complete native PDF."
-            )
-        return _sanitize_evidence(final, page_count=_page_count(pdf))
-
-    if selected_transport == "inline":
-        return execute(_native_pdf_block(pdf))
-
-    if progress:
-        progress("Uploading PDF once to the Anthropic Files API")
-    pdf_block, uploaded_file_id = _upload_pdf_block(api_client, pdf)
-    try:
-        return execute(pdf_block)
-    finally:
-        try:
-            api_client.beta.files.delete(uploaded_file_id)
-            if progress:
-                progress("Deleted temporary Anthropic Files API upload")
-        except Exception as exc:
-            raise DrkPdfExtractionError(
-                f"Failed to delete temporary Anthropic file {uploaded_file_id}: {exc}"
-            ) from exc
-
+    canonical = extract_referral_pdf(
+        pdf_path,
+        model=model,
+        effort=effort,
+        max_tokens=max_tokens,
+        client=client,
+        pdf_transport=pdf_transport,
+        progress=progress,
+    )
+    return _legacy_projection(canonical)
 
 def _sanitize_evidence(extraction: DrkPdfExtraction, *, page_count: int) -> DrkPdfExtraction:
     data = extraction.model_dump(mode="json")

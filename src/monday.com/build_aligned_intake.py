@@ -15,8 +15,7 @@ from typing import Any
 
 from intake_duplicate_check import check_duplicates_disabled, check_duplicates_from_snapshot, check_duplicates_live
 from intake_extractor.aligned_intake import AlignedIntakeBundle, build_aligned_intake_bundle
-from intake_extractor.drk_pdf import extract_drk_from_pdf
-from intake_extractor.drk_pdf_schema import DrkPdfExtraction
+from intake_extractor.canonical_referral import CanonicalReferral, extract_referral_pdf
 from intake_plan import build_intake_plan
 from master_sheet_agency_lookup import find_agency_matches_from_snapshot, find_agency_matches_live
 from master_sheet_writer import (
@@ -32,11 +31,11 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--pdf", type=Path, help="Extract a PDF with the high-accuracy Anthropic pipeline.")
-    source.add_argument("--extraction-json", type=Path, help="Existing drk_pdf _extraction.json.")
+    source.add_argument("--canonical-json", type=Path, help="Existing canonical-referral.json.")
     parser.add_argument(
         "--source-pdf",
         type=Path,
-        help="Original PDF required with --extraction-json for hashing and source provenance.",
+        help="Original PDF required with --canonical-json for hashing and source provenance.",
     )
     parser.add_argument("--sent-by", help="Info-box agent/source value preserved for the Master Sheet Sent By column.")
     parser.add_argument(
@@ -55,7 +54,6 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=os.getenv("ANTHROPIC_PDF_TRANSPORT", "files-api"),
         help="PDF delivery method (default: files-api; use inline as the fallback)",
     )
-    parser.add_argument("--passes", type=int, choices=(1, 3), default=3)
     parser.add_argument("--apply-master-sheet", action="store_true")
     parser.add_argument("--confirm-master-sheet-write", action="store_true")
     parser.add_argument(
@@ -67,24 +65,24 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def _load_extraction(args: argparse.Namespace) -> tuple[DrkPdfExtraction, Path]:
+def _load_extraction(args: argparse.Namespace) -> tuple[CanonicalReferral, Path]:
     if args.pdf is not None:
-        extraction = extract_drk_from_pdf(
+        extraction = extract_referral_pdf(
             args.pdf,
-            passes=args.passes,
+            sent_by=args.sent_by,
             pdf_transport=args.pdf_transport,
             progress=lambda message: print(message, flush=True),
         )
         return extraction, args.pdf
     if args.source_pdf is None:
-        raise ValueError("--source-pdf is required with --extraction-json")
+        raise ValueError("--source-pdf is required with --canonical-json")
     try:
-        payload = json.loads(args.extraction_json.read_text(encoding="utf-8-sig"))
-        return DrkPdfExtraction.model_validate(payload), args.source_pdf
+        payload = json.loads(args.canonical_json.read_text(encoding="utf-8-sig"))
+        return CanonicalReferral.model_validate(payload), args.source_pdf
     except OSError as exc:
-        raise RuntimeError(f"Could not read extraction JSON: {args.extraction_json}") from exc
+        raise RuntimeError(f"Could not read canonical JSON: {args.canonical_json}") from exc
     except json.JSONDecodeError as exc:
-        raise RuntimeError(f"Extraction JSON is invalid: {args.extraction_json}") from exc
+        raise RuntimeError(f"Canonical JSON is invalid: {args.canonical_json}") from exc
 
 
 def _duplicate_check(args: argparse.Namespace, bundle: AlignedIntakeBundle):
@@ -148,10 +146,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.apply_master_sheet and not args.confirm_master_sheet_write:
         raise ValueError("--apply-master-sheet requires --confirm-master-sheet-write")
 
-    extraction, source_pdf = _load_extraction(args)
+    canonical, source_pdf = _load_extraction(args)
     source_metadata = {"sent_by": args.sent_by} if args.sent_by else {}
     bundle = build_aligned_intake_bundle(
-        extraction,
+        canonical,
         source_pdf,
         source_metadata=source_metadata,
     )
@@ -199,11 +197,13 @@ def main(argv: list[str] | None = None) -> int:
 
     output = args.output_dir / bundle.correlation_id
     bundle_path = output / "aligned-intake.json"
+    canonical_path = output / "canonical-referral.json"
     plan_path = output / "intake-plan.json"
     master_preview_path = output / "master-sheet-preview.json"
     drk_draft_path = output / "drk-create-draft.json"
     drk_duplicate = _load_drk_duplicate_decision(args.drk_duplicate_json)
     drk_duplicate_path = output / "drk-duplicate-check.json"
+    _write_json(canonical_path, bundle.canonical_referral.model_dump(mode="json"))
     _write_json(bundle_path, bundle.model_dump(mode="json"))
     _write_json(plan_path, plan)
     _write_json(master_preview_path, preview)

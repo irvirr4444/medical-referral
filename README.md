@@ -12,13 +12,10 @@ These PDFs contain **PHI**.
 ### Project structure (current)
 
 - `samples/`: 7 reference PDFs (fixtures)
-- `src/intake_extractor/schema.py`: Pydantic schema (`ReferralIntake`)
-- `src/intake_extractor/llm_direct.py`: main extraction runner
-- `src/intake_extractor/drk_pdf.py`: highest-accuracy native-PDF to DRK-card extractor
-- `src/intake_extractor/drk_pdf_schema.py`: evidence-backed PDF extraction and DRK mapping schemas
-- `src/intake_extractor/monday_pdf.py`: focused two-call PDF extraction for Monday intake
-- `src/intake_extractor/monday_pdf_schema.py`: focused Master Sheet PDF facts plus `sent_by` contract
-- `src/intake_extractor/aligned_intake.py`: canonical extraction adapters for Monday and DRK
+- `src/intake_extractor/canonical_referral.py`: the only PDF interpreter and extraction command
+- `src/intake_extractor/aligned_intake.py`: destination adapters for Monday and DRK
+- `src/intake_extractor/monday_pdf.py`: compatibility projection; does not independently interpret PDFs
+- `src/intake_extractor/drk_pdf.py`: DRK card projection; does not independently interpret PDFs
 - `docs/PDF_TRANSPORT.md`: Files API primary policy, inline fallback, PHI lifecycle, and troubleshooting
 - `src/monday.com/build_aligned_intake.py`: preview-first Monday/DRK handoff orchestrator
 - `src/drk_emr/create_patient/schema.py`: typed, non-submitting DRK Patient Intake draft
@@ -76,46 +73,21 @@ cp .env.example .env
 # edit .env and set ANTHROPIC_API_KEY=...
 ```
 
-### Highest-accuracy PDF → DRK card extraction
+### Canonical PDF extraction
 
-This path sends the original PDF to Anthropic as a native `application/pdf` document, so Claude receives both
-the text and visual layout. The default uses `claude-opus-5`, adaptive thinking, maximum effort, and nine model
-calls: two independent readings plus source adjudication for each of three smaller domains
-(identity/referral, clinical lists, and insurance). The three domain pipelines run concurrently by default while
-the two independent readings within each domain also run concurrently; adjudication waits for both readings.
-This produces six concurrent reading calls followed by three concurrent adjudications. Use
-`--sequential-domains` and/or `--sequential-readings` only for restrictive Anthropic rate limits.
-
-The default transport is now `files-api`: the extractor uploads the PDF once, references the temporary
-Anthropic file in all nine calls, and deletes it in a `finally` block after success or failure. The `inline`
-transport remains available as an explicit fallback and sends base64 PDF bytes with each request. Transport
-selection changes delivery only; both paths use the same model, prompts, schemas, passes, and adjudication.
-See [the PDF transport policy](docs/PDF_TRANSPORT.md) for selection, fallback, PHI lifecycle, audit behavior,
-the A/B accuracy observation, and troubleshooting.
+There is one source of truth and one supported PDF extraction command:
 
 ```bash
-PYTHONPATH=src python3.11 -m intake_extractor.drk_pdf \
-  "samples/BUTLER, ALVA demo.pdf" \
-  --output-dir output/pdf-drk-profile \
-  --passes 3
+PYTHONPATH=src python3.11 -m intake_extractor.canonical_referral \
+  "samples/BUTLER, ALVA demo.pdf"
 ```
 
-The patient folder contains the same card filenames as the DRK reader:
-
-- `patient_information.json`
-- `admission.json`
-- `communications.json`
-- `encounters.json`
-- `diagnosis.json`
-- `medications_allergies.json`
-- `insurance.json`
-- `custom_scans.json`
-- `billing.json`
-- `pipeline.json`
-
-It also writes `_extraction.json` with page-level evidence and warnings, plus `_manifest.json` with the source
-SHA-256, model, effort, and pass count. DRK-generated IDs and workflow state are never invented: absent values
-remain `null`, and cards unavailable from the PDF have `record_count: 0`.
+It uploads the PDF once through the Anthropic Files API, performs exactly two model calls (complete extraction,
+then source verification), deletes the temporary upload, and writes `canonical-referral.json`,
+`inbox-intake.txt`, `monday-referral.json`, and `drk-create-draft.json`. The canonical
+record retains all readable demographics, source organizations, home-health/hospice facts, clinical lists,
+insurances, requested services, warnings, and per-field states (`present`, `explicitly_none`, `missing`,
+`unclear`). Monday, DRK, and inbox workflows only project from this record; they never reinterpret the PDF.
 
 Optional environment overrides:
 
@@ -126,53 +98,17 @@ ANTHROPIC_PDF_MAX_TOKENS=32000
 ANTHROPIC_PDF_TRANSPORT=files-api
 ```
 
-Inline native-PDF requests are limited to 23 MB in this implementation, leaving room under Anthropic's 32 MB
-request limit after base64 and JSON overhead.
-
-To use the retained inline fallback for one run:
+Inline native-PDF transport remains an explicit fallback:
 
 ```bash
-PYTHONPATH=src python3.11 -m intake_extractor.drk_pdf \
+PYTHONPATH=src python3.11 -m intake_extractor.canonical_referral \
   "samples/BUTLER, ALVA demo.pdf" \
   --pdf-transport inline
 ```
 
-Fallback is explicit rather than automatic so a Files API permission or cleanup failure is not hidden and nine
-expensive model calls are not silently repeated.
-
-### Focused two-call PDF → Monday contract
-
-When only Monday intake is needed, do not wait for the full DRK clinical record. The focused contract uses two
-sequential Opus calls: one complete PDF reading and one independent source verification. It covers every
-intake-relevant Master Sheet fact that can reasonably come from a referral PDF:
-
-- patient name, date of birth, phone, email, and address
-- referring agency and its contact name, phone, and email
-- current home-health/hospice and its contact details, kept distinct from the referring agency
-- place of service and whether a wound order is explicitly included
-- concise wound/referral-relevant clinical information
-- every actual insurance policy
-- an explicit clinical referral/order/signature date
-
-`sent_by` is supplied by the info-box/email workflow rather than inferred from the PDF. Scheduling, case-manager,
-territory, contact-outcome, and status columns remain downstream workflow data. Both calls use the same focused
-strict schema. The verifier corrects the first candidate against the source but does not expand the result into
-complete medication or historical diagnosis lists.
-
-```bash
-PYTHONPATH=src python3.11 -m intake_extractor.monday_pdf \
-  "samples/BUTLER, ALVA demo.pdf" \
-  --sent-by "Intake Info Box" \
-  --output-dir output/pdf-monday-intake
-```
-
-The command writes PHI-protected `monday-intake.json`, the existing-pipeline-compatible
-`referral-intake.json`, and `_manifest.json`. It does not call Monday or create an item. The manifest records
-the source hash, model, transport, and the two-call contract.
-
 ### Aligned PDF → parallel Monday + DRK handoffs
 
-The aligned flow keeps the full `DrkPdfExtraction` as the canonical record, then derives two views from it:
+The aligned flow derives two views from `CanonicalReferral`:
 
 1. `master_sheet_referral` for the existing Monday Master Sheet planner/writer
 2. `drk_create_draft` matching the discovered DRK Patient Intake fields
@@ -186,7 +122,7 @@ Build both previews from a completed high-accuracy extraction:
 
 ```bash
 PYTHONPATH=src python3.11 src/monday.com/build_aligned_intake.py \
-  --extraction-json "output/pdf-drk-profile/Patient_Name/_extraction.json" \
+  --canonical-json "output/canonical-referrals/ref_.../canonical-referral.json" \
   --source-pdf "samples/referral.pdf" \
   --sent-by "Intake Info Box" \
   --config src/monday.com/master_sheet_write_config.example.json
@@ -196,8 +132,7 @@ Or extract and build the previews in one command:
 
 ```bash
 PYTHONPATH=src python3.11 src/monday.com/build_aligned_intake.py \
-  --pdf "samples/referral.pdf" \
-  --passes 3
+  --pdf "samples/referral.pdf"
 ```
 
 The default writes local PHI artifacts with mode `0600` and does not call Monday or DRK:

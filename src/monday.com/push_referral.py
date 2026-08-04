@@ -7,7 +7,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from intake_extractor.llm.direct import extract_direct_from_pdf
+from intake_extractor.aligned_intake import to_master_sheet_referral_from_canonical
+from intake_extractor.canonical_referral import extract_referral_pdf
 from intake_extractor.models.schema import ReferralIntake
 from monday_api import monday_file_upload, monday_graphql
 from referral_board_config import ReferralBoardConfig, load_referral_board_config
@@ -160,9 +161,9 @@ def push_pdf_to_monday(
     progress: Callable[[str], None] | None = None,
 ) -> dict[str, Any]:
     pdf = Path(pdf_path)
-    _emit(progress, f"[1/6] Extracting referral from {pdf.name} (input_mode={input_mode})")
-    extraction = extract_direct_from_pdf(pdf, input_mode=input_mode)
-    referral = extraction.referral
+    _emit(progress, f"[1/6] Extracting canonical referral from {pdf.name}")
+    canonical = extract_referral_pdf(pdf)
+    referral = to_master_sheet_referral_from_canonical(canonical)
 
     item_name = build_item_name(referral, pdf, mode=config.item_name_mode)
     column_values = build_column_values(referral, config)
@@ -178,6 +179,7 @@ def push_pdf_to_monday(
         "group_id": config.group_id,
         "item_name": item_name,
         "column_values": column_values,
+        "canonical_referral": canonical.model_dump(mode="json"),
         "referral": referral.model_dump(mode="json"),
     }
 
@@ -185,7 +187,7 @@ def push_pdf_to_monday(
         out_dir = Path(write_out_dir)
         out_dir.mkdir(parents=True, exist_ok=True)
         out_path = out_dir / f"{pdf.stem}.json"
-        out_path.write_text(json.dumps(result["referral"], indent=2, sort_keys=True), encoding="utf-8")
+        out_path.write_text(json.dumps(result["canonical_referral"], indent=2, sort_keys=True), encoding="utf-8")
         result["written_json"] = str(out_path)
         _emit(progress, f"[3/6] Wrote local extraction JSON to {out_path}")
 

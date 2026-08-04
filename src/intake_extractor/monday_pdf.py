@@ -14,61 +14,21 @@ from .drk_pdf import (
     DEFAULT_MODEL,
     DEFAULT_PDF_TRANSPORT,
     DrkPdfExtractionError,
-    _call_structured_extractor,
-    _native_pdf_block,
     _page_count,
-    _upload_pdf_block,
     _write_json,
 )
-from .llm.anthropic_json import AnthropicJsonError, build_client
+from .llm.anthropic_json import AnthropicJsonError
+from .canonical_referral import CanonicalReferral, extract_referral_pdf
 from .models.schema import ReferralIntake
-from .monday_pdf_schema import MondayPdfIntakeContract
+from .monday_pdf_schema import (
+    MondayAgencyInformation,
+    MondayFieldEvidence,
+    MondayInsuranceInformation,
+    MondayPdfIntakeContract,
+)
 
 
-DEFAULT_MAX_TOKENS = 8_000
-
-SYSTEM_PROMPT = """You extract a focused Monday.com referral intake from one medical PDF.
-
-The source PDF is authoritative. Copy only explicitly supported facts. Never guess, complete truncated values,
-or convert a patient/account ID into an MRN. Return exactly the requested structured schema.
-
-Extract all PDF facts that correspond to intake-relevant Master Sheet data:
-- patient name, date of birth, phone, email, and address
-- referring agency and its documented contact name, phone, and email
-- current home-health/hospice agency and its contact details, kept separate from the referring agency
-- place of service
-- whether a wound order is explicitly included
-- concise wound/referral-relevant clinical information
-- every actual insurance policy
-- an explicit clinical referral/order/signature date
-
-The sent_by field is operational metadata supplied in the request. Copy it exactly and never infer it
-from a provider, facility, fax header, author, or signer.
-
-Do not use a fax sender as the referring agency unless the PDF explicitly identifies that organization as the
-referral source. Do not assume the current HH/hospice is also the referring agency. Do not turn a fax timestamp
-or PDF print date into referral_or_order_date. Set wound_order_included only when presence or absence is explicit.
-
-Do not enumerate the complete historical diagnosis list or medication list. Clinical information should be a
-concise summary sufficient for Monday intake routing. Do not add medical interpretation, causal conclusions, or
-risk statements that the document does not explicitly state. In particular, do not infer wound-healing,
-bleeding, infection, fall, or hospitalization risk from diagnoses or medications. Preserve every actual
-insurance policy, but do not create an insurance record from an empty template block. Include short page-backed
-evidence for every non-null PDF field and report ambiguity in warnings."""
-
-EXTRACTION_REQUEST = """Perform the first reading of the entire PDF.
-
-Inspect every page because the fields may be distributed across unrelated forms. Return the focused
-Monday intake contract, concise evidence, and warnings. Missing values must remain null or empty."""
-
-VERIFICATION_REQUEST = """Independently verify the candidate Monday intake against the entire source PDF.
-
-Correct transcription errors, unsupported inferences, missing policies, empty insurance templates, wrong agency
-roles, contact details assigned to the wrong organization, conflated referral/print/fax dates, and clinical
-summaries that are too broad or omit the current referral reason. Confirm the four threshold fields (name, DOB,
-phone, address) especially carefully. Remove any clinical interpretation or risk statement that is not directly
-printed in the source. Return one corrected final contract. Do not expand the result into a DRK-style diagnosis
-or medication history."""
+DEFAULT_MAX_TOKENS = 32_000
 
 
 def extract_monday_from_pdf(
@@ -82,86 +42,83 @@ def extract_monday_from_pdf(
     client: Any | None = None,
     progress: Callable[[str], None] | None = None,
 ) -> MondayPdfIntakeContract:
-    pdf = Path(pdf_path)
-    if not pdf.is_file():
-        raise DrkPdfExtractionError(f"PDF not found: {pdf}")
-    if pdf.suffix.lower() != ".pdf":
-        raise DrkPdfExtractionError(f"Expected a PDF file: {pdf}")
+    """Compatibility projection; the PDF is interpreted by canonical_referral."""
+    canonical = extract_referral_pdf(
+        pdf_path,
+        sent_by=sent_by,
+        model=model,
+        effort=effort,
+        max_tokens=max_tokens,
+        pdf_transport=pdf_transport,
+        client=client,
+        progress=progress,
+    )
+    return canonical_to_monday_contract(canonical)
 
-    selected_model = model or os.getenv("ANTHROPIC_PDF_MODEL", DEFAULT_MODEL)
-    selected_effort = effort or os.getenv("ANTHROPIC_PDF_EFFORT", DEFAULT_EFFORT)
-    selected_max_tokens = max_tokens or DEFAULT_MAX_TOKENS
-    selected_transport = pdf_transport or os.getenv("ANTHROPIC_PDF_TRANSPORT", DEFAULT_PDF_TRANSPORT)
-    if selected_transport not in {"inline", "files-api"}:
-        raise DrkPdfExtractionError("pdf_transport must be inline or files-api")
-    api_client = client or build_client()
-    supplied_sent_by = _clean(sent_by)
 
-    def execute(pdf_block: dict[str, Any]) -> MondayPdfIntakeContract:
-        metadata_instruction = (
-            f"SENT_BY OPERATIONAL METADATA: {json.dumps(supplied_sent_by)}\n"
-            "Copy this value exactly into sent_by. It is not a PDF extraction."
+def canonical_to_monday_contract(canonical: CanonicalReferral) -> MondayPdfIntakeContract:
+    patient = canonical.patient
+    address = patient.address
+    locality = " ".join(part for part in (address.city, address.state, address.postal_code) if part)
+    full_address = " ".join(part for part in (address.line_1, address.line_2, locality) if part) or None
+    source = canonical.referral_source.organization
+    current = canonical.home_health_or_hospice.organization
+    evidence_names = {
+        "patient.name": "patient_name",
+        "patient.date_of_birth": "patient_date_of_birth",
+        "patient.phones": "patient_phone",
+        "patient.address": "patient_address",
+        "home_health_or_hospice": "current_home_health_or_hospice",
+        "clinical": "wound_or_clinical_information",
+        "insurances": "insurance_information",
+    }
+    evidence = [
+        MondayFieldEvidence(
+            field_name=evidence_names[path],
+            page_numbers=quality.evidence_pages,
+            quote=quality.evidence_quote,
+            confidence=quality.confidence,
         )
-        if progress:
-            progress("Monday pass 1/2: focused PDF extraction started")
-        first = _call_structured_extractor(
-            api_client,
-            output_format=MondayPdfIntakeContract,
-            model=selected_model,
-            effort=selected_effort,
-            max_tokens=selected_max_tokens,
-            system_prompt=SYSTEM_PROMPT,
-            content=[
-                pdf_block,
-                {
-                    "type": "text",
-                    "text": f"{metadata_instruction}\n\n{EXTRACTION_REQUEST}",
-                },
-            ],
-        ).model_copy(update={"sent_by": supplied_sent_by})
-        if progress:
-            progress("Monday pass 1/2: complete")
-            progress("Monday pass 2/2: source verification started")
-        final = _call_structured_extractor(
-            api_client,
-            output_format=MondayPdfIntakeContract,
-            model=selected_model,
-            effort=selected_effort,
-            max_tokens=selected_max_tokens,
-            system_prompt=SYSTEM_PROMPT,
-            content=[
-                pdf_block,
-                {
-                    "type": "text",
-                    "text": (
-                        f"{metadata_instruction}\n\n{VERIFICATION_REQUEST}\n\n"
-                        "CANDIDATE FROM FIRST READING:\n"
-                        f"{json.dumps(first.model_dump(mode='json'), ensure_ascii=False)}"
-                    ),
-                },
-            ],
-        ).model_copy(update={"sent_by": supplied_sent_by})
-        if progress:
-            progress("Monday pass 2/2: complete")
-        return _sanitize_evidence(final, page_count=_page_count(pdf))
-
-    if selected_transport == "inline":
-        return execute(_native_pdf_block(pdf))
-
-    if progress:
-        progress("Uploading PDF once to the Anthropic Files API")
-    pdf_block, uploaded_file_id = _upload_pdf_block(api_client, pdf)
-    try:
-        return execute(pdf_block)
-    finally:
-        try:
-            api_client.beta.files.delete(uploaded_file_id)
-            if progress:
-                progress("Deleted temporary Anthropic Files API upload")
-        except Exception as exc:
-            raise DrkPdfExtractionError(
-                f"Failed to delete temporary Anthropic file {uploaded_file_id}: {exc}"
-            ) from exc
+        for path, quality in canonical.field_quality.items()
+        if path in evidence_names and quality.status in {"present", "explicitly_none"}
+    ]
+    return MondayPdfIntakeContract(
+        patient_name=patient.name.full
+        or " ".join(part for part in (patient.name.first, patient.name.middle, patient.name.last) if part)
+        or None,
+        patient_date_of_birth=patient.date_of_birth,
+        patient_phone=patient.phones[0].number if patient.phones else None,
+        patient_email=patient.email,
+        patient_address=full_address,
+        referring_agency=MondayAgencyInformation(
+            name=source.name,
+            contact_name=source.contact_name,
+            phone=source.phone,
+            email=source.email,
+        ),
+        current_home_health_or_hospice=MondayAgencyInformation(
+            name=current.name,
+            contact_name=current.contact_name,
+            phone=current.phone,
+            email=current.email,
+        ),
+        place_of_service=canonical.admission.place_of_service,
+        wound_order_included=canonical.clinical.wound_order_included,
+        wound_or_clinical_information=canonical.clinical.summary,
+        insurance_information=[
+            MondayInsuranceInformation(
+                payer_name=item.payer_name,
+                policy_number=item.policy_number,
+                group_number=item.group_number,
+                insurance_type=item.insurance_type,
+            )
+            for item in canonical.insurances
+        ],
+        referral_or_order_date=canonical.referral_source.referral_or_order_date,
+        sent_by=canonical.source.sent_by,
+        evidence=evidence,
+        warnings=canonical.warnings,
+    )
 
 
 def to_referral_intake(

@@ -6,7 +6,14 @@ from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from types import SimpleNamespace
 
-from intake_extractor.monday_pdf_schema import MondayAgencyInformation, MondayPdfIntakeContract
+from intake_extractor.canonical_referral import (
+    CanonicalAddress,
+    CanonicalName,
+    CanonicalPatient,
+    CanonicalPhone,
+    CanonicalReferral,
+    CanonicalSource,
+)
 
 
 _ROOT = Path(__file__).resolve().parents[1]
@@ -24,7 +31,7 @@ inbound_pipeline = module_from_spec(_SPEC)
 _SPEC.loader.exec_module(inbound_pipeline)
 
 
-def test_inbound_pipeline_defaults_to_focused_monday_extractor(tmp_path, monkeypatch) -> None:
+def test_inbound_pipeline_defaults_to_canonical_extractor(tmp_path, monkeypatch) -> None:
     pdf = tmp_path / "referral.pdf"
     pdf.write_bytes(b"%PDF-1.4\n")
     config = tmp_path / "master-sheet-config.json"
@@ -46,22 +53,25 @@ def test_inbound_pipeline_defaults_to_focused_monday_extractor(tmp_path, monkeyp
         ),
         encoding="utf-8",
     )
-    contract = MondayPdfIntakeContract(
-        patient_name="Jane Doe",
-        patient_date_of_birth="1950-01-02",
-        patient_phone="555-555-0100",
-        patient_email="jane@example.com",
-        patient_address="1 Main St",
-        referring_agency=MondayAgencyInformation(name="Example Home Health"),
-        sent_by="Intake User",
+    contract = CanonicalReferral(
+        referral_id="ref_test",
+        source=CanonicalSource(file_name=pdf.name, pdf_sha256="abc123"),
+        patient=CanonicalPatient(
+            name=CanonicalName(full="Jane Doe", first="Jane", last="Doe"),
+            date_of_birth="1950-01-02",
+            phones=[CanonicalPhone(number="555-555-0100")],
+            email="jane@example.com",
+            address=CanonicalAddress(line_1="1 Main St"),
+        ),
     )
     calls: list[tuple[Path, str | None]] = []
 
-    def fake_extract(path: Path, *, sent_by: str | None = None):
+    def fake_extract(path: Path, **kwargs):
+        sent_by = kwargs.get("sent_by")
         calls.append((path, sent_by))
         return contract
 
-    monkeypatch.setattr(inbound_pipeline, "extract_monday_from_pdf", fake_extract)
+    monkeypatch.setattr(inbound_pipeline, "extract_referral_pdf", fake_extract)
     attachment = SimpleNamespace(
         source="email",
         message_id="message-1",
@@ -81,7 +91,9 @@ def test_inbound_pipeline_defaults_to_focused_monday_extractor(tmp_path, monkeyp
     )
 
     assert calls == [(pdf, "Intake User")]
-    assert manifest["monday_contract_path"] == str(tmp_path / "output" / "monday-intake.json")
+    assert manifest["canonical_referral_path"] == str(tmp_path / "output" / "canonical-referral.json")
+    assert Path(manifest["inbox_text_path"]).is_file()
+    assert Path(manifest["drk_draft_path"]).is_file()
     preview = json.loads((tmp_path / "output" / "master-sheet-preview.json").read_text(encoding="utf-8"))
     assert preview["column_values"]["email2"] == {
         "email": "jane@example.com",

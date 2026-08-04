@@ -39,6 +39,7 @@ class PatientCandidate(StrictModel):
         default=None,
         description="Only an identifier explicitly labeled MRN; never substitute an account or patient ID",
     )
+    ssn: str | None = None
     date_of_birth: str | None = None
     age: int | None = None
     gender: str | None = None

@@ -20,7 +20,18 @@ from drk_emr.create_patient.schema import (
     DrkSubscriberDraft,
 )
 
-from .drk_pdf_schema import DrkPdfExtraction
+from .canonical_referral import CanonicalReferral
+from .drk_pdf_schema import (
+    AdmissionCandidate,
+    AllergyCandidate,
+    DiagnosisCandidate,
+    DrkPdfExtraction,
+    InsuranceCandidate,
+    MedicationCandidate,
+    PatientCandidate,
+    ReferringSourceCandidate,
+    RequestedServiceCandidate,
+)
 from .models.schema import ReferralIntake, RequestedService
 
 
@@ -37,6 +48,9 @@ class AlignedSource(StrictModel):
 
 
 class HandoffReadiness(StrictModel):
+    seven_field_ready: bool
+    seven_field_missing: list[str] = Field(default_factory=list)
+    seven_field_status: dict[str, str] = Field(default_factory=dict)
     monday_threshold_ready: bool
     monday_threshold_missing: list[str] = Field(default_factory=list)
     drk_fill_ready: bool
@@ -50,14 +64,14 @@ class AlignedIntakeBundle(StrictModel):
     version: int = 1
     correlation_id: str
     source: AlignedSource
-    canonical_extraction: DrkPdfExtraction
+    canonical_referral: CanonicalReferral
     master_sheet_referral: ReferralIntake
     drk_create_draft: DrkCreateDraftEnvelope
     readiness: HandoffReadiness
 
 
 def build_aligned_intake_bundle(
-    extraction: DrkPdfExtraction,
+    canonical: CanonicalReferral,
     pdf_path: str | Path,
     *,
     source_metadata: dict[str, Any] | None = None,
@@ -68,11 +82,12 @@ def build_aligned_intake_bundle(
     if page_count is None:
         evidence_pages = {
             page
-            for item in extraction.evidence
-            for page in item.page_numbers
+            for quality in canonical.field_quality.values()
+            for page in quality.evidence_pages
         }
         page_count = max(evidence_pages) if evidence_pages else None
-    master_sheet_referral = to_master_sheet_referral(extraction, source_file=pdf.name)
+    extraction = _legacy_projection(canonical)
+    master_sheet_referral = to_master_sheet_referral_from_canonical(canonical)
     drk_create_draft = to_drk_create_draft(extraction)
     threshold_fields = {
         "patient_name": master_sheet_referral.patient_name,
@@ -81,6 +96,22 @@ def build_aligned_intake_bundle(
         "patient_address": master_sheet_referral.patient_address,
     }
     threshold_missing = [field for field, value in threshold_fields.items() if not value]
+    seven_paths = (
+        "patient.name",
+        "patient.date_of_birth",
+        "patient.phones",
+        "patient.address",
+        "home_health_or_hospice",
+        "clinical",
+        "insurances",
+    )
+    seven_status = {
+        path: canonical.field_quality[path].status if path in canonical.field_quality else "missing"
+        for path in seven_paths
+    }
+    seven_missing = [
+        path for path, status in seven_status.items() if status not in {"present", "explicitly_none"}
+    ]
     return AlignedIntakeBundle(
         correlation_id=f"pdf-{digest[:24]}",
         source=AlignedSource(
@@ -90,16 +121,112 @@ def build_aligned_intake_bundle(
             page_count=page_count,
             metadata=source_metadata or {},
         ),
-        canonical_extraction=extraction,
+        canonical_referral=canonical,
         master_sheet_referral=master_sheet_referral,
         drk_create_draft=drk_create_draft,
         readiness=HandoffReadiness(
+            seven_field_ready=not seven_missing,
+            seven_field_missing=seven_missing,
+            seven_field_status=seven_status,
             monday_threshold_ready=not threshold_missing,
             monday_threshold_missing=threshold_missing,
             drk_fill_ready=drk_create_draft.ready_for_fill,
             drk_blockers=drk_create_draft.blockers,
         ),
     )
+
+
+def _legacy_projection(canonical: CanonicalReferral) -> DrkPdfExtraction:
+    """Project the canonical record into the existing low-level DRK card shape."""
+    patient = canonical.patient
+    phones = patient.phones
+    emergency = patient.emergency_contact
+    return DrkPdfExtraction(
+        document_type=canonical.document_type,
+        patient=PatientCandidate(
+            first_name=patient.name.first,
+            middle_name=patient.name.middle,
+            last_name=patient.name.last,
+            full_name=patient.name.full,
+            source_patient_id=patient.source_patient_id,
+            source_patient_id_label=patient.source_patient_id_label,
+            mrn=patient.mrn,
+            ssn=patient.ssn,
+            date_of_birth=patient.date_of_birth,
+            age=patient.age,
+            gender=patient.sex_or_gender,
+            address1=patient.address.line_1,
+            address2=patient.address.line_2,
+            city=patient.address.city,
+            state=patient.address.state,
+            zip_code=patient.address.postal_code,
+            phone_number=phones[0].number if phones else None,
+            secondary_phone_number=phones[1].number if len(phones) > 1 else None,
+            email=patient.email,
+            emergency_contact_name=None if emergency is None else emergency.name.full,
+            emergency_contact_phone=None if emergency is None else emergency.phone,
+        ),
+        referring_source=ReferringSourceCandidate(
+            provider_name=canonical.referral_source.provider_name,
+            facility_name=canonical.referral_source.organization.name,
+            phone=canonical.referral_source.organization.phone,
+            fax=canonical.referral_source.organization.fax,
+            address=canonical.referral_source.organization.address,
+            referral_date=canonical.referral_source.referral_or_order_date,
+        ),
+        admission=AdmissionCandidate(
+            admission_date=canonical.admission.admission_date,
+            facility_name=canonical.admission.facility.name,
+            facility_phone=canonical.admission.facility.phone,
+            facility_fax=canonical.admission.facility.fax,
+            home_health_company=canonical.home_health_or_hospice.organization.name,
+            place_of_service=canonical.admission.place_of_service,
+            medicare_admission=canonical.admission.medicare_admission,
+            palliative_admission=canonical.home_health_or_hospice.palliative_care,
+            hospice=canonical.home_health_or_hospice.hospice,
+        ),
+        diagnoses_section_present=canonical.clinical.diagnoses_section_present,
+        diagnoses=[DiagnosisCandidate(**item.model_dump()) for item in canonical.clinical.diagnoses],
+        medications_section_present=canonical.clinical.medications_section_present,
+        medications=[MedicationCandidate(**item.model_dump()) for item in canonical.clinical.medications],
+        allergies_section_present=canonical.clinical.allergies_section_present,
+        no_known_allergies_explicit=True if canonical.clinical.no_known_allergies_explicit is True else None,
+        allergies=[AllergyCandidate(**item.model_dump()) for item in canonical.clinical.allergies],
+        insurance_section_present=(
+            canonical.field_quality.get("insurances").status in {"present", "explicitly_none"}
+            if canonical.field_quality.get("insurances")
+            else None
+        ),
+        insurances=[InsuranceCandidate(**item.model_dump()) for item in canonical.insurances],
+        requested_services=[RequestedServiceCandidate(**item.model_dump()) for item in canonical.requested_services],
+        other_clinical_notes=[
+            *([canonical.clinical.summary] if canonical.clinical.summary else []),
+            *canonical.clinical.notes,
+            *(
+                [f"Wound order explicitly included: {'Yes' if canonical.clinical.wound_order_included else 'No'}"]
+                if canonical.clinical.wound_order_included is not None
+                else []
+            ),
+        ],
+        warnings=canonical.warnings,
+    )
+
+
+def to_master_sheet_referral_from_canonical(canonical: CanonicalReferral) -> ReferralIntake:
+    referral = to_master_sheet_referral(_legacy_projection(canonical), source_file=canonical.source.file_name)
+    source = canonical.referral_source.organization
+    return referral.model_copy(
+        update={
+            "referring_facility": source.name,
+            "agency_contact_name": source.contact_name,
+            "agency_email": source.email,
+            "diagnosis_text": canonical.clinical.summary or referral.diagnosis_text,
+        }
+    )
+
+
+def to_drk_create_draft_from_canonical(canonical: CanonicalReferral) -> DrkCreateDraftEnvelope:
+    return to_drk_create_draft(_legacy_projection(canonical))
 
 
 def to_master_sheet_referral(
@@ -110,7 +237,7 @@ def to_master_sheet_referral(
     patient = extraction.patient
     first_name, last_name, full_name = _patient_names(extraction)
     address = _full_address(extraction)
-    agency = extraction.admission.home_health_company or extraction.referring_source.facility_name
+    agency = extraction.referring_source.facility_name
     diagnosis_descriptions = [
         item.description or item.code
         for item in extraction.diagnoses
@@ -133,12 +260,16 @@ def to_master_sheet_referral(
         patient_dob=_iso_date(patient.date_of_birth),
         patient_sex=patient.gender,
         patient_phone=patient.phone_number,
+        patient_email=patient.email,
         patient_address=address,
         patient_mrn=patient.mrn,
         referring_provider_name=extraction.referring_source.provider_name,
         referring_facility=agency,
         referring_phone=extraction.referring_source.phone,
         referring_fax=extraction.referring_source.fax,
+        current_home_health_or_hospice=extraction.admission.home_health_company,
+        place_of_service=extraction.admission.place_of_service,
+        wound_order_included=_wound_order_value(extraction.other_clinical_notes),
         diagnosis_text=diagnosis_text,
         icd10_codes=icd10_codes,
         insurance_provider=None if insurance is None else insurance.payer_name,
@@ -218,6 +349,7 @@ def to_drk_create_draft(extraction: DrkPdfExtraction) -> DrkCreateDraftEnvelope:
             last_name=last_name,
             date_of_birth=_iso_date(patient.date_of_birth),
             gender=gender,
+            ssn=patient.ssn,
         ),
         primary_address=DrkAddressDraft(
             address_line_1=patient.address1,
@@ -376,6 +508,15 @@ def _master_sheet_notes(extraction: DrkPdfExtraction) -> str | None:
         notes.append("Additional insurance: " + "; ".join(item for item in extras if item))
     notes.extend(extraction.other_clinical_notes)
     return _bounded_join(notes, limit=1800)
+
+
+def _wound_order_value(notes: list[str]) -> bool | None:
+    for note in notes:
+        if note == "Wound order explicitly included: Yes":
+            return True
+        if note == "Wound order explicitly included: No":
+            return False
+    return None
 
 
 def _bounded_join(values: list[str], *, limit: int) -> str | None:

@@ -14,7 +14,8 @@ from pydantic import ValidationError
 
 from intake_duplicate_check import check_duplicates_disabled, check_duplicates_from_snapshot, check_duplicates_live
 from intake_plan import build_intake_plan
-from intake_extractor.llm_direct import extract_direct_from_pdf
+from intake_extractor.aligned_intake import to_master_sheet_referral_from_canonical
+from intake_extractor.canonical_referral import extract_referral_pdf
 from intake_extractor.schema import ReferralIntake
 
 
@@ -44,8 +45,8 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def _load_referral(args: argparse.Namespace) -> tuple[ReferralIntake, Path]:
     if args.pdf is not None:
-        output = extract_direct_from_pdf(args.pdf, input_mode=args.input_mode, max_pages=args.max_pages)
-        return output.referral, args.pdf
+        canonical = extract_referral_pdf(args.pdf)
+        return to_master_sheet_referral_from_canonical(canonical), args.pdf
     assert args.referral_json is not None
     try:
         payload = json.loads(args.referral_json.read_text(encoding="utf-8-sig"))

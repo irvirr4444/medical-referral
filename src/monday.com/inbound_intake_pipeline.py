@@ -8,9 +8,14 @@ from typing import Any, Callable, Protocol
 
 from intake_duplicate_check import check_duplicates_disabled, check_duplicates_from_snapshot, check_duplicates_live
 from intake_plan import build_intake_plan
-from intake_extractor.aligned_intake import to_master_sheet_referral
+from intake_extractor.aligned_intake import (
+    to_drk_create_draft_from_canonical,
+    to_master_sheet_referral,
+    to_master_sheet_referral_from_canonical,
+)
+from intake_extractor.canonical_referral import CanonicalReferral, extract_referral_pdf, render_inbox_text
 from intake_extractor.drk_pdf_schema import DrkPdfExtraction
-from intake_extractor.monday_pdf import extract_monday_from_pdf, to_referral_intake
+from intake_extractor.monday_pdf import to_referral_intake
 from intake_extractor.monday_pdf_schema import MondayPdfIntakeContract
 from intake_extractor.models.schema import ReferralIntake
 from master_sheet_agency_lookup import find_agency_matches_from_snapshot, find_agency_matches_live
@@ -63,7 +68,12 @@ def process_inbound_pdf(
 
     pdf = Path(pdf_path)
     if extractor is None:
-        result = extract_monday_from_pdf(pdf, sent_by=sent_by)
+        result = extract_referral_pdf(
+            pdf,
+            email_id=attachment.message_id,
+            attachment_id=attachment.attachment_id,
+            sent_by=sent_by,
+        )
     else:
         # Retain the injection seam for legacy extractors and isolated unit tests.
         result = extractor(pdf, input_mode=input_mode, max_pages=max_pages)
@@ -112,7 +122,24 @@ def process_inbound_pdf(
     output.mkdir(parents=True, exist_ok=True)
     plan_path = output / "intake-plan.json"
     preview_path = output / "master-sheet-preview.json"
-    contract_path = output / "monday-intake.json"
+    contract_path = output / "canonical-referral.json"
+    inbox_path = output / "inbox-intake.txt"
+    drk_draft_path = output / "drk-create-draft.json"
+    if isinstance(result, CanonicalReferral):
+        contract_path.write_text(
+            json.dumps(result.model_dump(mode="json"), indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+        inbox_path.write_text(render_inbox_text(result), encoding="utf-8")
+        drk_draft_path.write_text(
+            json.dumps(
+                to_drk_create_draft_from_canonical(result).model_dump(mode="json"),
+                indent=2,
+                ensure_ascii=False,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
     if isinstance(result, MondayPdfIntakeContract):
         contract_path.write_text(
             json.dumps(result.model_dump(mode="json"), indent=2, ensure_ascii=False) + "\n",
@@ -134,6 +161,9 @@ def process_inbound_pdf(
         "filename": attachment.filename,
         "plan_path": str(plan_path),
         "preview_path": str(preview_path),
+        "canonical_referral_path": str(contract_path) if isinstance(result, CanonicalReferral) else None,
+        "inbox_text_path": str(inbox_path) if isinstance(result, CanonicalReferral) else None,
+        "drk_draft_path": str(drk_draft_path) if isinstance(result, CanonicalReferral) else None,
         "monday_contract_path": str(contract_path) if isinstance(result, MondayPdfIntakeContract) else None,
         "outcome": plan["outcome"],
         "duplicate_status": plan["monday_duplicate_check"]["status"],
@@ -147,6 +177,8 @@ def process_inbound_pdf(
 
 def _referral_from_extraction(result: Any) -> ReferralIntake:
     referral = getattr(result, "referral", result)
+    if isinstance(referral, CanonicalReferral):
+        return to_master_sheet_referral_from_canonical(referral)
     if isinstance(referral, MondayPdfIntakeContract):
         return to_referral_intake(referral)
     if isinstance(referral, DrkPdfExtraction):
