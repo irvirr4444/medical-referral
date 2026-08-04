@@ -242,6 +242,51 @@ PYTHONPATH=src python3.11 src/monday.com/push_referral.py \
   --dry-run
 ```
 
+### Synthetic inbox-to-Monday rehearsal
+
+The synthetic inbox fixtures contain no real patient data. They exercise four cases:
+complete, missing threshold fields, incomplete supporting fields, and an exact duplicate.
+The default flow only writes local artifacts under `tmp/`; it does not change Monday.
+
+```powershell
+$env:PYTHONPATH='src'
+python src/monday.com/generate_synthetic_referrals.py
+$eml = Get-ChildItem tmp/synthetic-referrals/emails/*.eml | Select-Object -ExpandProperty FullName
+python src/monday.com/run_inbound_intake.py `
+  --eml $eml `
+  --monday-mode snapshot `
+  --monday-records-file tmp/synthetic-referrals/monday-snapshots/master_sheet_records.json `
+  --agency-mode snapshot `
+  --agency-records-file tmp/synthetic-referrals/monday-snapshots/accounts_records.json `
+  --output-dir tmp/synthetic-inbox-run
+python src/monday.com/evaluate_synthetic_replay.py `
+  --fixture-dir tmp/synthetic-referrals `
+  --run-dir tmp/synthetic-inbox-run
+```
+
+To connect a test Outlook mailbox, create an Entra application with **read-only**
+Microsoft Graph `Mail.Read` application permission and mailbox-scoped access, then
+set these values in `.env`: `OUTLOOK_TENANT_ID`, `OUTLOOK_CLIENT_ID`,
+`OUTLOOK_CLIENT_SECRET`, and `OUTLOOK_MAILBOX`. The poller accepts only attachments
+whose filename ends in `.pdf` and whose file bytes contain a PDF signature:
+
+```powershell
+python src/monday.com/intake.py outlook --dry-run
+python src/monday.com/intake.py apply --confirm-master-sheet-write
+```
+
+The first command processes the newest message, performs read-only Monday and agency
+lookups, and saves an exact Master Sheet preview. The second command applies that
+latest unblocked preview without rerunning extraction. For a controlled one-command
+smoke test, use `outlook --apply --confirm-master-sheet-write`. The CLI creates its
+own timestamped directory under `tmp/inbox-runs/`, remembers processed PDF hashes,
+and prints progress by default. Add `--quiet` when only the final JSON summary is needed.
+
+`run_inbound_intake.py` and `push_master_sheet_plan.py` remain available for debugging
+and batch/snapshot overrides. An explicit confirmation flag is deliberately required
+before any Master Sheet item can be created. Do not apply against WCW's live board
+without approval because item-creation automations fan out to related boards.
+
 ### How extraction works
 
 For a given PDF:
@@ -387,13 +432,13 @@ Notes:
 
 ### Tests
 
-Run the intake extractor test suite with:
-
 ```bash
+PYTHONPATH=src pytest -q tests/test_intake_extractor
+# or everything under tests/
 PYTHONPATH=src pytest -q tests
 ```
 
-This covers page selection, input modes, postprocess cleanup, repair merges, reviewer patch policy, and evaluator behavior.
+This covers page selection, input modes, postprocess cleanup, repair merges, reviewer patch policy, and evaluator behavior. See [`tests/README.md`](tests/README.md).
 
 ### Second-pass review (optional)
 

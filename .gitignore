@@ -4,8 +4,12 @@
 
 # Local outputs (may contain PHI; do not commit)
 out/
-output/
+output/*
 outputs/
+output/drk-browser-profile/
+output/drk-capture-logs/
+!output/endpoint_index.md
+!output/endpoint_index_grouped.md
 
 # Combined output artifact
 *_combined.jsonl
@@ -16,4 +20,14 @@ tmp/
 .pytest_cache/
 __pycache__/
 *.pyc
+
+# Browser/network capture artifacts
+*.har
+*.pcap
+*.pcapng
+*.trace
+*.zip.trace
+storage_state*.json
+cookies*.json
+session*.json
 

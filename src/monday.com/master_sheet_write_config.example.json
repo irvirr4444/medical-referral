@@ -28,5 +28,9 @@
   "routing": {
     "default_case_manager_id": null
   },
-  "sent_by_people": {}
+  "sent_by_people": {},
+  "writes": {
+    "stage": false,
+    "referral_received": false
+  }
 }

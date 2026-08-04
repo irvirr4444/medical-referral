@@ -42,6 +42,8 @@ class MasterSheetWriteConfig:
     time_sent_to_case_manager_column: str | None = None
     default_case_manager_id: str | None = None
     sent_by_person_ids: dict[str, str] = field(default_factory=dict)
+    write_stage: bool = False
+    write_referral_received: bool = False
 
 
 def load_master_sheet_write_config(path: str | Path) -> MasterSheetWriteConfig:
@@ -51,6 +53,7 @@ def load_master_sheet_write_config(path: str | Path) -> MasterSheetWriteConfig:
     agency = payload.get("agency_relation") or {}
     routing = payload.get("routing") or {}
     sent_by_people = payload.get("sent_by_people") or {}
+    writes = payload.get("writes") or {}
     return MasterSheetWriteConfig(
         board_id=int(payload["board_id"]),
         group_id=str(payload["group_id"]),
@@ -76,6 +79,8 @@ def load_master_sheet_write_config(path: str | Path) -> MasterSheetWriteConfig:
         time_sent_to_case_manager_column=_optional_string(columns.get("time_sent_to_case_manager")),
         default_case_manager_id=_optional_string(routing.get("default_case_manager_id")),
         sent_by_person_ids={str(name).casefold(): str(person_id) for name, person_id in sent_by_people.items()},
+        write_stage=bool(writes.get("stage", False)),
+        write_referral_received=bool(writes.get("referral_received", False)),
     )
 
 
@@ -99,7 +104,7 @@ def build_master_sheet_create_preview(
         current_hh_matches=current_hh_matches or [],
         route_to_case_manager=route_to_case_manager,
     )
-    post_create_actions = _post_create_actions(referral)
+    post_create_actions = _post_create_actions(referral, source=plan.get("source") or {})
     preview: dict[str, Any] = {
         "board_id": config.board_id,
         "group_id": config.group_id,
@@ -185,8 +190,13 @@ def _mapped_columns(
     current_hh_matches: list[dict[str, str]],
     route_to_case_manager: bool,
 ) -> tuple[dict[str, Any], list[dict[str, str]]]:
-    columns: dict[str, Any] = {config.stage_column: {"label": config.stage_label}}
+    columns: dict[str, Any] = {}
     notes: list[dict[str, str]] = []
+
+    if config.write_stage:
+        columns[config.stage_column] = {"label": config.stage_label}
+    else:
+        notes.append({"field": "stage", "reason": "managed_by_existing_monday_automation"})
 
     dob = _iso_date(referral.patient_dob)
     if dob:
@@ -206,10 +216,17 @@ def _mapped_columns(
         notes.append({"field": "patient_email", "reason": "stored_in_comments_column_not_configured"})
 
     received_value = _source_received_value(source)
-    if config.referral_received_column and received_value:
+    if config.write_referral_received and config.referral_received_column and received_value:
         columns[config.referral_received_column] = received_value
-    elif config.referral_received_column:
+    elif config.write_referral_received and config.referral_received_column:
         notes.append({"field": "referral_received", "reason": "not_written_missing_inbound_received_timestamp"})
+    elif received_value:
+        notes.append(
+            {
+                "field": "referral_received",
+                "reason": "stored_in_comments_and_item_update_column_write_not_enabled",
+            }
+        )
 
     if config.agency_phone_column and referral.referring_phone:
         columns[config.agency_phone_column] = referral.referring_phone
@@ -263,7 +280,7 @@ def _mapped_columns(
             columns[config.time_sent_to_case_manager_column] = {"date": datetime.now().strftime("%Y-%m-%d")}
 
     if config.comments_column:
-        summary = _format_intake_summary(referral)
+        summary = _format_intake_summary(referral, source=source)
         if summary:
             columns[config.comments_column] = summary
 
@@ -311,17 +328,18 @@ def _route_to_case_manager(plan: dict[str, Any]) -> bool:
     return any(action.get("type") == "route_partial_referral_to_case_manager" for action in plan.get("proposed_actions") or [])
 
 
-def _post_create_actions(referral: ReferralIntake) -> list[dict[str, str]]:
-    return [{"type": "create_update", "body": _format_intake_context(referral)}]
+def _post_create_actions(referral: ReferralIntake, *, source: dict[str, Any]) -> list[dict[str, str]]:
+    return [{"type": "create_update", "body": _format_intake_context(referral, source=source)}]
 
 
-def _format_intake_context(referral: ReferralIntake) -> str:
+def _format_intake_context(referral: ReferralIntake, *, source: dict[str, Any]) -> str:
     services = "; ".join(
         " | ".join(part for part in (service.service, service.frequency, service.instructions) if part)
         for service in referral.requested_services
     )
     rows = [
         "<p><strong>Automated intake context - pending human review</strong></p>",
+        _html_row("Inbox received at", _optional_string(source.get("received_at"))),
         _html_row("Patient address", referral.patient_address),
         _html_row("Patient email", referral.patient_email),
         _html_row("Referring agency", referral.referring_facility),
@@ -339,13 +357,14 @@ def _format_intake_context(referral: ReferralIntake) -> str:
     return "".join(row for row in rows if row)
 
 
-def _format_intake_summary(referral: ReferralIntake) -> str | None:
+def _format_intake_summary(referral: ReferralIntake, *, source: dict[str, Any]) -> str | None:
     """Keep unmodeled PDF facts visible in the populated Master Sheet comments field."""
     services = "; ".join(
         " | ".join(part for part in (service.service, service.frequency, service.instructions) if part)
         for service in referral.requested_services
     )
     values = (
+        ("Inbox received at", _optional_string(source.get("received_at"))),
         ("Patient address", referral.patient_address),
         ("Patient email", referral.patient_email),
         ("Referring agency", referral.referring_facility),
@@ -362,7 +381,6 @@ def _format_intake_summary(referral: ReferralIntake) -> str | None:
     )
     summary = " | ".join(f"{label}: {value}" for label, value in values if value)
     return summary or None
-
 
 def _html_row(label: str, value: str | None) -> str:
     if not value:
