@@ -15,6 +15,8 @@ The system processes information available through the referral inbox, PDF attac
 5. All seven required fields must be complete before the referral proceeds.
 6. Exact and probable duplicate matches block record creation until they are reviewed.
 7. Clinical conditions and discharge decisions are never determined by the automation. The system acts only on information recorded by authorized staff.
+ 8. Monday.com remains responsible for its active internal recipes. The external pipeline writes verified field values, observes the resulting Monday.com state, and does not duplicate an existing Monday.com action.
+9. A Monday.com automation's success is verified from its resulting item, connected board, date, or status—not assumed from the triggering field change.
 
 ---
 
@@ -141,6 +143,17 @@ The approved referral is processed through independent Monday.com and DRK operat
 - The assigned case manager is recorded.
 - The source PDF is attached or linked.
 
+Creating the Master Sheet item activates existing Monday.com recipes. Based on the current active automation inventory, Monday.com may:
+
+- set the initial Stage to `In intake`;
+- set the initial Due Date;
+- start `Time Since Entry`;
+- create and connect an Intake Team item;
+- create and connect a QA Board item; and
+- run other configured cross-board connections.
+
+The external pipeline does not create duplicate Intake or QA tasks. After item creation, it reads the item and relevant connected boards to verify that the expected Monday.com recipes completed.
+
 #### DRK
 
 - A duplicate check is completed again immediately before creation.
@@ -167,11 +180,13 @@ The assigned case manager's approved provider list and territory rules are used 
 
 Automatic provider selection becomes available after the authoritative provider, territory, and case-manager assignment lists are provided.
 
-### 3.2 Provider notified
+### 3.2 Provider recorded and notified
 
-The selected company provider is recorded in Monday.com. The Monday.com provider-selection process automatically sends the configured notification to that provider.
+The selected company provider is recorded in Monday.com.
 
-The `Referral sent to provider` value records whether the provider notification has been completed.
+The current Monday.com automation inventory does not contain an active provider-change notification. The older Outlook provider-email recipes are deactivated. Until a replacement notification is implemented and verified, provider communication remains a human action.
+
+The `Referral sent to provider` value is updated only after the referral has actually been sent or the provider notification has been confirmed. Selecting a provider alone does not prove that the referral was sent.
 
 ### 3.3 Appointment times suggested
 
@@ -212,13 +227,15 @@ Immediately after the end-of-day deadline, every active referral is checked for:
 
 If a referral is not scheduled:
 
-1. A scheduling exception is created immediately after the end-of-day check.
-2. The lead and responsible team members are alerted.
-3. The alert includes the patient, assigned case manager, provider status, current scheduling information, and known blocker.
-4. Management is notified about the case.
-5. Management determines whether the problem can be resolved by the case manager or lead or requires further escalation.
+1. Existing Monday.com Due Date notifications are allowed to notify their configured recipients when their conditions match.
+2. The external pipeline checks whether the referral remains unscheduled after the end-of-day deadline.
+3. If the existing Monday.com recipes do not cover the case, a scheduling exception is created without duplicating notifications already sent by Monday.com.
+4. The lead and responsible team members are alerted.
+5. The alert includes the patient, assigned case manager, provider status, current scheduling information, and known blocker.
+6. Management is notified about the case.
+7. Management determines whether the problem can be resolved by the case manager or lead or requires further escalation.
 
-The automation identifies and communicates the exception. The team and management remain responsible for resolving it.
+The external pipeline verifies the resulting Monday.com state because several Due Date recipes contain additional recipients and conditions that are not fully visible in the exported automation sentence. The team and management remain responsible for resolving the exception.
 
 ### 4.3 Scheduled referrals advanced
 
@@ -234,6 +251,8 @@ The active weekly schedule is monitored using Monday.com, the routing schedule, 
 
 The automation reads the recorded visit and patient statuses. It does not make clinical determinations.
 
+Monday.com already performs several internal actions when visit, scheduling, hold, QA, and discharge fields change. These include recording dates, creating connected tasks, sending notifications, and moving discharged patients to the discharged group. The external pipeline supplies or synchronizes verified statuses and then confirms that the expected Monday.com result occurred.
+
 ### 5.2 Visit outcome processed
 
 The DRK progress note and available status information are checked after the scheduled visit.
@@ -242,6 +261,7 @@ The DRK progress note and available status information are checked after the sch
 
 - The visit is recorded as completed.
 - The initial visit is marked `SEEN` in Monday.com when applicable.
+- Existing Monday.com recipes record the Seen date and may create the connected Appointment Log item.
 - The consecutive-not-seen counter is reset.
 - The patient remains in the weekly cycle unless another recorded status changes the workflow.
 
@@ -250,6 +270,7 @@ The DRK progress note and available status information are checked after the sch
 - The visit is marked `NOT SEEN`.
 - The patient is returned to the next weekly scheduling cycle unless placed on hold.
 - The consecutive-not-seen counter is increased.
+- Existing Monday.com Visit Status and Due Date recipes are allowed to update the next due date and send their configured notifications.
 
 When the patient has not been seen for three consecutive weeks:
 
@@ -268,12 +289,13 @@ The visit status recorded by authorized staff is monitored for healed or expired
 - The recorded healed status triggers a QA review request.
 - The provider and QA workflow remains human-controlled.
 - The patient is discharged only after the required review and approval are recorded.
+- After an approved discharge status is recorded, the active Monday.com discharge recipe moves the item to the discharged-patients group.
 
 #### Patient expired
 
-- The recorded expired status triggers removal from future scheduling.
+- The recorded expired status triggers the QA and discharge-review workflow.
 - A discharge-approval request is created.
-- The patient is discharged only after the required approval is recorded.
+- The patient is removed from future scheduling and moved to the discharged-patients group only after the required approval and final discharge status are recorded.
 
 The automation responds to the recorded clinical status but does not determine that the wound is healed or that the patient has expired.
 
@@ -283,7 +305,9 @@ When an authorized user records that a patient is on hold because of hospitaliza
 
 - the patient is removed from the active weekly schedule;
 - the patient is added to the holds workflow or holds list; and
-- the hold status is monitored.
+- the hold status is monitored;
+- existing Monday.com recipes record the Hold Date; and
+- configured short-term, long-term, and outsource follow-up recipes continue to run inside Monday.com.
 
 When an authorized user records that the patient is ready to return:
 
@@ -292,6 +316,17 @@ When an authorized user records that the patient is ready to return:
 - scheduling resumes.
 
 The automation validates and processes recorded hold statuses. The decision to place or remove a patient from hold remains a human decision.
+
+### 5.5 Monday.com event monitoring
+
+The current `any column changes → send a webhook` automation is in an error state. The external pipeline therefore cannot depend on that webhook for reliable Monday.com events.
+
+Until the webhook is repaired and tested:
+
+- Monday.com is polled for relevant field and item changes;
+- each observed change is processed idempotently;
+- existing internal Monday.com recipes remain enabled; and
+- the pipeline verifies resulting states instead of assuming an internal recipe succeeded.
 
 ---
 
@@ -324,7 +359,10 @@ The complete pipeline requires:
 - authoritative case-manager territory assignments;
 - authoritative company-provider territory assignments;
 - information-inbox access;
-- Monday.com access and confirmed provider-notification behavior;
+- Monday.com access;
+- a reviewed inventory of active Monday.com recipes, including hidden conditions and recipients;
+- a repaired and tested Monday.com webhook, or an approved polling interval;
+- a verified provider-notification mechanism;
 - DRK access;
 - routing-schedule access and schedule structure;
 - the complete list of Monday.com patient and visit status values;

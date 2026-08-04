@@ -1,0 +1,138 @@
+ID,Sentence,Description,App names,Owner,State,Updated at
+7920837444,"When Visit Status changes to Anything and only if item Visit Status is not . +2, set item ACT Ready to ACT Ready","","","Braxton Rickert","active","Jul 22, 2026, 7:31 PM"
+7920969904,"When Visit Status changes to DC - NEW REFERRALS, set item ACT Ready to DO NOT CALL","","","Braxton Rickert","active","Jul 21, 2026, 9:05 PM"
+7920837497,"When Visit Status changes to Pending DC/NICOLE, set item ACT Ready to DO NOT CALL","","","Braxton Rickert","active","Jul 17, 2026, 7:58 PM"
+7918034454,"When Due Date arrives and only if item Sent to CM is Yes and only if item Visit Status is not . +4, notify someone","","","Braxton Rickert","active","Apr 23, 2026, 9:13 PM"
+7918113910,"When Due Date arrives and only if item Sent to CM is Yes and only if item Visit Status is ., notify someone and then notify Daisy Trujillo +2","","","Braxton Rickert","active","Apr 21, 2026, 9:44 PM"
+7918113894,"When Due Date arrives and only if item Sent to CM is Yes and only if item Visit Status is ., notify someone and then notify Daisy Trujillo +2","","","Braxton Rickert","active","Apr 21, 2026, 9:44 PM"
+7918113878,"When Due Date arrives and only if item Sent to CM is Yes and only if item Visit Status is ., notify someone and then notify Daisy Trujillo +2","","","Braxton Rickert","active","Apr 21, 2026, 9:43 PM"
+7918113809,"When Due Date arrives and only if item Sent to CM is Yes and only if item Visit Status is ., notify someone and then notify Daisy Trujillo +2","","","Braxton Rickert","active","Apr 21, 2026, 9:42 PM"
+7918113774,"When Due Date arrives and only if item Sent to CM is Yes and only if item Visit Status is ., notify someone and then notify Daisy Trujillo +2","","","Braxton Rickert","active","Apr 21, 2026, 9:41 PM"
+7918113210,"When Due Date arrives and only if item Sent to CM is Yes and only if item Visit Status is ., notify someone and then notify Daisy Trujillo +2","","","Braxton Rickert","active","Apr 21, 2026, 9:41 PM"
+7918033688,"When Visit Status changes to ., set item Due Date to today and then push item's Due Date by some time","","","Braxton Rickert","deactivated","Apr 21, 2026, 9:39 PM"
+7918040732,"When Due Date arrives and only if item Sent to CM is Yes and only if item Visit Status is ., notify someone and then notify Daisy Trujillo +2","","","Braxton Rickert","active","Apr 21, 2026, 9:38 PM"
+7918039939,"When Due Date arrives and only if item Sent to CM is Yes and only if item Visit Status is ., notify someone","","","Braxton Rickert","deactivated","Apr 21, 2026, 9:37 PM"
+7918034062,"When Due Date arrives and only if item Sent to CM is Yes and only if item Visit Status is ., notify someone","","","Braxton Rickert","deactivated","Apr 21, 2026, 9:37 PM"
+7918034313,"When Visit Status changes and only if item Visit Status is not Seen +4, set item Due Date to today and then push item's Due Date by some time","","","Braxton Rickert","active","Apr 21, 2026, 8:49 PM"
+7918034147,"When an item is created, set item Due Date to today","","","Braxton Rickert","active","Apr 18, 2026, 12:24 AM"
+556587114,"When Visit Status changes to DC - ON HOLDS
+ move item to Discharged Patients (Seen/Not Seen)",,"","Braxton Rickert","active","Mar 27, 2026, 4:57 PM"
+556586843,"When Visit Status changes to DC - EXISTING PTS
+ move item to Discharged Patients (Seen/Not Seen)",,"","Braxton Rickert","active","Mar 27, 2026, 4:56 PM"
+556586109,"When Visit Status changes to DC - NEW REFERRALS
+ move item to Discharged Patients (Seen/Not Seen)",,"","Braxton Rickert","active","Mar 27, 2026, 4:56 PM"
+553431965,"When button clicked notify Braxton Rickert",,"","Braxton Rickert","deactivated","Mar 20, 2026, 9:09 PM"
+546617451,"When an item is created create an item in Accounts and connect Master Sheet&Accounts with column",,"","Gelyn R. Clerigo","deactivated","Mar 19, 2026, 10:22 PM"
+399627437,"When any column changes, send a webhook",,"Webhooks","Cole Winfield","error","Feb 18, 2026, 2:10 AM"
+507174891,"When Visit Status changes to DC -Declined Service
+ move item to Discharged Patients (Seen/Not Seen)",,"","Braxton Rickert","active","Dec 11, 2025, 12:11 AM"
+507174841,"When Visit Status changes to DC Another wx care
+ move item to Discharged Patients (Seen/Not Seen)",,"","Braxton Rickert","active","Dec 11, 2025, 12:11 AM"
+507174766,"When Visit Status changes to DC - Noncompliant
+ move item to Discharged Patients (Seen/Not Seen)",,"","Braxton Rickert","active","Dec 11, 2025, 12:11 AM"
+507174326,"When Visit Status changes to DC - wx healed
+ move item to Discharged Patients (Seen/Not Seen)",,"","Braxton Rickert","active","Dec 11, 2025, 12:10 AM"
+251053110,"When an item is created set Stage to In intake","🟢 New opportunity indication","","Tyler Manee","active","Oct 20, 2025, 9:34 PM"
+483949031,"When Visit Status changes from Seen to INACTIVE/DC'D
+ move item to Discharged Patients (Seen/Not Seen)",,"","Braxton Rickert","active","Oct 16, 2025, 10:26 PM"
+414627349,"When Visit Status changes to Deceased
+ archive item",,"","Cole Winfield","deactivated","Jul 30, 2025, 9:16 PM"
+414626331,"When Visit Status changes to Immediate DC
+ archive item",,"","Cole Winfield","deactivated","Jul 30, 2025, 8:57 PM"
+260689558,"When Progress Note Sent changes to Done
+ create an item in Outsource 3 - Prog Notes and connect Master Sheet&Outsource 3 - Prog Notes with Outsource 3 - Prog Notes",,"","Tyler Manee","active","Feb 24, 2025, 11:27 PM"
+251776171,"When Visit Complete? changes to anything
+ set Stage to Complete and set Last Appointment to today",,"","Tyler Manee","active","Feb 24, 2025, 11:27 PM"
+254274723,"When Send to Outsource Team (only for returning pts) changes to Send
+ and if Hold Date is not empty create an item in Outsource 2 - Hold Calls and connect Master Sheet with WCW Outsource",,"","Tyler Manee","active","Feb 24, 2025, 11:17 PM"
+257701146,"When Scheduling changes to Done
+ set Send to Outsource Team (only for returning pts) to Send",,"","Tyler Manee","active","Feb 24, 2025, 11:17 PM"
+251510763,"When Send to Outsource Team (only for returning pts) changes to Send
+ and if Hold Date is empty create an item in WCW Outsource and connect Master Sheet&WCW Outsource with WCW Outsource",,"","Tyler Manee","active","Feb 24, 2025, 11:14 PM"
+251773031,"When Outsource Complete changes to Done
+ notify Case Manager",,"","Tyler Manee","active","Feb 24, 2025, 11:14 PM"
+257690147,"When Agency Contacted? changes to Done
+  send an email to Kathy Email",,"Outlook","Tova Bayever","deactivated","Feb 11, 2025, 9:03 PM"
+251509954,"When Agency Contacted? changes to Done
+ stop Time Since Entry",,"","Tyler Manee","active","Feb 11, 2025, 8:35 PM"
+359026746,"When Provider changes and if Provider is not empty  send an email to  and  send an email to  and  send an email to  and  send an email to  and  send an email to ",,"Outlook","Cole Winfield","deactivated","Nov 18, 2024, 9:02 PM"
+349208007,"When status changes to Follow Up Patients, change Intake Group Copy to Follow Up Patients",,"","Cole Winfield","auto_disabled_by_deleted_resource","Nov 18, 2024, 7:01 PM"
+349209742,"When status changes to ., change Intake Group Copy to .",,"","Cole Winfield","auto_disabled_by_deleted_resource","Nov 18, 2024, 7:01 PM"
+349164108,"When status changes to something, change Visit Status to .",,"","Cole Winfield","auto_disabled_by_deleted_resource","Nov 18, 2024, 7:01 PM"
+261927905,"When QA Hold Reason changes to No Comm log updated
+ set Stage to QA Hold",,"","Tyler Manee","active","Nov 14, 2024, 11:30 PM"
+261928268,"When QA Hold Reason changes to Healed
+ set Stage to QA Hold",,"","Tyler Manee","active","Nov 14, 2024, 11:30 PM"
+261925693,"When QA Hold Reason changes to Pt Issue
+ set Stage to QA Hold",,"","Tyler Manee","active","Nov 14, 2024, 11:30 PM"
+261927656,"When QA Hold Reason changes to Provider Issue
+ set Stage to QA Hold",,"","Tyler Manee","active","Nov 14, 2024, 11:29 PM"
+261926442,"When QA Hold Reason changes to Agency Issue
+ set Stage to QA Hold and set QA Hold Date to today",,"","Tyler Manee","active","Nov 14, 2024, 11:29 PM"
+261928031,"When QA Hold Reason changes to Not on wound expert
+ set Stage to QA Hold",,"","Tyler Manee","active","Nov 14, 2024, 11:29 PM"
+261927759,"When QA Hold Reason changes to Billing Issue
+ set Stage to QA Hold",,"","Tyler Manee","active","Nov 14, 2024, 11:29 PM"
+261927963,"When QA Hold Reason changes to Immediate Discharge
+ set Stage to QA Hold",,"","Tyler Manee","active","Nov 14, 2024, 11:29 PM"
+261927733,"When QA Hold Reason changes to Deceased
+ set Stage to QA Hold",,"","Tyler Manee","active","Nov 14, 2024, 11:29 PM"
+261927707,"When QA Hold Reason changes to Hospitalized
+ set Stage to QA Hold",,"","Tyler Manee","active","Nov 14, 2024, 11:28 PM"
+261927849,"When QA Hold Reason changes to Intake Issue
+ set Stage to QA Hold",,"","Tyler Manee","active","Nov 14, 2024, 11:28 PM"
+261928207,"When QA Hold Reason changes to Pending Visit
+ set Stage to QA Hold",,"","Tyler Manee","active","Nov 14, 2024, 11:27 PM"
+343204410,"7 days after date arrives and only if Visit Status is Seen and only if Intake Group Copy is Follow Up Patients set Visit Status to .",,"","Cole Winfield","active","Oct 16, 2024, 8:37 PM"
+343205076,"7 days after date arrives and only if Visit Status is Scheduled and only if Intake Group Copy is Follow Up Patients set Visit Status to .",,"","Cole Winfield","active","Oct 16, 2024, 8:36 PM"
+343204292,"When Visit Status changes to Scheduled
+ set date to today",,"","Cole Winfield","active","Sep 27, 2024, 3:58 PM"
+343203772,"When Visit Status changes to Seen
+ set date to today",,"","Cole Winfield","active","Sep 27, 2024, 3:57 PM"
+251779480,"2 days after Next Appt Date arrives and only if Visit Status is Seen move item to Working pipeline and clear Next Appt Date and clear Add to Route Mgr and clear Send to Provider and clear Provider Confirmation and clear Send to Outsource Team (only for returning pts) and clear Outsource Complete and clear Respond to Email (if any outsource issues) and clear Provider Schedule Confirmed? and clear Visit Complete?",,"","Tyler Manee","active","Jul 22, 2024, 8:26 PM"
+261054560,"When an item is created create an item in Intake Team and connect Master Sheet&Intake Team with Intake process",,"","Tyler Manee","active","Jul 8, 2024, 8:30 PM"
+313533514,"When Stage changes  send an email to ",,"Outlook","Cole Winfield","deactivated","Jun 27, 2024, 10:37 PM"
+313531089,"When Referring Agency changes  send an email to  and  send an email to  and  send an email to ",,"Outlook","Cole Winfield","deactivated","Jun 27, 2024, 10:33 PM"
+313519782,"When Provider changes  send an email to  and  send an email to  and  send an email to  and  send an email to  and  send an email to ",,"Outlook","Cole Winfield","deactivated","Jun 27, 2024, 10:28 PM"
+251053099,"When Stage changes to Lost move item to Lost","🟢 Moves item to relevant group","","Tyler Manee","active","May 21, 2024, 1:32 AM"
+261057064,"When Intake/sched complete changes to Ready
+ set Stage to New - Schedule",,"","Tyler Manee","active","May 21, 2024, 1:32 AM"
+251053097,"When Stage changes to Lost move item to Lost","🟢 Moves item to relevant group","","Tyler Manee","active","May 21, 2024, 1:32 AM"
+251053111,"When Stage changes to Complete
+ create an item in board and connect  with column","🟡 Creates a task to invoice","","Tyler Manee","active","May 21, 2024, 1:31 AM"
+254278924,"When Stage changes to Opt Out
+ create an item in Leads and move item to Lost",,"","Tyler Manee","active","May 21, 2024, 1:30 AM"
+251053112,"When Stage changes to Return from QA Hold - Schedule
+ create an item in Legal Requests and connect Master Sheet&Legal Requests with Legal Request","🟡 Creates request from legal team","","Tyler Manee","active","May 21, 2024, 1:30 AM"
+251053113,"When Stage changes to Complete
+ create an item in board and connect  with column","🟡 Creates onboarding project","","Tyler Manee","active","May 21, 2024, 1:30 AM"
+251053098,"When Stage changes to Complete move item to Visit Complete","🟢 Moves item to relevant group","","Tyler Manee","active","May 21, 2024, 1:29 AM"
+251053091,"When Stage changes to Lost
+ set *Actual Close Date to today","🔴 Sets lost date of the opportunity","","Tyler Manee","active","May 21, 2024, 1:29 AM"
+254272204,"When Stage changes to Short Term - Hospitalized
+ set Hold Date to today",,"","Tyler Manee","active","May 21, 2024, 1:28 AM"
+254275645,"When Stage changes to Long Term Hold
+ set Hold Date to today and set Send to Outsource Team (only for returning pts) to Send",,"","Tyler Manee","active","May 21, 2024, 1:28 AM"
+291693986,"When QA Hold Reason changes to Not on Hold
+ set Stage to Return from QA Hold - Schedule",,"","Tyler Manee","active","May 1, 2024, 7:38 PM"
+291680238,"When Referring Agency changes notify Tyler Manee",,"","Tyler Manee","active","May 1, 2024, 7:11 PM"
+266116830,"When Visit Complete? changes to Seen
+ create an item in Appointment log",,"","Tyler Manee","active","Feb 27, 2024, 7:47 PM"
+261921150,"When Referring Agency changes notify Tyler Manee",,"","Tyler Manee","active","Feb 13, 2024, 7:23 PM"
+261919094,"When an item is created create an item in QA Board and connect QA Board with column",,"","Tyler Manee","active","Feb 13, 2024, 7:18 PM"
+254276074,"14 days after Hold Date arrives and only if Stage is Long Term Hold set Send to Outsource Team (only for returning pts) to Send",,"","Tyler Manee","active","Jan 18, 2024, 8:32 PM"
+254272977,"3 days after Hold Date arrives and only if Stage is Short Term - Hospitalized set Send to Outsource Team (only for returning pts) to Send",,"","Tyler Manee","active","Jan 18, 2024, 8:31 PM"
+251053105,"When an item is created set *Deal Creation Date to today and set hour to current time
+","🔴 Sets date of the opportunity","","Tyler Manee","error","Jan 10, 2024, 5:57 AM"
+251509756,"When an item is created start Time Since Entry",,"","Tyler Manee","active","Jan 10, 2024, 5:43 AM"
+251053095,"When Stage changes to Complete, set *Actual Close Date to current date","🔴 Sets won date of the opportunity","","Tyler Manee","active","Jan 9, 2024, 2:27 AM"
+251053120,"When an item is created in this board, connect the item where *Company matches this column in another board by this logic","🔴 Connects to account","","Tyler Manee","active","Jan 9, 2024, 2:27 AM"
+251053118,"When an activity/email is created in Emails & Activities,
+ set Last update to today
+",,"Emails & Activities","Tyler Manee","active","Jan 9, 2024, 2:27 AM"
+251053114,"When an item is created in this board, connect the item where *Main contact's email address matches this column in Contacts by this logic","🔴 Connects to exiting contact","","Tyler Manee","active","Jan 9, 2024, 2:27 AM"
+251053106,"When an item is created set *Current stage start date to today","🟡 Counts opportunity's stage length","","Tyler Manee","active","Jan 9, 2024, 2:27 AM"
+251053107,"When Stage changes, connect the item where *Company matches another column in another board by this logic","🔴 Keeps connectivity ","","Tyler Manee","active","Jan 9, 2024, 2:27 AM"
+251053103,"When Deal Value changes, connect the item where *Company matches another column in another board by this logic","🔴 Keeps connectivity ","","Tyler Manee","active","Jan 9, 2024, 2:27 AM"
+251053102,"When Case Manager changes, connect the item where the new value matches Rep in ⭐️ Sales Targets by this logic","🟡 Connects deals to relevant rep","","Tyler Manee","active","Jan 9, 2024, 2:27 AM"
+251053094,"When Stage changes to anything, set *Current stage start date to current date","🟡 Counts deal's stage length","","Tyler Manee","active","Jan 9, 2024, 2:27 AM"

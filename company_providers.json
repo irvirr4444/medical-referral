@@ -1,0 +1,3455 @@
+{
+  "schema_version": 1,
+  "source_file": "Company Provider's list.xlsx",
+  "generated_at_utc": "2026-08-04T11:28:20.222793+00:00",
+  "record_count": 380,
+  "data_quality": {
+    "present_counts": {
+      "name": 380,
+      "npi": 291,
+      "city": 273,
+      "specialty_or_notes": 2,
+      "phone_number": 300,
+      "email": 174
+    },
+    "missing_counts": {
+      "name": 0,
+      "npi": 89,
+      "city": 107,
+      "specialty_or_notes": 378,
+      "phone_number": 80,
+      "email": 206
+    },
+    "duplicate_names": {
+      "group_count": 6,
+      "row_count": 12
+    },
+    "duplicate_npis": {
+      "group_count": 9,
+      "row_count": 18
+    },
+    "unique_nonempty_cities": 46
+  },
+  "providers": [
+    {
+      "source_row": 2,
+      "name": "Aaron Chapa",
+      "npi": "1619555281",
+      "city": "Edinburg",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "chapaaaron2575@yahoo.com"
+    },
+    {
+      "source_row": 3,
+      "name": "Aaron Currie",
+      "npi": "1922032499",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "aaron_currie@hotmail.com"
+    },
+    {
+      "source_row": 4,
+      "name": "ABDI ABDIRAHMAN",
+      "npi": "1497405229",
+      "city": "TUCSON",
+      "specialty_or_notes": null,
+      "phone_number": "(520)207-1618",
+      "email": null
+    },
+    {
+      "source_row": 5,
+      "name": "Access + AZ",
+      "npi": null,
+      "city": "Phoenix 85006",
+      "specialty_or_notes": null,
+      "phone_number": "(602)962-0088",
+      "email": null
+    },
+    {
+      "source_row": 6,
+      "name": "Ada Brown-Walls",
+      "npi": "1912567546",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "hiimada1@hotmail.com"
+    },
+    {
+      "source_row": 7,
+      "name": "Adam Elkharbotly",
+      "npi": "1154208791",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "adamelkharbotly@gmail.com"
+    },
+    {
+      "source_row": 8,
+      "name": "ADAM MCKEOWN",
+      "npi": "1073950846",
+      "city": "LAS VEGAS",
+      "specialty_or_notes": null,
+      "phone_number": "(702)710-0812",
+      "email": null
+    },
+    {
+      "source_row": 9,
+      "name": "Adrienne Byrne",
+      "npi": "1790457984",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "adry110987@gmail.com"
+    },
+    {
+      "source_row": 10,
+      "name": "Adrienne Denenberg",
+      "npi": "1902682883",
+      "city": "Jacksonville",
+      "specialty_or_notes": null,
+      "phone_number": "(818)856-9535",
+      "email": null
+    },
+    {
+      "source_row": 11,
+      "name": "Afia Ukor",
+      "npi": "1720575442",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "afiaalbin@gmail.com"
+    },
+    {
+      "source_row": 12,
+      "name": "AGHO RUKEVWE",
+      "npi": "1427607696",
+      "city": "SAN ANTONIO",
+      "specialty_or_notes": null,
+      "phone_number": "(210)847-5716",
+      "email": null
+    },
+    {
+      "source_row": 13,
+      "name": "AKINSANSOYE DOSEKUN",
+      "npi": "1316970445",
+      "city": "DALLAS",
+      "specialty_or_notes": null,
+      "phone_number": "(713)500-3500",
+      "email": null
+    },
+    {
+      "source_row": 14,
+      "name": "Alec Hoschouer",
+      "npi": "1023779014",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "alec.hoschouer@gmail.com"
+    },
+    {
+      "source_row": 15,
+      "name": "Alexis Calderon",
+      "npi": "1689416018",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "alexis.calderon23@yahoo.com"
+    },
+    {
+      "source_row": 16,
+      "name": "Alisa Moore",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": "(559)999-3103",
+      "email": null
+    },
+    {
+      "source_row": 17,
+      "name": "Alyssa Cooper",
+      "npi": "1902605264",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "alyssacooper.fnp@gmail.com"
+    },
+    {
+      "source_row": 18,
+      "name": "Amber Cargill",
+      "npi": "1477267755",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "cargilla314@gmail.com"
+    },
+    {
+      "source_row": 19,
+      "name": "Amelia Bauder",
+      "npi": "1912892621",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "8188691415",
+      "email": "zelda2811@icloud.com"
+    },
+    {
+      "source_row": 20,
+      "name": "AMIR AFTAB",
+      "npi": "1083671010",
+      "city": "LAS VEGAS",
+      "specialty_or_notes": null,
+      "phone_number": "(702)487-7055",
+      "email": null
+    },
+    {
+      "source_row": 21,
+      "name": "Amit Patel",
+      "npi": "1396409884",
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 22,
+      "name": "Ammar Muhsin",
+      "npi": "1669362158",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "ammarmuhsin@gmail.com"
+    },
+    {
+      "source_row": 23,
+      "name": "Amy Bekanich",
+      "npi": "1275721839",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "amybekanichmd@gmail.com"
+    },
+    {
+      "source_row": 24,
+      "name": "Andrea Hernandez",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 25,
+      "name": "Andres Soto",
+      "npi": "1811884265",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "andres.soto01@frontier.edu"
+    },
+    {
+      "source_row": 26,
+      "name": "Andrew Saurin",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 27,
+      "name": "ANGELA ORTEGA-BERMUDEZ",
+      "npi": "1982873360",
+      "city": "HENDERSON",
+      "specialty_or_notes": null,
+      "phone_number": "(702)213-4848",
+      "email": null
+    },
+    {
+      "source_row": 28,
+      "name": "Angelina Dehoyos",
+      "npi": "1548947765",
+      "city": "San Antonio",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "2010payitfwd@gmail.com"
+    },
+    {
+      "source_row": 29,
+      "name": "ANJANA SHAH",
+      "npi": "1508893942",
+      "city": "HOUSTON",
+      "specialty_or_notes": null,
+      "phone_number": "(281)866-9187",
+      "email": null
+    },
+    {
+      "source_row": 30,
+      "name": "Anna Ramon2",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 31,
+      "name": "Anshu Varma",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": "(559)603-7241",
+      "email": null
+    },
+    {
+      "source_row": 32,
+      "name": "ANTONIO CAVAZOS",
+      "npi": "1336180439",
+      "city": "SAN ANTONIO",
+      "specialty_or_notes": null,
+      "phone_number": "(210)479-3297",
+      "email": null
+    },
+    {
+      "source_row": 33,
+      "name": "Aparanjita Kolluru",
+      "npi": "1598052607",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)856-9535",
+      "email": null
+    },
+    {
+      "source_row": 34,
+      "name": "ARINDER CHADHA",
+      "npi": "1467480137",
+      "city": "PLACENTIA",
+      "specialty_or_notes": null,
+      "phone_number": "(714)996-0599",
+      "email": null
+    },
+    {
+      "source_row": 35,
+      "name": "armando de guzman",
+      "npi": "1558665398",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)856-9535",
+      "email": null
+    },
+    {
+      "source_row": 36,
+      "name": "Arnaldo Gomez Lotti",
+      "npi": "1538022942",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(832)-897-7444",
+      "email": "arnald768@gmail.com"
+    },
+    {
+      "source_row": 37,
+      "name": "Ashley Cunningham",
+      "npi": "1275146201",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "ashley.cunningham623@gmail.com"
+    },
+    {
+      "source_row": 38,
+      "name": "Audrey Hernandez",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": "8188569535",
+      "email": "dcianfichi@gmail.com"
+    },
+    {
+      "source_row": 39,
+      "name": "Azurin Narciso",
+      "npi": null,
+      "city": "South Gate",
+      "specialty_or_notes": null,
+      "phone_number": "(323)566-4111",
+      "email": null
+    },
+    {
+      "source_row": 40,
+      "name": "Babak Ghadishah",
+      "npi": "1346272408",
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 41,
+      "name": "Barbara Weisman",
+      "npi": "1598964728",
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 42,
+      "name": "Beth Simmons",
+      "npi": null,
+      "city": "Orcutt",
+      "specialty_or_notes": null,
+      "phone_number": "(805)345-9353",
+      "email": null
+    },
+    {
+      "source_row": 43,
+      "name": "Bhavjeet Khara",
+      "npi": "1568082519",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "bsk_khara@yahoo.com"
+    },
+    {
+      "source_row": 44,
+      "name": "Bibish Mukena",
+      "npi": "1619428026",
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 45,
+      "name": "BRAD PECK",
+      "npi": "1730760307",
+      "city": "LAS VEGAS",
+      "specialty_or_notes": null,
+      "phone_number": "(702)803-5534",
+      "email": null
+    },
+    {
+      "source_row": 46,
+      "name": "Brandi Blakes",
+      "npi": "1174281539",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "bnblakes@aol.com"
+    },
+    {
+      "source_row": 47,
+      "name": "Brian Dam",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 48,
+      "name": "Brian Pfeiffer",
+      "npi": "1457826901",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "brianpfeifferpa@gmail.com"
+    },
+    {
+      "source_row": 49,
+      "name": "Brian Sullivan",
+      "npi": "1720770639",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "Bsullivanwcw@gmail.com"
+    },
+    {
+      "source_row": 50,
+      "name": "Brittany Herrera",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 51,
+      "name": "Brittany Vander Kooy",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 52,
+      "name": "Bushra Hasan",
+      "npi": "1265173223",
+      "city": "Menifee",
+      "specialty_or_notes": null,
+      "phone_number": "(818)856-9535",
+      "email": null
+    },
+    {
+      "source_row": 53,
+      "name": "Carly Ross",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": "8188569535",
+      "email": "c_carman2011@hotmail.com"
+    },
+    {
+      "source_row": 54,
+      "name": "CAROLYN DECHAINE",
+      "npi": "1649276254",
+      "city": "LAS VEGAS",
+      "specialty_or_notes": null,
+      "phone_number": "(708)844-4842",
+      "email": null
+    },
+    {
+      "source_row": 55,
+      "name": "CASIANO FLAVIANO",
+      "npi": "1871596338",
+      "city": "HENDERSON",
+      "specialty_or_notes": null,
+      "phone_number": "(702)837-4397",
+      "email": null
+    },
+    {
+      "source_row": 56,
+      "name": "Celia Offman",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 57,
+      "name": "Celyness Colina Pratts",
+      "npi": "1346937059",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "celyness11@gmail.com"
+    },
+    {
+      "source_row": 58,
+      "name": "Charles Atkinson",
+      "npi": "1871593731",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(520)-320-5665",
+      "email": "drchip48@gmail.com"
+    },
+    {
+      "source_row": 59,
+      "name": "Charles Cho",
+      "npi": "1053512566",
+      "city": "Los Angeles",
+      "specialty_or_notes": null,
+      "phone_number": "(213)674-8282",
+      "email": null
+    },
+    {
+      "source_row": 60,
+      "name": "Charles Green",
+      "npi": "1609604859",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "cgreen@westcoastwound.com"
+    },
+    {
+      "source_row": 61,
+      "name": "Chester Lumanlan",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 62,
+      "name": "CHESTER WHITLEY",
+      "npi": "1740550078",
+      "city": "LAS VEGAS",
+      "specialty_or_notes": null,
+      "phone_number": "(252)582-9827",
+      "email": null
+    },
+    {
+      "source_row": 63,
+      "name": "CHEYENNA KOPACZ",
+      "npi": "1386204097",
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": "(602)641-5445",
+      "email": null
+    },
+    {
+      "source_row": 64,
+      "name": "Choucokri Ward",
+      "npi": "1003794918",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "choucokriw@gmail.com"
+    },
+    {
+      "source_row": 65,
+      "name": "Christian Sarceno",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 66,
+      "name": "CHRISTIANE SANBURN",
+      "npi": "1518956523",
+      "city": "ORO VALLEY",
+      "specialty_or_notes": null,
+      "phone_number": "(520)825-2520",
+      "email": null
+    },
+    {
+      "source_row": 67,
+      "name": "Christiane Waters",
+      "npi": "1720627912",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "christiherrera@yahoo.com"
+    },
+    {
+      "source_row": 68,
+      "name": "Christoper Beuder",
+      "npi": "1316782378",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "cbeuder@gmail.com"
+    },
+    {
+      "source_row": 69,
+      "name": "CHRISTOPHER BRANA",
+      "npi": "1386096345",
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 70,
+      "name": "Christopher Ochieng",
+      "npi": "1730757733",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "christopheromondi.ochieng@calbaptist.edu"
+    },
+    {
+      "source_row": 71,
+      "name": "Claudia Romo",
+      "npi": "1912892621",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "cromo621@gmail.com"
+    },
+    {
+      "source_row": 72,
+      "name": "Clint Arojo",
+      "npi": "1487331435",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "clint.arojo@gmail.com"
+    },
+    {
+      "source_row": 73,
+      "name": "Cole Winfield",
+      "npi": null,
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(727)-831-5220",
+      "email": "cwinfield@westcoastwound.com"
+    },
+    {
+      "source_row": 74,
+      "name": "Czarina Hamza",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": "8188569535",
+      "email": "czarinahamza@gmail.com"
+    },
+    {
+      "source_row": 75,
+      "name": "Damon Baker",
+      "npi": "1629684170",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "ddlbaker2002@yahoo.com"
+    },
+    {
+      "source_row": 76,
+      "name": "Daniel Rowady",
+      "npi": null,
+      "city": "Pasadena",
+      "specialty_or_notes": null,
+      "phone_number": "(626)795-4223",
+      "email": null
+    },
+    {
+      "source_row": 77,
+      "name": "David Gonzalez",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": "8188569535",
+      "email": "gonzalez7d@gmail.com"
+    },
+    {
+      "source_row": 78,
+      "name": "DAVID GUERRERO",
+      "npi": "1265561849",
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 79,
+      "name": "David Kay",
+      "npi": "1205254992",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-979-0593",
+      "email": "dkay@westcoastwound.com"
+    },
+    {
+      "source_row": 80,
+      "name": "David Kay",
+      "npi": "1205254992",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)856-9535",
+      "email": null
+    },
+    {
+      "source_row": 81,
+      "name": "Dawn Francisco",
+      "npi": "1598126005",
+      "city": "BURBANK",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "dawnfrancisco7@yahoo.com"
+    },
+    {
+      "source_row": 82,
+      "name": "Dawn Mcclure",
+      "npi": "1023704434",
+      "city": "Rancho Cucamonga",
+      "specialty_or_notes": null,
+      "phone_number": "(818)856-9535",
+      "email": null
+    },
+    {
+      "source_row": 83,
+      "name": "DeAnna McGarity",
+      "npi": "1619397288",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(678)-979-8378",
+      "email": "deannalmcgarity@gmail.com"
+    },
+    {
+      "source_row": 84,
+      "name": "Deirdre Corley",
+      "npi": "1033881768",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "dcwestcoastwound@gmail.com"
+    },
+    {
+      "source_row": 85,
+      "name": "DEMIAN GITNACHT",
+      "npi": "1679899579",
+      "city": "LAS VEGAS",
+      "specialty_or_notes": null,
+      "phone_number": "(725)220-8457",
+      "email": null
+    },
+    {
+      "source_row": 86,
+      "name": "Denise Beard",
+      "npi": "1407227135",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "dbeard16@gmail.com"
+    },
+    {
+      "source_row": 87,
+      "name": "Diana Vasilenko",
+      "npi": "1124715164",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "habibi0103@gmail.com"
+    },
+    {
+      "source_row": 88,
+      "name": "Diana Gilbert,",
+      "npi": "1992482160",
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 89,
+      "name": "Diana McCully",
+      "npi": "1972973022",
+      "city": "Tucson",
+      "specialty_or_notes": null,
+      "phone_number": "(818)856-9535",
+      "email": null
+    },
+    {
+      "source_row": 90,
+      "name": "DIANE WREN",
+      "npi": "1811069628",
+      "city": "SCOTTSDALE",
+      "specialty_or_notes": null,
+      "phone_number": "(480)585-0095",
+      "email": null
+    },
+    {
+      "source_row": 91,
+      "name": "DIANE ZILIOX",
+      "npi": "1811693179",
+      "city": "SAN ANTONIO",
+      "specialty_or_notes": null,
+      "phone_number": "(210)598-8035",
+      "email": null
+    },
+    {
+      "source_row": 92,
+      "name": "DOUGLAS BOSIN",
+      "npi": "1124430004",
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 93,
+      "name": "DOUGLAS BOSIN",
+      "npi": "1124430004",
+      "city": "JACKSON",
+      "specialty_or_notes": null,
+      "phone_number": "(517)788-4800",
+      "email": null
+    },
+    {
+      "source_row": 94,
+      "name": "DOUGLAS BUDDE",
+      "npi": "1457321580",
+      "city": "LAS VEGAS",
+      "specialty_or_notes": null,
+      "phone_number": "(725)220-8667",
+      "email": null
+    },
+    {
+      "source_row": 95,
+      "name": "Dritan Likollari",
+      "npi": "1255147765",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "likollari07@gmail.com"
+    },
+    {
+      "source_row": 96,
+      "name": "Dulce Barajas",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 97,
+      "name": "EBERE AZUBUIKE",
+      "npi": "1154560027",
+      "city": "DALLAS",
+      "specialty_or_notes": null,
+      "phone_number": "(214)942-2377",
+      "email": null
+    },
+    {
+      "source_row": 98,
+      "name": "Ebony James",
+      "npi": "1306339452",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)856-9535",
+      "email": null
+    },
+    {
+      "source_row": 99,
+      "name": "Ebony Williams",
+      "npi": "1205775244",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "ebony.williams68@gmail.com"
+    },
+    {
+      "source_row": 100,
+      "name": "EDDALEE TOLENTINO",
+      "npi": "1710457395",
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": "(909)825-7084",
+      "email": null
+    },
+    {
+      "source_row": 101,
+      "name": "Edward Galvan",
+      "npi": "1891115614",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "eddie6271@sbcglobal.net"
+    },
+    {
+      "source_row": 102,
+      "name": "Elizabeth Akinkuolie",
+      "npi": "1396696258",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "elezabeth1991@gmail.com"
+    },
+    {
+      "source_row": 103,
+      "name": "Emily Eldred",
+      "npi": "1285409961",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)856-9535",
+      "email": null
+    },
+    {
+      "source_row": 104,
+      "name": "Enrico Melson",
+      "npi": null,
+      "city": "Beverly Hills",
+      "specialty_or_notes": null,
+      "phone_number": "(818)762-8702",
+      "email": null
+    },
+    {
+      "source_row": 105,
+      "name": "Enrique Tamayo-Giraudis",
+      "npi": "1912699190",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "giraudis@icloud.com"
+    },
+    {
+      "source_row": 106,
+      "name": "Eric Oliver",
+      "npi": "1962238410",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)856-9535",
+      "email": null
+    },
+    {
+      "source_row": 107,
+      "name": "Eric Ortiz",
+      "npi": "1629543392",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "paericortiz@gmail.com"
+    },
+    {
+      "source_row": 108,
+      "name": "Eric Sonderer",
+      "npi": null,
+      "city": "Los Angeles",
+      "specialty_or_notes": null,
+      "phone_number": "(520)547-3900",
+      "email": null
+    },
+    {
+      "source_row": 109,
+      "name": "Erin Ferguson",
+      "npi": "1417600701",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "Erinferguson955@yahoo.com"
+    },
+    {
+      "source_row": 110,
+      "name": "Essence Health Medical Group",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": "(520)510-0034",
+      "email": null
+    },
+    {
+      "source_row": 111,
+      "name": "Fariba Iseyedsoleiman",
+      "npi": "1366911786",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "FIseyedsoleiman@westcoastwound.com"
+    },
+    {
+      "source_row": 112,
+      "name": "Faye Jennings",
+      "npi": "1871285098",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "fjennings30@ymail.com"
+    },
+    {
+      "source_row": 113,
+      "name": "Fernando Antelo",
+      "npi": "1295927887",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "antelomd@gmail.com"
+    },
+    {
+      "source_row": 114,
+      "name": "Fernando Torres",
+      "npi": "1205993524",
+      "city": "Los Angeles",
+      "specialty_or_notes": null,
+      "phone_number": "(213)421-2707",
+      "email": null
+    },
+    {
+      "source_row": 115,
+      "name": "Freeha Azher",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 116,
+      "name": "Gautam Bhakta",
+      "npi": "1588676407",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "Gautam1967@hotmail.com"
+    },
+    {
+      "source_row": 117,
+      "name": "Gelly Hilario",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 118,
+      "name": "Genesis Medical Group NV",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": "(702)436-7700",
+      "email": null
+    },
+    {
+      "source_row": 119,
+      "name": "Geoffrey Buncke",
+      "npi": "1295863520",
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 120,
+      "name": "GEORGINA NJENGA",
+      "npi": "1518346444",
+      "city": "SPRINGFIELD",
+      "specialty_or_notes": null,
+      "phone_number": "(413)887-5130",
+      "email": null
+    },
+    {
+      "source_row": 121,
+      "name": "Ghislaine Goetz",
+      "npi": "1467238725",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "gmoniengantcha@yahoo.com"
+    },
+    {
+      "source_row": 122,
+      "name": "Greg Coates",
+      "npi": "1184187304",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)856-9535",
+      "email": null
+    },
+    {
+      "source_row": 123,
+      "name": "Gregory Etienne",
+      "npi": "1669180915",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "getienne04@gmail.com"
+    },
+    {
+      "source_row": 124,
+      "name": "HEALTHCARE LLC AZ",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": "(602)362-2983",
+      "email": null
+    },
+    {
+      "source_row": 125,
+      "name": "HEATHER HARVEY",
+      "npi": "1801309919",
+      "city": "HENDERSON",
+      "specialty_or_notes": null,
+      "phone_number": "(725)220-8477",
+      "email": null
+    },
+    {
+      "source_row": 126,
+      "name": "Hetter Fuller",
+      "npi": "1386278554",
+      "city": "Chandler",
+      "specialty_or_notes": null,
+      "phone_number": "(480)626-6318",
+      "email": null
+    },
+    {
+      "source_row": 127,
+      "name": "HOLMAN CHAN",
+      "npi": "1255619177",
+      "city": "HENDERSON",
+      "specialty_or_notes": null,
+      "phone_number": "(702)878-0393",
+      "email": null
+    },
+    {
+      "source_row": 128,
+      "name": "Honeylynn Abaya",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 129,
+      "name": "Humberto DeLaTorreHogan",
+      "npi": "1649161027",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "humbertodelatorrehogan@gmail.com"
+    },
+    {
+      "source_row": 130,
+      "name": "Humberto Villalvazo",
+      "npi": "1902994551",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-865-9535",
+      "email": "hvc61@hotmail.com"
+    },
+    {
+      "source_row": 131,
+      "name": "Ibrahim Abumaria",
+      "npi": "1922419308",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "iabumaria@gmail.com"
+    },
+    {
+      "source_row": 132,
+      "name": "Ihtisham Choudhry",
+      "npi": "1790985273",
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 133,
+      "name": "Ingrid Surigao",
+      "npi": "1568154573",
+      "city": "BURBANK",
+      "specialty_or_notes": null,
+      "phone_number": "(818)856-9535",
+      "email": null
+    },
+    {
+      "source_row": 134,
+      "name": "Jack Azad",
+      "npi": "1841489440",
+      "city": "Los Angeles",
+      "specialty_or_notes": null,
+      "phone_number": "(877)-929-6863",
+      "email": "jackazad@gmail.com"
+    },
+    {
+      "source_row": 135,
+      "name": "Jack Azad",
+      "npi": "1841489440",
+      "city": "Los Angeles",
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 136,
+      "name": "Jacquline Wright",
+      "npi": "1407236474",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "AleraMedicalPLLC@gmail.com"
+    },
+    {
+      "source_row": 137,
+      "name": "JAKE ARMBRUST",
+      "npi": "1235585522",
+      "city": "LAS VEGAS",
+      "specialty_or_notes": null,
+      "phone_number": "(702)877-5199",
+      "email": null
+    },
+    {
+      "source_row": 138,
+      "name": "James Ferstel",
+      "npi": "1922102474",
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 139,
+      "name": "James Joachim",
+      "npi": "1669570107",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "jimjoachim.md@gmail.com"
+    },
+    {
+      "source_row": 140,
+      "name": "James Michail",
+      "npi": "1760879217",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "drjmichailmd@gmail.com"
+    },
+    {
+      "source_row": 141,
+      "name": "Jared Toller",
+      "npi": "1396341293",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)856-9593",
+      "email": null
+    },
+    {
+      "source_row": 142,
+      "name": "Jason Kreider",
+      "npi": "1063034601",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "jason.tai.kreider@gmail.com"
+    },
+    {
+      "source_row": 143,
+      "name": "JEANNE CARVER",
+      "npi": "1619395399",
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": "(602)316-6042",
+      "email": null
+    },
+    {
+      "source_row": 144,
+      "name": "Jeffrey Felgner",
+      "npi": "1790122497",
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 145,
+      "name": "Jenna Morley",
+      "npi": "1346950607",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "jmorley.m@gmail.com"
+    },
+    {
+      "source_row": 146,
+      "name": "Jennifer Young",
+      "npi": "1861234148",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "jnng6010@gmail.com"
+    },
+    {
+      "source_row": 147,
+      "name": "Jennifer Roux",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 148,
+      "name": "Jennifer Winnick",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 149,
+      "name": "Jennilyn Raynor",
+      "npi": "1598356024",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "jennilynraynor@gmail.com"
+    },
+    {
+      "source_row": 150,
+      "name": "Jessica Harris",
+      "npi": "1619633211",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "jessica.harris.np@gmail.com"
+    },
+    {
+      "source_row": 151,
+      "name": "Joan Achondo",
+      "npi": "1487338638",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "joanachondoacnp@gmail.com"
+    },
+    {
+      "source_row": 152,
+      "name": "Joan Galang",
+      "npi": "1407204035",
+      "city": "Las Vegas",
+      "specialty_or_notes": null,
+      "phone_number": "(818)856-9535",
+      "email": null
+    },
+    {
+      "source_row": 153,
+      "name": "Joanna Delapena",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 154,
+      "name": "Joanna Wu",
+      "npi": "1093699043",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "8188569535",
+      "email": "joanna.wu.5632@gmail.com"
+    },
+    {
+      "source_row": 155,
+      "name": "Joanne Austria",
+      "npi": "1376383703",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)856-9535",
+      "email": null
+    },
+    {
+      "source_row": 156,
+      "name": "Jodi Bond",
+      "npi": "1346894714",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "jodi.ellen.bond@gmail.com"
+    },
+    {
+      "source_row": 157,
+      "name": "Joel Reed",
+      "npi": "1013886985",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "reedjp024@gmail.com"
+    },
+    {
+      "source_row": 158,
+      "name": "Joevilyn Delos Trino",
+      "npi": "1477416576",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "Jdelostrinowcw@gmail.com"
+    },
+    {
+      "source_row": 159,
+      "name": "John McKinney",
+      "npi": "1750310629",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "gomerdok@aol.com"
+    },
+    {
+      "source_row": 160,
+      "name": "John Simmonds",
+      "npi": "1801195912",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "simmondsJohn@gmail.com"
+    },
+    {
+      "source_row": 161,
+      "name": "JOHNNIE LEWIS",
+      "npi": "1255879185",
+      "city": "TUCSON",
+      "specialty_or_notes": null,
+      "phone_number": "(520)670-3909",
+      "email": null
+    },
+    {
+      "source_row": 162,
+      "name": "Johnson Lee",
+      "npi": "1982847851",
+      "city": "BEVERLY HILLS",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "jlee@westcoastwound.com"
+    },
+    {
+      "source_row": 163,
+      "name": "Jon Debault",
+      "npi": "1225636996",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "jbdebault@gmail.com"
+    },
+    {
+      "source_row": 164,
+      "name": "Jon Snipes",
+      "npi": "1821250077",
+      "city": "Burbank",
+      "specialty_or_notes": "Psychiatry & Neurology - Psychiatry",
+      "phone_number": "(818)-856-9535",
+      "email": "snipes@snipesmedicalservices.com"
+    },
+    {
+      "source_row": 165,
+      "name": "Jonatha Leicher",
+      "npi": "1790441384",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "jonaleicher@gmail.com"
+    },
+    {
+      "source_row": 166,
+      "name": "JONATHAN MAXHAM",
+      "npi": "1811124589",
+      "city": "LAS VEGAS",
+      "specialty_or_notes": null,
+      "phone_number": "(702)779-3902",
+      "email": null
+    },
+    {
+      "source_row": 167,
+      "name": "Jordan Edwards",
+      "npi": "1376376905",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818) 856-9535",
+      "email": "jtedwards786@gmail.com"
+    },
+    {
+      "source_row": 168,
+      "name": "Jordan Edwards",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": "8188569535",
+      "email": "jtedwards786@gmail.com"
+    },
+    {
+      "source_row": 169,
+      "name": "Joseph Lobel",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": "(818)989-0041",
+      "email": null
+    },
+    {
+      "source_row": 170,
+      "name": "Josh Warr",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 171,
+      "name": "Jovelyn Nava",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 172,
+      "name": "Juan Chiriboga",
+      "npi": "1740621747",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "jjchiriboga@gmail.com"
+    },
+    {
+      "source_row": 173,
+      "name": "Judi Miller",
+      "npi": "1629374509",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "8188569535",
+      "email": "littlejudi8@yahoo.com"
+    },
+    {
+      "source_row": 174,
+      "name": "Julia Davis",
+      "npi": "1396206603",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(501)-766-9567",
+      "email": "juliardavismd@gmail.com"
+    },
+    {
+      "source_row": 175,
+      "name": "Julia Park",
+      "npi": "1508376872",
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 176,
+      "name": "Julie Hopkins",
+      "npi": "1659243616",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "julie.marie.hopkins@gmail.com"
+    },
+    {
+      "source_row": 177,
+      "name": "Julie Carrillo",
+      "npi": "1457091712",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "titajulie@icloud.com"
+    },
+    {
+      "source_row": 178,
+      "name": "Julie Peters",
+      "npi": "1407605439",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "chedder1982@gmail.com"
+    },
+    {
+      "source_row": 179,
+      "name": "Julio Pedrero Bernal",
+      "npi": "1912688177",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)865-9535",
+      "email": null
+    },
+    {
+      "source_row": 180,
+      "name": "Jupiter Jones",
+      "npi": "1003620014",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "juball1@yahoo.com"
+    },
+    {
+      "source_row": 181,
+      "name": "JUSTO SATARAY",
+      "npi": "1689619983",
+      "city": "LAS VEGAS",
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 182,
+      "name": "KAHRENANNE DY-PATACSIL",
+      "npi": "1346786498",
+      "city": "LAS VEGAS",
+      "specialty_or_notes": null,
+      "phone_number": "(725)231-9260",
+      "email": null
+    },
+    {
+      "source_row": 183,
+      "name": "Karen Maples",
+      "npi": "1174294284",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)856-9535",
+      "email": null
+    },
+    {
+      "source_row": 184,
+      "name": "KASEY ABANONU",
+      "npi": "1609109644",
+      "city": "LAS VEGAS",
+      "specialty_or_notes": null,
+      "phone_number": "(725)220-8706",
+      "email": null
+    },
+    {
+      "source_row": 185,
+      "name": "Katherine Lepar",
+      "npi": "1720863186",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "klepar1@gmail.com"
+    },
+    {
+      "source_row": 186,
+      "name": "Kathleen Morgan",
+      "npi": "1245363969",
+      "city": "CA",
+      "specialty_or_notes": null,
+      "phone_number": "(562)597-4181",
+      "email": null
+    },
+    {
+      "source_row": 187,
+      "name": "Kathy Mohammadi",
+      "npi": "1154063816",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "kathy.mohammadi@gmail.com"
+    },
+    {
+      "source_row": 188,
+      "name": "Kathy Okelley",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 189,
+      "name": "Kayla Shillcutt",
+      "npi": "1427735687",
+      "city": "Chicago",
+      "specialty_or_notes": null,
+      "phone_number": "(630)247-1948",
+      "email": null
+    },
+    {
+      "source_row": 190,
+      "name": "Kelly Wright",
+      "npi": "1285407841",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)856-9535",
+      "email": null
+    },
+    {
+      "source_row": 191,
+      "name": "Kelsey Payne",
+      "npi": "1902642457",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "kpaynewcw@gmail.com"
+    },
+    {
+      "source_row": 192,
+      "name": "Kevin Majors",
+      "npi": "1114328655",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "kevinmajorsfnp@gmail.com"
+    },
+    {
+      "source_row": 193,
+      "name": "Kevin Mallari",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 194,
+      "name": "KHAN SHIRANI",
+      "npi": "1518135904",
+      "city": "WINDCREST",
+      "specialty_or_notes": null,
+      "phone_number": "(937)241-3670",
+      "email": null
+    },
+    {
+      "source_row": 195,
+      "name": "Kimberly Bynum",
+      "npi": "1114331626",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "kim.a.bynum@gmail.com"
+    },
+    {
+      "source_row": 196,
+      "name": "Kimberly Dyer",
+      "npi": "1255690483",
+      "city": "BURBANK",
+      "specialty_or_notes": null,
+      "phone_number": "(818)856-9535",
+      "email": null
+    },
+    {
+      "source_row": 197,
+      "name": "Kimberly Tezano",
+      "npi": "1407645401",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "kimtezeno@yahoo.com"
+    },
+    {
+      "source_row": 198,
+      "name": "Kinjal Desai",
+      "npi": "1679860290",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "fremee@cox.net"
+    },
+    {
+      "source_row": 199,
+      "name": "KINNEATHEA BENNETT",
+      "npi": "1902346141",
+      "city": "SAN ANTONIO",
+      "specialty_or_notes": null,
+      "phone_number": "(248)824-6623",
+      "email": null
+    },
+    {
+      "source_row": 200,
+      "name": "Kristi Parkhurst",
+      "npi": "1265803936",
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 201,
+      "name": "Kristie Landon",
+      "npi": "1144031923",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)856-9535",
+      "email": null
+    },
+    {
+      "source_row": 202,
+      "name": "KRUPA SHAH",
+      "npi": "1316538382",
+      "city": "LAS VEGAS",
+      "specialty_or_notes": null,
+      "phone_number": "(702)877-9514",
+      "email": null
+    },
+    {
+      "source_row": 203,
+      "name": "Lalaine Garsula",
+      "npi": "1528563582",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)856-9535",
+      "email": null
+    },
+    {
+      "source_row": 204,
+      "name": "Laneta Wynn",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": "8188569535",
+      "email": "summer900377@gmail.com"
+    },
+    {
+      "source_row": 205,
+      "name": "Lanie Quiambao",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 206,
+      "name": "Lara Alonso",
+      "npi": "1295244895",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)856-9535",
+      "email": null
+    },
+    {
+      "source_row": 207,
+      "name": "Laura Burris",
+      "npi": "1932714839",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "laura.vansteyn@gmail.com"
+    },
+    {
+      "source_row": 208,
+      "name": "LAUREN ROTHE",
+      "npi": "1134524648",
+      "city": "UVALDE",
+      "specialty_or_notes": null,
+      "phone_number": "(830)278-4456",
+      "email": null
+    },
+    {
+      "source_row": 209,
+      "name": "Lauro Guerro",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 210,
+      "name": "Lavetrice Steele",
+      "npi": "1235550658",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "lavetrices@gmail.com"
+    },
+    {
+      "source_row": 211,
+      "name": "Leah Zanoria",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 212,
+      "name": "Leanne Kent",
+      "npi": "1629552815",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "blank@yahoo.com"
+    },
+    {
+      "source_row": 213,
+      "name": "LEE AKERSON",
+      "npi": "1073928180",
+      "city": "SURPRISE",
+      "specialty_or_notes": null,
+      "phone_number": "(623)374-7774",
+      "email": null
+    },
+    {
+      "source_row": 214,
+      "name": "Lilibet Hernandez",
+      "npi": "1992536510",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "plutinlilibet@gmail.com"
+    },
+    {
+      "source_row": 215,
+      "name": "Lisa Luchsinger",
+      "npi": "1083126783",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "lluchsingerwcw@gmail.com"
+    },
+    {
+      "source_row": 216,
+      "name": "Lisa Plotkin",
+      "npi": "1043510894",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "lisaplot@gmail.com"
+    },
+    {
+      "source_row": 217,
+      "name": "Litia Gans",
+      "npi": "1346052123",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "litiawestcoastwound@gmail.com"
+    },
+    {
+      "source_row": 218,
+      "name": "Livi Medical AZ",
+      "npi": null,
+      "city": "Scottsdale",
+      "specialty_or_notes": null,
+      "phone_number": "(480)607-0606",
+      "email": null
+    },
+    {
+      "source_row": 219,
+      "name": "Loisann Galarza",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": "lgalarza@westcoastwound.com"
+    },
+    {
+      "source_row": 220,
+      "name": "Lori Martin",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 221,
+      "name": "LOTTIE EVERETT",
+      "npi": "1285129460",
+      "city": "CARROLLTON",
+      "specialty_or_notes": null,
+      "phone_number": "(972)666-9200",
+      "email": null
+    },
+    {
+      "source_row": 222,
+      "name": "Lupe Gomez-Martinez",
+      "npi": "1235672387",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "lupe.gomezmartinez@gmail.com"
+    },
+    {
+      "source_row": 223,
+      "name": "LYNN WANDERER-POTTER",
+      "npi": "1174633994",
+      "city": "PEORIA",
+      "specialty_or_notes": null,
+      "phone_number": "(202)455-0013",
+      "email": null
+    },
+    {
+      "source_row": 224,
+      "name": "Ma Teresa Mercado",
+      "npi": "1235984931",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "mtmercado1208@gmail.com"
+    },
+    {
+      "source_row": 225,
+      "name": "Manessa Shaw",
+      "npi": null,
+      "city": "Sherman Oaks",
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 226,
+      "name": "Mardialyn Barrera",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 227,
+      "name": "Maria Ordenana",
+      "npi": "1063157352",
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 228,
+      "name": "Mariela Canilas",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 229,
+      "name": "Marina Gonzalez",
+      "npi": "1891188454",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "marinanicolev@gmail.com"
+    },
+    {
+      "source_row": 230,
+      "name": "Marissa Stone",
+      "npi": "1427870971",
+      "city": "BURBANK",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "Mstonewcw@gmail.com"
+    },
+    {
+      "source_row": 231,
+      "name": "Marka Dredla",
+      "npi": "1154949600",
+      "city": "BURBANK",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "mdredlawcw@gmail.com"
+    },
+    {
+      "source_row": 232,
+      "name": "Marquita Pickens",
+      "npi": "1588279525",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)856-9535",
+      "email": null
+    },
+    {
+      "source_row": 233,
+      "name": "Mary Corona",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 234,
+      "name": "Mary Hudson",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 235,
+      "name": "Mary Lambo",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 236,
+      "name": "Mary Ann Jones",
+      "npi": "1295379964",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "fremee@cox.net"
+    },
+    {
+      "source_row": 237,
+      "name": "Matthew Escobar",
+      "npi": "1447115662",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "matthewescobar24@gmail.com"
+    },
+    {
+      "source_row": 238,
+      "name": "Matthew Lefferman",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 239,
+      "name": "May Salgada",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": "(818)639-9520",
+      "email": null
+    },
+    {
+      "source_row": 240,
+      "name": "Mayeso Chithambo",
+      "npi": "1629746136",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "8188569535",
+      "email": "maychithambo@gmail.com"
+    },
+    {
+      "source_row": 241,
+      "name": "Melissa Ray",
+      "npi": "1831055904",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "mcray@dons.usfca.edu"
+    },
+    {
+      "source_row": 242,
+      "name": "Melvin Coats",
+      "npi": "1376599159",
+      "city": "Whittier",
+      "specialty_or_notes": null,
+      "phone_number": "(562)236-2290",
+      "email": null
+    },
+    {
+      "source_row": 243,
+      "name": "Mervin DeGuzman",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 244,
+      "name": "Mhedy Paradero",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": "(818)698-1209",
+      "email": null
+    },
+    {
+      "source_row": 245,
+      "name": "MICAH RUYBALID",
+      "npi": "1619695277",
+      "city": "SCOTTSDALE",
+      "specialty_or_notes": null,
+      "phone_number": "(308)546-7405",
+      "email": null
+    },
+    {
+      "source_row": 246,
+      "name": "Michael Braunstein",
+      "npi": "1689416018",
+      "city": "Las Vegas",
+      "specialty_or_notes": null,
+      "phone_number": "(818)856-9535",
+      "email": null
+    },
+    {
+      "source_row": 247,
+      "name": "Michael OBrien",
+      "npi": "1215257100",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "michaelobrien2010@gmail.com"
+    },
+    {
+      "source_row": 248,
+      "name": "MICHAEL STEVENS",
+      "npi": "1285106070",
+      "city": "NORTH LAS VEGAS",
+      "specialty_or_notes": null,
+      "phone_number": "(702)832-4562",
+      "email": null
+    },
+    {
+      "source_row": 249,
+      "name": "MICHAEL WONG",
+      "npi": "1649701814",
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 250,
+      "name": "Michelle Apurillo",
+      "npi": "1568142529",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "michellerose_gayoba@yahoo.com"
+    },
+    {
+      "source_row": 251,
+      "name": "Michelle Contreras",
+      "npi": "1740978790",
+      "city": "Orlando",
+      "specialty_or_notes": null,
+      "phone_number": "(407)219-7407",
+      "email": null
+    },
+    {
+      "source_row": 252,
+      "name": "Michelle Gonzales",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 253,
+      "name": "Michelle Kahana",
+      "npi": "1467028373",
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 254,
+      "name": "Michelle Raffetry",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": "(520)940-1119",
+      "email": null
+    },
+    {
+      "source_row": 255,
+      "name": "Mihai Zaiat",
+      "npi": "1447874268",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "mihaizaiat@gmail.com"
+    },
+    {
+      "source_row": 256,
+      "name": "Mikaela Pereira",
+      "npi": "1871294975",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "mikaela.lm.pereira@gmail.com"
+    },
+    {
+      "source_row": 257,
+      "name": "Millicent Rovelo",
+      "npi": "1326280371",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "drrovelo@roxburysurgery.com"
+    },
+    {
+      "source_row": 258,
+      "name": "Miranda Fife",
+      "npi": "1164073755",
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 259,
+      "name": "Miranda Flatz",
+      "npi": "1326921511",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "mirandaflatz@gmail.com"
+    },
+    {
+      "source_row": 260,
+      "name": "Mmachi Nwaobia",
+      "npi": "1154951531",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "mnwaobia.mn@gmail.com"
+    },
+    {
+      "source_row": 261,
+      "name": "MOBILE ONE DOCS AZ",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": "(888)709-8721",
+      "email": null
+    },
+    {
+      "source_row": 262,
+      "name": "Mobile Valley Physicians AZ",
+      "npi": null,
+      "city": "Phoenix",
+      "specialty_or_notes": null,
+      "phone_number": "(480)589-2890",
+      "email": null
+    },
+    {
+      "source_row": 263,
+      "name": "Mohammad Hassan",
+      "npi": "1639819667",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "hassanisokay@gmail.com"
+    },
+    {
+      "source_row": 264,
+      "name": "Mohammed Swissa",
+      "npi": "1396210969",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "moswissa@yahoo.com"
+    },
+    {
+      "source_row": 265,
+      "name": "Monica Murphy",
+      "npi": "1184077091",
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 266,
+      "name": "Mutiatu Jarrett",
+      "npi": "1063937225",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)856-9535",
+      "email": null
+    },
+    {
+      "source_row": 267,
+      "name": "Nahid Siavoshi",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 268,
+      "name": "NANCY LAO",
+      "npi": "1174596431",
+      "city": "HENDERSON",
+      "specialty_or_notes": null,
+      "phone_number": "(702)565-1007",
+      "email": null
+    },
+    {
+      "source_row": 269,
+      "name": "Naomi Locket",
+      "npi": "1235536350",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)856-9535",
+      "email": null
+    },
+    {
+      "source_row": 270,
+      "name": "Natasha Ingram",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": "8188569535",
+      "email": "nursenatasha1@gmail.com"
+    },
+    {
+      "source_row": 271,
+      "name": "Natasha Thompson",
+      "npi": "1003762865",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "ncsthompson27@yahoo.com"
+    },
+    {
+      "source_row": 272,
+      "name": "NICOL MONTEZ",
+      "npi": "1871016394",
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": "(480)589-2890",
+      "email": null
+    },
+    {
+      "source_row": 273,
+      "name": "Nicole Barth",
+      "npi": "1417497066",
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 274,
+      "name": "Nikkita Rodgers",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 275,
+      "name": "Noelle James",
+      "npi": "1316523541",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "noelleljames@gmail.com"
+    },
+    {
+      "source_row": 276,
+      "name": "Noemi Echeverria",
+      "npi": "1962972257",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)856-9535",
+      "email": null
+    },
+    {
+      "source_row": 277,
+      "name": "Nomagugu Mafu",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 278,
+      "name": "Nouchee Vang",
+      "npi": "1689547317",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "21vang.nfaith@gmail.com"
+    },
+    {
+      "source_row": 279,
+      "name": "Olivia Davis",
+      "npi": "1508705690",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "oliviadavis712@yahoo.com"
+    },
+    {
+      "source_row": 280,
+      "name": "Omar Gonzalez",
+      "npi": "1659475309",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "mdgonzalez2305@gmail.com"
+    },
+    {
+      "source_row": 281,
+      "name": "Oriana Aguirre",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": "8188569535",
+      "email": "oriaguirre4@hotmail.com"
+    },
+    {
+      "source_row": 282,
+      "name": "Oro Valley Family Practice",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": "(520)825-2520",
+      "email": null
+    },
+    {
+      "source_row": 283,
+      "name": "Patrick Melder",
+      "npi": "1780688051",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "pmelder@mac.com"
+    },
+    {
+      "source_row": 284,
+      "name": "Paul Dizon Beltran",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 285,
+      "name": "Pauline Duran",
+      "npi": "1922888023",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "paponce5@yahoo.com"
+    },
+    {
+      "source_row": 286,
+      "name": "Pauline Duran",
+      "npi": "1922888023",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)856-9535",
+      "email": null
+    },
+    {
+      "source_row": 287,
+      "name": "PAVAN JANAPATI",
+      "npi": "1467535070",
+      "city": "LAS VEGAS",
+      "specialty_or_notes": null,
+      "phone_number": "(702)304-2144",
+      "email": null
+    },
+    {
+      "source_row": 288,
+      "name": "PEI-CHI FU",
+      "npi": "1053363473",
+      "city": "LAS VEGAS",
+      "specialty_or_notes": null,
+      "phone_number": "(702)776-6720",
+      "email": null
+    },
+    {
+      "source_row": 289,
+      "name": "Peter Weigel",
+      "npi": "1043272768",
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 290,
+      "name": "Peter Weigel",
+      "npi": "1043272768",
+      "city": "Grand Junction",
+      "specialty_or_notes": null,
+      "phone_number": "(908)-451-2553",
+      "email": "doc2flr@gmail.com"
+    },
+    {
+      "source_row": 291,
+      "name": "Phillip Ortiz",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 292,
+      "name": "Pinnacle Healthcare",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": "(520)533-4964",
+      "email": null
+    },
+    {
+      "source_row": 293,
+      "name": "Princess Mallari",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 294,
+      "name": "Raanan Alter",
+      "npi": "1558789826",
+      "city": "Burbank",
+      "specialty_or_notes": "Obstetrics & Gynecology - Gynecologic Oncology",
+      "phone_number": "(818)-856-9535",
+      "email": "raanan.y.alter@gmail.com"
+    },
+    {
+      "source_row": 295,
+      "name": "Rachel Seeds",
+      "npi": "1952129561",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "rachelseeds22@gmail.com"
+    },
+    {
+      "source_row": 296,
+      "name": "Rachel White",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 297,
+      "name": "Raelyn Hamman",
+      "npi": "1043805047",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)856-9535",
+      "email": null
+    },
+    {
+      "source_row": 298,
+      "name": "RAJA CHERUKURI",
+      "npi": "1356577076",
+      "city": "SAN ANOTNIO",
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 299,
+      "name": "Raul Salazar",
+      "npi": "1750856241",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "rasalaza1220@gmail.com"
+    },
+    {
+      "source_row": 300,
+      "name": "Ravindra Gautam",
+      "npi": "1891791703",
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 301,
+      "name": "Rebecca Flores",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 302,
+      "name": "Rebecca Hutton",
+      "npi": "1871732370",
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 303,
+      "name": "REGINA ANN EVANS",
+      "npi": "1306451240",
+      "city": "LAS VEGAS",
+      "specialty_or_notes": null,
+      "phone_number": "(702)293-4488",
+      "email": null
+    },
+    {
+      "source_row": 304,
+      "name": "Robert Protzman",
+      "npi": "1588523930",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "protzman@hawaii.edu"
+    },
+    {
+      "source_row": 305,
+      "name": "ROBERT KORCAL",
+      "npi": "1558329839",
+      "city": "LAS VEGAS",
+      "specialty_or_notes": null,
+      "phone_number": "(702)877-5199",
+      "email": null
+    },
+    {
+      "source_row": 306,
+      "name": "ROBERT TRACY",
+      "npi": "1316219058",
+      "city": "DIAMONS BAR",
+      "specialty_or_notes": null,
+      "phone_number": "(323)256-2231",
+      "email": null
+    },
+    {
+      "source_row": 307,
+      "name": "RoomService DoctorCare AZ",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": "(480)575-0578",
+      "email": null
+    },
+    {
+      "source_row": 308,
+      "name": "ROSALITA JURANI",
+      "npi": "1477632685",
+      "city": "LAS VEGAS",
+      "specialty_or_notes": null,
+      "phone_number": "(702)258-4900",
+      "email": null
+    },
+    {
+      "source_row": 309,
+      "name": "SAADI HALBOUNI",
+      "npi": "1720274533",
+      "city": "FORT WORTH",
+      "specialty_or_notes": null,
+      "phone_number": "(682)224-3748",
+      "email": null
+    },
+    {
+      "source_row": 310,
+      "name": "SABIAT SHITTU",
+      "npi": "1871093161",
+      "city": "HOUSTON",
+      "specialty_or_notes": null,
+      "phone_number": "(281)707-7362",
+      "email": null
+    },
+    {
+      "source_row": 311,
+      "name": "Saman Lashkari",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 312,
+      "name": "Samiyah Shahid",
+      "npi": null,
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "shahidsamiyah@yahoo.com"
+    },
+    {
+      "source_row": 313,
+      "name": "Sandra Seidel",
+      "npi": "1144875964",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "seidel.fnp@outlook.com"
+    },
+    {
+      "source_row": 314,
+      "name": "Sarah Murphy",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 315,
+      "name": "Saundra Wirig",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": "818856",
+      "email": "saundrawirig@gmail.com"
+    },
+    {
+      "source_row": 316,
+      "name": "Scott Trimas",
+      "npi": "1881784841",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "scottrimas1122@gmail.com"
+    },
+    {
+      "source_row": 317,
+      "name": "Scott Jeffrey Trimas",
+      "npi": "1881784841",
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 318,
+      "name": "Sergey Smirnov",
+      "npi": "1699318295",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)856-9535",
+      "email": null
+    },
+    {
+      "source_row": 319,
+      "name": "Sergio Godinez",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 320,
+      "name": "Shana StylerHenderson",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 321,
+      "name": "Shana Tyler Henderson",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 322,
+      "name": "Shannon McCormick",
+      "npi": "1528021219",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "shanrae_2000@msn.com"
+    },
+    {
+      "source_row": 323,
+      "name": "Sharath Reniguntala",
+      "npi": "1003107152",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "s.reniguntala@gmail.com"
+    },
+    {
+      "source_row": 324,
+      "name": "Sharon Hakakian",
+      "npi": "1184498321",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "hakakiansharon1@gmail.com"
+    },
+    {
+      "source_row": 325,
+      "name": "Shawanna Brun",
+      "npi": "1891496428",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "famurn@gmail.com"
+    },
+    {
+      "source_row": 326,
+      "name": "Sherby Leung",
+      "npi": "1447970074",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-8953",
+      "email": "sleung@westcoastwound.com"
+    },
+    {
+      "source_row": 327,
+      "name": "Sherryl Eisma",
+      "npi": "1003330101",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "seisma18@gmail.com"
+    },
+    {
+      "source_row": 328,
+      "name": "Sonia Fernandez",
+      "npi": "1962032813",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "ivelis1@hotmail.com"
+    },
+    {
+      "source_row": 329,
+      "name": "Stacey Lovan",
+      "npi": "1184429375",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "staceylovan@gmail.com"
+    },
+    {
+      "source_row": 330,
+      "name": "STEFANIE MANDEVILL",
+      "npi": "1184053811",
+      "city": "SPENCER",
+      "specialty_or_notes": null,
+      "phone_number": "(508)922-1810",
+      "email": null
+    },
+    {
+      "source_row": 331,
+      "name": "Stephanie Barocio",
+      "npi": "1346931862",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "slopez13964@gmail.com"
+    },
+    {
+      "source_row": 332,
+      "name": "Stephanie Padero",
+      "npi": "1538994389",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)856-9535",
+      "email": null
+    },
+    {
+      "source_row": 333,
+      "name": "Stephanie Pinkerton",
+      "npi": "1972185726",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "pelling5@comcast.net"
+    },
+    {
+      "source_row": 334,
+      "name": "Stephen Greenfield",
+      "npi": "1568469203",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)856-9535",
+      "email": null
+    },
+    {
+      "source_row": 335,
+      "name": "STEPHEN KARUGA",
+      "npi": "1831605658",
+      "city": "TUCSON",
+      "specialty_or_notes": null,
+      "phone_number": "(978)828-7627",
+      "email": null
+    },
+    {
+      "source_row": 336,
+      "name": "Steven De Caro",
+      "npi": "1295295392",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "stevendecaro@yahoo.com"
+    },
+    {
+      "source_row": 337,
+      "name": "Steven Sheu",
+      "npi": "1528600079",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "steven.sheu@gmail.com"
+    },
+    {
+      "source_row": 338,
+      "name": "STEVEN THOMAS",
+      "npi": "1750721254",
+      "city": "AUSTIN",
+      "specialty_or_notes": null,
+      "phone_number": "(512)407-8880",
+      "email": null
+    },
+    {
+      "source_row": 339,
+      "name": "Sukhjit Dhaliwal",
+      "npi": "1609737154",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "dhaliwalsukhjit@yahoo.com"
+    },
+    {
+      "source_row": 340,
+      "name": "Summer Jackson",
+      "npi": "1790432458",
+      "city": "Darien",
+      "specialty_or_notes": null,
+      "phone_number": "(773)-416-9936",
+      "email": "jackson.wcwsc@gmail.com"
+    },
+    {
+      "source_row": 341,
+      "name": "Sunday Akinboye",
+      "npi": "1255284899",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "grahamasj@yahoo.com"
+    },
+    {
+      "source_row": 342,
+      "name": "Surekha Mishal",
+      "npi": "1699817221",
+      "city": "Norwalk",
+      "specialty_or_notes": null,
+      "phone_number": "(562)864-7279",
+      "email": null
+    },
+    {
+      "source_row": 343,
+      "name": "Susan Dixon-Sibley",
+      "npi": "1912426842",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "susandixon70@gmail.com"
+    },
+    {
+      "source_row": 344,
+      "name": "SUSAN BATTEN",
+      "npi": "1033732375",
+      "city": "TOLEDO",
+      "specialty_or_notes": null,
+      "phone_number": "(419)861-0023",
+      "email": null
+    },
+    {
+      "source_row": 345,
+      "name": "Susan Hilsabeck",
+      "npi": "1497357990",
+      "city": "BURBANK",
+      "specialty_or_notes": null,
+      "phone_number": "(818)856-9535",
+      "email": null
+    },
+    {
+      "source_row": 346,
+      "name": "Tatyanna Newman",
+      "npi": "1639928971",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "tatyannamnewman.pac@gmail.com"
+    },
+    {
+      "source_row": 347,
+      "name": "Tawni Christensen",
+      "npi": "1881640662",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "t.j.christensen@cox.net"
+    },
+    {
+      "source_row": 348,
+      "name": "Team Select Mobile Physician Services",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": "(623)214-0100",
+      "email": null
+    },
+    {
+      "source_row": 349,
+      "name": "Team Select Mobile Physicians",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": "(602)715-2568",
+      "email": null
+    },
+    {
+      "source_row": 350,
+      "name": "Test User",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 351,
+      "name": "The Doctor Is In AZ",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": "(480)626-6318",
+      "email": null
+    },
+    {
+      "source_row": 352,
+      "name": "Theresa Acebo",
+      "npi": "1487378642",
+      "city": "Round Rock",
+      "specialty_or_notes": null,
+      "phone_number": "(818)856-9535",
+      "email": null
+    },
+    {
+      "source_row": 353,
+      "name": "Theresa Marin",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 354,
+      "name": "Tiffani Armstrong",
+      "npi": "1164013710",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "tiffani1006@yahoo.com"
+    },
+    {
+      "source_row": 355,
+      "name": "Tiffany Brown",
+      "npi": "1952129561",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "tnbrown0339@yahoo.com"
+    },
+    {
+      "source_row": 356,
+      "name": "Tiffany Taylor",
+      "npi": "1568390680",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-869-1415",
+      "email": "tdenisern@gmail.com"
+    },
+    {
+      "source_row": 357,
+      "name": "Tina Joy",
+      "npi": "1467812156",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "lifesaver152@gmail.com"
+    },
+    {
+      "source_row": 358,
+      "name": "Trask Mobile Medical AZ",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": "(480)590-2123",
+      "email": null
+    },
+    {
+      "source_row": 359,
+      "name": "Vanessa Boeckenstedt",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 360,
+      "name": "Vanessa King",
+      "npi": "1396106811",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "vkingwestcoast@att.net"
+    },
+    {
+      "source_row": 361,
+      "name": "VANESSA ROBLES",
+      "npi": "1871143560",
+      "city": "AUSTIN",
+      "specialty_or_notes": null,
+      "phone_number": "(512)407-8880",
+      "email": null
+    },
+    {
+      "source_row": 362,
+      "name": "Veronica Cardenas,",
+      "npi": "1689957599",
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 363,
+      "name": "VERONICA JAMES",
+      "npi": "1245768019",
+      "city": "LAS VEGAS",
+      "specialty_or_notes": null,
+      "phone_number": "(702)479-4850",
+      "email": null
+    },
+    {
+      "source_row": 364,
+      "name": "VERSHEL CONNOR",
+      "npi": "1730708769",
+      "city": "HOUSTON",
+      "specialty_or_notes": null,
+      "phone_number": "(713)500-6500",
+      "email": null
+    },
+    {
+      "source_row": 365,
+      "name": "Victor Barnard",
+      "npi": "1033861653",
+      "city": "BURBANK",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "vbarnardwcw@gmail.com"
+    },
+    {
+      "source_row": 366,
+      "name": "Victor Kabbany",
+      "npi": "1568623635",
+      "city": "Los Alamitos",
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 367,
+      "name": "VICTOR KIM",
+      "npi": "1558655191",
+      "city": "LAS VEGAS",
+      "specialty_or_notes": null,
+      "phone_number": "(725)220-8706",
+      "email": null
+    },
+    {
+      "source_row": 368,
+      "name": "Victoria Kelley",
+      "npi": "1194532820",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "vikkikelley2024@gmail.com"
+    },
+    {
+      "source_row": 369,
+      "name": "Wayneinder Anand",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": "(818)842-4819",
+      "email": null
+    },
+    {
+      "source_row": 370,
+      "name": "Wella Krista Espanol",
+      "npi": "1386333078",
+      "city": "burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "wespanol@westcoastwound.com"
+    },
+    {
+      "source_row": 371,
+      "name": "Wenli Brindle",
+      "npi": "1811393382",
+      "city": "BURBANK",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "wbrindlewcw@gmail.com"
+    },
+    {
+      "source_row": 372,
+      "name": "William Fung",
+      "npi": "1306657358",
+      "city": "BURBANK",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "wfungwcw@gmail.com"
+    },
+    {
+      "source_row": 373,
+      "name": "William Loo",
+      "npi": "1427887660",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "william.loo.pac@gmail.com"
+    },
+    {
+      "source_row": 374,
+      "name": "William Sharp",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": "(559)679-1741",
+      "email": null
+    },
+    {
+      "source_row": 375,
+      "name": "Willice Hopkins",
+      "npi": "1942071634",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "rnhopkins2010@gmail.com"
+    },
+    {
+      "source_row": 376,
+      "name": "Xin Hong",
+      "npi": "1962103143",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "xinhong99@gmail.com"
+    },
+    {
+      "source_row": 377,
+      "name": "Yamile Nodarse-Perez",
+      "npi": "1497620132",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "yamilenodarse@yahoo.com"
+    },
+    {
+      "source_row": 378,
+      "name": "Yang Li",
+      "npi": "1750171914",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "yanglifinding@gmail.com"
+    },
+    {
+      "source_row": 379,
+      "name": "Yiika Campbell",
+      "npi": "1790485209",
+      "city": "Burbank",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "yassy852k3@yahoo.com"
+    },
+    {
+      "source_row": 380,
+      "name": "Yolanda Guerrero-Rebollo",
+      "npi": null,
+      "city": null,
+      "specialty_or_notes": null,
+      "phone_number": null,
+      "email": null
+    },
+    {
+      "source_row": 381,
+      "name": "Yolanda Raysor",
+      "npi": "1538807961",
+      "city": "BURBANK",
+      "specialty_or_notes": null,
+      "phone_number": "(818)-856-9535",
+      "email": "yraysorwcw@gmail.com"
+    }
+  ]
+}
