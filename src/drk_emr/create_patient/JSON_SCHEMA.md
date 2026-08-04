@@ -35,6 +35,30 @@ entry, so a later approved DRK writer must process the list deliberately rather 
 coverage. `ready_for_fill` remains false while required values are missing or typeahead values have not been
 matched to exact DRK catalog rows. This envelope is a draft and is not evidence that a patient was created.
 
+## Duplicate-check decision
+
+Before Patient Intake is opened, `duplicate_check.py` writes `drk-duplicate-check.json`:
+
+```json
+{
+  "status": "clear_to_create",
+  "searched_name": "Alva Butler",
+  "result_count": 0,
+  "row_count": 0,
+  "summary_text": "0 results · matched on name",
+  "candidate_patient_ids": [],
+  "assessments": [],
+  "reason": "stable_zero_search_results",
+  "clear_to_create": true,
+  "checked_at_utc": "2026-08-03T14:00:00+00:00",
+  "error": null
+}
+```
+
+`status` is one of `clear_to_create`, `duplicate_found`, `manual_review_required`, or `not_checked`.
+Fill/create requires `status=clear_to_create` and `clear_to_create=true`. Create Patient submit remains
+disabled even after a clear decision.
+
 ---
 
 ## Top-level object

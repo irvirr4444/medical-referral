@@ -58,6 +58,11 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--passes", type=int, choices=(1, 3), default=3)
     parser.add_argument("--apply-master-sheet", action="store_true")
     parser.add_argument("--confirm-master-sheet-write", action="store_true")
+    parser.add_argument(
+        "--drk-duplicate-json",
+        type=Path,
+        help="Optional drk-duplicate-check.json decision to include in handoff state.",
+    )
     parser.add_argument("--output-dir", type=Path, default=Path("tmp") / "aligned-intake")
     return parser.parse_args(argv)
 
@@ -116,6 +121,26 @@ def _write_json(path: Path, payload: Any) -> None:
     os.chmod(temporary, 0o600)
     temporary.replace(path)
     os.chmod(path, 0o600)
+
+
+def _load_drk_duplicate_decision(path: Path | None) -> dict[str, Any]:
+    if path is None:
+        return {
+            "status": "not_checked",
+            "clear_to_create": False,
+            "reason": "DRK duplicate gate was not run for this aligned preview.",
+            "candidate_patient_ids": [],
+        }
+    try:
+        from drk_emr.create_patient.schema import DrkDuplicateCheckDecision
+
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
+        decision = DrkDuplicateCheckDecision.model_validate(payload)
+        return decision.model_dump(mode="json")
+    except OSError as exc:
+        raise RuntimeError(f"Could not read DRK duplicate JSON: {path}") from exc
+    except Exception as exc:
+        raise RuntimeError(f"Invalid DRK duplicate JSON: {path}") from exc
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -177,15 +202,39 @@ def main(argv: list[str] | None = None) -> int:
     plan_path = output / "intake-plan.json"
     master_preview_path = output / "master-sheet-preview.json"
     drk_draft_path = output / "drk-create-draft.json"
+    drk_duplicate = _load_drk_duplicate_decision(args.drk_duplicate_json)
+    drk_duplicate_path = output / "drk-duplicate-check.json"
     _write_json(bundle_path, bundle.model_dump(mode="json"))
     _write_json(plan_path, plan)
     _write_json(master_preview_path, preview)
     _write_json(drk_draft_path, bundle.drk_create_draft.model_dump(mode="json"))
+    _write_json(drk_duplicate_path, drk_duplicate)
 
     applied = None
     if args.apply_master_sheet:
         applied = apply_master_sheet_create(preview)
         _write_json(output / "master-sheet-apply-result.json", applied)
+
+    drk_blockers = list(bundle.drk_create_draft.blockers)
+    if drk_duplicate.get("status") == "duplicate_found":
+        drk_blockers.append("drk_duplicate_found")
+    elif drk_duplicate.get("status") == "manual_review_required":
+        drk_blockers.append("drk_duplicate_manual_review_required")
+    elif drk_duplicate.get("status") == "not_checked":
+        drk_blockers.append("drk_duplicate_not_checked")
+    elif not drk_duplicate.get("clear_to_create"):
+        drk_blockers.append("drk_duplicate_not_clear_to_create")
+
+    if drk_duplicate.get("status") == "clear_to_create" and bundle.drk_create_draft.ready_for_fill:
+        drk_status = "clear_to_create"
+    elif bundle.drk_create_draft.ready_for_fill and drk_duplicate.get("status") == "not_checked":
+        drk_status = "draft_ready_duplicate_not_checked"
+    elif drk_duplicate.get("status") == "duplicate_found":
+        drk_status = "blocked_duplicate"
+    elif drk_duplicate.get("status") == "manual_review_required":
+        drk_status = "blocked_manual_review"
+    else:
+        drk_status = "blocked"
 
     handoff_state = {
         "version": 1,
@@ -200,11 +249,16 @@ def main(argv: list[str] | None = None) -> int:
             "blockers": preview["blockers"],
         },
         "drk": {
-            "status": "draft_ready" if bundle.drk_create_draft.ready_for_fill else "blocked",
+            "status": drk_status,
             "patient_id": None,
             "write_supported": False,
-            "blockers": bundle.drk_create_draft.blockers,
-            "message": "Current DRK automation is fill-only and does not submit Create Patient.",
+            "clear_to_create": bool(drk_duplicate.get("clear_to_create")),
+            "duplicate_check": drk_duplicate,
+            "blockers": drk_blockers,
+            "message": (
+                "DRK fill requires a fresh clear_to_create duplicate decision; "
+                "Create Patient submit remains disabled."
+            ),
         },
     }
     state_path = output / "handoff-state.json"

@@ -1,10 +1,20 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
 class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
+
+
+DuplicateDecisionStatus = Literal[
+    "clear_to_create",
+    "duplicate_found",
+    "manual_review_required",
+    "not_checked",
+]
 
 
 class DrkDemographicsDraft(StrictModel):
@@ -107,3 +117,33 @@ class DrkCreateDraftEnvelope(StrictModel):
     blockers: list[str] = Field(default_factory=list)
     unresolved_fields: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
+
+
+class DrkFieldComparison(StrictModel):
+    field_name: str
+    incoming_value: str | None = None
+    candidate_value: str | None = None
+    outcome: Literal["match", "mismatch", "missing_incoming", "missing_candidate", "inconclusive"]
+
+
+class DrkDuplicateCandidateAssessment(StrictModel):
+    patient_id: str
+    display_name: str | None = None
+    classification: Literal["duplicate", "different_person", "suspicious", "inconclusive"]
+    reason: str
+    comparisons: list[DrkFieldComparison] = Field(default_factory=list)
+    demographics: dict[str, object] | None = None
+
+
+class DrkDuplicateCheckDecision(StrictModel):
+    status: DuplicateDecisionStatus
+    searched_name: str | None = None
+    result_count: int | None = None
+    row_count: int | None = None
+    summary_text: str | None = None
+    candidate_patient_ids: list[str] = Field(default_factory=list)
+    assessments: list[DrkDuplicateCandidateAssessment] = Field(default_factory=list)
+    reason: str
+    clear_to_create: bool = False
+    checked_at_utc: str | None = None
+    error: str | None = None
