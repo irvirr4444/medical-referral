@@ -29,14 +29,80 @@ def create_and_send_review(
     recipient = recipient.strip()
     if not recipient:
         raise ReviewWorkflowError("review recipient cannot be empty")
+    source_message_id = str(manifest.get("source_message_id") or "").strip()
+    if not source_message_id:
+        raise ReviewWorkflowError("source message ID is required to send the review as a reply")
     paths = _artifact_paths(manifest)
     digest = artifact_digest(paths.values())
+    store = ReviewStore(state_db)
+    existing = store.find_active(
+        artifact_digest=digest,
+        source_message_id=source_message_id,
+        recipient=recipient,
+    )
+    if existing is not None and (existing.email_html_body or existing.email_text_body or existing.email_body):
+        subject = existing.email_subject or f"[WCW REFERRAL REVIEW] {existing.review_id}"
+        content_type = (existing.email_content_type or ("HTML" if existing.email_html_body else "Text")).upper()
+        html_body = existing.email_html_body
+        text_body = existing.email_text_body or existing.email_body
+        body_for_send = html_body if content_type == "HTML" and html_body else text_body
+        review_id = existing.review_id
+        confirmation_source = text_body or existing.email_body or ""
+        review_status = (
+            "awaiting_confirmation"
+            if existing.status in {"awaiting_confirmation", "review_send_failed"}
+            and "CONFIRMED " in confirmation_source
+            else existing.status
+        )
+        if review_status == "review_send_failed":
+            review_status = "awaiting_confirmation"
+        try:
+            mailbox.send_reply(
+                source_message_id=source_message_id,
+                recipient=recipient,
+                html_body=html_body,
+                text_body=text_body,
+                content_type=content_type,
+                body=body_for_send,
+            )
+        except Exception as error:
+            store.mark_failed(review_id, error=f"review email send failed: {error}", status="review_send_failed")
+            raise
+        store.mark_sent(
+            review_id,
+            status=review_status,
+            email_subject=subject,
+            email_html_body=html_body,
+            email_text_body=text_body,
+            email_content_type=content_type,
+        )
+        audit_path = _write_review_audit(
+            paths["monday"].parent,
+            review_id=review_id,
+            recipient=recipient,
+            status=review_status,
+            artifact_digest=digest,
+            subject=subject,
+            html_body=html_body,
+            text_body=text_body or "",
+            content_type=content_type,
+            reused=True,
+        )
+        return {
+            "review_id": review_id,
+            "review_status": review_status,
+            "review_recipient": recipient,
+            "review_audit_path": str(audit_path),
+            "review_reused": True,
+            "review_content_type": content_type,
+        }
+
     review_id = f"review_{digest[:12]}_{secrets.token_hex(3)}"
     token = secrets.token_urlsafe(18)
     preview = _load_json(paths["monday"])
     approval_allowed = not bool(preview.get("blocked"))
     review_status = "awaiting_confirmation" if approval_allowed else "needs_correction"
-    subject, body = render_review_email(
+    email = render_review_email(
         review_id=review_id,
         token=token,
         canonical_path=paths["canonical"],
@@ -46,7 +112,6 @@ def create_and_send_review(
         write_config_path=write_config_path,
         approval_allowed=approval_allowed,
     )
-    store = ReviewStore(state_db)
     store.add(
         review_id=review_id,
         token=token,
@@ -56,39 +121,85 @@ def create_and_send_review(
         intake_plan_path=str(paths["plan"].resolve()),
         monday_preview_path=str(paths["monday"].resolve()),
         drk_draft_path=str(paths["drk"].resolve()),
-        source_message_id=str(manifest.get("source_message_id") or ""),
+        source_message_id=source_message_id,
         status=review_status,
+        email_subject=email.subject,
+        email_html_body=email.html_body,
+        email_text_body=email.text_body,
+        email_content_type=email.content_type,
     )
     try:
-        mailbox.send(recipient=recipient, subject=subject, text_body=body)
+        mailbox.send_reply(
+            source_message_id=source_message_id,
+            recipient=recipient,
+            html_body=email.html_body,
+            text_body=email.text_body,
+            content_type=email.content_type,
+        )
     except Exception as error:
         store.mark_failed(review_id, error=f"review email send failed: {error}", status="review_send_failed")
         raise
 
-    audit_path = paths["monday"].parent / "review-request.json"
-    email_path = paths["monday"].parent / "review-email.txt"
-    email_path.write_text(body, encoding="utf-8")
-    audit_path.write_text(
-        json.dumps(
-            {
-                "review_id": review_id,
-                "recipient": recipient,
-                "status": review_status,
-                "artifact_digest": digest,
-                "subject": subject,
-                "email_path": str(email_path),
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
+    audit_path = _write_review_audit(
+        paths["monday"].parent,
+        review_id=review_id,
+        recipient=recipient,
+        status=review_status,
+        artifact_digest=digest,
+        subject=email.subject,
+        html_body=email.html_body,
+        text_body=email.text_body,
+        content_type=email.content_type,
+        reused=False,
     )
     return {
         "review_id": review_id,
         "review_status": review_status,
         "review_recipient": recipient,
         "review_audit_path": str(audit_path),
+        "review_reused": False,
+        "review_content_type": email.content_type,
     }
+
+
+def _write_review_audit(
+    output_dir: Path,
+    *,
+    review_id: str,
+    recipient: str,
+    status: str,
+    artifact_digest: str,
+    subject: str,
+    html_body: str | None,
+    text_body: str,
+    content_type: str,
+    reused: bool,
+) -> Path:
+    audit_path = output_dir / "review-request.json"
+    text_path = output_dir / "review-email.txt"
+    html_path = output_dir / "review-email.html"
+    text_path.write_text(text_body, encoding="utf-8")
+    if html_body:
+        html_path.write_text(html_body, encoding="utf-8")
+    audit_path.write_text(
+        json.dumps(
+            {
+                "review_id": review_id,
+                "recipient": recipient,
+                "status": status,
+                "artifact_digest": artifact_digest,
+                "subject": subject,
+                "content_type": content_type,
+                "email_path": str(text_path),
+                "html_email_path": str(html_path) if html_body else None,
+                "reused": reused,
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return audit_path
 
 
 class ApprovalProcessor:

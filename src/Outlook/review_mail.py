@@ -25,16 +25,40 @@ class OutlookReviewMailbox:
     def __init__(self, client: OutlookGraphClient) -> None:
         self.client = client
 
-    def send(self, *, recipient: str, subject: str, text_body: str) -> None:
+    def send_reply(
+        self,
+        *,
+        source_message_id: str,
+        recipient: str,
+        text_body: str | None = None,
+        html_body: str | None = None,
+        content_type: str = "HTML",
+        body: str | None = None,
+    ) -> None:
+        """Send the review in the source message's Outlook conversation."""
+        if not source_message_id:
+            raise ValueError("source_message_id is required to send a review reply")
+        selected_type = content_type.strip().upper()
+        if selected_type not in {"HTML", "TEXT"}:
+            raise ValueError("content_type must be HTML or Text")
+        if body is not None:
+            content = body
+        elif selected_type == "HTML":
+            content = html_body if html_body is not None else text_body
+        else:
+            content = text_body if text_body is not None else html_body
+        if not content:
+            raise ValueError("review reply body cannot be empty")
         self.client.post_no_content(
-            f"/users/{self.client.config.mailbox}/sendMail",
+            f"/users/{self.client.config.mailbox}/messages/{source_message_id}/reply",
             {
                 "message": {
-                    "subject": subject,
-                    "body": {"contentType": "Text", "content": text_body},
+                    "body": {
+                        "contentType": "HTML" if selected_type == "HTML" else "Text",
+                        "content": content,
+                    },
                     "toRecipients": [{"emailAddress": {"address": recipient}}],
                 },
-                "saveToSentItems": True,
             },
         )
 

@@ -93,10 +93,16 @@ Optional environment overrides:
 
 ```dotenv
 ANTHROPIC_PDF_MODEL=claude-opus-5
+ANTHROPIC_PDF_FALLBACK_MODELS=claude-opus-4-8
 ANTHROPIC_PDF_EFFORT=max
 ANTHROPIC_PDF_MAX_TOKENS=32000
 ANTHROPIC_PDF_TRANSPORT=files-api
 ```
+
+Capacity failures retry with jitter, then advance through the configured fallback
+chain. Successful artifacts record the model used under `source.extraction`.
+Validate fallback quality against the synthetic/golden referral set before
+production rollout.
 
 Inline native-PDF transport remains an explicit fallback:
 
@@ -226,15 +232,25 @@ For the email-based human review path, configure `REVIEW_RECIPIENT_EMAIL` and
 Microsoft Graph `Mail.Read` plus `Mail.Send`, then run:
 
 ```powershell
-python run_pipeline.py outlook --send-review
+python run_pipeline.py outlook --send-review --max-messages 25
+python run_pipeline.py retries
+python run_pipeline.py failures
 python run_pipeline.py approvals --execute
 ```
 
-The review email is rendered deterministically from the canonical extraction,
-intake plan, Monday preview, and DRK draft. Approval is bound to the configured
-sender, a one-time token, and a digest of those exact artifacts. The confirmed path
-creates Monday first and records a DRK handoff; DRK automatic patient submission is
-not yet enabled.
+`--max-messages` counts eligible unreplied referral emails (newest first) and
+pages through Outlook so replied messages do not hide older work. Permanent
+failures stay failed until `python run_pipeline.py failures --requeue <sha256>`.
+On Render, prefer the continuous background worker in `render.yaml` /
+`run_worker.py` so SQLite state and PDF artifacts live on a persistent disk.
+
+The review summary is rendered from the canonical extraction and sent to the
+configured reviewer as a reply on the source message's Outlook thread. Unreplied
+threads are eligible for intake; Anthropic capacity failures are queued as
+`pending_retry` and drained by `retries`. Approval is bound to the configured
+sender, a one-time token, and a digest of those exact artifacts. The confirmed
+path creates Monday first and records a DRK handoff; DRK automatic patient
+submission is not yet enabled.
 
 ### How extraction works
 

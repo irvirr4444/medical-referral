@@ -16,6 +16,8 @@ from urllib.parse import quote
 from pydantic import BaseModel, ValidationError
 
 from .llm.anthropic_json import AnthropicJsonError, build_client, parse_json_from_message
+from .llm.reliability import is_capacity_error as _is_retryable_api_error
+from .llm.reliability import retry_delay_seconds as _shared_retry_delay_seconds
 from .drk_pdf_schema import (
     ClinicalExtraction,
     DrkPdfExtraction,
@@ -163,27 +165,14 @@ def _supplemental_text(pdf_path: Path) -> tuple[str | None, bool]:
     return text[:MAX_SUPPLEMENTAL_TEXT_CHARS], True
 
 
-def _is_retryable_api_error(exc: Exception) -> bool:
-    status = getattr(exc, "status_code", None)
-    if status == 429 or (isinstance(status, int) and status >= 500):
-        return True
-    if type(exc).__name__ in {"APIConnectionError", "APITimeoutError", "RateLimitError", "InternalServerError"}:
-        return True
-    message = str(exc).lower()
-    return any(token in message for token in ("overloaded", "rate_limit", "temporarily unavailable"))
-
-
 def _retry_delay_seconds(exc: Exception, attempt: int) -> float:
-    response = getattr(exc, "response", None)
-    headers = getattr(response, "headers", None)
-    if headers is not None:
-        retry_after = headers.get("retry-after")
-        if retry_after:
-            try:
-                return min(max(float(retry_after), 0.5), 60.0)
-            except ValueError:
-                pass
-    return float(2**attempt)
+    return _shared_retry_delay_seconds(
+        exc,
+        attempt,
+        base_delay_seconds=1.0,
+        max_delay_seconds=60.0,
+        random_source=lambda: 1.0,
+    )
 
 
 def _call_structured_extractor(

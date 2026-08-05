@@ -31,9 +31,9 @@ def test_threshold_gap_routes_to_marketer() -> None:
     assert plan["write_safety"]["monday_writes_enabled"] is False
 
 
-def test_duplicate_candidate_requires_review_even_when_complete() -> None:
+def test_duplicate_requires_review_even_when_complete() -> None:
     referral = _complete_referral()
-    check = DuplicateCheck(mode="snapshot", status="candidates_found", candidates=({"id": "1"},))
+    check = DuplicateCheck(mode="snapshot", status="duplicate_found", candidates=({"id": "1"},))
 
     plan = build_intake_plan(referral, duplicate_check=check)
 

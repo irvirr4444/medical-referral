@@ -70,13 +70,13 @@ def build_intake_plan(referral: ReferralIntake, *, duplicate_check: DuplicateChe
     ]
     review_reasons: list[str] = []
 
-    if duplicate_check.status == "candidates_found":
+    if duplicate_check.status == "duplicate_found":
         actions.append(
             {
                 "type": "review_duplicate_candidate",
                 "owner": "intake team",
                 "status": "proposed",
-                "reason": "A Master Sheet item has the same normalized patient name and date of birth.",
+                "reason": "A Master Sheet item has the same normalized patient name, date of birth, phone, and address.",
                 "candidate_count": len(duplicate_check.candidates),
             }
         )

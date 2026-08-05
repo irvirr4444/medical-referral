@@ -1,0 +1,38 @@
+services:
+  - type: worker
+    name: medical-referral-intake
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: PYTHONPATH=src python -m referral_pipeline.worker
+    disk:
+      name: intake-data
+      mountPath: /var/data
+      sizeGB: 10
+    envVars:
+      - key: INTAKE_DATA_ROOT
+        value: /var/data/intake
+      - key: INTAKE_POLL_INTERVAL_SECONDS
+        value: "600"
+      - key: INTAKE_RETRY_INTERVAL_SECONDS
+        value: "300"
+      - key: INTAKE_MAX_MESSAGES
+        value: "25"
+      - key: INTAKE_MAX_RETRY_JOBS
+        value: "10"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: OUTLOOK_TENANT_ID
+        sync: false
+      - key: OUTLOOK_CLIENT_ID
+        sync: false
+      - key: OUTLOOK_CLIENT_SECRET
+        sync: false
+      - key: OUTLOOK_MAILBOX
+        sync: false
+      - key: REVIEW_RECIPIENT_EMAIL
+        sync: false
+      - key: MONDAY_DOT_COM_API_KEY
+        sync: false

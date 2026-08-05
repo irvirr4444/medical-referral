@@ -30,7 +30,11 @@ def test_cli_writes_snapshot_plan_without_using_live_monday(tmp_path, capsys) ->
                         "id": "123",
                         "name": "Patient, Example",
                         "group": {"title": "Working pipeline"},
-                        "column_values": [{"id": "date12", "text": "01/02/1980"}],
+                        "column_values": [
+                            {"id": "date12", "text": "01/02/1980"},
+                            {"id": "phone", "text": "555-555-0100"},
+                            {"id": "location", "text": "1 Example Street"},
+                        ],
                     }
                 ],
             }
@@ -56,5 +60,5 @@ def test_cli_writes_snapshot_plan_without_using_live_monday(tmp_path, capsys) ->
     plan = json.loads((tmp_path / "plans" / "referral.intake-plan.json").read_text())
 
     assert output["duplicate_candidate_count"] == 1
-    assert plan["monday_duplicate_check"]["status"] == "candidates_found"
+    assert plan["monday_duplicate_check"]["status"] == "duplicate_found"
     assert plan["write_safety"]["monday_writes_enabled"] is False

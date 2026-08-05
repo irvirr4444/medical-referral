@@ -107,7 +107,7 @@ CASES: tuple[SyntheticReferralCase, ...] = (
             "notes": "Synthetic fixture should match the synthetic Master Sheet snapshot.",
         },
         expected_outcome="manual_review_required",
-        expected_duplicate_status="candidates_found",
+        expected_duplicate_status="duplicate_found",
     ),
 )
 
@@ -218,6 +218,8 @@ def _master_sheet_snapshot() -> dict[str, Any]:
                 "group": {"id": "topics", "title": "Working pipeline"},
                 "column_values": [
                     {"id": "date12", "text": "Apr 28, 1949", "value": '{"date":"1949-04-28"}'},
+                    {"id": "phone", "text": "(708) 555-0184"},
+                    {"id": "location", "text": "82 Training Street, Oak Park, IL 60302"},
                     {"id": "deal_stage", "text": "In intake", "value": '{"label":"In intake"}'},
                 ],
             }

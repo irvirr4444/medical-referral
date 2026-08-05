@@ -150,6 +150,7 @@ def test_canonical_extractor_uses_exactly_two_calls_and_owns_source_metadata() -
         attachment_id="attachment-1",
         client=client,
         pdf_transport="inline",
+        sleep=lambda _delay: None,
     )
 
     assert len(client.messages.calls) == 2
@@ -157,17 +158,64 @@ def test_canonical_extractor_uses_exactly_two_calls_and_owns_source_metadata() -
     assert result.source.email_id == "mail-1"
     assert result.source.attachment_id == "attachment-1"
     assert result.source.pdf_sha256 != "candidate"
+    assert result.source.extraction is not None
+    assert result.source.extraction.primary_model == "claude-opus-5"
+    assert result.source.extraction.pass_models == ["claude-opus-5", "claude-opus-5"]
 
 
 def test_default_files_api_uploads_once_and_still_uses_two_calls() -> None:
     client = _FilesClient([_record(), _record()])
 
-    extract_referral_pdf(SAMPLE_PDF, client=client)
+    extract_referral_pdf(SAMPLE_PDF, client=client, sleep=lambda _delay: None)
 
     assert client.beta.files.upload_count == 1
     assert client.beta.files.deleted == ["file_test"]
     assert len(client.beta.messages.calls) == 2
     assert all(call["betas"] == ["files-api-2025-04-14"] for call in client.beta.messages.calls)
+
+
+class _FlakyMessages:
+    def __init__(self, outputs: list[CanonicalReferral], fail_times: int) -> None:
+        self.outputs = outputs
+        self.fail_times = fail_times
+        self.calls: list[dict] = []
+
+    def stream(self, **kwargs):
+        self.calls.append(kwargs)
+        if self.fail_times > 0:
+            self.fail_times -= 1
+
+            class Overloaded(Exception):
+                status_code = 529
+                body = {"error": {"type": "overloaded_error", "message": "Overloaded"}}
+
+            raise Overloaded("Overloaded")
+        return _Stream(self.outputs.pop(0))
+
+
+class _FallbackClient:
+    def __init__(self, outputs: list[CanonicalReferral], fail_primary: int) -> None:
+        self.messages = _FlakyMessages(outputs, fail_primary)
+
+
+def test_canonical_extractor_falls_back_after_primary_capacity_errors() -> None:
+    client = _FallbackClient([_record(), _record()], fail_primary=3)
+
+    result = extract_referral_pdf(
+        SAMPLE_PDF,
+        client=client,
+        pdf_transport="inline",
+        model="claude-opus-5",
+        fallback_models=["claude-opus-4-8"],
+        sleep=lambda _delay: None,
+        random_source=lambda: 0.0,
+    )
+
+    assert result.source.extraction is not None
+    assert result.source.extraction.fallback_used is True
+    assert "claude-opus-4-8" in result.source.extraction.models_attempted
+    assert client.messages.calls[0]["model"] == "claude-opus-5"
+    assert any(call["model"] == "claude-opus-4-8" for call in client.messages.calls)
 
 
 def test_all_seven_intake_values_survive_monday_and_drk_projection() -> None:

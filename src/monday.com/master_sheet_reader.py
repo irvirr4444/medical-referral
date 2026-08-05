@@ -45,6 +45,8 @@ FIELD_COLUMNS: dict[str, str] = {
 DEFAULT_RESULT_FIELDS = (
     "name",
     "dob",
+    "patient_phone",
+    "patient_address",
     "referral_received",
     "case_manager",
     "sent_to_cm",
@@ -175,6 +177,18 @@ def normalize_dob(value: str | None) -> str:
         except ValueError:
             continue
     return "".join(ch for ch in text if ch.isdigit())
+
+
+def normalize_phone(value: str | None) -> str:
+    """Normalize displayed phone values to a cautious comparable digit string."""
+    digits = "".join(ch for ch in (value or "") if ch.isdigit())
+    return digits[-10:] if len(digits) >= 10 else digits
+
+
+def normalize_address(value: str | None) -> str:
+    """Normalize punctuation, casing, and whitespace for exact address matching."""
+    text = unicodedata.normalize("NFKD", value or "").encode("ascii", "ignore").decode("ascii")
+    return " ".join(re.sub(r"[^A-Za-z0-9]+", " ", text).upper().split())
 
 
 def item_values(item: dict[str, Any]) -> dict[str, str]:
@@ -364,16 +378,20 @@ def find_patients(
     *,
     name: str,
     dob: str | None = None,
+    phone: str | None = None,
+    address: str | None = None,
     contains: bool = False,
 ) -> list[dict[str, Any]]:
-    """Find exact normalized-name candidates, optionally narrowed by DOB.
+    """Find exact normalized identity matches using each supplied field.
 
-    The result is deliberately a candidate list. A matching name and DOB does
-    not prove two referrals are the same patient.
+    Duplicate intake checks supply name, DOB, phone, and address. Other
+    operational readers may continue to use only name or name plus DOB.
     """
     target_name = normalize_name(name)
     target_name_key = _name_match_key(name)
     target_dob = normalize_dob(dob)
+    target_phone = normalize_phone(phone)
+    target_address = normalize_address(address)
     if not target_name:
         raise ValueError("name must contain at least one letter or number")
 
@@ -385,6 +403,10 @@ def find_patients(
         if not name_matches:
             continue
         if target_dob and normalize_dob(values["dob"]) != target_dob:
+            continue
+        if target_phone and normalize_phone(values["patient_phone"]) != target_phone:
+            continue
+        if target_address and normalize_address(values["patient_address"]) != target_address:
             continue
         matches.append(item)
     return matches

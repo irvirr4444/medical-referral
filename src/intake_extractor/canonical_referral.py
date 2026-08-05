@@ -11,13 +11,18 @@ import base64
 import hashlib
 import json
 import os
-import time
 from pathlib import Path
-from typing import Any, Callable, Literal
+from typing import Any, Callable, Literal, Sequence
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from .llm.anthropic_json import AnthropicJsonError, build_client, parse_json_from_message
+from .llm.reliability import (
+    CapacityExhaustedError,
+    ExtractionAudit,
+    call_with_model_fallback,
+    resolve_model_chain,
+)
 
 
 DEFAULT_MAX_TOKENS = 32_000
@@ -38,6 +43,13 @@ class CanonicalExtractionError(RuntimeError):
     pass
 
 
+class CanonicalExtractionAudit(StrictModel):
+    primary_model: str
+    models_attempted: list[str] = Field(default_factory=list)
+    pass_models: list[str] = Field(default_factory=list)
+    fallback_used: bool = False
+
+
 class CanonicalSource(StrictModel):
     email_id: str | None = None
     attachment_id: str | None = None
@@ -45,6 +57,7 @@ class CanonicalSource(StrictModel):
     pdf_sha256: str
     page_count: int | None = None
     sent_by: str | None = None
+    extraction: CanonicalExtractionAudit | None = None
 
 
 class CanonicalName(StrictModel):
@@ -270,12 +283,15 @@ def _call_structured_extractor(
     client: Any,
     *,
     output_format: type[CanonicalReferral],
-    model: str,
+    models: Sequence[str],
     effort: str,
     max_tokens: int,
     system_prompt: str,
     content: list[dict[str, Any]],
-) -> CanonicalReferral:
+    progress: Callable[[str], None] | None = None,
+    sleep: Callable[[float], None] | None = None,
+    random_source: Callable[[], float] | None = None,
+) -> tuple[CanonicalReferral, str]:
     schema_prompt = (
         f"{system_prompt}\n\nReturn exactly one RFC 8259 JSON object matching this JSON Schema. "
         f"Do not add markdown or commentary:\n{json.dumps(output_format.model_json_schema(), ensure_ascii=False)}"
@@ -288,38 +304,41 @@ def _call_structured_extractor(
                 {"type": "text", "text": f"Return fresh valid JSON. Previous validation error: {last_error}"}
             )
         try:
-            message = None
-            for api_attempt in range(5):
-                try:
-                    kwargs = {
-                        "model": model,
-                        "max_tokens": max_tokens,
-                        "system": schema_prompt,
-                        "messages": [{"role": "user", "content": attempt_content}],
-                        "output_config": {"effort": effort},
-                        "thinking": {"type": "adaptive"},
-                    }
-                    uses_file = content[0].get("source", {}).get("type") == "file"
-                    manager = (
-                        client.beta.messages.stream(**kwargs, betas=[FILES_API_BETA])
-                        if uses_file
-                        else client.messages.stream(**kwargs)
-                    )
-                    with manager as stream:
-                        message = stream.get_final_message()
-                    break
-                except Exception as exc:
-                    retryable = getattr(exc, "status_code", None) in {429, 500, 502, 503, 504}
-                    retryable = retryable or "overloaded" in str(exc).lower()
-                    if api_attempt == 4 or not retryable:
-                        raise
-                    time.sleep(2**api_attempt)
-            if message is None:
-                raise CanonicalExtractionError("Anthropic returned no message")
-            parsed = getattr(message, "parsed_output", None) or parse_json_from_message(message)
-            return parsed if isinstance(parsed, output_format) else output_format.model_validate(parsed)
+
+            def _invoke(model: str) -> CanonicalReferral:
+                kwargs = {
+                    "model": model,
+                    "max_tokens": max_tokens,
+                    "system": schema_prompt,
+                    "messages": [{"role": "user", "content": attempt_content}],
+                    "output_config": {"effort": effort},
+                    "thinking": {"type": "adaptive"},
+                }
+                uses_file = content[0].get("source", {}).get("type") == "file"
+                manager = (
+                    client.beta.messages.stream(**kwargs, betas=[FILES_API_BETA])
+                    if uses_file
+                    else client.messages.stream(**kwargs)
+                )
+                with manager as stream:
+                    message = stream.get_final_message()
+                if message is None:
+                    raise CanonicalExtractionError("Anthropic returned no message")
+                parsed = getattr(message, "parsed_output", None) or parse_json_from_message(message)
+                return parsed if isinstance(parsed, output_format) else output_format.model_validate(parsed)
+
+            result, audit = call_with_model_fallback(
+                _invoke,
+                models=models,
+                progress=progress,
+                sleep=sleep or __import__("time").sleep,
+                random_source=random_source,
+            )
+            return result, audit.model
         except (AnthropicJsonError, ValidationError) as exc:
             last_error = exc
+        except CapacityExhaustedError as exc:
+            raise CanonicalExtractionError(str(exc)) from exc
         except Exception as exc:
             raise CanonicalExtractionError(f"Anthropic extraction failed: {exc}") from exc
     raise CanonicalExtractionError(f"Anthropic output failed JSON/schema validation twice: {last_error}")
@@ -341,11 +360,14 @@ def extract_referral_pdf(
     attachment_id: str | None = None,
     sent_by: str | None = None,
     model: str | None = None,
+    fallback_models: Sequence[str] | None = None,
     effort: str | None = None,
     max_tokens: int | None = None,
     pdf_transport: str | None = None,
     client: Any | None = None,
     progress: Callable[[str], None] | None = None,
+    sleep: Callable[[float], None] | None = None,
+    random_source: Callable[[], float] | None = None,
 ) -> CanonicalReferral:
     """Interpret a PDF exactly twice: initial extraction, then source verification."""
     pdf = Path(pdf_path)
@@ -356,7 +378,7 @@ def extract_referral_pdf(
     transport = pdf_transport or os.getenv("ANTHROPIC_PDF_TRANSPORT", DEFAULT_PDF_TRANSPORT)
     if transport not in {"inline", "files-api"}:
         raise CanonicalExtractionError("pdf_transport must be inline or files-api")
-    selected_model = model or os.getenv("ANTHROPIC_PDF_MODEL", DEFAULT_MODEL)
+    models = resolve_model_chain(primary=model, fallbacks=fallback_models)
     selected_effort = effort or os.getenv("ANTHROPIC_PDF_EFFORT", DEFAULT_EFFORT)
     selected_tokens = max_tokens or int(os.getenv("ANTHROPIC_PDF_MAX_TOKENS", str(DEFAULT_MAX_TOKENS)))
     api_client = client or build_client()
@@ -371,26 +393,32 @@ def extract_referral_pdf(
     )
     referral_id = f"ref_{digest[:24]}"
     metadata = json.dumps({"referral_id": referral_id, "source": source.model_dump(mode="json")})
+    audit = ExtractionAudit()
+    sleeper = sleep if sleep is not None else __import__("time").sleep
 
     def execute(pdf_block: dict[str, Any]) -> CanonicalReferral:
         if progress:
             progress("Canonical pass 1/2: complete PDF extraction started")
-        first = _call_structured_extractor(
+        first, first_model = _call_structured_extractor(
             api_client,
             output_format=CanonicalReferral,
-            model=selected_model,
+            models=models,
             effort=selected_effort,
             max_tokens=selected_tokens,
             system_prompt=SYSTEM_PROMPT,
             content=[pdf_block, {"type": "text", "text": f"{FIRST_READING}\nSOURCE METADATA:\n{metadata}"}],
+            progress=progress,
+            sleep=sleeper,
+            random_source=random_source,
         )
+        audit.record_pass(first_model, primary_model=models[0])
         if progress:
-            progress("Canonical pass 1/2: complete")
+            progress(f"Canonical pass 1/2: complete (model={first_model})")
             progress("Canonical pass 2/2: source verification started")
-        final = _call_structured_extractor(
+        final, final_model = _call_structured_extractor(
             api_client,
             output_format=CanonicalReferral,
-            model=selected_model,
+            models=models,
             effort=selected_effort,
             max_tokens=selected_tokens,
             system_prompt=SYSTEM_PROMPT,
@@ -404,10 +432,24 @@ def extract_referral_pdf(
                     ),
                 },
             ],
+            progress=progress,
+            sleep=sleeper,
+            random_source=random_source,
         )
+        audit.record_pass(final_model, primary_model=models[0])
         if progress:
-            progress("Canonical pass 2/2: complete")
-        final = final.model_copy(update={"schema_version": 1, "referral_id": referral_id, "source": source})
+            progress(f"Canonical pass 2/2: complete (model={final_model})")
+        source_with_audit = source.model_copy(
+            update={
+                "extraction": CanonicalExtractionAudit(
+                    primary_model=models[0],
+                    models_attempted=list(audit.models_attempted),
+                    pass_models=list(audit.pass_models),
+                    fallback_used=audit.fallback_used,
+                )
+            }
+        )
+        final = final.model_copy(update={"schema_version": 1, "referral_id": referral_id, "source": source_with_audit})
         return _ensure_core_quality(final)
 
     if transport == "inline":
@@ -418,10 +460,14 @@ def extract_referral_pdf(
     try:
         return execute(pdf_block)
     finally:
-        api_client.beta.files.delete(uploaded_id)
-        if progress:
-            progress("Deleted temporary Anthropic Files API upload")
-
+        try:
+            api_client.beta.files.delete(uploaded_id)
+        except Exception as cleanup_error:
+            if progress:
+                progress(f"Failed to delete temporary Anthropic upload: {cleanup_error}")
+        else:
+            if progress:
+                progress("Deleted temporary Anthropic Files API upload")
 
 def _ensure_core_quality(record: CanonicalReferral) -> CanonicalReferral:
     quality = dict(record.field_quality)

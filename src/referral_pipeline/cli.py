@@ -25,10 +25,13 @@ from Outlook.review_mail import OutlookReviewMailbox  # noqa: E402
 from referral_pipeline.review.workflow import ApprovalProcessor  # noqa: E402
 from referral_pipeline.review.workflow import create_and_send_review  # noqa: E402
 from referral_pipeline.runner import main as run_inbound_main  # noqa: E402
+from referral_pipeline.state import InboxState  # noqa: E402
 
 
 DEFAULT_OUTPUT_ROOT = Path("tmp") / "inbox-runs"
 LATEST_POINTER_NAME = "latest.json"
+# Temporary test toggle. Change to True when Monday duplicate checks should run.
+MONDAY_DUPLICATE_CHECK_ENABLED = False
 
 
 class IntakeCLIError(RuntimeError):
@@ -49,10 +52,20 @@ def _build_parser() -> argparse.ArgumentParser:
     write_mode.add_argument("--dry-run", action="store_true", help="Build and save a preview only (default).")
     write_mode.add_argument("--apply", action="store_true", help="Create an unblocked Master Sheet item immediately.")
     outlook.add_argument("--confirm-master-sheet-write", action="store_true")
-    outlook.add_argument("--max-messages", type=int, default=1)
+    outlook.add_argument(
+        "--max-messages",
+        type=int,
+        default=25,
+        help="Maximum eligible unreplied referral emails to process (newest first).",
+    )
     outlook.add_argument("--input-mode", choices=("auto", "text", "image", "hybrid"), default="image")
     outlook.add_argument("--max-pages", type=int)
-    outlook.add_argument("--monday-mode", choices=("disabled", "snapshot", "live-readonly"), default="live-readonly")
+    outlook.add_argument(
+        "--monday-mode",
+        choices=("disabled", "snapshot", "live-readonly"),
+        default="live-readonly" if MONDAY_DUPLICATE_CHECK_ENABLED else "disabled",
+        help="Monday duplicate lookup mode; disabled by the in-code test toggle by default.",
+    )
     outlook.add_argument("--monday-records-file", type=Path)
     outlook.add_argument("--agency-mode", choices=("disabled", "snapshot", "live-readonly"), default="live-readonly")
     outlook.add_argument("--agency-records-file", type=Path)
@@ -63,7 +76,10 @@ def _build_parser() -> argparse.ArgumentParser:
     outlook.add_argument("--force", action="store_true", help="Reprocess the newest PDF even if its hash was completed.")
     outlook.add_argument("--quiet", action="store_true", help="Suppress progress logs while retaining the final summary.")
     outlook.add_argument("--send-review", action="store_true", help="Email the generated review summary instead of writing immediately.")
-    outlook.add_argument("--review-recipient", help="Reviewer email; defaults to REVIEW_RECIPIENT_EMAIL.")
+    outlook.add_argument(
+        "--review-recipient",
+        help="Override reviewer email; by default the review reply goes to the original sender.",
+    )
 
     apply = commands.add_parser(
         "apply",
@@ -89,13 +105,54 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Send a review from an existing completed extraction without rerunning the LLM.",
     )
     review_send.add_argument("--run", type=Path, required=True, help="Existing timestamped intake run directory.")
-    review_send.add_argument("--review-recipient", help="Reviewer email; defaults to REVIEW_RECIPIENT_EMAIL.")
+    review_send.add_argument(
+        "--review-recipient",
+        help="Override reviewer email; defaults to the original sender stored on the run manifest.",
+    )
     review_send.add_argument(
         "--config",
         type=Path,
         default=MONDAY_DIR / "master_sheet_write_config.example.json",
     )
     review_send.add_argument("--state-db", type=Path)
+
+    retries = commands.add_parser(
+        "retries",
+        help="Process due durable retry jobs (scheduler-friendly one-shot).",
+    )
+    retries.add_argument("--max-jobs", type=int, default=10)
+    retries.add_argument("--input-mode", choices=("auto", "text", "image", "hybrid"), default="image")
+    retries.add_argument("--max-pages", type=int)
+    retries.add_argument(
+        "--monday-mode",
+        choices=("disabled", "snapshot", "live-readonly"),
+        default="live-readonly" if MONDAY_DUPLICATE_CHECK_ENABLED else "disabled",
+        help="Monday duplicate lookup mode; disabled by the in-code test toggle by default.",
+    )
+    retries.add_argument("--monday-records-file", type=Path)
+    retries.add_argument("--agency-mode", choices=("disabled", "snapshot", "live-readonly"), default="live-readonly")
+    retries.add_argument("--agency-records-file", type=Path)
+    retries.add_argument("--include-full-row", action="store_true")
+    retries.add_argument("--config", type=Path)
+    retries.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
+    retries.add_argument("--state-db", type=Path)
+    retries.add_argument("--quiet", action="store_true")
+    retries.add_argument("--send-review", action="store_true", default=True)
+    retries.add_argument("--no-send-review", action="store_false", dest="send_review")
+    retries.add_argument("--review-recipient", help="Reviewer email; defaults to REVIEW_RECIPIENT_EMAIL.")
+
+    failures = commands.add_parser(
+        "failures",
+        help="List permanent intake failures and optionally requeue one by sha256.",
+    )
+    failures.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
+    failures.add_argument("--state-db", type=Path)
+    failures.add_argument("--limit", type=int, default=50, help="Maximum failed jobs to list.")
+    failures.add_argument(
+        "--requeue",
+        metavar="SHA256",
+        help="Move one permanent failure back onto the discovery queue for a deliberate retry.",
+    )
 
     return parser
 
@@ -202,7 +259,13 @@ def _record_latest_run(output_root: Path, run_dir: Path) -> dict[str, Any]:
         }
     )
     if result.get("status") != "completed":
-        pointer["reason"] = str(result.get("status") or "attachment did not complete")
+        status = str(result.get("status") or "attachment did not complete")
+        pointer["reason"] = status
+        if status == "pending_retry":
+            pointer["status"] = "pending_retry"
+            pointer["next_attempt_at"] = result.get("next_attempt_at")
+        elif status == "circuit_open":
+            pointer["status"] = "circuit_open"
         return _write_pointer(output_root, pointer)
 
     preview_value = result.get("preview_path")
@@ -260,6 +323,12 @@ def _print_run_result(pointer: dict[str, Any], *, output_root: Path) -> None:
     elif status == "needs_correction":
         print(f"[intake] review request: {pointer.get('review_id')}")
         print(f"[intake] correction required: {pointer.get('reason', 'review is blocked')}")
+    elif status == "pending_retry":
+        print(f"[intake] deferred for retry: {pointer.get('next_attempt_at') or 'soon'}")
+        print("[intake] next: python run_pipeline.py retries")
+    elif status == "circuit_open":
+        print("[intake] Anthropic circuit open; work deferred")
+        print("[intake] next: python run_pipeline.py retries")
     elif status == "applied":
         print(f"[intake] created Monday item: {pointer.get('created_item_id')}")
     else:
@@ -321,6 +390,54 @@ def _run_approvals(args: argparse.Namespace) -> int:
     return 1 if any(item.get("status") == "failed" for item in result["executed"]) else 0
 
 
+def _run_retries(args: argparse.Namespace) -> int:
+    if args.max_jobs < 1:
+        raise IntakeCLIError("--max-jobs must be at least 1")
+    output_root = args.output_root.resolve()
+    run_dir = _new_run_dir(output_root)
+    state_db = (args.state_db or output_root / "state.sqlite").resolve()
+    delegated = [
+        "--process-retries",
+        "--max-jobs",
+        str(args.max_jobs),
+        "--input-mode",
+        args.input_mode,
+        "--monday-mode",
+        args.monday_mode,
+        "--agency-mode",
+        args.agency_mode,
+        "--output-dir",
+        str(run_dir),
+        "--state-db",
+        str(state_db),
+        "--master-sheet-mode",
+        "dry-run",
+    ]
+    if args.max_pages is not None:
+        delegated.extend(("--max-pages", str(args.max_pages)))
+    if args.monday_records_file is not None:
+        delegated.extend(("--monday-records-file", str(args.monday_records_file)))
+    if args.agency_records_file is not None:
+        delegated.extend(("--agency-records-file", str(args.agency_records_file)))
+    if args.include_full_row:
+        delegated.append("--include-full-row")
+    if args.config is not None:
+        delegated.extend(("--config", str(args.config)))
+    if not args.quiet:
+        delegated.append("--verbose")
+    if args.send_review:
+        delegated.append("--send-review")
+    if args.review_recipient:
+        delegated.extend(("--review-recipient", args.review_recipient))
+
+    print(f"[intake] source: durable retry queue (max {args.max_jobs})")
+    print(f"[intake] run directory: {run_dir}")
+    exit_code = run_inbound_main(delegated)
+    pointer = _record_latest_run(output_root, run_dir)
+    _print_run_result(pointer, output_root=output_root)
+    return exit_code
+
+
 def _resend_review(args: argparse.Namespace) -> int:
     run_dir = args.run.resolve()
     manifests = list(run_dir.rglob("manifest.json"))
@@ -328,9 +445,16 @@ def _resend_review(args: argparse.Namespace) -> int:
         raise IntakeCLIError(f"--run must contain exactly one manifest; found {len(manifests)}")
     manifest = _load_json_object(manifests[0], label="intake manifest")
     graph_client = OutlookGraphClient(OutlookGraphConfig.from_environment())
-    recipient = (args.review_recipient or os.getenv("REVIEW_RECIPIENT_EMAIL", "")).strip()
+    recipient = (
+        (args.review_recipient or "").strip()
+        or str(manifest.get("source_sender") or "").strip()
+        or os.getenv("REVIEW_RECIPIENT_EMAIL", "").strip()
+    )
     if not recipient:
-        raise IntakeCLIError("review-send requires --review-recipient or REVIEW_RECIPIENT_EMAIL")
+        raise IntakeCLIError(
+            "review-send requires the original sender on the manifest, "
+            "--review-recipient, or REVIEW_RECIPIENT_EMAIL"
+        )
     state_db = (args.state_db or run_dir.parent / "state.sqlite").resolve()
 
     print(f"[review] reusing extraction: {run_dir}")
@@ -344,6 +468,55 @@ def _resend_review(args: argparse.Namespace) -> int:
     )
     print(json.dumps(result, indent=2))
     return 0
+
+
+def _run_failures(args: argparse.Namespace) -> int:
+    if args.limit < 1:
+        raise IntakeCLIError("--limit must be at least 1")
+    output_root = args.output_root.resolve()
+    state_db = (args.state_db or output_root / "state.sqlite").resolve()
+    state = InboxState(state_db)
+
+    if args.requeue:
+        try:
+            job = state.requeue_failed(sha256=args.requeue)
+        except KeyError as error:
+            raise IntakeCLIError(str(error)) from error
+        print(
+            json.dumps(
+                {
+                    "status": "requeued",
+                    "sha256": job.sha256,
+                    "filename": job.filename,
+                    "subject": job.subject,
+                    "next": "python run_pipeline.py outlook --send-review  or  python run_pipeline.py retries",
+                },
+                indent=2,
+            )
+        )
+        return 0
+
+    jobs = state.list_failed(limit=args.limit)
+    payload = {
+        "failed_count": state.failed_count(),
+        "listed": len(jobs),
+        "state_db": str(state_db),
+        "failures": [
+            {
+                "filename": job.filename,
+                "subject": job.subject,
+                "received_at": job.received_at,
+                "sha256": job.sha256,
+                "attempt_count": job.attempt_count,
+                "error_kind": job.error_kind,
+                "last_error": job.last_error,
+                "updated_at": job.updated_at,
+            }
+            for job in jobs
+        ],
+    }
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    return 1 if jobs else 0
 
 
 def _select_preview(args: argparse.Namespace) -> tuple[Path, dict[str, Any] | None]:
@@ -396,6 +569,10 @@ def main(argv: list[str] | None = None) -> int:
             return _apply_preview(args)
         if args.command == "approvals":
             return _run_approvals(args)
+        if args.command == "retries":
+            return _run_retries(args)
+        if args.command == "failures":
+            return _run_failures(args)
         return _resend_review(args)
     except IntakeCLIError as error:
         print(f"intake: error: {error}", file=sys.stderr)

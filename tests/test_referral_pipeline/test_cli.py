@@ -45,7 +45,7 @@ def _write_completed_run(argv: list[str], *, blocked: bool = False, created_item
     )
 
 
-def test_outlook_defaults_to_one_message_and_dry_run(tmp_path, monkeypatch, capsys) -> None:
+def test_outlook_defaults_to_batch_and_dry_run(tmp_path, monkeypatch, capsys) -> None:
     delegated: list[str] = []
 
     def fake_run(argv: list[str]) -> int:
@@ -57,9 +57,9 @@ def test_outlook_defaults_to_one_message_and_dry_run(tmp_path, monkeypatch, caps
 
     assert intake.main(["outlook", "--output-root", str(tmp_path)]) == 0
 
-    assert delegated[delegated.index("--max-messages") + 1] == "1"
+    assert delegated[delegated.index("--max-messages") + 1] == "25"
     assert delegated[delegated.index("--input-mode") + 1] == "image"
-    assert delegated[delegated.index("--monday-mode") + 1] == "live-readonly"
+    assert delegated[delegated.index("--monday-mode") + 1] == "disabled"
     assert delegated[delegated.index("--agency-mode") + 1] == "live-readonly"
     assert delegated[delegated.index("--master-sheet-mode") + 1] == "dry-run"
     assert "--confirm-master-sheet-write" not in delegated
@@ -69,6 +69,60 @@ def test_outlook_defaults_to_one_message_and_dry_run(tmp_path, monkeypatch, caps
     assert latest["status"] == "ready"
     assert latest["item_name"] == "TEST Jamie Tester"
     assert "run_pipeline.py apply --confirm-master-sheet-write" in capsys.readouterr().out
+
+
+def test_failures_command_lists_and_requeues(tmp_path, capsys) -> None:
+    from Outlook.mail import InboundPdfAttachment
+    from referral_pipeline.state import InboxState
+
+    attachment = InboundPdfAttachment(
+        "outlook-graph",
+        "message-1",
+        "attachment-1",
+        "broken.pdf",
+        b"%PDF-1.4\nbad",
+        subject="Broken referral",
+        received_at="2026-08-05T12:00:00+00:00",
+    )
+    state_db = tmp_path / "state.sqlite"
+    state = InboxState(state_db)
+    pdf = tmp_path / "broken.pdf"
+    pdf.write_bytes(attachment.content)
+    state.enqueue(attachment, artifact_path=pdf)
+    claimed = state.claim_job(attachment)
+    assert claimed is not None
+    state.mark_terminal_failure(claimed, error="corrupt pdf", error_kind="permanent")
+
+    assert intake.main(["failures", "--output-root", str(tmp_path), "--state-db", str(state_db)]) == 1
+    listed = capsys.readouterr().out
+    assert "corrupt pdf" in listed
+    assert attachment.sha256 in listed
+
+    assert (
+        intake.main(
+            [
+                "failures",
+                "--output-root",
+                str(tmp_path),
+                "--state-db",
+                str(state_db),
+                "--requeue",
+                attachment.sha256,
+            ]
+        )
+        == 0
+    )
+    requeued = capsys.readouterr().out
+    assert "requeued" in requeued
+    assert state.get_job(attachment).status == "discovered"
+
+
+def test_monday_duplicate_toggle_enables_live_readonly_mode(monkeypatch) -> None:
+    monkeypatch.setattr(intake, "MONDAY_DUPLICATE_CHECK_ENABLED", True)
+
+    args = intake._build_parser().parse_args(["outlook"])
+
+    assert args.monday_mode == "live-readonly"
 
 
 def test_direct_apply_requires_explicit_confirmation(tmp_path, monkeypatch, capsys) -> None:
@@ -223,3 +277,19 @@ def test_review_send_reuses_existing_manifest(tmp_path, monkeypatch, capsys) -> 
     assert sent[0][1]["recipient"] == "reviewer@example.test"
     assert sent[0][1]["state_db"] == tmp_path / "state.sqlite"
     assert "review_test" in capsys.readouterr().out
+
+
+def test_retries_command_delegates_process_retries(tmp_path, monkeypatch) -> None:
+    delegated: list[str] = []
+
+    def fake_run(argv: list[str]) -> int:
+        delegated.extend(argv)
+        _write_completed_run(argv)
+        return 0
+
+    monkeypatch.setattr(intake, "run_inbound_main", fake_run)
+
+    assert intake.main(["retries", "--max-jobs", "3", "--output-root", str(tmp_path)]) == 0
+    assert "--process-retries" in delegated
+    assert delegated[delegated.index("--max-jobs") + 1] == "3"
+    assert "--send-review" in delegated

@@ -45,6 +45,7 @@ class InboundPdfAttachment(Protocol):
     received_at: str
     subject: str
     filename: str
+    sender: str | None
 
 
 def process_inbound_pdf(
@@ -184,6 +185,7 @@ def process_inbound_pdf(
         "master_sheet_blockers": preview["blockers"],
         "created_item_id": None if applied is None else applied["item"]["id"],
         "source_message_id": attachment.message_id,
+        "source_sender": getattr(attachment, "sender", None),
     }
     (output / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     return manifest

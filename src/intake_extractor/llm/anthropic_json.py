@@ -11,7 +11,12 @@ class AnthropicJsonError(RuntimeError):
     pass
 
 
-def build_client() -> Any:
+def build_client(*, max_retries: int = 0, timeout_s: float | None = 600.0) -> Any:
+    """Build a synchronous Anthropic client.
+
+    Application code owns capacity retries. The SDK's hidden retries are disabled
+    by default so attempt counts and delays stay deterministic.
+    """
     if not os.getenv("ANTHROPIC_API_KEY"):
         load_dotenv()
     api_key = os.getenv("ANTHROPIC_API_KEY")
@@ -20,7 +25,10 @@ def build_client() -> Any:
 
     from anthropic import Anthropic
 
-    return Anthropic(api_key=api_key)
+    kwargs: dict[str, Any] = {"api_key": api_key, "max_retries": max_retries}
+    if timeout_s is not None:
+        kwargs["timeout"] = timeout_s
+    return Anthropic(**kwargs)
 
 
 def message_fix_json(parse_error: str) -> str:

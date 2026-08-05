@@ -1,0 +1,47 @@
+from __future__ import annotations
+
+from referral_pipeline import worker
+
+
+def test_worker_once_runs_poll_then_retries(tmp_path, monkeypatch) -> None:
+    calls: list[list[str]] = []
+
+    def fake_main(argv: list[str]) -> int:
+        calls.append(list(argv))
+        return 0
+
+    results = worker.run_worker_loop(
+        data_root=tmp_path / "data",
+        poll_interval_seconds=60,
+        retry_interval_seconds=30,
+        max_messages=25,
+        max_jobs=10,
+        once=True,
+        quiet=True,
+        run_main=fake_main,
+        sleep_fn=lambda _seconds: None,
+        clock=lambda: 0.0,
+    )
+
+    assert [item["kind"] for item in results] == ["poll", "retries"]
+    assert all(item["status"] == "ok" for item in results)
+    assert "--outlook-poll" in calls[0]
+    assert "--process-retries" in calls[1]
+    assert str(tmp_path / "data" / "state.sqlite") in calls[0]
+    assert str(tmp_path / "data" / "state.sqlite") in calls[1]
+
+
+def test_worker_cycle_survives_runner_exceptions(tmp_path) -> None:
+    def boom(_argv: list[str]) -> int:
+        raise RuntimeError("mailbox auth failed")
+
+    result = worker.run_poll_cycle(
+        data_root=tmp_path / "data",
+        max_messages=5,
+        quiet=True,
+        run_main=boom,
+    )
+
+    assert result["kind"] == "poll"
+    assert result["status"] == "error"
+    assert "mailbox auth failed" in result["error"]

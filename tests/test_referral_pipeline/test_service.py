@@ -56,6 +56,6 @@ def test_pipeline_blocks_synthetic_duplicate_before_any_write(tmp_path) -> None:
         extractor=lambda *_args, **_kwargs: case.referral,
     )
 
-    assert manifest["duplicate_status"] == "candidates_found"
+    assert manifest["duplicate_status"] == "duplicate_found"
     assert manifest["master_sheet_blocked"] is True
-    assert "duplicate_check_is_candidates_found" in manifest["master_sheet_blockers"]
+    assert "duplicate_check_is_duplicate_found" in manifest["master_sheet_blockers"]

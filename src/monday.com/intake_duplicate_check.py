@@ -62,27 +62,38 @@ def _match_referral(
 ) -> DuplicateCheck:
     if not _has_identity_for_check(referral):
         return _identity_missing_result(mode=mode)
-    matches = find_patients(items, name=referral.patient_name or "", dob=referral.patient_dob)
+    matches = find_patients(
+        items,
+        name=referral.patient_name or "",
+        dob=referral.patient_dob,
+        phone=referral.patient_phone,
+        address=referral.patient_address,
+    )
     candidates = tuple(_candidate_payload(item, include_full_row=include_full_row) for item in matches)
     if candidates:
         return DuplicateCheck(
             mode=mode,
-            status="candidates_found",
+            status="duplicate_found",
             candidates=candidates,
-            reason="Exact normalized name and DOB match; human confirmation is still required.",
+            reason="Exact normalized name, date of birth, phone, and address match.",
         )
     return DuplicateCheck(mode=mode, status="no_candidates_found")
 
 
 def _has_identity_for_check(referral: ReferralIntake) -> bool:
-    return bool(referral.patient_name and referral.patient_dob)
+    return bool(
+        referral.patient_name
+        and referral.patient_dob
+        and referral.patient_phone
+        and referral.patient_address
+    )
 
 
 def _identity_missing_result(*, mode: str) -> DuplicateCheck:
     return DuplicateCheck(
         mode=mode,
         status="skipped_missing_identity",
-        reason="Duplicate matching requires both patient name and date of birth.",
+        reason="Duplicate matching requires patient name, date of birth, phone, and address.",
     )
 
 

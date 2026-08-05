@@ -16,6 +16,9 @@ from Outlook.mail import InboundPdfAttachment, is_pdf_file
 
 
 GRAPH_ROOT = "https://graph.microsoft.com/v1.0"
+DEFAULT_PAGE_SIZE = 50
+# Safety bound so a pathological inbox cannot loop forever while seeking eligible mail.
+MAX_INBOX_SCAN = 500
 
 
 class OutlookGraphError(RuntimeError):
@@ -51,26 +54,81 @@ class OutlookGraphClient:
         self._access_token: str | None = None
 
     def list_inbox_pdf_attachments(self, *, max_messages: int = 25) -> list[InboundPdfAttachment]:
+        """Return PDF attachments from the newest unreplied referral emails.
+
+        `max_messages` counts eligible unreplied emails that carry at least one
+        PDF attachment, not raw inbox rows. Newer messages are preferred.
+        """
+        if max_messages < 1:
+            raise ValueError("max_messages must be at least 1")
+
         attachments: list[InboundPdfAttachment] = []
-        for message in self._list_messages(max_messages=max_messages):
+        eligible_messages = 0
+        for message in self._iter_inbox_messages(limit=MAX_INBOX_SCAN):
             if not message.get("hasAttachments"):
                 continue
-            attachments.extend(self._pdf_attachments_for_message(message))
+            if self._has_mailbox_reply(message):
+                continue
+            pdfs = self._pdf_attachments_for_message(message)
+            if not pdfs:
+                continue
+            attachments.extend(pdfs)
+            eligible_messages += 1
+            if eligible_messages >= max_messages:
+                break
+        # Selected batch is newest-first; process oldest-to-newest within the batch.
+        attachments.reverse()
         return attachments
 
-    def _list_messages(self, *, max_messages: int) -> list[dict[str, Any]]:
+    def _iter_inbox_messages(self, *, limit: int):
+        """Yield inbox messages newest-first, following Graph pagination."""
+        page_size = min(DEFAULT_PAGE_SIZE, max(limit, 1))
         query = urlencode(
             {
-                "$select": "id,subject,receivedDateTime,hasAttachments",
+                "$select": "id,subject,receivedDateTime,hasAttachments,conversationId,from",
                 "$orderby": "receivedDateTime desc",
-                "$top": str(max_messages),
+                "$top": str(page_size),
             }
         )
-        payload = self._get(f"/users/{self.config.mailbox}/mailFolders/inbox/messages?{query}")
+        next_url: str | None = f"{GRAPH_ROOT}/users/{self.config.mailbox}/mailFolders/inbox/messages?{query}"
+        yielded = 0
+        while next_url and yielded < limit:
+            payload = self._get_url(next_url)
+            values = payload.get("value")
+            if not isinstance(values, list):
+                raise OutlookGraphError("Microsoft Graph did not return an inbox message list.")
+            for item in values:
+                if not isinstance(item, dict):
+                    continue
+                yield item
+                yielded += 1
+                if yielded >= limit:
+                    return
+            next_link = payload.get("@odata.nextLink")
+            next_url = next_link if isinstance(next_link, str) and next_link else None
+
+    def _list_messages(self, *, max_messages: int) -> list[dict[str, Any]]:
+        """Compatibility helper used by older tests; prefer `_iter_inbox_messages`."""
+        return list(self._iter_inbox_messages(limit=max_messages))
+
+    def _has_mailbox_reply(self, message: dict[str, Any]) -> bool:
+        """Return whether Sent Items contains a message in this conversation."""
+        conversation_id = str(message.get("conversationId") or "")
+        if not conversation_id:
+            return False
+        escaped_id = conversation_id.replace("'", "''")
+        query = urlencode(
+            {
+                "$select": "id",
+                "$filter": f"conversationId eq '{escaped_id}'",
+                "$top": "1",
+            }
+        )
+        payload = self._get(
+            f"/users/{self.config.mailbox}/mailFolders/sentitems/messages?{query}"
+        )
         values = payload.get("value")
-        if not isinstance(values, list):
-            raise OutlookGraphError("Microsoft Graph did not return an inbox message list.")
-        return [item for item in values if isinstance(item, dict)]
+        return isinstance(values, list) and bool(values)
 
     def _pdf_attachments_for_message(self, message: dict[str, Any]) -> list[InboundPdfAttachment]:
         message_id = str(message.get("id") or "")
@@ -103,6 +161,7 @@ class OutlookGraphClient:
                     content=content,
                     received_at=str(message.get("receivedDateTime") or "") or None,
                     subject=str(message.get("subject") or "") or None,
+                    sender=_message_sender(message),
                 )
             )
         return accepted
@@ -110,9 +169,9 @@ class OutlookGraphClient:
     def _get(self, path: str) -> dict[str, Any]:
         return self.get_json(path)
 
-    def get_json(self, path: str) -> dict[str, Any]:
+    def _get_url(self, url: str) -> dict[str, Any]:
         response = requests.get(
-            f"{GRAPH_ROOT}{path}",
+            url,
             headers={"Authorization": f"Bearer {self._token()}"},
             timeout=self.timeout_s,
         )
@@ -122,6 +181,9 @@ class OutlookGraphClient:
         if not isinstance(payload, dict):
             raise OutlookGraphError("Microsoft Graph returned an unexpected response.")
         return payload
+
+    def get_json(self, path: str) -> dict[str, Any]:
+        return self._get_url(f"{GRAPH_ROOT}{path}")
 
     def post_no_content(self, path: str, payload: dict[str, Any]) -> None:
         response = requests.post(
@@ -157,3 +219,10 @@ class OutlookGraphClient:
             raise OutlookGraphError("Microsoft identity token response did not contain an access token.")
         self._access_token = token
         return token
+
+
+def _message_sender(message: dict[str, Any]) -> str | None:
+    sender = message.get("from") or {}
+    email = sender.get("emailAddress") if isinstance(sender, dict) else {}
+    address = str(email.get("address") or "").strip() if isinstance(email, dict) else ""
+    return address or None

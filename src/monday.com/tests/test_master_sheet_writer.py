@@ -100,11 +100,11 @@ def test_preview_leaves_automation_and_restricted_columns_unwritten() -> None:
 
 
 def test_duplicate_or_nonapproved_plan_is_blocked() -> None:
-    duplicate_preview = build_master_sheet_create_preview(_plan(duplicate_status="candidates_found"), config=_config())
+    duplicate_preview = build_master_sheet_create_preview(_plan(duplicate_status="duplicate_found"), config=_config())
     review_preview = build_master_sheet_create_preview(_plan(outcome="manual_review_required"), config=_config())
 
     assert duplicate_preview["blocked"]
-    assert "duplicate_check_is_candidates_found" in duplicate_preview["blockers"]
+    assert "duplicate_check_is_duplicate_found" in duplicate_preview["blockers"]
     assert review_preview["blocked"]
     assert "plan_outcome_is_manual_review_required" in review_preview["blockers"]
 

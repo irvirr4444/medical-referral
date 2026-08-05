@@ -2,19 +2,37 @@ from Outlook.graph import OutlookGraphClient, OutlookGraphConfig
 from Outlook.review_mail import OutlookReviewMailbox
 
 
-def test_review_mail_sends_from_configured_mailbox(monkeypatch) -> None:
+def test_review_mail_replies_with_html_body(monkeypatch) -> None:
     client = OutlookGraphClient(OutlookGraphConfig("tenant", "client", "secret", "inbox@example.test"))
     posted = []
     monkeypatch.setattr(client, "post_no_content", lambda path, payload: posted.append((path, payload)))
 
-    OutlookReviewMailbox(client).send(
+    OutlookReviewMailbox(client).send_reply(
+        source_message_id="source-message",
         recipient="reviewer@example.test",
-        subject="Review",
+        html_body="<p>Body</p>",
         text_body="Body",
+        content_type="HTML",
     )
 
-    assert posted[0][0] == "/users/inbox@example.test/sendMail"
+    assert posted[0][0] == "/users/inbox@example.test/messages/source-message/reply"
     assert posted[0][1]["message"]["toRecipients"][0]["emailAddress"]["address"] == "reviewer@example.test"
+    assert posted[0][1]["message"]["body"] == {"contentType": "HTML", "content": "<p>Body</p>"}
+
+
+def test_review_mail_can_resend_legacy_plain_text(monkeypatch) -> None:
+    client = OutlookGraphClient(OutlookGraphConfig("tenant", "client", "secret", "inbox@example.test"))
+    posted = []
+    monkeypatch.setattr(client, "post_no_content", lambda path, payload: posted.append((path, payload)))
+
+    OutlookReviewMailbox(client).send_reply(
+        source_message_id="source-message",
+        recipient="reviewer@example.test",
+        text_body="Body",
+        content_type="Text",
+    )
+
+    assert posted[0][1]["message"]["body"] == {"contentType": "Text", "content": "Body"}
 
 
 def test_review_mail_uses_unique_reply_body(monkeypatch) -> None:

@@ -21,6 +21,7 @@ class InboundPdfAttachment:
     content: bytes
     received_at: str | None = None
     subject: str | None = None
+    sender: str | None = None
 
     @property
     def sha256(self) -> str:
@@ -57,6 +58,7 @@ def read_eml_pdf_attachments(path: str | Path) -> list[InboundPdfAttachment]:
                 content=content,
                 received_at=_message_date(message.get("Date")),
                 subject=str(message.get("Subject") or "") or None,
+                sender=_eml_sender(message.get("From")),
             )
         )
     return attachments
@@ -80,5 +82,14 @@ def _message_date(value: str | None) -> str | None:
         return None
     try:
         return parsedate_to_datetime(value).isoformat()
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, IndexError):
         return None
+
+
+def _eml_sender(value: str | None) -> str | None:
+    text = (value or "").strip()
+    if not text:
+        return None
+    match = re.search(r"<([^>]+)>", text)
+    address = (match.group(1) if match else text).strip().strip('"')
+    return address or None

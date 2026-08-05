@@ -3,8 +3,86 @@
 from __future__ import annotations
 
 import json
+import re
+from dataclasses import dataclass
+from datetime import date, datetime
+from html import escape
 from pathlib import Path
 from typing import Any
+
+
+NOT_DOCUMENTED = "Not documented"
+NO_KNOWN_ALLERGIES = "No known allergies"
+
+
+@dataclass(frozen=True)
+class ReviewEmail:
+    subject: str
+    html_body: str
+    text_body: str
+    content_type: str = "HTML"
+
+
+@dataclass(frozen=True)
+class AttentionItem:
+    label: str
+    detail: str
+
+
+@dataclass(frozen=True)
+class PatientView:
+    name: str
+    date_of_birth: str
+    phone: str
+    address: str
+
+
+@dataclass(frozen=True)
+class InsuranceView:
+    payer_name: str
+    policy_number: str
+    group_number: str
+
+
+@dataclass(frozen=True)
+class DiagnosisView:
+    code: str
+    description: str
+
+
+@dataclass(frozen=True)
+class MedicationView:
+    name: str
+    strength: str
+    directions: str
+
+
+@dataclass(frozen=True)
+class DuplicateView:
+    name: str
+    date_of_birth: str
+    phone: str
+    address: str
+
+
+@dataclass(frozen=True)
+class ReviewPresentation:
+    patient_heading: str
+    attention: list[AttentionItem]
+    patient: PatientView
+    referring_organization: str
+    home_health_or_hospice: str
+    requested_services: list[str]
+    insurances: list[InsuranceView]
+    diagnoses: list[DiagnosisView]
+    medications: list[MedicationView]
+    allergies_label: str
+    allergies: list[str]
+    clinical_summary: str
+    duplicate: DuplicateView | None
+    approval_allowed: bool
+    review_id: str
+    token: str
 
 
 def render_review_email(
@@ -17,139 +95,596 @@ def render_review_email(
     drk_draft_path: str | Path,
     write_config_path: str | Path,
     approval_allowed: bool = True,
-) -> tuple[str, str]:
+) -> ReviewEmail:
+    del monday_preview_path, drk_draft_path, write_config_path
     canonical = _load(canonical_path)
-    plan = _load(intake_plan_path)
-    monday = _load(monday_preview_path)
-    drk = _load(drk_draft_path)
-    titles = _column_titles(write_config_path)
-    patient = canonical.get("patient") or {}
-    source = canonical.get("source") or {}
-    clinical = canonical.get("clinical") or {}
-
-    subject = f"[WCW REFERRAL REVIEW] {review_id}"
-    sections = [
-        "WCW REFERRAL REVIEW",
-        f"Review ID: {review_id}",
-        f"Source file: {_show(source.get('file_name'))}",
-        "",
-        "GENERAL REFERRAL SUMMARY",
-        *_general_rows(canonical),
-        "",
-        "QUALITY AND DUPLICATE REVIEW",
-        f"Intake outcome: {_show(plan.get('outcome'))}",
-        f"Review reasons: {_show_list(plan.get('review_reasons'))}",
-        f"Monday duplicate status: {_show((plan.get('monday_duplicate_check') or {}).get('status'))}",
-        f"Monday duplicate candidates: {_show_list((plan.get('monday_duplicate_check') or {}).get('candidates'))}",
-        f"Warnings: {_show_list(canonical.get('warnings'))}",
-        *_quality_rows(canonical.get("field_quality") or {}),
-        f"Monday write blocked: {'Yes' if monday.get('blocked') else 'No'}",
-        f"Monday blockers: {_show_list(monday.get('blockers'))}",
-        "",
-        "MONDAY.COM PROPOSED WRITE",
-        f"Item name: {_show(monday.get('item_name'))}",
-        *_monday_rows(monday.get("column_values") or {}, titles),
-        f"Mapping notes: {_show_list(monday.get('mapping_notes'))}",
-        f"Post-create updates: {_show_list(monday.get('post_create_actions'))}",
-        "",
-        "DRK PROPOSED PATIENT DATA",
-        f"Ready for form fill: {'Yes' if drk.get('ready_for_fill') else 'No'}",
-        f"DRK blockers: {_show_list(drk.get('blockers'))}",
-        f"DRK unresolved fields: {_show_list(drk.get('unresolved_fields'))}",
-        *_flatten_rows(drk.get("payload") or {}),
-        "",
-        *_action_rows(review_id=review_id, token=token, approval_allowed=approval_allowed),
-    ]
-    if clinical.get("summary"):
-        sections.insert(sections.index("QUALITY AND DUPLICATE REVIEW") - 1, f"Clinical summary: {clinical['summary']}")
-    return subject, "\n".join(str(line) for line in sections)
+    intake_plan = _load(intake_plan_path)
+    presentation = build_presentation(
+        canonical,
+        duplicate_check=intake_plan.get("monday_duplicate_check") or {},
+        review_id=review_id,
+        token=token,
+        approval_allowed=approval_allowed,
+    )
+    return ReviewEmail(
+        subject=f"[WCW REFERRAL REVIEW] {review_id}",
+        html_body=render_html(presentation),
+        text_body=render_text(presentation),
+        content_type="HTML",
+    )
 
 
-def _action_rows(*, review_id: str, token: str, approval_allowed: bool) -> list[str]:
-    if not approval_allowed:
-        return [
-            "ACTION REQUIRED",
-            "This referral is blocked and cannot be approved for an automated write.",
-            "Review the listed blockers and send corrections through the current manual process.",
-        ]
-    return [
-        "ACTION REQUIRED",
-        "Review the values above. To approve this exact artifact, reply with this line only:",
-        f"CONFIRMED {review_id} {token}",
-        "",
-        "A confirmation can write the approved Monday payload. DRK patient creation is not yet automatic;",
-        "the approved DRK draft remains an audited handoff until the guarded DRK submit path exists.",
-    ]
-
-
-def _general_rows(canonical: dict[str, Any]) -> list[str]:
+def build_presentation(
+    canonical: dict[str, Any],
+    *,
+    duplicate_check: dict[str, Any] | None = None,
+    review_id: str,
+    token: str,
+    approval_allowed: bool,
+) -> ReviewPresentation:
     patient = canonical.get("patient") or {}
     name = patient.get("name") or {}
     address = patient.get("address") or {}
     source = canonical.get("referral_source") or {}
     source_org = source.get("organization") or {}
     hh = (canonical.get("home_health_or_hospice") or {}).get("organization") or {}
-    insurances = canonical.get("insurances") or []
-    services = canonical.get("requested_services") or []
     clinical = canonical.get("clinical") or {}
+    field_quality = canonical.get("field_quality") or {}
     phones = patient.get("phones") or []
-    return [
-        f"Patient: {_show(name.get('full') or _join(name.get('first'), name.get('middle'), name.get('last')))}",
-        f"DOB: {_show(patient.get('date_of_birth'))}",
-        f"Phone: {_show_list([item.get('number') for item in phones if isinstance(item, dict)])}",
-        f"Address: {_show(_join(address.get('line_1'), address.get('line_2'), address.get('city'), address.get('state'), address.get('postal_code')))}",
-        f"Referring organization: {_show(source_org.get('name'))}",
-        f"Home health/hospice: {_show(hh.get('name'))}",
-        f"Referral date: {_show(source.get('referral_or_order_date'))}",
-        f"Insurance: {_show_list([_join(item.get('payer_name'), item.get('policy_number'), item.get('group_number')) for item in insurances if isinstance(item, dict)])}",
-        f"Requested services: {_show_list([_join(item.get('service'), item.get('frequency'), item.get('instructions')) for item in services if isinstance(item, dict)])}",
-        f"Diagnoses: {_show_list([_join(item.get('code'), item.get('description')) for item in clinical.get('diagnoses') or [] if isinstance(item, dict)])}",
-        f"Medications: {_show_list([_join(item.get('name'), item.get('strength'), item.get('directions')) for item in clinical.get('medications') or [] if isinstance(item, dict)])}",
-        f"Allergies: {_show_list([_join(item.get('name'), item.get('reaction')) for item in clinical.get('allergies') or [] if isinstance(item, dict)])}",
-        f"Clinical notes: {_show_list(clinical.get('notes'))}",
+    insurances = [
+        InsuranceView(
+            payer_name=_display(item.get("payer_name")),
+            policy_number=_display(item.get("policy_number")),
+            group_number=_display(item.get("group_number")),
+        )
+        for item in canonical.get("insurances") or []
+        if isinstance(item, dict)
     ]
+    diagnoses = [
+        DiagnosisView(
+            code=_display(item.get("code")),
+            description=_display(item.get("description")),
+        )
+        for item in clinical.get("diagnoses") or []
+        if isinstance(item, dict)
+    ]
+    medications = [
+        MedicationView(
+            name=_display(item.get("name")),
+            strength=_display(item.get("strength")),
+            directions=_display(item.get("directions")),
+        )
+        for item in clinical.get("medications") or []
+        if isinstance(item, dict)
+    ]
+    services = [
+        _join_parts(item.get("service"), item.get("frequency"), item.get("instructions"))
+        for item in canonical.get("requested_services") or []
+        if isinstance(item, dict)
+    ]
+    services = [value for value in services if value]
+    allergies_label, allergies = _allergies(clinical, field_quality)
+    referring = _display(source_org.get("name"))
+    home_health = _display(hh.get("name"))
+    requested = services or [NOT_DOCUMENTED]
+    duplicate = _duplicate_view(duplicate_check or {})
+    attention = _attention_items(
+        referring_organization=referring,
+        home_health_or_hospice=home_health,
+        requested_services=requested,
+        allergies_label=allergies_label,
+        patient_name=_patient_name(name),
+        date_of_birth=_human_date(patient.get("date_of_birth")),
+        phone=_phone(phones),
+        address=_address(address),
+        insurances=insurances,
+        duplicate=duplicate,
+    )
+    return ReviewPresentation(
+        patient_heading=_patient_name(name),
+        attention=attention,
+        patient=PatientView(
+            name=_patient_name(name),
+            date_of_birth=_human_date(patient.get("date_of_birth")),
+            phone=_phone(phones),
+            address=_address(address),
+        ),
+        referring_organization=referring,
+        home_health_or_hospice=home_health,
+        requested_services=requested,
+        insurances=insurances,
+        diagnoses=diagnoses,
+        medications=medications,
+        allergies_label=allergies_label,
+        allergies=allergies,
+        clinical_summary=_display(clinical.get("summary")),
+        duplicate=duplicate,
+        approval_allowed=approval_allowed,
+        review_id=review_id,
+        token=token,
+    )
 
 
-def _quality_rows(quality: dict[str, Any]) -> list[str]:
+def render_html(presentation: ReviewPresentation) -> str:
+    sections = [
+        _html_title(presentation.patient_heading),
+        _html_attention(presentation.attention),
+        _html_patient(presentation),
+        _html_section("Insurance", _html_insurance(presentation.insurances)),
+        _html_section(
+            f"Diagnoses ({len(presentation.diagnoses)})",
+            _html_diagnoses(presentation.diagnoses),
+        ),
+        _html_section(
+            f"Medications ({len(presentation.medications)})",
+            _html_medications(presentation.medications),
+        ),
+        _html_section("Allergies", _html_allergies(presentation)),
+        _html_section("Clinical summary", _html_paragraph(presentation.clinical_summary)),
+        _html_action(presentation),
+    ]
+    body = "".join(section for section in sections if section)
+    return (
+        '<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f7fa;">'
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
+        'style="background:#f5f7fa;padding:16px 0;">'
+        '<tr><td align="center">'
+        '<table role="presentation" width="640" cellpadding="0" cellspacing="0" '
+        'style="width:640px;max-width:100%;background:#ffffff;border:1px solid #d9e2ec;'
+        'border-radius:8px;font-family:Arial,Helvetica,sans-serif;color:#102a43;'
+        'font-size:14px;line-height:1.5;">'
+        f"{body}"
+        "</table></td></tr></table></body></html>"
+    )
+
+
+def render_text(presentation: ReviewPresentation) -> str:
+    lines = [
+        f"Referral Review: {presentation.patient_heading}",
+        "",
+    ]
+    if presentation.attention:
+        lines.extend(["Needs attention", ""])
+        for item in presentation.attention:
+            lines.append(f"- {item.label}: {item.detail}")
+            lines.append("")
+    lines.extend(
+        [
+            "Patient",
+            "",
+            f"Name: {presentation.patient.name}",
+            "",
+            f"DOB: {presentation.patient.date_of_birth}",
+            "",
+            f"Phone: {presentation.patient.phone}",
+            "",
+            f"Address: {presentation.patient.address}",
+            "",
+            f"Referring organization: {presentation.referring_organization}",
+            "",
+            f"Home health/hospice: {presentation.home_health_or_hospice}",
+            "",
+            "Requested services:",
+            "",
+        ]
+    )
+    for service in presentation.requested_services:
+        lines.append(f"- {service}")
+        lines.append("")
+    lines.extend(["Insurance", ""])
+    if presentation.insurances:
+        for item in presentation.insurances:
+            policy = item.policy_number if item.policy_number != NOT_DOCUMENTED else ""
+            group = f" / Group: {item.group_number}" if item.group_number != NOT_DOCUMENTED else ""
+            detail = f" — Policy: {policy}{group}" if policy or group else ""
+            lines.append(f"- {item.payer_name}{detail}")
+            lines.append("")
+    else:
+        lines.extend([f"- {NOT_DOCUMENTED}", ""])
+    lines.extend([f"Diagnoses ({len(presentation.diagnoses)})", ""])
+    if presentation.diagnoses:
+        for item in presentation.diagnoses:
+            label = f"{item.code} — {item.description}" if item.code != NOT_DOCUMENTED else item.description
+            lines.append(f"- {label}")
+            lines.append("")
+    else:
+        lines.extend([f"- {NOT_DOCUMENTED}", ""])
+    lines.extend([f"Medications ({len(presentation.medications)})", ""])
+    if presentation.medications:
+        for item in presentation.medications:
+            heading = item.name if item.strength == NOT_DOCUMENTED else f"{item.name}, {item.strength}"
+            lines.append(f"- {heading}")
+            lines.append(f"  {item.directions}")
+            lines.append("")
+    else:
+        lines.extend([f"- {NOT_DOCUMENTED}", ""])
+    lines.extend(["Allergies", "", presentation.allergies_label, ""])
+    if presentation.allergies and presentation.allergies_label not in {NO_KNOWN_ALLERGIES, NOT_DOCUMENTED}:
+        for item in presentation.allergies:
+            lines.append(f"- {item}")
+            lines.append("")
+    lines.extend(["Clinical summary", "", presentation.clinical_summary, ""])
+    lines.extend(["----------------------------------------", "", "REVIEW DECISION", ""])
+    if presentation.approval_allowed:
+        lines.extend(
+            [
+                "Confirm to create this patient's data in Monday and prepare the audited DRK handoff.",
+                "",
+                "Automatic DRK patient submission is not enabled yet.",
+                "",
+                "To confirm, reply with this line only:",
+                "",
+                f"CONFIRMED {presentation.review_id} {presentation.token}",
+                "",
+                "To add information or correct a field, reply with the changes instead of the confirmation line.",
+                "A new review must be generated before corrected data can be approved.",
+                "",
+            ]
+        )
+    elif presentation.duplicate is not None:
+        lines.extend(
+            [
+                "Duplicate found in Monday.",
+                "",
+                "Do not create another patient. Review the existing Monday record.",
+                "",
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                "This referral cannot be confirmed yet.",
+                "",
+                "Reply with any additional details or field corrections listed in Needs attention.",
+                "",
+                "Do not send a confirmation line until a corrected review has been generated.",
+                "",
+            ]
+        )
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _attention_items(
+    *,
+    referring_organization: str,
+    home_health_or_hospice: str,
+    requested_services: list[str],
+    allergies_label: str,
+    patient_name: str,
+    date_of_birth: str,
+    phone: str,
+    address: str,
+    insurances: list[InsuranceView],
+    duplicate: DuplicateView | None,
+) -> list[AttentionItem]:
+    items: list[AttentionItem] = []
+    if duplicate is not None:
+        items.append(
+            AttentionItem(
+                label="Duplicate patient in Monday",
+                detail=(
+                    f"Name: {duplicate.name}; DOB: {duplicate.date_of_birth}; "
+                    f"Phone: {duplicate.phone}; Address: {duplicate.address}"
+                ),
+            )
+        )
+    checks = (
+        ("Patient name", patient_name),
+        ("Date of birth", date_of_birth),
+        ("Phone", phone),
+        ("Address", address),
+        ("Referring organization", referring_organization),
+        ("Home health/hospice", home_health_or_hospice),
+    )
+    for label, value in checks:
+        if value == NOT_DOCUMENTED:
+            items.append(AttentionItem(label=label, detail=NOT_DOCUMENTED))
+    if requested_services == [NOT_DOCUMENTED]:
+        items.append(AttentionItem(label="Requested services", detail=NOT_DOCUMENTED))
+    if allergies_label == NOT_DOCUMENTED:
+        items.append(
+            AttentionItem(
+                label="Allergies",
+                detail=f"{NOT_DOCUMENTED} — no NKA/NKDA statement found",
+            )
+        )
+    if not insurances:
+        items.append(AttentionItem(label="Insurance", detail=NOT_DOCUMENTED))
+    return items
+
+
+def _duplicate_view(duplicate_check: dict[str, Any]) -> DuplicateView | None:
+    if duplicate_check.get("status") != "duplicate_found":
+        return None
+    candidates = duplicate_check.get("candidates") or []
+    if not candidates or not isinstance(candidates[0], dict):
+        return None
+    fields = candidates[0].get("fields") or {}
+    if not isinstance(fields, dict):
+        return None
+    return DuplicateView(
+        name=_display(fields.get("name")),
+        date_of_birth=_human_date(fields.get("dob")),
+        phone=_display(fields.get("patient_phone")),
+        address=_display(fields.get("patient_address")),
+    )
+
+
+def _allergies(clinical: dict[str, Any], field_quality: dict[str, Any]) -> tuple[str, list[str]]:
+    allergies = clinical.get("allergies") or []
+    quality = field_quality.get("clinical.allergies") or field_quality.get("allergies") or {}
+    quality_status = str(quality.get("status") or "")
+    if clinical.get("no_known_allergies_explicit") or quality_status == "explicitly_none":
+        return NO_KNOWN_ALLERGIES, []
+    if allergies:
+        values = []
+        for item in allergies:
+            if not isinstance(item, dict):
+                continue
+            values.append(_join_parts(item.get("name"), item.get("reaction"), item.get("treatment")))
+        values = [value for value in values if value]
+        if values:
+            return "Documented allergies", values
+    if clinical.get("allergies_section_present") is False or quality_status in {"missing", "unclear", ""}:
+        return NOT_DOCUMENTED, []
+    return NOT_DOCUMENTED, []
+
+
+def _patient_name(name: dict[str, Any]) -> str:
+    first = _clean_name_part(name.get("first"))
+    middle = _clean_name_part(name.get("middle"))
+    last = _clean_name_part(name.get("last"))
+    structured = " ".join(part for part in (first, middle, last) if part)
+    if structured:
+        return structured
+    full = str(name.get("full") or "").strip()
+    if not full:
+        return NOT_DOCUMENTED
+    if "," in full:
+        last_part, first_part = [part.strip() for part in full.split(",", 1)]
+        rebuilt = " ".join(part for part in (_clean_name_part(first_part), _clean_name_part(last_part)) if part)
+        return rebuilt or full
+    return full
+
+
+def _clean_name_part(value: Any) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    if text.isupper() or text.islower():
+        return text.title()
+    return text
+
+
+def _human_date(value: Any) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return NOT_DOCUMENTED
+    for parser in (date.fromisoformat, lambda raw: datetime.fromisoformat(raw).date()):
+        try:
+            parsed = parser(text)
+            return f"{parsed.strftime('%B')} {parsed.day}, {parsed.year}"
+        except ValueError:
+            continue
+    match = re.fullmatch(r"(\d{4})-(\d{2})-(\d{2})", text)
+    if match:
+        year, month, day = (int(part) for part in match.groups())
+        try:
+            parsed = date(year, month, day)
+            return f"{parsed.strftime('%B')} {parsed.day}, {parsed.year}"
+        except ValueError:
+            return text
+    return text
+
+
+def _phone(phones: list[Any]) -> str:
+    numbers = [str(item.get("number") or "").strip() for item in phones if isinstance(item, dict)]
+    numbers = [number for number in numbers if number]
+    return numbers[0] if numbers else NOT_DOCUMENTED
+
+
+def _address(address: dict[str, Any]) -> str:
+    city = _titleish(address.get("city"))
+    state = str(address.get("state") or "").strip().upper()
+    postal = str(address.get("postal_code") or "").strip()
+    parts = [
+        _titleish(address.get("line_1")),
+        _titleish(address.get("line_2")),
+        ", ".join(part for part in (city, state) if part),
+        postal,
+    ]
+    value = ", ".join(part for part in parts if part)
+    return value or NOT_DOCUMENTED
+
+
+def _titleish(value: Any) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    if text.isupper() or text.islower():
+        return text.title()
+    return text
+
+
+def _display(value: Any) -> str:
+    text = str(value or "").strip()
+    return text if text else NOT_DOCUMENTED
+
+
+def _join_parts(*values: Any) -> str:
+    return " / ".join(str(value).strip() for value in values if value not in (None, ""))
+
+
+def _html_title(patient_heading: str) -> str:
+    return (
+        '<tr><td style="padding:20px 24px 8px 24px;">'
+        f'<div style="font-size:20px;font-weight:bold;color:#102a43;">Referral Review: {escape(patient_heading)}</div>'
+        "</td></tr>"
+    )
+
+
+def _html_attention(items: list[AttentionItem]) -> str:
+    if not items:
+        return ""
+    rows = "".join(
+        '<tr><td style="padding:4px 0;color:#9b1c1c;">'
+        f"<strong>{escape(item.label)}:</strong> {escape(item.detail)}"
+        "</td></tr>"
+        for item in items
+    )
+    return (
+        '<tr><td style="padding:8px 24px 16px 24px;">'
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
+        'style="background:#fff5f5;border:1px solid #f5c2c7;border-radius:6px;">'
+        '<tr><td style="padding:12px 16px;">'
+        '<div style="font-weight:bold;color:#9b1c1c;margin-bottom:8px;">Needs attention</div>'
+        f"<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">{rows}</table>"
+        "</td></tr></table></td></tr>"
+    )
+
+
+def _html_patient(presentation: ReviewPresentation) -> str:
+    details = [
+        ("Name", presentation.patient.name),
+        ("DOB", presentation.patient.date_of_birth),
+        ("Phone", presentation.patient.phone),
+        ("Address", presentation.patient.address),
+        ("Referring organization", presentation.referring_organization),
+        ("Home health/hospice", presentation.home_health_or_hospice),
+        ("Requested services", "; ".join(presentation.requested_services)),
+    ]
+    rows = "".join(
+        "<tr>"
+        f'<td style="width:40%;padding:6px 12px 6px 0;color:#627d98;vertical-align:top;">{escape(label)}</td>'
+        f'<td style="padding:6px 0;color:#102a43;vertical-align:top;"><strong>{escape(value)}</strong></td>'
+        "</tr>"
+        for label, value in details
+    )
+    return _html_section("Patient", f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0">{rows}</table>')
+
+
+def _html_insurance(items: list[InsuranceView]) -> str:
+    if not items:
+        return _html_paragraph(NOT_DOCUMENTED)
     rows = []
-    for field, value in sorted(quality.items()):
-        if isinstance(value, dict):
-            rows.append(f"{field}: {value.get('status', 'unknown')} / {value.get('confidence', 'unknown')}")
-    return rows or ["Field quality: Not available"]
+    for item in items:
+        meta = []
+        if item.policy_number != NOT_DOCUMENTED:
+            meta.append(f"Policy: {escape(item.policy_number)}")
+        if item.group_number != NOT_DOCUMENTED:
+            meta.append(f"Group: {escape(item.group_number)}")
+        detail = f'<div style="color:#627d98;font-size:13px;">{ " · ".join(meta)}</div>' if meta else ""
+        rows.append(
+            f'<div style="padding:6px 0;border-bottom:1px solid #e2e8f0;">'
+            f"<strong>{escape(item.payer_name)}</strong>{detail}</div>"
+        )
+    return "".join(rows)
 
 
-def _monday_rows(values: dict[str, Any], titles: dict[str, str]) -> list[str]:
+def _html_diagnoses(items: list[DiagnosisView]) -> str:
+    if not items:
+        return _html_paragraph(NOT_DOCUMENTED)
+    bullets = []
+    for item in items:
+        label = (
+            f"<strong>{escape(item.code)}</strong> — {escape(item.description)}"
+            if item.code != NOT_DOCUMENTED
+            else escape(item.description)
+        )
+        bullets.append(f'<li style="margin:0 0 8px 0;">{label}</li>')
+    return f'<ul style="margin:0;padding-left:18px;">{"".join(bullets)}</ul>'
+
+
+def _html_medications(items: list[MedicationView]) -> str:
+    if not items:
+        return _html_paragraph(NOT_DOCUMENTED)
+    rows = [
+        '<tr style="background:#f0f4f8;color:#486581;">'
+        '<th align="left" style="padding:8px;border-bottom:1px solid #d9e2ec;">Medication</th>'
+        '<th align="left" style="padding:8px;border-bottom:1px solid #d9e2ec;">Strength</th>'
+        '<th align="left" style="padding:8px;border-bottom:1px solid #d9e2ec;">Directions</th>'
+        "</tr>"
+    ]
+    for item in items:
+        rows.append(
+            "<tr>"
+            f'<td style="padding:8px;border-bottom:1px solid #e2e8f0;vertical-align:top;">{escape(item.name)}</td>'
+            f'<td style="padding:8px;border-bottom:1px solid #e2e8f0;vertical-align:top;">{escape(item.strength)}</td>'
+            f'<td style="padding:8px;border-bottom:1px solid #e2e8f0;vertical-align:top;">{escape(item.directions)}</td>'
+            "</tr>"
+        )
+    return (
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
+        'style="border-collapse:collapse;">'
+        f"{''.join(rows)}</table>"
+    )
+
+
+def _html_allergies(presentation: ReviewPresentation) -> str:
+    if presentation.allergies_label in {NO_KNOWN_ALLERGIES, NOT_DOCUMENTED}:
+        return _html_paragraph(presentation.allergies_label)
+    return _html_bullets(presentation.allergies)
+
+
+def _html_action(presentation: ReviewPresentation) -> str:
+    if presentation.approval_allowed:
+        content = (
+            '<div style="margin-bottom:8px;">Confirm to create this patient&#39;s data in Monday '
+            "and prepare the audited DRK handoff.</div>"
+            '<div style="margin-bottom:8px;color:#627d98;">Automatic DRK patient submission '
+            "is not enabled yet.</div>"
+            '<div style="margin-bottom:8px;">To confirm, reply with this line only:</div>'
+            '<div style="font-family:Consolas,Monaco,monospace;background:#f0f4f8;'
+            'border:1px solid #d9e2ec;border-radius:4px;padding:10px 12px;">'
+            f"CONFIRMED {escape(presentation.review_id)} {escape(presentation.token)}"
+            "</div>"
+            '<div style="margin-top:12px;">To add information or correct a field, reply with '
+            "the changes instead of the confirmation line. A new review must be generated "
+            "before corrected data can be approved.</div>"
+        )
+    elif presentation.duplicate is not None:
+        content = (
+            "<div>Duplicate found in Monday.</div>"
+            '<div style="margin-top:8px;">Do not create another patient. '
+            "Review the existing Monday record.</div>"
+        )
+    else:
+        content = (
+            "<div>This referral cannot be confirmed yet.</div>"
+            '<div style="margin-top:8px;">Reply with any additional details or field corrections '
+            "listed in Needs attention.</div>"
+            '<div style="margin-top:8px;color:#627d98;">Do not send a confirmation line until '
+            "a corrected review has been generated.</div>"
+        )
+    return (
+        '<tr><td style="padding:8px 24px 24px 24px;">'
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
+        'style="background:#f0f4f8;border:1px solid #d9e2ec;border-radius:6px;">'
+        '<tr><td style="padding:14px 16px;">'
+        '<div style="font-weight:bold;margin-bottom:8px;">Review decision</div>'
+        f"{content}</td></tr></table></td></tr>"
+    )
+
+
+def _html_section(title: str, content: str) -> str:
+    if not content:
+        return ""
+    return (
+        '<tr><td style="padding:8px 24px 16px 24px;">'
+        f'<div style="font-size:15px;font-weight:bold;color:#243b53;margin-bottom:8px;">{escape(title)}</div>'
+        f"{content}</td></tr>"
+    )
+
+
+def _html_paragraph(value: str) -> str:
+    return f'<div style="color:#102a43;">{escape(value)}</div>'
+
+
+def _html_bullets(values: list[str]) -> str:
     if not values:
-        return ["Columns: No direct column values are currently mapped"]
-    return [f"{titles.get(column_id, column_id)}: {_compact(value)}" for column_id, value in values.items()]
-
-
-def _flatten_rows(value: dict[str, Any], prefix: str = "") -> list[str]:
-    rows: list[str] = []
-    for key, child in value.items():
-        path = f"{prefix}.{key}" if prefix else key
-        if isinstance(child, dict):
-            rows.extend(_flatten_rows(child, path))
-        elif isinstance(child, list):
-            if child and all(isinstance(item, dict) for item in child):
-                for index, item in enumerate(child):
-                    rows.extend(_flatten_rows(item, f"{path}[{index}]"))
-            elif child:
-                rows.append(f"{path}: {_show_list(child)}")
-        elif child is not None and child != "":
-            rows.append(f"{path}: {child}")
-    return rows or ["DRK fields: No values available"]
-
-
-def _column_titles(path: str | Path) -> dict[str, str]:
-    config = _load(path)
-    columns = config.get("columns") or {}
-    titles = config.get("column_titles") or {}
-    return {
-        str(column_id): str(titles.get(semantic_name) or semantic_name.replace("_", " ").title())
-        for semantic_name, column_id in columns.items()
-        if column_id
-    }
+        return _html_paragraph(NOT_DOCUMENTED)
+    items = "".join(f'<li style="margin:0 0 8px 0;">{escape(value)}</li>' for value in values)
+    return f'<ul style="margin:0;padding-left:18px;">{items}</ul>'
 
 
 def _load(path: str | Path) -> dict[str, Any]:
@@ -157,25 +692,3 @@ def _load(path: str | Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ValueError(f"Expected a JSON object: {path}")
     return value
-
-
-def _join(*values: Any) -> str:
-    return " | ".join(str(value) for value in values if value not in (None, ""))
-
-
-def _show(value: Any) -> str:
-    return str(value) if value not in (None, "") else "MISSING"
-
-
-def _show_list(values: Any) -> str:
-    if not values:
-        return "None"
-    if isinstance(values, list):
-        return "; ".join(_compact(value) for value in values if value not in (None, "")) or "None"
-    return _compact(values)
-
-
-def _compact(value: Any) -> str:
-    if isinstance(value, (dict, list)):
-        return json.dumps(value, ensure_ascii=False, sort_keys=True)
-    return str(value)

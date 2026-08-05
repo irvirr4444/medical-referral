@@ -19,6 +19,11 @@ class ReviewRequest:
     created_at: str
     monday_item_id: str | None = None
     drk_status: str | None = None
+    email_subject: str | None = None
+    email_body: str | None = None
+    email_html_body: str | None = None
+    email_text_body: str | None = None
+    email_content_type: str | None = None
 
 
 @dataclass(frozen=True)

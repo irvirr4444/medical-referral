@@ -261,15 +261,17 @@ python src/monday.com/plan_referral_intake.py `
 ```
 
 Plans are saved beneath `tmp/intake-plans/`, which is ignored by Git because it
-contains PHI. A duplicate is always a **candidate**, not an automatic merge or
-record update. This planner does not import or invoke `push_referral.py`.
+contains PHI. A duplicate requires exact normalized matches on patient name,
+DOB, phone, and address. It still requires human review and never triggers an
+automatic merge or record update. This planner does not import or invoke
+`push_referral.py`.
 
 ### Master Sheet create preview (dry-run by default)
 
 `push_master_sheet_plan.py` consumes an intake plan and builds a conservative
 Master Sheet create request. It defaults to dry-run and does not call Monday in
 that mode. It creates only when the plan is `ready_for_human_approval` and its
-name-plus-DOB duplicate check returned `no_candidates_found`; duplicate or
+four-field duplicate check returned `no_candidates_found`; duplicate or
 review-required plans are blocked, never updated.
 
 The verified mapping creates an item with `Name`, `Patient DoB`, `Pt Phone`,
@@ -413,15 +415,17 @@ python src/monday.com/plan_referral_intake.py `
 ```
 
 Plans are saved beneath `tmp/intake-plans/`, which is ignored by Git because it
-contains PHI. A duplicate is always a **candidate**, not an automatic merge or
-record update. This planner does not import or invoke `push_referral.py`.
+contains PHI. A duplicate requires exact normalized matches on patient name,
+DOB, phone, and address. It still requires human review and never triggers an
+automatic merge or record update. This planner does not import or invoke
+`push_referral.py`.
 
 ### Master Sheet create preview (dry-run by default)
 
 `push_master_sheet_plan.py` consumes an intake plan and builds a conservative
 Master Sheet create request. It defaults to dry-run and does not call Monday in
 that mode. It creates only when the plan is `ready_for_human_approval` and its
-name-plus-DOB duplicate check returned `no_candidates_found`; duplicate or
+four-field duplicate check returned `no_candidates_found`; duplicate or
 review-required plans are blocked, never updated.
 
 The verified mapping creates an item with `Name`, `Patient DoB`, `Pt Phone`,

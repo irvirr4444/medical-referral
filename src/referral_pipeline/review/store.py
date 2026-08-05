@@ -10,7 +10,14 @@ from pathlib import Path
 from referral_pipeline.review.models import ReviewRequest
 
 
-ACTIVE_STATUSES = ("awaiting_confirmation", "confirmed")
+CONFIRMABLE_STATUSES = ("awaiting_confirmation",)
+REVIEW_SELECT = """
+    SELECT review_id, recipient, status, artifact_digest, canonical_path,
+           intake_plan_path, monday_preview_path, drk_draft_path, source_message_id,
+           created_at, monday_item_id, drk_status, email_subject, email_body,
+           email_html_body, email_text_body, email_content_type
+    FROM referral_reviews
+"""
 
 
 class ReviewStore:
@@ -40,6 +47,7 @@ class ReviewStore:
                 )
                 """
             )
+            self._ensure_email_columns(connection)
 
     def add(
         self,
@@ -54,16 +62,26 @@ class ReviewStore:
         drk_draft_path: str,
         source_message_id: str,
         status: str = "awaiting_confirmation",
+        email_subject: str | None = None,
+        email_body: str | None = None,
+        email_html_body: str | None = None,
+        email_text_body: str | None = None,
+        email_content_type: str | None = None,
     ) -> ReviewRequest:
         created_at = _now()
+        text_body = email_text_body if email_text_body is not None else email_body
+        html_body = email_html_body
+        content_type = (email_content_type or ("HTML" if html_body else "Text")).upper()
+        legacy_body = html_body if content_type == "HTML" and html_body else text_body
         with self._connect() as connection:
             connection.execute(
                 """
                 INSERT INTO referral_reviews (
                     review_id, recipient, status, token_hash, artifact_digest,
                     canonical_path, intake_plan_path, monday_preview_path, drk_draft_path,
-                    source_message_id, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    source_message_id, created_at, email_subject, email_body,
+                    email_html_body, email_text_body, email_content_type
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     review_id,
@@ -77,24 +95,76 @@ class ReviewStore:
                     drk_draft_path,
                     source_message_id,
                     created_at,
+                    email_subject,
+                    legacy_body,
+                    html_body,
+                    text_body,
+                    content_type,
                 ),
             )
         return self.get(review_id)
 
-    def get(self, review_id: str) -> ReviewRequest:
+    def find_active(
+        self,
+        *,
+        artifact_digest: str,
+        source_message_id: str,
+        recipient: str,
+    ) -> ReviewRequest | None:
         with self._connect() as connection:
             row = connection.execute(
-                """
-                SELECT review_id, recipient, status, artifact_digest, canonical_path,
-                       intake_plan_path, monday_preview_path, drk_draft_path, source_message_id,
-                       created_at, monday_item_id, drk_status
-                FROM referral_reviews WHERE review_id = ?
+                REVIEW_SELECT
+                + """
+                WHERE artifact_digest = ? AND source_message_id = ? AND recipient = ?
+                  AND status IN (?, ?, ?)
+                ORDER BY created_at DESC
+                LIMIT 1
                 """,
-                (review_id,),
+                (
+                    artifact_digest,
+                    source_message_id,
+                    recipient.casefold(),
+                    "awaiting_confirmation",
+                    "needs_correction",
+                    "review_send_failed",
+                ),
             ).fetchone()
         if row is None:
+            return None
+        return _row_to_request(row)
+
+    def get(self, review_id: str) -> ReviewRequest:
+        with self._connect() as connection:
+            row = connection.execute(REVIEW_SELECT + " WHERE review_id = ?", (review_id,)).fetchone()
+        if row is None:
             raise KeyError(review_id)
-        return ReviewRequest(*row)
+        return _row_to_request(row)
+
+    def mark_sent(
+        self,
+        review_id: str,
+        *,
+        status: str,
+        email_subject: str,
+        email_body: str | None = None,
+        email_html_body: str | None = None,
+        email_text_body: str | None = None,
+        email_content_type: str | None = None,
+    ) -> None:
+        text_body = email_text_body if email_text_body is not None else email_body
+        html_body = email_html_body
+        content_type = (email_content_type or ("HTML" if html_body else "Text")).upper()
+        legacy_body = html_body if content_type == "HTML" and html_body else text_body
+        with self._connect() as connection:
+            connection.execute(
+                """
+                UPDATE referral_reviews
+                SET status = ?, email_subject = ?, email_body = ?, email_html_body = ?,
+                    email_text_body = ?, email_content_type = ?, error = NULL
+                WHERE review_id = ?
+                """,
+                (status, email_subject, legacy_body, html_body, text_body, content_type, review_id),
+            )
 
     def confirm(
         self,
@@ -115,7 +185,7 @@ class ReviewStore:
             if row is None:
                 return False
             recipient, expected_hash, status = row
-            if status not in ACTIVE_STATUSES:
+            if status not in CONFIRMABLE_STATUSES:
                 return False
             if str(recipient).casefold() != sender.casefold():
                 return False
@@ -137,14 +207,9 @@ class ReviewStore:
     def confirmed(self) -> list[ReviewRequest]:
         with self._connect() as connection:
             rows = connection.execute(
-                """
-                SELECT review_id, recipient, status, artifact_digest, canonical_path,
-                       intake_plan_path, monday_preview_path, drk_draft_path, source_message_id,
-                       created_at, monday_item_id, drk_status
-                FROM referral_reviews WHERE status = 'confirmed' ORDER BY created_at
-                """
+                REVIEW_SELECT + " WHERE status = 'confirmed' ORDER BY created_at"
             ).fetchall()
-        return [ReviewRequest(*row) for row in rows]
+        return [_row_to_request(row) for row in rows]
 
     def mark_monday_applied(self, review_id: str, *, item_id: str, drk_status: str) -> None:
         with self._connect() as connection:
@@ -176,8 +241,51 @@ class ReviewStore:
                 (status, error, review_id),
             )
 
+    def _ensure_email_columns(self, connection: sqlite3.Connection) -> None:
+        columns = {row[1] for row in connection.execute("PRAGMA table_info(referral_reviews)").fetchall()}
+        additions = {
+            "email_subject": "TEXT",
+            "email_body": "TEXT",
+            "email_html_body": "TEXT",
+            "email_text_body": "TEXT",
+            "email_content_type": "TEXT",
+        }
+        for name, declaration in additions.items():
+            if name not in columns:
+                connection.execute(f"ALTER TABLE referral_reviews ADD COLUMN {name} {declaration}")
+        connection.execute(
+            """
+            UPDATE referral_reviews
+            SET email_text_body = COALESCE(email_text_body, email_body),
+                email_content_type = COALESCE(email_content_type, CASE WHEN email_html_body IS NOT NULL THEN 'HTML' ELSE 'Text' END)
+            WHERE email_text_body IS NULL OR email_content_type IS NULL
+            """
+        )
+
     def _connect(self) -> sqlite3.Connection:
         return sqlite3.connect(self.path)
+
+
+def _row_to_request(row: tuple) -> ReviewRequest:
+    return ReviewRequest(
+        review_id=row[0],
+        recipient=row[1],
+        status=row[2],
+        artifact_digest=row[3],
+        canonical_path=row[4],
+        intake_plan_path=row[5],
+        monday_preview_path=row[6],
+        drk_draft_path=row[7],
+        source_message_id=row[8],
+        created_at=row[9],
+        monday_item_id=row[10],
+        drk_status=row[11],
+        email_subject=row[12],
+        email_body=row[13],
+        email_html_body=row[14],
+        email_text_body=row[15],
+        email_content_type=row[16],
+    )
 
 
 def _token_hash(token: str) -> str:
