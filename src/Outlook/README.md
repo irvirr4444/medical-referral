@@ -11,7 +11,7 @@ mark email as read. Destination writes remain owned by `referral_pipeline`.
 
 - `graph.py`: Microsoft Graph authentication and small HTTP primitives.
 - `mail.py`: shared PDF validation, `.eml` parsing, attachment hashing, and local materialization.
-- `review_mail.py`: HTML review replies on the source thread and unique reply-body retrieval.
+- `review_mail.py`: standalone internal HTML review messages and unique reply-body retrieval.
 - `README.md`: Outlook/Entra configuration and adapter behavior.
 
 Cross-system orchestration and idempotency live in `src/referral_pipeline`. Monday
@@ -44,19 +44,19 @@ Formatting is deterministic from the canonical extraction: missing fields say
 
 ## Normal operation
 
-Extract unreplied referral PDFs and reply on each Outlook thread with the review
-summary, addressed to the configured reviewer, without changing Monday:
+Extract new referral PDFs and send each review summary to the configured internal
+reviewer without changing Monday:
 
 ```powershell
 python run_pipeline.py outlook --send-review --max-messages 25
 ```
 
-`--max-messages` counts eligible unreplied referral emails (newest first). The
-adapter pages beyond the newest raw inbox rows so replied threads do not hide
-older unreplied PDFs.
+`--max-messages` counts eligible referral emails (newest first). The adapter pages
+through the inbox, and the durable attachment ledger excludes completed, queued,
+and permanently failed attachments.
 
-If Anthropic is overloaded, the job is stored as `pending_retry` and can be
-drained later without re-polling the whole mailbox:
+If Anthropic, Outlook, or a read-only Monday lookup fails transiently, the job is
+stored as `pending_retry` and can be drained without re-polling the whole mailbox:
 
 ```powershell
 python run_pipeline.py retries
@@ -89,7 +89,7 @@ The older manual smoke-test path remains available for diagnostics:
 python run_pipeline.py outlook --apply --confirm-master-sheet-write
 ```
 
-The CLI defaults to 25 eligible unreplied messages, uses the canonical Anthropic
+The CLI defaults to 25 eligible new messages, uses the canonical Anthropic
 Files API extractor, performs optional Monday duplicate and agency lookups,
 stores timestamped audit artifacts under `tmp/inbox-runs/`, and prints progress.
 The approval command writes Monday first and then records a DRK handoff. DRK

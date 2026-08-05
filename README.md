@@ -215,8 +215,8 @@ python run_pipeline.py outlook
 python run_pipeline.py apply --confirm-master-sheet-write
 ```
 
-The first command processes the newest message, performs read-only Monday and agency
-lookups, and saves an exact Master Sheet preview. The second command applies that
+The first command processes eligible new messages, performs read-only Monday and
+agency lookups, and saves exact Master Sheet previews. The second command applies that
 latest unblocked preview without rerunning extraction. For a controlled one-command
 smoke test, use `outlook --apply --confirm-master-sheet-write`. The CLI creates its
 own timestamped directory under `tmp/inbox-runs/`, remembers processed PDF hashes,
@@ -238,19 +238,20 @@ python run_pipeline.py failures
 python run_pipeline.py approvals --execute
 ```
 
-`--max-messages` counts eligible unreplied referral emails (newest first) and
-pages through Outlook so replied messages do not hide older work. Permanent
+`--max-messages` counts eligible referral emails (newest first) and pages through
+Outlook while the durable attachment ledger excludes known work. Permanent
 failures stay failed until `python run_pipeline.py failures --requeue <sha256>`.
 On Render, prefer the continuous background worker in `render.yaml` /
 `run_worker.py` so SQLite state and PDF artifacts live on a persistent disk.
 
-The review summary is rendered from the canonical extraction and sent to the
-configured reviewer as a reply on the source message's Outlook thread. Unreplied
-threads are eligible for intake; Anthropic capacity failures are queued as
-`pending_retry` and drained by `retries`. Approval is bound to the configured
-sender, a one-time token, and a digest of those exact artifacts. The confirmed
-path creates Monday first and records a DRK handoff; DRK automatic patient
-submission is not yet enabled.
+The review summary is rendered from the canonical extraction and sent as a
+separate email to the configured internal reviewer; it is never sent back to the
+referral source by default. Transient Anthropic, Outlook, and Monday failures are
+queued as `pending_retry` and drained by `retries`. Approval is bound to the
+configured reviewer, a one-time token, and a digest of those exact artifacts.
+The worker polls confirmations but creates Monday items only when
+`INTAKE_EXECUTE_APPROVALS=true`. The confirmed path records a DRK handoff after
+Monday; DRK automatic patient submission is not yet enabled.
 
 ### How extraction works
 

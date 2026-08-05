@@ -9,6 +9,26 @@ from referral_pipeline import runner
 from referral_pipeline.state import InboxState, STATUS_FAILED, STATUS_PENDING_RETRY
 
 
+def test_review_recipient_never_falls_back_to_referral_sender(monkeypatch) -> None:
+    monkeypatch.delenv("REVIEW_RECIPIENT_EMAIL", raising=False)
+    args = runner._parse_args(
+        [
+            "--process-retries",
+            "--output-dir",
+            "out",
+            "--state-db",
+            "state.sqlite",
+        ]
+    )
+
+    assert runner._review_recipient(options={"source_sender": "external@example.test"}, args=args) == ""
+
+    monkeypatch.setenv("REVIEW_RECIPIENT_EMAIL", "internal@example.test")
+    assert runner._review_recipient(options={"source_sender": "external@example.test"}, args=args) == (
+        "internal@example.test"
+    )
+
+
 def test_process_claimed_job_defers_capacity_failures(tmp_path, monkeypatch) -> None:
     pdf = tmp_path / "referral.pdf"
     pdf.write_bytes(b"%PDF-1.4\nsynthetic")
@@ -67,7 +87,7 @@ def test_first_email_failure_does_not_block_later_emails(tmp_path, monkeypatch) 
         b"%PDF-1.4\nsecond",
     )
 
-    monkeypatch.setattr(runner, "_attachments", lambda _args: [first, second])
+    monkeypatch.setattr(runner, "_attachments", lambda _args, **_kwargs: [first, second])
 
     def fake_process(attachment, **_kwargs):
         if attachment.filename == "first.pdf":

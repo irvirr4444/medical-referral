@@ -6,7 +6,7 @@ import base64
 import binascii
 import os
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Callable
 from urllib.parse import urlencode
 
 import requests
@@ -22,7 +22,9 @@ MAX_INBOX_SCAN = 500
 
 
 class OutlookGraphError(RuntimeError):
-    pass
+    def __init__(self, message: str, *, status_code: int | None = None) -> None:
+        super().__init__(message)
+        self.status_code = status_code
 
 
 @dataclass(frozen=True)
@@ -53,11 +55,17 @@ class OutlookGraphClient:
         self.timeout_s = timeout_s
         self._access_token: str | None = None
 
-    def list_inbox_pdf_attachments(self, *, max_messages: int = 25) -> list[InboundPdfAttachment]:
-        """Return PDF attachments from the newest unreplied referral emails.
+    def list_inbox_pdf_attachments(
+        self,
+        *,
+        max_messages: int = 25,
+        include_attachment: Callable[[InboundPdfAttachment], bool] | None = None,
+    ) -> list[InboundPdfAttachment]:
+        """Return PDFs from the newest eligible referral emails.
 
-        `max_messages` counts eligible unreplied emails that carry at least one
-        PDF attachment, not raw inbox rows. Newer messages are preferred.
+        The optional predicate lets the durable job ledger exclude attachments
+        that were already discovered. `max_messages` counts emails retaining at
+        least one eligible PDF, not raw inbox rows.
         """
         if max_messages < 1:
             raise ValueError("max_messages must be at least 1")
@@ -67,9 +75,9 @@ class OutlookGraphClient:
         for message in self._iter_inbox_messages(limit=MAX_INBOX_SCAN):
             if not message.get("hasAttachments"):
                 continue
-            if self._has_mailbox_reply(message):
-                continue
             pdfs = self._pdf_attachments_for_message(message)
+            if include_attachment is not None:
+                pdfs = [attachment for attachment in pdfs if include_attachment(attachment)]
             if not pdfs:
                 continue
             attachments.extend(pdfs)
@@ -110,25 +118,6 @@ class OutlookGraphClient:
     def _list_messages(self, *, max_messages: int) -> list[dict[str, Any]]:
         """Compatibility helper used by older tests; prefer `_iter_inbox_messages`."""
         return list(self._iter_inbox_messages(limit=max_messages))
-
-    def _has_mailbox_reply(self, message: dict[str, Any]) -> bool:
-        """Return whether Sent Items contains a message in this conversation."""
-        conversation_id = str(message.get("conversationId") or "")
-        if not conversation_id:
-            return False
-        escaped_id = conversation_id.replace("'", "''")
-        query = urlencode(
-            {
-                "$select": "id",
-                "$filter": f"conversationId eq '{escaped_id}'",
-                "$top": "1",
-            }
-        )
-        payload = self._get(
-            f"/users/{self.config.mailbox}/mailFolders/sentitems/messages?{query}"
-        )
-        values = payload.get("value")
-        return isinstance(values, list) and bool(values)
 
     def _pdf_attachments_for_message(self, message: dict[str, Any]) -> list[InboundPdfAttachment]:
         message_id = str(message.get("id") or "")
@@ -176,7 +165,10 @@ class OutlookGraphClient:
             timeout=self.timeout_s,
         )
         if not response.ok:
-            raise OutlookGraphError(f"Microsoft Graph read failed: HTTP {response.status_code}")
+            raise OutlookGraphError(
+                f"Microsoft Graph read failed: HTTP {response.status_code}",
+                status_code=response.status_code,
+            )
         payload = response.json()
         if not isinstance(payload, dict):
             raise OutlookGraphError("Microsoft Graph returned an unexpected response.")
@@ -196,7 +188,10 @@ class OutlookGraphClient:
             timeout=self.timeout_s,
         )
         if not response.ok:
-            raise OutlookGraphError(f"Microsoft Graph write failed: HTTP {response.status_code}")
+            raise OutlookGraphError(
+                f"Microsoft Graph write failed: HTTP {response.status_code}",
+                status_code=response.status_code,
+            )
 
     def _token(self) -> str:
         if self._access_token:
@@ -212,7 +207,10 @@ class OutlookGraphClient:
             timeout=self.timeout_s,
         )
         if not response.ok:
-            raise OutlookGraphError(f"Microsoft identity token request failed: HTTP {response.status_code}")
+            raise OutlookGraphError(
+                f"Microsoft identity token request failed: HTTP {response.status_code}",
+                status_code=response.status_code,
+            )
         payload = response.json()
         token = payload.get("access_token") if isinstance(payload, dict) else None
         if not isinstance(token, str) or not token:

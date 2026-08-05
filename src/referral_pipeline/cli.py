@@ -56,7 +56,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--max-messages",
         type=int,
         default=25,
-        help="Maximum eligible unreplied referral emails to process (newest first).",
+        help="Maximum eligible new referral emails to process (newest first).",
     )
     outlook.add_argument("--input-mode", choices=("auto", "text", "image", "hybrid"), default="image")
     outlook.add_argument("--max-pages", type=int)
@@ -73,12 +73,12 @@ def _build_parser() -> argparse.ArgumentParser:
     outlook.add_argument("--config", type=Path)
     outlook.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
     outlook.add_argument("--state-db", type=Path)
-    outlook.add_argument("--force", action="store_true", help="Reprocess the newest PDF even if its hash was completed.")
+    outlook.add_argument("--force", action="store_true", help="Reprocess eligible PDFs even when already recorded.")
     outlook.add_argument("--quiet", action="store_true", help="Suppress progress logs while retaining the final summary.")
     outlook.add_argument("--send-review", action="store_true", help="Email the generated review summary instead of writing immediately.")
     outlook.add_argument(
         "--review-recipient",
-        help="Override reviewer email; by default the review reply goes to the original sender.",
+        help="Authorized internal reviewer email; defaults to REVIEW_RECIPIENT_EMAIL.",
     )
 
     apply = commands.add_parser(
@@ -107,7 +107,7 @@ def _build_parser() -> argparse.ArgumentParser:
     review_send.add_argument("--run", type=Path, required=True, help="Existing timestamped intake run directory.")
     review_send.add_argument(
         "--review-recipient",
-        help="Override reviewer email; defaults to the original sender stored on the run manifest.",
+        help="Authorized internal reviewer email; defaults to REVIEW_RECIPIENT_EMAIL.",
     )
     review_send.add_argument(
         "--config",
@@ -447,13 +447,11 @@ def _resend_review(args: argparse.Namespace) -> int:
     graph_client = OutlookGraphClient(OutlookGraphConfig.from_environment())
     recipient = (
         (args.review_recipient or "").strip()
-        or str(manifest.get("source_sender") or "").strip()
         or os.getenv("REVIEW_RECIPIENT_EMAIL", "").strip()
     )
     if not recipient:
         raise IntakeCLIError(
-            "review-send requires the original sender on the manifest, "
-            "--review-recipient, or REVIEW_RECIPIENT_EMAIL"
+            "review-send requires --review-recipient or REVIEW_RECIPIENT_EMAIL"
         )
     state_db = (args.state_db or run_dir.parent / "state.sqlite").resolve()
 

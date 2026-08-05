@@ -2,22 +2,24 @@ from Outlook.graph import OutlookGraphClient, OutlookGraphConfig
 from Outlook.review_mail import OutlookReviewMailbox
 
 
-def test_review_mail_replies_with_html_body(monkeypatch) -> None:
+def test_review_mail_sends_standalone_internal_html_message(monkeypatch) -> None:
     client = OutlookGraphClient(OutlookGraphConfig("tenant", "client", "secret", "inbox@example.test"))
     posted = []
     monkeypatch.setattr(client, "post_no_content", lambda path, payload: posted.append((path, payload)))
 
-    OutlookReviewMailbox(client).send_reply(
-        source_message_id="source-message",
+    OutlookReviewMailbox(client).send_review(
         recipient="reviewer@example.test",
+        subject="Referral review",
         html_body="<p>Body</p>",
         text_body="Body",
         content_type="HTML",
     )
 
-    assert posted[0][0] == "/users/inbox@example.test/messages/source-message/reply"
+    assert posted[0][0] == "/users/inbox@example.test/sendMail"
+    assert posted[0][1]["message"]["subject"] == "Referral review"
     assert posted[0][1]["message"]["toRecipients"][0]["emailAddress"]["address"] == "reviewer@example.test"
     assert posted[0][1]["message"]["body"] == {"contentType": "HTML", "content": "<p>Body</p>"}
+    assert posted[0][1]["saveToSentItems"] is True
 
 
 def test_review_mail_can_resend_legacy_plain_text(monkeypatch) -> None:
@@ -25,9 +27,9 @@ def test_review_mail_can_resend_legacy_plain_text(monkeypatch) -> None:
     posted = []
     monkeypatch.setattr(client, "post_no_content", lambda path, payload: posted.append((path, payload)))
 
-    OutlookReviewMailbox(client).send_reply(
-        source_message_id="source-message",
+    OutlookReviewMailbox(client).send_review(
         recipient="reviewer@example.test",
+        subject="Referral review",
         text_body="Body",
         content_type="Text",
     )

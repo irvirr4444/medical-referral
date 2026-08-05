@@ -44,18 +44,13 @@ def test_outlook_adapter_accepts_only_real_pdf_attachments(monkeypatch) -> None:
     assert [(item.attachment_id, item.filename, item.content) for item in attachments] == [("good", "referral.pdf", valid_pdf)]
 
 
-def test_outlook_adapter_only_reads_threads_mailbox_has_not_replied_to(monkeypatch) -> None:
+def test_outlook_adapter_applies_durable_ledger_predicate(monkeypatch) -> None:
     client = OutlookGraphClient(OutlookGraphConfig("tenant", "client", "secret", "inbox@example.test"))
     messages = [
         {"id": "replied", "conversationId": "conversation-1", "hasAttachments": True},
         {"id": "not-replied", "conversationId": "conversation-2", "hasAttachments": True},
     ]
     monkeypatch.setattr(client, "_iter_inbox_messages", lambda **_kwargs: iter(messages))
-    monkeypatch.setattr(
-        client,
-        "_has_mailbox_reply",
-        lambda message: message["conversationId"] == "conversation-1",
-    )
     inspected = []
     monkeypatch.setattr(
         client,
@@ -66,26 +61,16 @@ def test_outlook_adapter_only_reads_threads_mailbox_has_not_replied_to(monkeypat
         ],
     )
 
-    client.list_inbox_pdf_attachments(max_messages=10)
-
-    assert inspected == ["not-replied"]
-
-
-def test_mailbox_reply_check_queries_sent_items_conversation(monkeypatch) -> None:
-    client = OutlookGraphClient(OutlookGraphConfig("tenant", "client", "secret", "inbox@example.test"))
-    requested = []
-    monkeypatch.setattr(
-        client,
-        "_get",
-        lambda path: requested.append(path) or {"value": [{"id": "sent-reply"}]},
+    attachments = client.list_inbox_pdf_attachments(
+        max_messages=10,
+        include_attachment=lambda item: item.message_id == "not-replied",
     )
 
-    assert client._has_mailbox_reply({"conversationId": "conversation-1"}) is True
-    assert "/mailFolders/sentitems/messages?" in requested[0]
-    assert "conversationId+eq+%27conversation-1%27" in requested[0]
+    assert inspected == ["replied", "not-replied"]
+    assert [item.message_id for item in attachments] == ["not-replied"]
 
 
-def test_list_inbox_paginates_and_counts_eligible_unreplied_messages(monkeypatch) -> None:
+def test_list_inbox_paginates_and_counts_eligible_new_messages(monkeypatch) -> None:
     client = OutlookGraphClient(OutlookGraphConfig("tenant", "client", "secret", "inbox@example.test"))
     pages = {
         f"{GRAPH_ROOT}/users/inbox@example.test/mailFolders/inbox/messages?": {
@@ -152,25 +137,15 @@ def test_list_inbox_paginates_and_counts_eligible_unreplied_messages(monkeypatch
                     }
                 ]
             }
-        if "sentitems" in url:
-            if "conversation-c1" in url or "c1" in url:
-                # First message is replied; detect by conversation id in filter.
-                if "c1" in url and "c2" not in url and "c4" not in url and "c5" not in url:
-                    return {"value": [{"id": "sent"}]}
-            return {"value": []}
         raise AssertionError(url)
 
     monkeypatch.setattr(client, "_get_url", fake_get_url)
     monkeypatch.setattr(client, "_token", lambda: "token")
 
-    # More precise reply check using conversationId from the message itself.
-    monkeypatch.setattr(
-        client,
-        "_has_mailbox_reply",
-        lambda message: message["conversationId"] == "c1",
+    attachments = client.list_inbox_pdf_attachments(
+        max_messages=2,
+        include_attachment=lambda item: item.message_id != "replied",
     )
-
-    attachments = client.list_inbox_pdf_attachments(max_messages=2)
 
     assert [item.message_id for item in attachments] == ["eligible-2", "eligible-1"]
     assert [item.filename for item in attachments] == ["eligible-2.pdf", "eligible-1.pdf"]

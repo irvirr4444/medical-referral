@@ -3,12 +3,18 @@ from __future__ import annotations
 from referral_pipeline import worker
 
 
-def test_worker_once_runs_poll_then_retries(tmp_path, monkeypatch) -> None:
+def test_worker_once_runs_poll_retries_and_safe_approval_poll(tmp_path, monkeypatch) -> None:
     calls: list[list[str]] = []
 
     def fake_main(argv: list[str]) -> int:
         calls.append(list(argv))
         return 0
+
+    class FakeApprovalProcessor:
+        def poll(self, *, max_messages: int, execute: bool):
+            assert max_messages == 100
+            assert execute is False
+            return {"accepted_confirmations": [], "ignored_confirmations": [], "executed": []}
 
     results = worker.run_worker_loop(
         data_root=tmp_path / "data",
@@ -21,12 +27,15 @@ def test_worker_once_runs_poll_then_retries(tmp_path, monkeypatch) -> None:
         run_main=fake_main,
         sleep_fn=lambda _seconds: None,
         clock=lambda: 0.0,
+        approval_processor_factory=lambda _state_db: FakeApprovalProcessor(),
     )
 
-    assert [item["kind"] for item in results] == ["poll", "retries"]
+    assert [item["kind"] for item in results] == ["poll", "retries", "approvals"]
     assert all(item["status"] == "ok" for item in results)
     assert "--outlook-poll" in calls[0]
     assert "--process-retries" in calls[1]
+    assert calls[0][calls[0].index("--monday-mode") + 1] == "live-readonly"
+    assert calls[1][calls[1].index("--monday-mode") + 1] == "live-readonly"
     assert str(tmp_path / "data" / "state.sqlite") in calls[0]
     assert str(tmp_path / "data" / "state.sqlite") in calls[1]
 
@@ -45,3 +54,23 @@ def test_worker_cycle_survives_runner_exceptions(tmp_path) -> None:
     assert result["kind"] == "poll"
     assert result["status"] == "error"
     assert "mailbox auth failed" in result["error"]
+
+
+def test_approval_cycle_only_executes_when_explicitly_enabled(tmp_path) -> None:
+    seen = []
+
+    class FakeApprovalProcessor:
+        def poll(self, *, max_messages: int, execute: bool):
+            seen.append((max_messages, execute))
+            return {"accepted_confirmations": [], "ignored_confirmations": [], "executed": []}
+
+    result = worker.run_approval_cycle(
+        data_root=tmp_path,
+        max_messages=50,
+        execute=True,
+        processor_factory=lambda _state_db: FakeApprovalProcessor(),
+    )
+
+    assert result["status"] == "ok"
+    assert result["execution_enabled"] is True
+    assert seen == [(50, True)]

@@ -21,7 +21,7 @@ Monday duplicate and agency checks
 Master Sheet preview
         |
         v
-Review reply on source thread and sender-bound confirmation
+Separate internal review email and reviewer-bound confirmation
         |
         v
 Monday create, then audited DRK handoff
@@ -29,21 +29,21 @@ Monday create, then audited DRK handoff
 
 The normal operator entry point is the repository-root `run_pipeline.py`. Intake
 does not write to Monday; an exact reply from the configured reviewer authorizes
-the immutable artifact bundle. Capacity failures are queued as `pending_retry`
-instead of failing permanently.
+the immutable artifact bundle. Transient dependency failures are queued as
+`pending_retry` instead of failing permanently.
 
 ## Commands
 
-Process unreplied Outlook PDF referrals, build destination drafts, and reply on
-the source message's thread to the configured reviewer:
+Process new Outlook PDF referrals, build destination drafts, and send standalone
+review messages to the configured internal reviewer:
 
 ```powershell
 python run_pipeline.py outlook --send-review
 ```
 
-`--max-messages` defaults to 25 and counts **eligible unreplied referral emails**
-(newest first). The Outlook adapter pages through the inbox so older unreplied
-referrals are not hidden behind newer replied mail.
+`--max-messages` defaults to 25 and counts **eligible new referral emails**
+(newest first). The Outlook adapter pages through the inbox while SQLite state
+excludes attachments that are already known.
 
 Process due durable retries without polling Outlook again (scheduler-friendly):
 
@@ -69,8 +69,9 @@ python run_worker.py
 ```
 
 [`render.yaml`](../../render.yaml) mounts durable storage at `/var/data` and sets
-`INTAKE_DATA_ROOT=/var/data/intake`. The worker alternates Outlook discovery and
-retry drains on configurable intervals while surviving cycle-level errors.
+`INTAKE_DATA_ROOT=/var/data/intake`. The worker runs Outlook discovery, retry
+drains, and approval polling on independent intervals while surviving cycle-level
+errors. Approval execution is off unless `INTAKE_EXECUTE_APPROVALS=true`.
 
 Local one-shot commands (`outlook`, `retries`, `failures`, `approvals`) remain
 available for testing on any machine.
@@ -106,7 +107,8 @@ on it in production.
 
 - `cli.py`: operator commands, safe defaults, latest-run pointer, retries, failures, and guarded apply.
 - `runner.py`: source polling, PDF materialization, durable queue claims, and batch execution.
-- `worker.py`: continuous Render-friendly poll + retry loop over durable disk paths.
+- `retry_policy.py`: shared transient/permanent classification for Anthropic, Outlook, Monday, and network failures.
+- `worker.py`: continuous Render-friendly discovery, retry, and approval loop over durable disk paths.
 - `service.py`: one accepted PDF through canonical Files API extraction, destination projections, planning, Monday preview, and optional create.
 - `state.py`: SQLite job ledger, lease recovery, retry scheduling, permanent-failure retention, and Anthropic circuit breaker.
 - `review/`: deterministic HTML/plain-text summary rendering, token/sender gating, durable review state, and destination execution.
@@ -121,10 +123,11 @@ and warnings stay in
 use `Not documented`; explicit NKA/NKDA uses `No known allergies`. Formatting
 never reinterprets the PDF or invents medical facts.
 
-The read-only Monday duplicate gate compares normalized patient name, DOB,
-phone, and address. When all four match, Needs attention identifies the
-duplicate and lists those four Monday values; when no duplicate is found, the
-email says nothing about duplicates. It is disabled by default for test runs.
+The read-only Monday duplicate gate treats normalized patient name and DOB as a
+candidate match. Phone and address remain supporting evidence and may match,
+differ, or be missing; they do not hide the candidate. When no duplicate is
+found, the email says nothing about duplicates. It is disabled by default for
+manual test runs.
 Set `MONDAY_DUPLICATE_CHECK_ENABLED = True` in `referral_pipeline/cli.py` to
 enable it globally, or use `--monday-mode live-readonly` for one run.
 

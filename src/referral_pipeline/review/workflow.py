@@ -57,9 +57,9 @@ def create_and_send_review(
         if review_status == "review_send_failed":
             review_status = "awaiting_confirmation"
         try:
-            mailbox.send_reply(
-                source_message_id=source_message_id,
+            mailbox.send_review(
                 recipient=recipient,
+                subject=subject,
                 html_body=html_body,
                 text_body=text_body,
                 content_type=content_type,
@@ -129,9 +129,9 @@ def create_and_send_review(
         email_content_type=email.content_type,
     )
     try:
-        mailbox.send_reply(
-            source_message_id=source_message_id,
+        mailbox.send_review(
             recipient=recipient,
+            subject=email.subject,
             html_body=email.html_body,
             text_body=email.text_body,
             content_type=email.content_type,

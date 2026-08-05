@@ -271,7 +271,7 @@ automatic merge or record update. This planner does not import or invoke
 `push_master_sheet_plan.py` consumes an intake plan and builds a conservative
 Master Sheet create request. It defaults to dry-run and does not call Monday in
 that mode. It creates only when the plan is `ready_for_human_approval` and its
-four-field duplicate check returned `no_candidates_found`; duplicate or
+name-and-DOB duplicate check returned `no_candidates_found`; duplicate or
 review-required plans are blocked, never updated.
 
 The verified mapping creates an item with `Name`, `Patient DoB`, `Pt Phone`,
@@ -425,7 +425,7 @@ automatic merge or record update. This planner does not import or invoke
 `push_master_sheet_plan.py` consumes an intake plan and builds a conservative
 Master Sheet create request. It defaults to dry-run and does not call Monday in
 that mode. It creates only when the plan is `ready_for_human_approval` and its
-four-field duplicate check returned `no_candidates_found`; duplicate or
+name-and-DOB duplicate check returned `no_candidates_found`; duplicate or
 review-required plans are blocked, never updated.
 
 The verified mapping creates an item with `Name`, `Patient DoB`, `Pt Phone`,

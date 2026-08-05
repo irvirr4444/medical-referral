@@ -23,8 +23,7 @@ for import_path in (SRC_ROOT, MONDAY_DIR):
 from Outlook.graph import OutlookGraphClient, OutlookGraphConfig
 from Outlook.mail import InboundPdfAttachment, materialize_attachments, read_eml_pdf_attachments
 from Outlook.review_mail import OutlookReviewMailbox
-from intake_extractor.canonical_referral import CanonicalExtractionError
-from intake_extractor.llm.reliability import CapacityExhaustedError, is_capacity_error
+from referral_pipeline.retry_policy import classify_retry
 from referral_pipeline.review.workflow import create_and_send_review
 from referral_pipeline.service import process_inbound_pdf
 from referral_pipeline.state import AttachmentJob, InboxState
@@ -86,11 +85,12 @@ def _processing_options(args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
-def _attachments(args: argparse.Namespace) -> list[InboundPdfAttachment]:
+def _attachments(args: argparse.Namespace, *, state: InboxState) -> list[InboundPdfAttachment]:
     if args.eml:
         return [attachment for path in args.eml for attachment in read_eml_pdf_attachments(path)]
     return OutlookGraphClient(OutlookGraphConfig.from_environment()).list_inbox_pdf_attachments(
-        max_messages=args.max_messages
+        max_messages=args.max_messages,
+        include_attachment=None if args.force else lambda attachment: state.get_job(attachment) is None,
     )
 
 
@@ -117,30 +117,13 @@ def _review_recipient(
     *,
     options: dict[str, Any],
     args: argparse.Namespace,
-    attachment: InboundPdfAttachment,
-    manifest: dict[str, Any],
 ) -> str:
-    """Prefer an explicit override; otherwise reply to the original email sender."""
+    """Resolve only explicitly authorized internal review destinations."""
     return (
         str(options.get("review_recipient") or "").strip()
         or str(getattr(args, "review_recipient", None) or "").strip()
-        or str(manifest.get("source_sender") or "").strip()
-        or str(getattr(attachment, "sender", None) or "").strip()
-        or str(options.get("source_sender") or "").strip()
         or os.getenv("REVIEW_RECIPIENT_EMAIL", "").strip()
     )
-
-
-def _is_retryable_extraction_error(error: Exception) -> bool:
-    if isinstance(error, CapacityExhaustedError):
-        return True
-    if isinstance(error, CanonicalExtractionError):
-        cause = error.__cause__
-        if isinstance(cause, CapacityExhaustedError) or (cause is not None and is_capacity_error(cause)):
-            return True
-        if is_capacity_error(error) or "capacity exhausted" in str(error).lower() or "overloaded" in str(error).lower():
-            return True
-    return is_capacity_error(error)
 
 
 def process_claimed_job(
@@ -189,13 +172,10 @@ def process_claimed_job(
             recipient = _review_recipient(
                 options=options,
                 args=args,
-                attachment=attachment,
-                manifest=manifest,
             )
             if not recipient:
                 raise ValueError(
-                    "--send-review requires the original sender address, "
-                    "--review-recipient, or REVIEW_RECIPIENT_EMAIL"
+                    "--send-review requires --review-recipient or REVIEW_RECIPIENT_EMAIL"
                 )
             if graph_client is None:
                 graph_client = OutlookGraphClient(OutlookGraphConfig.from_environment())
@@ -211,8 +191,13 @@ def process_claimed_job(
             )
     except Exception as error:
         elapsed_seconds = round(time.perf_counter() - attachment_started, 2)
-        if _is_retryable_extraction_error(error):
-            updated = state.mark_retryable_failure(job, error=str(error), error_kind="capacity")
+        retry = classify_retry(error)
+        if retry is not None:
+            updated = state.mark_retryable_failure(
+                job,
+                error=str(error),
+                error_kind=retry.error_kind,
+            )
             _progress(
                 args,
                 f"Deferred after {elapsed_seconds:.2f}s: {attachment.filename} "
@@ -285,7 +270,7 @@ def main(argv: list[str] | None = None) -> int:
                 summaries.append(process_claimed_job(job, state=state, args=args, graph_client=graph_client))
     else:
         _progress(args, "Reading configured email source")
-        attachments = _attachments(args)
+        attachments = _attachments(args, state=state)
         _progress(args, f"Found {len(attachments)} genuine PDF attachment(s)")
         args.output_dir.mkdir(parents=True, exist_ok=True)
         for attachment, pdf_path in materialize_attachments(attachments, args.output_dir):

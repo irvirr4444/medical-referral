@@ -75,11 +75,11 @@ class RecordingMailbox:
     def __init__(self):
         self.sent = []
 
-    def send_reply(self, *, source_message_id: str, recipient: str, text_body: str | None = None, html_body: str | None = None, content_type: str = "HTML", body: str | None = None) -> None:
+    def send_review(self, *, recipient: str, subject: str, text_body: str | None = None, html_body: str | None = None, content_type: str = "HTML", body: str | None = None) -> None:
         self.sent.append(
             {
-                "source_message_id": source_message_id,
                 "recipient": recipient,
+                "subject": subject,
                 "text_body": text_body,
                 "html_body": html_body,
                 "content_type": content_type,
@@ -133,6 +133,8 @@ def test_create_and_send_review_reuses_active_request(tmp_path) -> None:
     assert second["review_reused"] is True
     assert first["review_content_type"] == "HTML"
     assert len(mailbox.sent) == 2
+    assert mailbox.sent[0]["recipient"] == "reviewer@example.test"
+    assert mailbox.sent[0]["subject"].startswith("[WCW REFERRAL REVIEW]")
     assert mailbox.sent[0]["html_body"] == mailbox.sent[1]["html_body"]
     assert (tmp_path / "review-email.html").is_file()
     assert (tmp_path / "review-email.txt").is_file()

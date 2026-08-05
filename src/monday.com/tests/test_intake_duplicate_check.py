@@ -28,7 +28,7 @@ def test_disabled_check_never_returns_candidates() -> None:
     assert not result.candidates
 
 
-def test_snapshot_duplicate_check_requires_name_and_dob(tmp_path) -> None:
+def test_snapshot_duplicate_check_uses_name_and_dob_with_supporting_evidence(tmp_path) -> None:
     records = tmp_path / "records.json"
     records.write_text(json.dumps({"board": {"id": "1"}, "items": [_item()]}))
     referral = ReferralIntake(
@@ -45,6 +45,11 @@ def test_snapshot_duplicate_check_requires_name_and_dob(tmp_path) -> None:
     assert result.candidates[0]["id"] == "123"
     assert result.candidates[0]["fields"]["patient_phone"] == "+1 (555) 555-0100"
     assert result.candidates[0]["fields"]["patient_address"] == "100 Example Street, Tampa, FL 33602"
+    assert result.candidates[0]["match_evidence"] == {
+        "identity_fields": ["name", "dob"],
+        "phone": "match",
+        "address": "match",
+    }
 
 
 def test_snapshot_duplicate_check_skips_when_dob_missing(tmp_path) -> None:
@@ -56,7 +61,7 @@ def test_snapshot_duplicate_check_skips_when_dob_missing(tmp_path) -> None:
     assert result.status == "skipped_missing_identity"
 
 
-def test_snapshot_duplicate_check_requires_all_four_fields_to_match(tmp_path) -> None:
+def test_snapshot_duplicate_check_keeps_candidate_when_supporting_phone_differs(tmp_path) -> None:
     records = tmp_path / "records.json"
     records.write_text(json.dumps({"board": {"id": "1"}, "items": [_item()]}))
     referral = ReferralIntake(
@@ -68,4 +73,6 @@ def test_snapshot_duplicate_check_requires_all_four_fields_to_match(tmp_path) ->
 
     result = check_duplicates_from_snapshot(referral, records_file=records)
 
-    assert result.status == "no_candidates_found"
+    assert result.status == "duplicate_found"
+    assert result.candidates[0]["match_evidence"]["phone"] == "different"
+    assert result.candidates[0]["match_evidence"]["address"] == "match"

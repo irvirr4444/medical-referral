@@ -16,10 +16,16 @@ services:
         value: "600"
       - key: INTAKE_RETRY_INTERVAL_SECONDS
         value: "300"
+      - key: INTAKE_APPROVAL_INTERVAL_SECONDS
+        value: "60"
       - key: INTAKE_MAX_MESSAGES
         value: "25"
       - key: INTAKE_MAX_RETRY_JOBS
         value: "10"
+      - key: INTAKE_MAX_APPROVAL_MESSAGES
+        value: "100"
+      - key: INTAKE_EXECUTE_APPROVALS
+        value: "false"
       - key: PYTHONUNBUFFERED
         value: "1"
       - key: ANTHROPIC_API_KEY

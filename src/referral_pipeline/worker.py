@@ -1,4 +1,4 @@
-"""Continuous Outlook poll + retry worker for durable Render deployments."""
+"""Continuous Outlook intake, retry, and approval worker for Render."""
 
 from __future__ import annotations
 
@@ -11,6 +11,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 
+from Outlook.graph import OutlookGraphClient, OutlookGraphConfig
+from Outlook.review_mail import OutlookReviewMailbox
+from referral_pipeline.review.workflow import ApprovalProcessor
 from referral_pipeline.runner import main as run_inbound_main
 
 
@@ -19,13 +22,22 @@ logger = logging.getLogger(__name__)
 DEFAULT_DATA_ROOT = Path(os.getenv("INTAKE_DATA_ROOT", "/var/data/intake"))
 DEFAULT_POLL_INTERVAL_SECONDS = int(os.getenv("INTAKE_POLL_INTERVAL_SECONDS", "600"))
 DEFAULT_RETRY_INTERVAL_SECONDS = int(os.getenv("INTAKE_RETRY_INTERVAL_SECONDS", "300"))
+DEFAULT_APPROVAL_INTERVAL_SECONDS = int(os.getenv("INTAKE_APPROVAL_INTERVAL_SECONDS", "60"))
 DEFAULT_MAX_MESSAGES = int(os.getenv("INTAKE_MAX_MESSAGES", "25"))
 DEFAULT_MAX_RETRY_JOBS = int(os.getenv("INTAKE_MAX_RETRY_JOBS", "10"))
+DEFAULT_MAX_APPROVAL_MESSAGES = int(os.getenv("INTAKE_MAX_APPROVAL_MESSAGES", "100"))
+
+
+def _env_flag(name: str, *, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().casefold() in {"1", "true", "yes", "on"}
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Run Outlook discovery and durable retries in a continuous loop.",
+        description="Run Outlook discovery, durable retries, and approval polling.",
     )
     parser.add_argument(
         "--data-root",
@@ -35,11 +47,20 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--poll-interval-seconds", type=int, default=DEFAULT_POLL_INTERVAL_SECONDS)
     parser.add_argument("--retry-interval-seconds", type=int, default=DEFAULT_RETRY_INTERVAL_SECONDS)
+    parser.add_argument("--approval-interval-seconds", type=int, default=DEFAULT_APPROVAL_INTERVAL_SECONDS)
     parser.add_argument("--max-messages", type=int, default=DEFAULT_MAX_MESSAGES)
     parser.add_argument("--max-jobs", type=int, default=DEFAULT_MAX_RETRY_JOBS)
-    parser.add_argument("--once", action="store_true", help="Run one poll cycle and one retry cycle, then exit.")
-    parser.add_argument("--skip-poll", action="store_true", help="Only run the retry drain path.")
-    parser.add_argument("--skip-retries", action="store_true", help="Only run the Outlook discovery path.")
+    parser.add_argument("--max-approval-messages", type=int, default=DEFAULT_MAX_APPROVAL_MESSAGES)
+    parser.add_argument(
+        "--execute-approvals",
+        action="store_true",
+        default=_env_flag("INTAKE_EXECUTE_APPROVALS"),
+        help="Apply confirmed Monday previews; disabled unless explicitly enabled.",
+    )
+    parser.add_argument("--once", action="store_true", help="Run each enabled cycle once, then exit.")
+    parser.add_argument("--skip-poll", action="store_true", help="Do not run Outlook referral discovery.")
+    parser.add_argument("--skip-retries", action="store_true", help="Do not drain due retry jobs.")
+    parser.add_argument("--skip-approvals", action="store_true", help="Do not poll review confirmations.")
     parser.add_argument("--quiet", action="store_true")
     return parser.parse_args(argv)
 
@@ -63,46 +84,21 @@ def run_poll_cycle(
     run_main: Callable[[list[str]], int] = run_inbound_main,
 ) -> dict:
     """One Outlook discovery cycle; failures are logged and returned, not raised."""
-    output_root = data_root / "inbox-runs"
-    state_db = data_root / "state.sqlite"
-    run_dir = _new_run_dir(output_root)
     argv = [
         "--outlook-poll",
         "--max-messages",
         str(max_messages),
-        "--output-dir",
-        str(run_dir),
-        "--state-db",
-        str(state_db),
         "--master-sheet-mode",
         "dry-run",
         "--send-review",
         "--monday-mode",
-        "disabled",
+        "live-readonly",
         "--agency-mode",
         "live-readonly",
     ]
     if not quiet:
         argv.append("--verbose")
-    started = time.perf_counter()
-    try:
-        exit_code = run_main(argv)
-        return {
-            "kind": "poll",
-            "status": "ok" if exit_code == 0 else "failed",
-            "exit_code": exit_code,
-            "run_dir": str(run_dir),
-            "elapsed_seconds": round(time.perf_counter() - started, 2),
-        }
-    except Exception as error:  # noqa: BLE001 - worker must survive cycle failures
-        logger.exception("Outlook poll cycle failed")
-        return {
-            "kind": "poll",
-            "status": "error",
-            "error": str(error),
-            "run_dir": str(run_dir),
-            "elapsed_seconds": round(time.perf_counter() - started, 2),
-        }
+    return _run_intake_cycle(kind="poll", data_root=data_root, argv=argv, run_main=run_main)
 
 
 def run_retry_cycle(
@@ -113,44 +109,88 @@ def run_retry_cycle(
     run_main: Callable[[list[str]], int] = run_inbound_main,
 ) -> dict:
     """One durable retry drain cycle; failures are logged and returned, not raised."""
-    output_root = data_root / "inbox-runs"
-    state_db = data_root / "state.sqlite"
-    run_dir = _new_run_dir(output_root)
     argv = [
         "--process-retries",
         "--max-jobs",
         str(max_jobs),
-        "--output-dir",
-        str(run_dir),
-        "--state-db",
-        str(state_db),
         "--master-sheet-mode",
         "dry-run",
         "--send-review",
         "--monday-mode",
-        "disabled",
+        "live-readonly",
         "--agency-mode",
         "live-readonly",
     ]
     if not quiet:
         argv.append("--verbose")
+    return _run_intake_cycle(kind="retries", data_root=data_root, argv=argv, run_main=run_main)
+
+
+def _run_intake_cycle(
+    *,
+    kind: str,
+    data_root: Path,
+    argv: list[str],
+    run_main: Callable[[list[str]], int],
+) -> dict:
+    run_dir = _new_run_dir(data_root / "inbox-runs")
+    argv.extend(("--output-dir", str(run_dir), "--state-db", str(data_root / "state.sqlite")))
     started = time.perf_counter()
     try:
         exit_code = run_main(argv)
         return {
-            "kind": "retries",
+            "kind": kind,
             "status": "ok" if exit_code == 0 else "failed",
             "exit_code": exit_code,
             "run_dir": str(run_dir),
             "elapsed_seconds": round(time.perf_counter() - started, 2),
         }
     except Exception as error:  # noqa: BLE001 - worker must survive cycle failures
-        logger.exception("Retry cycle failed")
+        logger.exception("%s cycle failed", kind)
         return {
-            "kind": "retries",
+            "kind": kind,
             "status": "error",
             "error": str(error),
             "run_dir": str(run_dir),
+            "elapsed_seconds": round(time.perf_counter() - started, 2),
+        }
+
+
+def run_approval_cycle(
+    *,
+    data_root: Path,
+    max_messages: int,
+    execute: bool = False,
+    processor_factory: Callable[[Path], ApprovalProcessor] | None = None,
+) -> dict:
+    """Poll reviewer replies and optionally apply confirmed Monday previews."""
+    state_db = data_root / "state.sqlite"
+    started = time.perf_counter()
+    try:
+        if processor_factory is None:
+            client = OutlookGraphClient(OutlookGraphConfig.from_environment())
+            processor = ApprovalProcessor(
+                state_db=state_db,
+                mailbox=OutlookReviewMailbox(client),
+            )
+        else:
+            processor = processor_factory(state_db)
+        result = processor.poll(max_messages=max_messages, execute=execute)
+        failed = any(item.get("status") == "failed" for item in result["executed"])
+        return {
+            "kind": "approvals",
+            "status": "failed" if failed else "ok",
+            "execution_enabled": execute,
+            "elapsed_seconds": round(time.perf_counter() - started, 2),
+            **result,
+        }
+    except Exception as error:  # noqa: BLE001 - worker must survive cycle failures
+        logger.exception("Approval poll cycle failed")
+        return {
+            "kind": "approvals",
+            "status": "error",
+            "execution_enabled": execute,
+            "error": str(error),
             "elapsed_seconds": round(time.perf_counter() - started, 2),
         }
 
@@ -169,12 +209,19 @@ def run_worker_loop(
     sleep_fn: Callable[[float], None] = time.sleep,
     run_main: Callable[[list[str]], int] = run_inbound_main,
     clock: Callable[[], float] = time.monotonic,
+    approval_interval_seconds: int = DEFAULT_APPROVAL_INTERVAL_SECONDS,
+    max_approval_messages: int = DEFAULT_MAX_APPROVAL_MESSAGES,
+    execute_approvals: bool = False,
+    skip_approvals: bool = False,
+    approval_processor_factory: Callable[[Path], ApprovalProcessor] | None = None,
 ) -> list[dict]:
-    """Run poll and retry cycles on independent intervals until stopped or `--once`."""
+    """Run discovery, retry, and approval cycles on independent intervals."""
     if poll_interval_seconds < 1:
         raise ValueError("poll_interval_seconds must be at least 1")
     if retry_interval_seconds < 1:
         raise ValueError("retry_interval_seconds must be at least 1")
+    if approval_interval_seconds < 1:
+        raise ValueError("approval_interval_seconds must be at least 1")
 
     data_root.mkdir(parents=True, exist_ok=True)
     (data_root / "inbox-runs").mkdir(parents=True, exist_ok=True)
@@ -183,6 +230,7 @@ def run_worker_loop(
     now = clock()
     next_poll_at = now if not skip_poll else float("inf")
     next_retry_at = now if not skip_retries else float("inf")
+    next_approval_at = now if not skip_approvals else float("inf")
 
     while True:
         now = clock()
@@ -209,11 +257,23 @@ def run_worker_loop(
             print(json.dumps(result, indent=2), flush=True)
             next_retry_at = clock() + retry_interval_seconds
 
+        now = clock()
+        if now >= next_approval_at and not skip_approvals:
+            result = run_approval_cycle(
+                data_root=data_root,
+                max_messages=max_approval_messages,
+                execute=execute_approvals,
+                processor_factory=approval_processor_factory,
+            )
+            results.append(result)
+            print(json.dumps(result, indent=2), flush=True)
+            next_approval_at = clock() + approval_interval_seconds
+
         if once:
             break
 
         now = clock()
-        wake_in = min(next_poll_at - now, next_retry_at - now)
+        wake_in = min(next_poll_at - now, next_retry_at - now, next_approval_at - now)
         sleep_fn(max(wake_in, 1.0))
 
     return results
@@ -226,11 +286,13 @@ def main(argv: list[str] | None = None) -> int:
         format="%(levelname)s:%(name)s:%(message)s",
     )
     logger.info(
-        "Starting intake worker data_root=%s poll=%ss retry=%ss max_messages=%s",
+        "Starting intake worker data_root=%s poll=%ss retry=%ss approvals=%ss max_messages=%s execute_approvals=%s",
         args.data_root,
         args.poll_interval_seconds,
         args.retry_interval_seconds,
+        args.approval_interval_seconds,
         args.max_messages,
+        args.execute_approvals,
     )
     run_worker_loop(
         data_root=args.data_root.resolve(),
@@ -241,6 +303,10 @@ def main(argv: list[str] | None = None) -> int:
         once=args.once,
         skip_poll=args.skip_poll,
         skip_retries=args.skip_retries,
+        approval_interval_seconds=args.approval_interval_seconds,
+        max_approval_messages=args.max_approval_messages,
+        execute_approvals=args.execute_approvals,
+        skip_approvals=args.skip_approvals,
         quiet=args.quiet,
     )
     return 0
