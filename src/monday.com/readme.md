@@ -306,32 +306,12 @@ The target mapping is [master_sheet_write_config.example.json](master_sheet_writ
 `--apply --confirm-master-sheet-write` is the only way to invoke the create
 mutation. Use it only with WCW's explicit approval and an unblocked preview.
 
-### Simplified Outlook intake CLI
+### Outlook intake handoff
 
-`intake.py` provides safe operational defaults without requiring PowerShell
-variables or manual plan-path discovery. It processes only the newest inbox message,
-uses image extraction, performs live read-only duplicate and agency lookups, writes
-timestamped audit artifacts beneath `tmp/inbox-runs/`, and defaults to dry-run:
-
-```powershell
-python src/monday.com/intake.py outlook --dry-run
-python src/monday.com/intake.py apply --confirm-master-sheet-write
-```
-
-The apply command uses the exact preview from the latest successful dry run. It
-refuses blocked, ambiguous, and already-applied previews. A controlled one-command
-smoke test is also available:
-
-```powershell
-python src/monday.com/intake.py outlook --apply --confirm-master-sheet-write
-```
-
-Useful overrides include `--max-messages`, `--input-mode`, `--max-pages`,
-`--monday-mode`, `--agency-mode`, `--output-root`, `--state-db`, `--force`, and
-`--quiet`. Progress and extractor INFO logs are shown by default.
-Use `python src/monday.com/intake.py outlook --help` for all options. The existing
-`run_inbound_intake.py` and `push_master_sheet_plan.py` commands remain the lower-level
-debug and batch interfaces.
+Outlook mailbox access, `.eml` parsing, idempotency, operator commands, and their
+tests are documented under [`src/Outlook`](../Outlook/README.md), while cross-system
+workflow ownership lives in [`src/referral_pipeline`](../referral_pipeline/README.md).
+This folder retains Monday duplicate checks, agency lookup, and guarded writers.
 
 ### Master Sheet operational reads (read-only)
 
@@ -463,10 +443,11 @@ requested services, or a source PDF. Extracted facts therefore remain visible in
 PDF remains in the local run artifacts for a future DRK integration and is not
 uploaded to the Master Sheet.
 
-`inbound_intake_pipeline.process_inbound_pdf(...)` defaults to the repository's
-single two-call canonical extractor. Pass `sent_by` explicitly; it is operational
-metadata and is never inferred from the PDF. The pipeline writes the complete
-`canonical-referral.json`, projects it to the planner record, performs the configured
+`referral_pipeline.service.process_inbound_pdf(...)` defaults to the repository's
+single two-call canonical extractor using the Anthropic Files API. Pass `sent_by`
+explicitly; it is operational metadata and is never inferred from the PDF. The
+pipeline writes the complete `canonical-referral.json`, projects it to the planner
+record, performs the configured
 duplicate and agency lookups, builds the exact Master Sheet column payload, and
 only calls `create_item` when apply mode and explicit confirmation are both set.
 Monday and DRK never independently interpret the PDF.

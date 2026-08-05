@@ -1,4 +1,4 @@
-"""PDF-only inbound-email primitives shared by local and Outlook sources."""
+"""PDF-only attachment primitives shared by local and Outlook sources."""
 
 from __future__ import annotations
 

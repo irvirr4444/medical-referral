@@ -22,6 +22,25 @@
     "sent_to_case_manager": "status7__1",
     "time_sent_to_case_manager": "time_sent_to_cm__1"
   },
+  "column_titles": {
+    "patient_dob": "Patient DoB",
+    "patient_phone": "Phone",
+    "patient_email": "Email",
+    "referral_received": "Date/Time Referral Received",
+    "agency_phone": "Agency Phone",
+    "agency_contact": "Agency Contact",
+    "agency_email": "Agency Email",
+    "place_of_service": "Place of Service",
+    "wound_order_included": "Wound Order Included",
+    "comments": "Comments",
+    "sent_by": "Sent By",
+    "stage": "Stage",
+    "agency_relation": "Company",
+    "current_hh_relation": "Current HH/Hospice",
+    "case_manager": "Case Manager",
+    "sent_to_case_manager": "Sent to Case Manager",
+    "time_sent_to_case_manager": "Time Sent to Case Manager"
+  },
   "agency_relation": {
     "accounts_board_id": 5886538756
   },

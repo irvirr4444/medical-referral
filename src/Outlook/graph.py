@@ -1,9 +1,4 @@
-"""Read-only Microsoft Graph adapter for PDF attachments in an Outlook inbox.
-
-This module intentionally has no mail-send, delete, move, or mark-read endpoint.
-An Entra application with Mail.Read application permission scoped to a test mailbox
-is sufficient for the initial poll-based integration.
-"""
+"""Small Microsoft Graph client used by the Outlook-specific adapters."""
 
 from __future__ import annotations
 
@@ -17,7 +12,7 @@ from urllib.parse import urlencode
 import requests
 from dotenv import load_dotenv
 
-from inbound_mail import InboundPdfAttachment, is_pdf_file
+from Outlook.mail import InboundPdfAttachment, is_pdf_file
 
 
 GRAPH_ROOT = "https://graph.microsoft.com/v1.0"
@@ -113,6 +108,9 @@ class OutlookGraphClient:
         return accepted
 
     def _get(self, path: str) -> dict[str, Any]:
+        return self.get_json(path)
+
+    def get_json(self, path: str) -> dict[str, Any]:
         response = requests.get(
             f"{GRAPH_ROOT}{path}",
             headers={"Authorization": f"Bearer {self._token()}"},
@@ -124,6 +122,19 @@ class OutlookGraphClient:
         if not isinstance(payload, dict):
             raise OutlookGraphError("Microsoft Graph returned an unexpected response.")
         return payload
+
+    def post_no_content(self, path: str, payload: dict[str, Any]) -> None:
+        response = requests.post(
+            f"{GRAPH_ROOT}{path}",
+            headers={
+                "Authorization": f"Bearer {self._token()}",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=self.timeout_s,
+        )
+        if not response.ok:
+            raise OutlookGraphError(f"Microsoft Graph write failed: HTTP {response.status_code}")
 
     def _token(self) -> str:
         if self._access_token:

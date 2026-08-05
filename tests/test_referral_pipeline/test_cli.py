@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import intake
+from referral_pipeline import cli as intake
 
 
 def _write_completed_run(argv: list[str], *, blocked: bool = False, created_item_id: str | None = None) -> None:
@@ -68,7 +68,7 @@ def test_outlook_defaults_to_one_message_and_dry_run(tmp_path, monkeypatch, caps
     latest = json.loads((tmp_path / "latest.json").read_text(encoding="utf-8"))
     assert latest["status"] == "ready"
     assert latest["item_name"] == "TEST Jamie Tester"
-    assert "intake.py apply --confirm-master-sheet-write" in capsys.readouterr().out
+    assert "run_pipeline.py apply --confirm-master-sheet-write" in capsys.readouterr().out
 
 
 def test_direct_apply_requires_explicit_confirmation(tmp_path, monkeypatch, capsys) -> None:
@@ -98,6 +98,29 @@ def test_outlook_quiet_mode_suppresses_low_level_verbose_flag(tmp_path, monkeypa
 
     assert intake.main(["outlook", "--quiet", "--output-root", str(tmp_path)]) == 0
     assert "--verbose" not in delegated
+
+
+def test_outlook_can_delegate_review_email(tmp_path, monkeypatch) -> None:
+    delegated: list[str] = []
+
+    def fake_run(argv: list[str]) -> int:
+        delegated.extend(argv)
+        _write_completed_run(argv)
+        return 0
+
+    monkeypatch.setattr(intake, "run_inbound_main", fake_run)
+
+    assert intake.main(["outlook", "--send-review", "--review-recipient", "reviewer@example.test", "--output-root", str(tmp_path)]) == 0
+
+    assert "--send-review" in delegated
+    assert delegated[delegated.index("--review-recipient") + 1] == "reviewer@example.test"
+
+
+def test_review_email_cannot_be_combined_with_immediate_write(tmp_path, monkeypatch, capsys) -> None:
+    monkeypatch.setattr(intake, "run_inbound_main", lambda _argv: (_ for _ in ()).throw(AssertionError()))
+
+    assert intake.main(["outlook", "--send-review", "--apply", "--confirm-master-sheet-write", "--output-root", str(tmp_path)]) == 2
+    assert "cannot be combined" in capsys.readouterr().err
 
 
 def test_apply_uses_exact_latest_preview_and_marks_it_applied(tmp_path, monkeypatch, capsys) -> None:
@@ -178,3 +201,25 @@ def test_apply_refuses_a_preview_with_an_existing_result(tmp_path, monkeypatch, 
         == 2
     )
     assert "already has an apply result" in capsys.readouterr().err
+
+
+def test_review_send_reuses_existing_manifest(tmp_path, monkeypatch, capsys) -> None:
+    run_dir = tmp_path / "20260804-120000"
+    artifact_dir = run_dir / "abc123"
+    artifact_dir.mkdir(parents=True)
+    (artifact_dir / "manifest.json").write_text(json.dumps({"preview_path": "preview.json"}), encoding="utf-8")
+    sent = []
+    monkeypatch.setattr(intake.OutlookGraphConfig, "from_environment", lambda: object())
+    monkeypatch.setattr(intake, "OutlookGraphClient", lambda _config: object())
+    monkeypatch.setenv("REVIEW_RECIPIENT_EMAIL", "reviewer@example.test")
+    monkeypatch.setattr(
+        intake,
+        "create_and_send_review",
+        lambda manifest, **kwargs: sent.append((manifest, kwargs)) or {"review_id": "review_test"},
+    )
+
+    assert intake.main(["review-send", "--run", str(run_dir)]) == 0
+
+    assert sent[0][1]["recipient"] == "reviewer@example.test"
+    assert sent[0][1]["state_db"] == tmp_path / "state.sqlite"
+    assert "review_test" in capsys.readouterr().out

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from inbound_intake_pipeline import process_inbound_pdf
-from inbound_mail import InboundPdfAttachment
+from Outlook.mail import InboundPdfAttachment
+from referral_pipeline.service import process_inbound_pdf
 from synthetic_referrals import CASES, write_synthetic_fixture_set
 
 
@@ -18,7 +18,7 @@ def test_pipeline_builds_unblocked_preview_for_complete_synthetic_referral(tmp_p
         filename=pdf.name,
         content=pdf.read_bytes(),
     )
-    config = Path(__file__).resolve().parents[1] / "master_sheet_write_config.example.json"
+    config = Path(__file__).resolve().parents[2] / "src" / "monday.com" / "master_sheet_write_config.example.json"
 
     manifest = process_inbound_pdf(
         attachment,
@@ -44,7 +44,7 @@ def test_pipeline_blocks_synthetic_duplicate_before_any_write(tmp_path) -> None:
     case = next(case for case in CASES if case.slug == "duplicate")
     pdf = tmp_path / "fixtures" / "pdfs" / "synthetic-duplicate-referral.pdf"
     attachment = InboundPdfAttachment("test", "message-2", "attachment-2", pdf.name, pdf.read_bytes())
-    config = Path(__file__).resolve().parents[1] / "master_sheet_write_config.example.json"
+    config = Path(__file__).resolve().parents[2] / "src" / "monday.com" / "master_sheet_write_config.example.json"
 
     manifest = process_inbound_pdf(
         attachment,

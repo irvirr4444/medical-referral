@@ -1,23 +1,30 @@
-"""Operator-friendly CLI for Outlook referral intake and guarded Monday writes."""
+"""Operator-friendly CLI for the referral pipeline and guarded Monday writes."""
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 
-# `monday.com` is a scripts directory rather than an importable package. Add the
-# project src directory so this entry point works without shell-specific PYTHONPATH.
+# `monday.com` is a scripts directory rather than an importable package. Keep its
+# path handling at the cross-system orchestration boundary.
 SRC_ROOT = Path(__file__).resolve().parents[1]
-if str(SRC_ROOT) not in sys.path:
-    sys.path.insert(0, str(SRC_ROOT))
+MONDAY_DIR = SRC_ROOT / "monday.com"
+for import_path in (SRC_ROOT, MONDAY_DIR):
+    if str(import_path) not in sys.path:
+        sys.path.insert(0, str(import_path))
 
 from master_sheet_writer import apply_master_sheet_create  # noqa: E402
-from run_inbound_intake import main as run_inbound_main  # noqa: E402
+from Outlook.graph import OutlookGraphClient, OutlookGraphConfig  # noqa: E402
+from Outlook.review_mail import OutlookReviewMailbox  # noqa: E402
+from referral_pipeline.review.workflow import ApprovalProcessor  # noqa: E402
+from referral_pipeline.review.workflow import create_and_send_review  # noqa: E402
+from referral_pipeline.runner import main as run_inbound_main  # noqa: E402
 
 
 DEFAULT_OUTPUT_ROOT = Path("tmp") / "inbox-runs"
@@ -55,6 +62,8 @@ def _build_parser() -> argparse.ArgumentParser:
     outlook.add_argument("--state-db", type=Path)
     outlook.add_argument("--force", action="store_true", help="Reprocess the newest PDF even if its hash was completed.")
     outlook.add_argument("--quiet", action="store_true", help="Suppress progress logs while retaining the final summary.")
+    outlook.add_argument("--send-review", action="store_true", help="Email the generated review summary instead of writing immediately.")
+    outlook.add_argument("--review-recipient", help="Reviewer email; defaults to REVIEW_RECIPIENT_EMAIL.")
 
     apply = commands.add_parser(
         "apply",
@@ -65,6 +74,28 @@ def _build_parser() -> argparse.ArgumentParser:
     source.add_argument("--run", type=Path, help="Apply the only preview inside a specific run directory.")
     apply.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
     apply.add_argument("--confirm-master-sheet-write", action="store_true", required=True)
+
+    approvals = commands.add_parser(
+        "approvals",
+        help="Read review replies and optionally execute exact confirmed Monday previews.",
+    )
+    approvals.add_argument("--execute", action="store_true", help="Apply confirmed Monday previews and create DRK handoffs.")
+    approvals.add_argument("--max-messages", type=int, default=25)
+    approvals.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
+    approvals.add_argument("--state-db", type=Path)
+
+    review_send = commands.add_parser(
+        "review-send",
+        help="Send a review from an existing completed extraction without rerunning the LLM.",
+    )
+    review_send.add_argument("--run", type=Path, required=True, help="Existing timestamped intake run directory.")
+    review_send.add_argument("--review-recipient", help="Reviewer email; defaults to REVIEW_RECIPIENT_EMAIL.")
+    review_send.add_argument(
+        "--config",
+        type=Path,
+        default=MONDAY_DIR / "master_sheet_write_config.example.json",
+    )
+    review_send.add_argument("--state-db", type=Path)
 
     return parser
 
@@ -83,6 +114,8 @@ def _new_run_dir(output_root: Path) -> Path:
 def _run_outlook(args: argparse.Namespace) -> int:
     if args.apply and not args.confirm_master_sheet_write:
         raise IntakeCLIError("--apply requires --confirm-master-sheet-write")
+    if args.apply and args.send_review:
+        raise IntakeCLIError("--send-review cannot be combined with --apply")
     if args.max_messages < 1:
         raise IntakeCLIError("--max-messages must be at least 1")
 
@@ -124,6 +157,10 @@ def _run_outlook(args: argparse.Namespace) -> int:
         delegated.append("--verbose")
     if args.confirm_master_sheet_write:
         delegated.append("--confirm-master-sheet-write")
+    if args.send_review:
+        delegated.append("--send-review")
+    if args.review_recipient:
+        delegated.extend(("--review-recipient", args.review_recipient))
 
     print(f"[intake] source: Outlook ({args.max_messages} newest message{'s' if args.max_messages != 1 else ''})")
     print(f"[intake] mode: {mode}")
@@ -159,6 +196,9 @@ def _record_latest_run(output_root: Path, run_dir: Path) -> dict[str, Any]:
             "filename": result.get("filename"),
             "attachment_sha256": result.get("attachment_sha256"),
             "created_item_id": result.get("created_item_id"),
+            "review_id": result.get("review_id"),
+            "review_status": result.get("review_status"),
+            "elapsed_seconds": result.get("elapsed_seconds"),
         }
     )
     if result.get("status") != "completed":
@@ -179,7 +219,13 @@ def _record_latest_run(output_root: Path, run_dir: Path) -> dict[str, Any]:
         return _write_pointer(output_root, pointer)
 
     pointer["item_name"] = preview.get("item_name")
-    if result.get("created_item_id"):
+    if result.get("review_status") == "awaiting_confirmation":
+        pointer["status"] = "awaiting_confirmation"
+    elif result.get("review_status") == "needs_correction":
+        pointer["status"] = "needs_correction"
+        blockers = result.get("master_sheet_blockers") or preview.get("blockers") or []
+        pointer["reason"] = "; ".join(str(blocker) for blocker in blockers) or "review is blocked"
+    elif result.get("created_item_id"):
         pointer["status"] = "applied"
     elif result.get("master_sheet_blocked") or preview.get("blocked"):
         blockers = result.get("master_sheet_blockers") or preview.get("blockers") or []
@@ -203,9 +249,17 @@ def _print_run_result(pointer: dict[str, Any], *, output_root: Path) -> None:
     print(f"[intake] status: {status}")
     if pointer.get("item_name"):
         print(f"[intake] patient: {pointer['item_name']}")
+    if pointer.get("elapsed_seconds") is not None:
+        print(f"[intake] attachment time: {float(pointer['elapsed_seconds']):.2f}s")
     if status == "ready":
         print("[intake] no Monday item was created")
-        print("[intake] next: python src/monday.com/intake.py apply --confirm-master-sheet-write")
+        print("[intake] next: python run_pipeline.py apply --confirm-master-sheet-write")
+    elif status == "awaiting_confirmation":
+        print(f"[intake] review request: {pointer.get('review_id')}")
+        print("[intake] next: reply to the review email, then run python run_pipeline.py approvals --execute")
+    elif status == "needs_correction":
+        print(f"[intake] review request: {pointer.get('review_id')}")
+        print(f"[intake] correction required: {pointer.get('reason', 'review is blocked')}")
     elif status == "applied":
         print(f"[intake] created Monday item: {pointer.get('created_item_id')}")
     else:
@@ -249,6 +303,46 @@ def _apply_preview(args: argparse.Namespace) -> int:
             indent=2,
         )
     )
+    return 0
+
+
+def _run_approvals(args: argparse.Namespace) -> int:
+    if args.max_messages < 1:
+        raise IntakeCLIError("--max-messages must be at least 1")
+    state_db = (args.state_db or args.output_root / "state.sqlite").resolve()
+    mailbox = OutlookReviewMailbox(OutlookGraphClient(OutlookGraphConfig.from_environment()))
+    print(f"[review] checking {args.max_messages} recent inbox messages")
+    print(f"[review] execution: {'enabled' if args.execute else 'disabled'}")
+    result = ApprovalProcessor(state_db=state_db, mailbox=mailbox).poll(
+        max_messages=args.max_messages,
+        execute=args.execute,
+    )
+    print(json.dumps(result, indent=2))
+    return 1 if any(item.get("status") == "failed" for item in result["executed"]) else 0
+
+
+def _resend_review(args: argparse.Namespace) -> int:
+    run_dir = args.run.resolve()
+    manifests = list(run_dir.rglob("manifest.json"))
+    if len(manifests) != 1:
+        raise IntakeCLIError(f"--run must contain exactly one manifest; found {len(manifests)}")
+    manifest = _load_json_object(manifests[0], label="intake manifest")
+    graph_client = OutlookGraphClient(OutlookGraphConfig.from_environment())
+    recipient = (args.review_recipient or os.getenv("REVIEW_RECIPIENT_EMAIL", "")).strip()
+    if not recipient:
+        raise IntakeCLIError("review-send requires --review-recipient or REVIEW_RECIPIENT_EMAIL")
+    state_db = (args.state_db or run_dir.parent / "state.sqlite").resolve()
+
+    print(f"[review] reusing extraction: {run_dir}")
+    print(f"[review] sending to: {recipient}")
+    result = create_and_send_review(
+        manifest,
+        recipient=recipient,
+        write_config_path=args.config,
+        state_db=state_db,
+        mailbox=OutlookReviewMailbox(graph_client),
+    )
+    print(json.dumps(result, indent=2))
     return 0
 
 
@@ -298,7 +392,11 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "outlook":
             return _run_outlook(args)
-        return _apply_preview(args)
+        if args.command == "apply":
+            return _apply_preview(args)
+        if args.command == "approvals":
+            return _run_approvals(args)
+        return _resend_review(args)
     except IntakeCLIError as error:
         print(f"intake: error: {error}", file=sys.stderr)
         return 2

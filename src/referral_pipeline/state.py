@@ -1,4 +1,4 @@
-"""Minimal local idempotency store for inbound referral attachments."""
+"""Minimal local idempotency store for processed referral attachments."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
-from inbound_mail import InboundPdfAttachment
+from Outlook.mail import InboundPdfAttachment
 
 
 class InboxState:

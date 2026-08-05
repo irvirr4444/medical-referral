@@ -187,7 +187,7 @@ The default flow only writes local artifacts under `tmp/`; it does not change Mo
 $env:PYTHONPATH='src'
 python src/monday.com/generate_synthetic_referrals.py
 $eml = Get-ChildItem tmp/synthetic-referrals/emails/*.eml | Select-Object -ExpandProperty FullName
-python src/monday.com/run_inbound_intake.py `
+python src/referral_pipeline/runner.py `
   --eml $eml `
   --monday-mode snapshot `
   --monday-records-file tmp/synthetic-referrals/monday-snapshots/master_sheet_records.json `
@@ -199,15 +199,14 @@ python src/monday.com/evaluate_synthetic_replay.py `
   --run-dir tmp/synthetic-inbox-run
 ```
 
-To connect a test Outlook mailbox, create an Entra application with **read-only**
-Microsoft Graph `Mail.Read` application permission and mailbox-scoped access, then
-set these values in `.env`: `OUTLOOK_TENANT_ID`, `OUTLOOK_CLIENT_ID`,
-`OUTLOOK_CLIENT_SECRET`, and `OUTLOOK_MAILBOX`. The poller accepts only attachments
-whose filename ends in `.pdf` and whose file bytes contain a PDF signature:
+The full orchestration and system boundary are documented in
+[src/referral_pipeline/README.md](src/referral_pipeline/README.md), while Outlook
+configuration is in [src/Outlook/README.md](src/Outlook/README.md). The normal
+manual-preview commands are:
 
 ```powershell
-python src/monday.com/intake.py outlook --dry-run
-python src/monday.com/intake.py apply --confirm-master-sheet-write
+python run_pipeline.py outlook
+python run_pipeline.py apply --confirm-master-sheet-write
 ```
 
 The first command processes the newest message, performs read-only Monday and agency
@@ -217,10 +216,25 @@ smoke test, use `outlook --apply --confirm-master-sheet-write`. The CLI creates 
 own timestamped directory under `tmp/inbox-runs/`, remembers processed PDF hashes,
 and prints progress by default. Add `--quiet` when only the final JSON summary is needed.
 
-`run_inbound_intake.py` and `push_master_sheet_plan.py` remain available for debugging
-and batch/snapshot overrides. An explicit confirmation flag is deliberately required
-before any Master Sheet item can be created. Do not apply against WCW's live board
-without approval because item-creation automations fan out to related boards.
+`python src/referral_pipeline/runner.py` and `push_master_sheet_plan.py` remain
+available for debugging and batch/snapshot overrides. An explicit confirmation flag is
+deliberately required before any Master Sheet item can be created. Do not apply
+against WCW's live board without approval because item-creation automations fan out
+to related boards.
+
+For the email-based human review path, configure `REVIEW_RECIPIENT_EMAIL` and
+Microsoft Graph `Mail.Read` plus `Mail.Send`, then run:
+
+```powershell
+python run_pipeline.py outlook --send-review
+python run_pipeline.py approvals --execute
+```
+
+The review email is rendered deterministically from the canonical extraction,
+intake plan, Monday preview, and DRK draft. Approval is bound to the configured
+sender, a one-time token, and a digest of those exact artifacts. The confirmed path
+creates Monday first and records a DRK handoff; DRK automatic patient submission is
+not yet enabled.
 
 ### How extraction works
 

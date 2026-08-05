@@ -4,7 +4,7 @@ import json
 
 import pdfplumber
 
-from inbound_mail import read_eml_pdf_attachments
+from Outlook.mail import read_eml_pdf_attachments
 from synthetic_referrals import CASES, write_synthetic_fixture_set
 
 

@@ -25,7 +25,12 @@ FIELDS = (
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Evaluate a synthetic inbox replay without reading or writing Monday.")
     parser.add_argument("--fixture-dir", type=Path, default=Path("tmp") / "synthetic-referrals")
-    parser.add_argument("--run-dir", type=Path, required=True, help="Output directory passed to run_inbound_intake.py")
+    parser.add_argument(
+        "--run-dir",
+        type=Path,
+        required=True,
+        help="Output directory produced by src/referral_pipeline/runner.py",
+    )
     parser.add_argument("--output-dir", type=Path, default=None)
     return parser.parse_args(argv)
 

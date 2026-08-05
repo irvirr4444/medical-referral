@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import base64
 
-from outlook_graph import OutlookGraphClient, OutlookGraphConfig
+from Outlook.graph import OutlookGraphClient, OutlookGraphConfig
 
 
 def test_outlook_adapter_accepts_only_real_pdf_attachments(monkeypatch) -> None:

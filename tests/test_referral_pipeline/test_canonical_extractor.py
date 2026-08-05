@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import json
-import sys
-from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -15,20 +13,7 @@ from intake_extractor.canonical_referral import (
     CanonicalSource,
 )
 
-
-_ROOT = Path(__file__).resolve().parents[1]
-_SRC = _ROOT / "src"
-_MONDAY_DIR = _SRC / "monday.com"
-if str(_SRC) not in sys.path:
-    sys.path.insert(0, str(_SRC))
-if str(_MONDAY_DIR) not in sys.path:
-    sys.path.insert(0, str(_MONDAY_DIR))
-
-_MODULE_PATH = _MONDAY_DIR / "inbound_intake_pipeline.py"
-_SPEC = spec_from_file_location("inbound_intake_pipeline", _MODULE_PATH)
-assert _SPEC and _SPEC.loader
-inbound_pipeline = module_from_spec(_SPEC)
-_SPEC.loader.exec_module(inbound_pipeline)
+from referral_pipeline import service as inbound_pipeline
 
 
 def test_inbound_pipeline_defaults_to_canonical_extractor(tmp_path, monkeypatch) -> None:
@@ -64,11 +49,18 @@ def test_inbound_pipeline_defaults_to_canonical_extractor(tmp_path, monkeypatch)
             address=CanonicalAddress(line_1="1 Main St"),
         ),
     )
-    calls: list[tuple[Path, str | None]] = []
+    calls: list[tuple[Path, str | None, str | None, str | None, str | None]] = []
 
     def fake_extract(path: Path, **kwargs):
-        sent_by = kwargs.get("sent_by")
-        calls.append((path, sent_by))
+        calls.append(
+            (
+                path,
+                kwargs.get("email_id"),
+                kwargs.get("attachment_id"),
+                kwargs.get("sent_by"),
+                kwargs.get("pdf_transport"),
+            )
+        )
         return contract
 
     monkeypatch.setattr(inbound_pipeline, "extract_referral_pdf", fake_extract)
@@ -90,7 +82,7 @@ def test_inbound_pipeline_defaults_to_canonical_extractor(tmp_path, monkeypatch)
         sent_by="Intake User",
     )
 
-    assert calls == [(pdf, "Intake User")]
+    assert calls == [(pdf, "message-1", "attachment-1", "Intake User", "files-api")]
     assert manifest["canonical_referral_path"] == str(tmp_path / "output" / "canonical-referral.json")
     assert Path(manifest["inbox_text_path"]).is_file()
     assert Path(manifest["drk_draft_path"]).is_file()

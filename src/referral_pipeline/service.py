@@ -3,8 +3,17 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 from typing import Any, Callable, Protocol
+
+
+# Monday is still a scripts directory rather than an importable package. Keep
+# that compatibility detail inside the orchestration layer.
+SRC_ROOT = Path(__file__).resolve().parents[1]
+MONDAY_DIR = SRC_ROOT / "monday.com"
+if str(MONDAY_DIR) not in sys.path:
+    sys.path.insert(0, str(MONDAY_DIR))
 
 from intake_duplicate_check import check_duplicates_disabled, check_duplicates_from_snapshot, check_duplicates_live
 from intake_plan import build_intake_plan
@@ -55,6 +64,7 @@ def process_inbound_pdf(
     confirm_master_sheet_write: bool = False,
     sent_by: str | None = None,
     extractor: Extractor | None = None,
+    progress: Callable[[str], None] | None = None,
 ) -> dict[str, Any]:
     """Extract, plan, duplicate-check, and preview or apply a Master Sheet create.
 
@@ -73,6 +83,8 @@ def process_inbound_pdf(
             email_id=attachment.message_id,
             attachment_id=attachment.attachment_id,
             sent_by=sent_by,
+            pdf_transport="files-api",
+            progress=progress,
         )
     else:
         # Retain the injection seam for legacy extractors and isolated unit tests.
@@ -122,11 +134,12 @@ def process_inbound_pdf(
     output.mkdir(parents=True, exist_ok=True)
     plan_path = output / "intake-plan.json"
     preview_path = output / "master-sheet-preview.json"
-    contract_path = output / "canonical-referral.json"
+    canonical_path = output / "canonical-referral.json"
     inbox_path = output / "inbox-intake.txt"
     drk_draft_path = output / "drk-create-draft.json"
+    monday_contract_path = output / "monday-intake.json"
     if isinstance(result, CanonicalReferral):
-        contract_path.write_text(
+        canonical_path.write_text(
             json.dumps(result.model_dump(mode="json"), indent=2, ensure_ascii=False) + "\n",
             encoding="utf-8",
         )
@@ -141,7 +154,7 @@ def process_inbound_pdf(
             encoding="utf-8",
         )
     if isinstance(result, MondayPdfIntakeContract):
-        contract_path.write_text(
+        monday_contract_path.write_text(
             json.dumps(result.model_dump(mode="json"), indent=2, ensure_ascii=False) + "\n",
             encoding="utf-8",
         )
@@ -161,15 +174,16 @@ def process_inbound_pdf(
         "filename": attachment.filename,
         "plan_path": str(plan_path),
         "preview_path": str(preview_path),
-        "canonical_referral_path": str(contract_path) if isinstance(result, CanonicalReferral) else None,
+        "canonical_referral_path": str(canonical_path) if isinstance(result, CanonicalReferral) else None,
         "inbox_text_path": str(inbox_path) if isinstance(result, CanonicalReferral) else None,
         "drk_draft_path": str(drk_draft_path) if isinstance(result, CanonicalReferral) else None,
-        "monday_contract_path": str(contract_path) if isinstance(result, MondayPdfIntakeContract) else None,
+        "monday_contract_path": str(monday_contract_path) if isinstance(result, MondayPdfIntakeContract) else None,
         "outcome": plan["outcome"],
         "duplicate_status": plan["monday_duplicate_check"]["status"],
         "master_sheet_blocked": preview["blocked"],
         "master_sheet_blockers": preview["blockers"],
         "created_item_id": None if applied is None else applied["item"]["id"],
+        "source_message_id": attachment.message_id,
     }
     (output / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     return manifest
