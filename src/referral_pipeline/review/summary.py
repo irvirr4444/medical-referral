@@ -13,6 +13,8 @@ from typing import Any
 
 NOT_DOCUMENTED = "Not documented"
 NO_KNOWN_ALLERGIES = "No known allergies"
+CLINICAL_SUMMARY_MAX_CHARS = 320
+CLINICAL_SUMMARY_MAX_SENTENCES = 2
 
 
 @dataclass(frozen=True)
@@ -197,7 +199,7 @@ def build_presentation(
         medications=medications,
         allergies_label=allergies_label,
         allergies=allergies,
-        clinical_summary=_display(clinical.get("summary")),
+        clinical_summary=_short_clinical_summary(clinical.get("summary")),
         duplicate=duplicate,
         approval_allowed=approval_allowed,
         review_id=review_id,
@@ -304,40 +306,16 @@ def render_text(presentation: ReviewPresentation) -> str:
             lines.append(f"- {item}")
             lines.append("")
     lines.extend(["Clinical summary", "", presentation.clinical_summary, ""])
-    lines.extend(["----------------------------------------", "", "REVIEW DECISION", ""])
-    if presentation.approval_allowed:
-        lines.extend(
-            [
-                'Reply with "Confirm" to push this patient to the '
-                "Monday.com Master Sheet and DRK.",
-                "",
-                "To add information or correct a field, reply with the changes instead.",
-                "A new review must be generated before corrected data can be approved.",
-                "",
-                "Testing mode: confirmation performs a dry run only. No data is written to Monday or DRK.",
-                "",
-            ]
-        )
-    elif presentation.duplicate is not None:
-        lines.extend(
-            [
-                "Duplicate found in Monday.",
-                "",
-                "Do not create another patient. Review the existing Monday record.",
-                "",
-            ]
-        )
-    else:
-        lines.extend(
-            [
-                "This referral cannot be confirmed yet.",
-                "",
-                "Reply with any additional details or field corrections listed in Needs attention.",
-                "",
-                "Do not send a confirmation line until a corrected review has been generated.",
-                "",
-            ]
-        )
+    lines.extend(
+        [
+            "----------------------------------------",
+            "",
+            "Confirm Patient",
+            "",
+            "Reply with confirm if you wanna insert this client into monday and DRK",
+            "",
+        ]
+    )
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -508,6 +486,23 @@ def _display(value: Any) -> str:
     return text if text else NOT_DOCUMENTED
 
 
+def _short_clinical_summary(value: Any) -> str:
+    text = " ".join(str(value or "").split())
+    if not text:
+        return NOT_DOCUMENTED
+    sentences = [
+        sentence.strip()
+        for sentence in re.split(r"(?<=[.!?])\s+", text)
+        if sentence.strip()
+    ]
+    shortened = " ".join(sentences[:CLINICAL_SUMMARY_MAX_SENTENCES])
+    if len(shortened) <= CLINICAL_SUMMARY_MAX_CHARS:
+        return shortened
+    boundary = shortened.rfind(" ", 0, CLINICAL_SUMMARY_MAX_CHARS - 1)
+    cutoff = boundary if boundary > CLINICAL_SUMMARY_MAX_CHARS // 2 else CLINICAL_SUMMARY_MAX_CHARS - 1
+    return shortened[:cutoff].rstrip(" ,;:-") + "…"
+
+
 def _join_parts(*values: Any) -> str:
     return " / ".join(str(value).strip() for value in values if value not in (None, ""))
 
@@ -623,37 +618,14 @@ def _html_allergies(presentation: ReviewPresentation) -> str:
     return _html_bullets(presentation.allergies)
 
 
-def _html_action(presentation: ReviewPresentation) -> str:
-    if presentation.approval_allowed:
-        content = (
-            '<div style="margin-bottom:8px;"><strong>Reply with &quot;Confirm&quot; to push '
-            "this patient to the Monday.com Master Sheet and DRK.</strong></div>"
-            '<div style="margin-bottom:8px;">To add information or correct a field, reply with '
-            "the changes instead. A new review must be generated before corrected data can "
-            "be approved.</div>"
-            '<div style="margin-top:12px;color:#627d98;">Testing mode: confirmation performs '
-            "a dry run only. No data is written to Monday or DRK.</div>"
-        )
-    elif presentation.duplicate is not None:
-        content = (
-            "<div>Duplicate found in Monday.</div>"
-            '<div style="margin-top:8px;">Do not create another patient. '
-            "Review the existing Monday record.</div>"
-        )
-    else:
-        content = (
-            "<div>This referral cannot be confirmed yet.</div>"
-            '<div style="margin-top:8px;">Reply with any additional details or field corrections '
-            "listed in Needs attention.</div>"
-            '<div style="margin-top:8px;color:#627d98;">Do not send a confirmation line until '
-            "a corrected review has been generated.</div>"
-        )
+def _html_action(_presentation: ReviewPresentation) -> str:
+    content = "<div>Reply with confirm if you wanna insert this client into monday and DRK</div>"
     return (
         '<tr><td style="padding:8px 24px 24px 24px;">'
         '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
         'style="background:#f0f4f8;border:1px solid #d9e2ec;border-radius:6px;">'
         '<tr><td style="padding:14px 16px;">'
-        '<div style="font-weight:bold;margin-bottom:8px;">Review decision</div>'
+        '<div style="font-weight:bold;margin-bottom:8px;">Confirm Patient</div>'
         f"{content}</td></tr></table></td></tr>"
     )
 

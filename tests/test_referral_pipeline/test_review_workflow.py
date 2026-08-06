@@ -386,5 +386,5 @@ def test_create_and_send_review_reuses_active_request(tmp_path) -> None:
     assert (tmp_path / "review-email.html").is_file()
     assert (tmp_path / "review-email.txt").is_file()
     email_text = (tmp_path / "review-email.txt").read_text(encoding="utf-8")
-    assert 'Reply with "Confirm"' in email_text
+    assert "Reply with confirm if you wanna insert this client into monday and DRK" in email_text
     assert "CONFIRMED " not in email_text

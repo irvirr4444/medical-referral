@@ -36,6 +36,86 @@ def test_review_recipient_defaults_to_referral_sender(monkeypatch) -> None:
         manifest={"source_sender": "external@example.test"},
     ) == "external@example.test"
 
+
+def test_outlook_poll_includes_unfinished_ledger_jobs(tmp_path) -> None:
+    state = InboxState(tmp_path / "state.sqlite")
+    attachment = InboundPdfAttachment(
+        "outlook-graph",
+        "message-1",
+        "attachment-1",
+        "referral.pdf",
+        b"%PDF-1.4\n",
+    )
+
+    assert runner._attachment_needs_processing(state, attachment)
+    state.enqueue(attachment, artifact_path=tmp_path / "referral.pdf")
+    assert runner._attachment_needs_processing(state, attachment)
+    claimed = state.claim_job(attachment)
+    assert claimed is not None
+    assert not runner._attachment_needs_processing(state, attachment)
+    state.mark_retryable_failure(claimed, error="temporary", error_kind="capacity")
+    assert runner._attachment_needs_processing(state, attachment)
+
+
+def test_permanent_review_failure_replies_in_original_thread(tmp_path, monkeypatch) -> None:
+    pdf = tmp_path / "referral.pdf"
+    pdf.write_bytes(b"%PDF-1.4\nsynthetic")
+    attachment = InboundPdfAttachment(
+        "outlook-graph",
+        "message-1",
+        "attachment-1",
+        "referral.pdf",
+        pdf.read_bytes(),
+        sender="external@example.test",
+        conversation_id="conversation-1",
+    )
+    state = InboxState(tmp_path / "state.sqlite")
+    state.enqueue(
+        attachment,
+        artifact_path=pdf,
+        options={"send_review": True, "source_sender": "external@example.test"},
+    )
+    job = state.claim_job(attachment)
+    assert job is not None
+    sent: list[dict] = []
+
+    class FakeMailbox:
+        def __init__(self, _client) -> None:
+            pass
+
+        def send_reply(self, **kwargs) -> None:
+            sent.append(kwargs)
+
+    monkeypatch.setattr(runner, "OutlookReviewMailbox", FakeMailbox)
+    monkeypatch.setattr(
+        runner,
+        "process_inbound_pdf",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(ValueError("unsupported referral")),
+    )
+    args = runner._parse_args(
+        [
+            "--process-retries",
+            "--send-review",
+            "--output-dir",
+            str(tmp_path / "out"),
+            "--state-db",
+            str(tmp_path / "state.sqlite"),
+        ]
+    )
+
+    result = runner.process_claimed_job(
+        job,
+        state=state,
+        args=args,
+        graph_client=object(),
+    )
+
+    assert result["status"] == STATUS_FAILED
+    assert result["failure_reply_sent"] is True
+    assert sent[0]["source_message_id"] == "message-1"
+    assert sent[0]["recipient"] == "external@example.test"
+    assert "could not complete this referral" in sent[0]["text_body"]
+
     monkeypatch.setenv("REVIEW_RECIPIENT_EMAIL", "internal@example.test")
     assert runner._review_recipient(
         options={"source_sender": "external@example.test"},

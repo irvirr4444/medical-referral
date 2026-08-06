@@ -26,7 +26,12 @@ from Outlook.review_mail import OutlookReviewMailbox
 from referral_pipeline.retry_policy import classify_retry
 from referral_pipeline.review.workflow import create_and_send_review
 from referral_pipeline.service import process_inbound_pdf
-from referral_pipeline.state import AttachmentJob, InboxState
+from referral_pipeline.state import (
+    STATUS_DISCOVERED,
+    STATUS_PENDING_RETRY,
+    AttachmentJob,
+    InboxState,
+)
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -88,10 +93,17 @@ def _processing_options(args: argparse.Namespace) -> dict[str, Any]:
 def _attachments(args: argparse.Namespace, *, state: InboxState) -> list[InboundPdfAttachment]:
     if args.eml:
         return [attachment for path in args.eml for attachment in read_eml_pdf_attachments(path)]
+    state.recover_expired_leases()
     return OutlookGraphClient(OutlookGraphConfig.from_environment()).list_inbox_pdf_attachments(
         max_messages=args.max_messages,
-        include_attachment=None if args.force else lambda attachment: state.get_job(attachment) is None,
+        include_attachment=None if args.force else lambda attachment: _attachment_needs_processing(state, attachment),
     )
+
+
+def _attachment_needs_processing(state: InboxState, attachment: InboundPdfAttachment) -> bool:
+    """Include new and unfinished jobs while excluding completed/permanent work."""
+    job = state.get_job(attachment)
+    return job is None or job.status in {STATUS_DISCOVERED, STATUS_PENDING_RETRY}
 
 
 def _attachment_from_job(job: AttachmentJob) -> InboundPdfAttachment:
@@ -143,13 +155,15 @@ def process_claimed_job(
     options = job.options or _processing_options(args)
     pdf_path = Path(job.artifact_path) if job.artifact_path else None
     if pdf_path is None or not pdf_path.is_file():
-        updated = state.mark_terminal_failure(job, error="artifact PDF missing for retry", error_kind="permanent")
-        return {
-            "filename": attachment.filename,
-            "status": updated.status,
-            "error": updated.last_error,
-            "attempt_count": updated.attempt_count,
-        }
+        return _handle_terminal_failure(
+            job,
+            attachment=attachment,
+            state=state,
+            args=args,
+            graph_client=graph_client,
+            error=RuntimeError("artifact PDF missing for retry"),
+            elapsed_seconds=0.0,
+        )
 
     output_dir = pdf_path.parent
     attachment_started = time.perf_counter()
@@ -222,17 +236,16 @@ def process_claimed_job(
                 "elapsed_seconds": elapsed_seconds,
                 "artifact_path": str(pdf_path),
             }
-        updated = state.mark_terminal_failure(job, error=str(error), error_kind="permanent")
-        _progress(args, f"Failed after {elapsed_seconds:.2f}s: {attachment.filename} ({error})")
-        return {
-            "filename": attachment.filename,
-            "status": updated.status,
-            "error": updated.last_error,
-            "error_kind": updated.error_kind,
-            "attempt_count": updated.attempt_count,
-            "elapsed_seconds": elapsed_seconds,
-            "artifact_path": str(pdf_path),
-        }
+        return _handle_terminal_failure(
+            job,
+            attachment=attachment,
+            state=state,
+            args=args,
+            graph_client=graph_client,
+            error=error,
+            elapsed_seconds=elapsed_seconds,
+            artifact_path=pdf_path,
+        )
 
     elapsed_seconds = round(time.perf_counter() - attachment_started, 2)
     manifest["elapsed_seconds"] = elapsed_seconds
@@ -249,6 +262,72 @@ def process_claimed_job(
         _progress(args, f"Review request sent: {manifest['review_id']}")
     _progress(args, f"Finished {attachment.filename} in {elapsed_seconds:.2f}s")
     return {"filename": attachment.filename, "status": "completed", **manifest}
+
+
+def _handle_terminal_failure(
+    job: AttachmentJob,
+    *,
+    attachment: InboundPdfAttachment,
+    state: InboxState,
+    args: argparse.Namespace,
+    graph_client: OutlookGraphClient | None,
+    error: Exception,
+    elapsed_seconds: float,
+    artifact_path: Path | None = None,
+) -> dict[str, Any]:
+    """Record a permanent failure and ensure review-mode emails get a reply."""
+    options = job.options or _processing_options(args)
+    notification_error: Exception | None = None
+    failure_reply_sent = False
+    if bool(options.get("send_review", args.send_review)):
+        recipient = _review_recipient(
+            options=options,
+            args=args,
+            attachment=attachment,
+            manifest={},
+        )
+        try:
+            if not recipient:
+                raise ValueError("original sender address is unavailable")
+            client = graph_client or OutlookGraphClient(OutlookGraphConfig.from_environment())
+            OutlookReviewMailbox(client).send_reply(
+                source_message_id=attachment.message_id,
+                recipient=recipient,
+                content_type="HTML",
+                html_body=(
+                    "<p>We could not complete this referral automatically.</p>"
+                    "<p>Please review the attached PDF and resend it, or contact the referral team for help.</p>"
+                ),
+                text_body=(
+                    "We could not complete this referral automatically.\n\n"
+                    "Please review the attached PDF and resend it, or contact the referral team for help."
+                ),
+            )
+            failure_reply_sent = True
+        except Exception as reply_error:  # noqa: BLE001 - preserve the job until a reply can be sent
+            notification_error = reply_error
+
+    if notification_error is not None:
+        updated = state.mark_retryable_failure(
+            job,
+            error=f"{error}; failure reply also failed: {notification_error}",
+            error_kind="failure_reply",
+        )
+    else:
+        updated = state.mark_terminal_failure(job, error=str(error), error_kind="permanent")
+    _progress(args, f"Failed after {elapsed_seconds:.2f}s: {attachment.filename} ({error})")
+    result: dict[str, Any] = {
+        "filename": attachment.filename,
+        "status": updated.status,
+        "error": updated.last_error,
+        "error_kind": updated.error_kind,
+        "attempt_count": updated.attempt_count,
+        "elapsed_seconds": elapsed_seconds,
+        "failure_reply_sent": failure_reply_sent,
+    }
+    if artifact_path is not None:
+        result["artifact_path"] = str(artifact_path)
+    return result
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -273,10 +352,18 @@ def main(argv: list[str] | None = None) -> int:
             _progress(args, "Anthropic circuit open; deferring retry work")
             summaries.append({"status": "circuit_open", "pending_retry_count": state.pending_retry_count()})
         else:
-            jobs = state.claim_due(limit=max(args.max_jobs, 1))
-            _progress(args, f"Claimed {len(jobs)} due job(s)")
-            for job in jobs:
-                summaries.append(process_claimed_job(job, state=state, args=args, graph_client=graph_client))
+            max_jobs = max(args.max_jobs, 1)
+            processed_jobs = 0
+            while processed_jobs < max_jobs:
+                jobs = state.claim_due(limit=1)
+                if not jobs:
+                    break
+                processed_jobs += 1
+                _progress(args, f"Claimed due job {processed_jobs}/{max_jobs}")
+                summaries.append(
+                    process_claimed_job(jobs[0], state=state, args=args, graph_client=graph_client)
+                )
+            _progress(args, f"Processed {processed_jobs} due job(s)")
     else:
         _progress(args, "Reading configured email source")
         attachments = _attachments(args, state=state)

@@ -253,18 +253,6 @@ def run_worker_loop(
 
     while True:
         now = clock()
-        if now >= next_poll_at and not skip_poll:
-            result = run_poll_cycle(
-                data_root=data_root,
-                max_messages=max_messages,
-                quiet=quiet,
-                run_main=run_main,
-            )
-            results.append(result)
-            print(json.dumps(result, indent=2), flush=True)
-            next_poll_at = clock() + poll_interval_seconds
-
-        now = clock()
         if now >= next_retry_at and not skip_retries:
             result = run_retry_cycle(
                 data_root=data_root,
@@ -275,6 +263,18 @@ def run_worker_loop(
             results.append(result)
             print(json.dumps(result, indent=2), flush=True)
             next_retry_at = clock() + retry_interval_seconds
+
+        now = clock()
+        if now >= next_poll_at and not skip_poll:
+            result = run_poll_cycle(
+                data_root=data_root,
+                max_messages=max_messages,
+                quiet=quiet,
+                run_main=run_main,
+            )
+            results.append(result)
+            print(json.dumps(result, indent=2), flush=True)
+            next_poll_at = clock() + poll_interval_seconds
 
         now = clock()
         if now >= next_approval_at and not skip_approvals:

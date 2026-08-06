@@ -11,6 +11,7 @@ import base64
 import hashlib
 import json
 import os
+from copy import deepcopy
 from pathlib import Path
 from typing import Any, Callable, Literal, Sequence
 
@@ -279,6 +280,59 @@ def _page_count(pdf: Path) -> int:
         return len(document.pages)
 
 
+def _validate_structured_output(
+    output_format: type[CanonicalReferral],
+    parsed: Any,
+) -> CanonicalReferral:
+    """Drop schema-unknown LLM keys while preserving strict validation.
+
+    Anthropic can occasionally emit a plausible but unsupported key despite
+    receiving the JSON Schema. Unknown keys should not invalidate otherwise
+    valid patient data, but all errors involving known fields remain fatal.
+    """
+    if isinstance(parsed, output_format):
+        return parsed
+    try:
+        return output_format.model_validate(parsed)
+    except ValidationError as error:
+        if not isinstance(parsed, dict):
+            raise
+        cleaned = deepcopy(parsed)
+        removed: list[str] = []
+        for issue in error.errors():
+            if issue.get("type") != "extra_forbidden":
+                continue
+            location = tuple(issue.get("loc") or ())
+            if location and _remove_unknown_path(cleaned, location):
+                removed.append(".".join(str(part) for part in location))
+        if not removed:
+            raise
+        validated = output_format.model_validate(cleaned)
+        validated.warnings.extend(
+            f"Ignored unsupported extractor field: {path}" for path in sorted(set(removed))
+        )
+        return validated
+
+
+def _remove_unknown_path(payload: Any, location: tuple[Any, ...]) -> bool:
+    current = payload
+    for part in location[:-1]:
+        if isinstance(current, dict) and part in current:
+            current = current[part]
+        elif isinstance(current, list) and isinstance(part, int) and 0 <= part < len(current):
+            current = current[part]
+        else:
+            return False
+    final = location[-1]
+    if isinstance(current, dict) and final in current:
+        del current[final]
+        return True
+    if isinstance(current, list) and isinstance(final, int) and 0 <= final < len(current):
+        del current[final]
+        return True
+    return False
+
+
 def _call_structured_extractor(
     client: Any,
     *,
@@ -325,7 +379,7 @@ def _call_structured_extractor(
                 if message is None:
                     raise CanonicalExtractionError("Anthropic returned no message")
                 parsed = getattr(message, "parsed_output", None) or parse_json_from_message(message)
-                return parsed if isinstance(parsed, output_format) else output_format.model_validate(parsed)
+                return _validate_structured_output(output_format, parsed)
 
             result, audit = call_with_model_fallback(
                 _invoke,

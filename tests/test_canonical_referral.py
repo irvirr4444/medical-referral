@@ -20,6 +20,7 @@ from intake_extractor.canonical_referral import (
     CanonicalReferral,
     CanonicalReferralSource,
     CanonicalSource,
+    _validate_structured_output,
     extract_referral_pdf,
     write_canonical_referral,
 )
@@ -83,6 +84,23 @@ def _record() -> CanonicalReferral:
             )
         ],
         field_quality=quality,
+    )
+
+
+def test_unknown_nested_extractor_fields_are_removed_without_losing_referral() -> None:
+    payload = _record().model_dump(mode="json")
+    payload["insurances"][0]["insurance_type_note"] = None
+    payload["patient"]["unsupported_patient_note"] = "not in schema"
+
+    validated = _validate_structured_output(CanonicalReferral, payload)
+
+    assert validated.insurances[0].payer_name == "Medicare"
+    serialized = validated.model_dump(mode="json")
+    assert "insurance_type_note" not in serialized["insurances"][0]
+    assert "unsupported_patient_note" not in serialized["patient"]
+    assert any(
+        "insurances.0.insurance_type_note" in warning
+        for warning in validated.warnings
     )
 
 

@@ -2,7 +2,13 @@ from __future__ import annotations
 
 import json
 
-from referral_pipeline.review.summary import NOT_DOCUMENTED, NO_KNOWN_ALLERGIES, render_review_email
+from referral_pipeline.review.summary import (
+    CLINICAL_SUMMARY_MAX_CHARS,
+    NOT_DOCUMENTED,
+    NO_KNOWN_ALLERGIES,
+    _short_clinical_summary,
+    render_review_email,
+)
 
 
 def _write(path, value) -> None:
@@ -19,6 +25,18 @@ def _base_paths(tmp_path):
     _write(drk, {"ready_for_fill": False, "blockers": [], "unresolved_fields": [], "payload": {}})
     _write(config, {"columns": {}})
     return canonical, monday, plan, drk, config
+
+
+def test_clinical_summary_is_limited_to_two_short_sentences() -> None:
+    summary = (
+        "Patient needs skilled wound care. Home health services were requested. "
+        "This third sentence contains lower-priority chart detail that should not appear."
+    )
+
+    shortened = _short_clinical_summary(summary)
+
+    assert shortened == "Patient needs skilled wound care. Home health services were requested."
+    assert len(_short_clinical_summary("word " * 200)) <= CLINICAL_SUMMARY_MAX_CHARS
 
 
 def test_summary_renders_readable_html_and_plain_text(tmp_path) -> None:
@@ -82,13 +100,9 @@ def test_summary_renders_readable_html_and_plain_text(tmp_path) -> None:
     assert "1 Test Way, Fresno, CA, 93701" in email.html_body
     assert "CONFIRMED review_" not in email.html_body
     assert "abcdefghijklmnop" not in email.text_body
-    assert "Reply with &quot;Confirm&quot;" in email.html_body
-    assert (
-        'Reply with "Confirm" to push this patient to the '
-        "Monday.com Master Sheet and DRK."
-    ) in email.text_body
-    assert "dry run only" in email.text_body
-    assert "correct a field" in email.text_body
+    assert "Confirm Patient" in email.html_body
+    assert "Reply with confirm if you wanna insert this client into monday and DRK" in email.html_body
+    assert "Reply with confirm if you wanna insert this client into monday and DRK" in email.text_body
     assert "Duplicate found in Monday" not in email.text_body
     assert "Clinical summary" in email.text_body
     assert "Document observations" not in email.text_body
@@ -168,7 +182,7 @@ def test_explicit_nka_is_distinguished_from_missing_allergies(tmp_path) -> None:
     assert "no NKA/NKDA statement found" not in email.html_body
 
 
-def test_blocked_summary_does_not_include_approval_command(tmp_path) -> None:
+def test_confirmation_copy_stays_static_until_scenarios_are_defined(tmp_path) -> None:
     canonical, monday, plan, drk, config = _base_paths(tmp_path)
     _write(canonical, {"source": {"file_name": "synthetic.pdf"}, "patient": {}, "field_quality": {}, "warnings": [], "clinical": {}, "insurances": [], "requested_services": []})
     _write(plan, {"outcome": "blocked_missing_threshold", "monday_duplicate_check": {"status": "skipped_missing_identity"}})
@@ -186,8 +200,8 @@ def test_blocked_summary_does_not_include_approval_command(tmp_path) -> None:
         approval_allowed=False,
     )
 
-    assert "cannot be confirmed yet" in email.text_body
-    assert "Reply with any additional details or field corrections" in email.text_body
+    assert "Confirm Patient" in email.text_body
+    assert "Reply with confirm if you wanna insert this client into monday and DRK" in email.text_body
     assert "CONFIRMED review_" not in email.text_body
     assert "CONFIRMED review_" not in email.html_body
 
@@ -246,6 +260,5 @@ def test_duplicate_warning_lists_four_matching_monday_fields(tmp_path) -> None:
     assert "DOB: January 2, 1980" in email.text_body
     assert "Phone: (555) 555-0100" in email.text_body
     assert "Address: 100 Example Street, Tampa, FL 33602" in email.text_body
-    assert "Duplicate found in Monday" in email.html_body
-    assert "Do not create another patient" in email.text_body
+    assert "Confirm Patient" in email.html_body
     assert "CONFIRMED review_" not in email.text_body

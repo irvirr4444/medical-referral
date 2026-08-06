@@ -165,6 +165,13 @@ class OutlookGraphClient:
             headers={"Authorization": f"Bearer {self._token()}"},
             timeout=self.timeout_s,
         )
+        if response.status_code == 401:
+            self._access_token = None
+            response = requests.get(
+                url,
+                headers={"Authorization": f"Bearer {self._token()}"},
+                timeout=self.timeout_s,
+            )
         if not response.ok:
             raise OutlookGraphError(
                 f"Microsoft Graph read failed: HTTP {response.status_code}",
@@ -179,15 +186,23 @@ class OutlookGraphClient:
         return self._get_url(f"{GRAPH_ROOT}{path}")
 
     def post_no_content(self, path: str, payload: dict[str, Any]) -> None:
-        response = requests.post(
-            f"{GRAPH_ROOT}{path}",
-            headers={
-                "Authorization": f"Bearer {self._token()}",
-                "Content-Type": "application/json",
-            },
-            json=payload,
-            timeout=self.timeout_s,
-        )
+        url = f"{GRAPH_ROOT}{path}"
+
+        def send():
+            return requests.post(
+                url,
+                headers={
+                    "Authorization": f"Bearer {self._token()}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+                timeout=self.timeout_s,
+            )
+
+        response = send()
+        if response.status_code == 401:
+            self._access_token = None
+            response = send()
         if not response.ok:
             raise OutlookGraphError(
                 f"Microsoft Graph write failed: HTTP {response.status_code}",

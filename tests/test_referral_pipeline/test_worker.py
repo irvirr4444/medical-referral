@@ -36,10 +36,10 @@ def test_worker_once_runs_poll_retries_and_safe_approval_poll(tmp_path, monkeypa
         approval_processor_factory=lambda _state_db: FakeApprovalProcessor(),
     )
 
-    assert [item["kind"] for item in results] == ["poll", "retries", "approvals"]
+    assert [item["kind"] for item in results] == ["retries", "poll", "approvals"]
     assert all(item["status"] == "ok" for item in results)
-    assert "--outlook-poll" in calls[0]
-    assert "--process-retries" in calls[1]
+    assert "--process-retries" in calls[0]
+    assert "--outlook-poll" in calls[1]
     assert calls[0][calls[0].index("--monday-mode") + 1] == "live-readonly"
     assert calls[1][calls[1].index("--monday-mode") + 1] == "live-readonly"
     assert str(tmp_path / "data" / "state.sqlite") in calls[0]

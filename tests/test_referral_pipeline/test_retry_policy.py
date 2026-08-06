@@ -38,5 +38,17 @@ def test_monday_complexity_error_is_retryable() -> None:
     assert decision.error_kind == "monday_transient"
 
 
+def test_incomplete_anthropic_stream_is_retryable() -> None:
+    decision = classify_retry(
+        RuntimeError(
+            "Anthropic extraction failed: peer closed connection without sending "
+            "complete message body (incomplete chunked read)"
+        )
+    )
+
+    assert decision is not None
+    assert decision.error_kind == "network_transient"
+
+
 def test_validation_error_is_terminal() -> None:
     assert classify_retry(ValueError("patient date is malformed")) is None

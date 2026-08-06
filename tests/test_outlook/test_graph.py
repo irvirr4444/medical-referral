@@ -9,6 +9,55 @@ def _pdf_b64() -> str:
     return base64.b64encode(b"%PDF-1.4\nsynthetic").decode()
 
 
+class _Response:
+    def __init__(self, status_code: int, payload=None) -> None:
+        self.status_code = status_code
+        self.ok = 200 <= status_code < 300
+        self._payload = payload or {}
+
+    def json(self):
+        return self._payload
+
+
+def test_graph_read_refreshes_expired_token_once(monkeypatch) -> None:
+    client = OutlookGraphClient(OutlookGraphConfig("tenant", "client", "secret", "inbox@example.test"))
+    tokens = iter(("expired-token", "fresh-token"))
+    headers_seen = []
+    monkeypatch.setattr(client, "_token", lambda: next(tokens))
+
+    def fake_get(_url, *, headers: dict, timeout: int):
+        assert timeout == 30
+        headers_seen.append(dict(headers))
+        return _Response(401) if len(headers_seen) == 1 else _Response(200, {"value": []})
+
+    monkeypatch.setattr("Outlook.graph.requests.get", fake_get)
+
+    assert client._get_url("https://graph.microsoft.com/test") == {"value": []}
+    assert [item["Authorization"] for item in headers_seen] == ["Bearer expired-token", "Bearer fresh-token"]
+
+
+def test_graph_write_refreshes_expired_token_once(monkeypatch) -> None:
+    client = OutlookGraphClient(OutlookGraphConfig("tenant", "client", "secret", "inbox@example.test"))
+    tokens = iter(("expired-token", "fresh-token"))
+    headers_seen = []
+    monkeypatch.setattr(client, "_token", lambda: next(tokens))
+
+    def fake_post(_url, *, headers: dict, json: dict, timeout: int):
+        assert json == {"message": {}}
+        assert timeout == 30
+        headers_seen.append(dict(headers))
+        return _Response(401) if len(headers_seen) == 1 else _Response(202)
+
+    monkeypatch.setattr("Outlook.graph.requests.post", fake_post)
+
+    client.post_no_content("/users/test/messages/1/reply", {"message": {}})
+
+    assert [item["Authorization"] for item in headers_seen] == [
+        "Bearer expired-token",
+        "Bearer fresh-token",
+    ]
+
+
 def test_outlook_adapter_accepts_only_real_pdf_attachments(monkeypatch) -> None:
     client = OutlookGraphClient(OutlookGraphConfig("tenant", "client", "secret", "inbox@example.test"))
     valid_pdf = b"%PDF-1.4\nsynthetic"
