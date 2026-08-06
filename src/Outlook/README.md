@@ -11,7 +11,7 @@ mark email as read. Destination writes remain owned by `referral_pipeline`.
 
 - `graph.py`: Microsoft Graph authentication and small HTTP primitives.
 - `mail.py`: shared PDF validation, `.eml` parsing, attachment hashing, and local materialization.
-- `review_mail.py`: standalone internal HTML review messages and unique reply-body retrieval.
+- `review_mail.py`: HTML review replies on source threads and unique reply-body retrieval.
 - `README.md`: Outlook/Entra configuration and adapter behavior.
 
 Cross-system orchestration and idempotency live in `src/referral_pipeline`. Monday
@@ -28,15 +28,18 @@ OUTLOOK_TENANT_ID=
 OUTLOOK_CLIENT_ID=
 OUTLOOK_CLIENT_SECRET=
 OUTLOOK_MAILBOX=
+# Optional override; normal review replies go to each original sender.
 REVIEW_RECIPIENT_EMAIL=
+REFERRAL_REVIEW_STORE=supabase
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
 ```
 
 The mailbox adapter accepts an attachment only when its filename ends in `.pdf`
 and its bytes begin with a PDF signature. Keep `.env`, downloaded PDFs, SQLite
 state, and run artifacts out of Git because they can contain credentials or PHI.
-Inbox messages are eligible only when Sent Items does not contain a message in
-the same Outlook conversation. This prevents the automation from examining and
-replying to a thread the mailbox has already answered.
+The durable attachment ledger excludes completed, queued, and permanently failed
+PDFs so a sent review reply does not cause the source attachment to be reprocessed.
 
 Review replies are sent as Outlook-compatible HTML with a plain-text audit copy.
 Formatting is deterministic from the canonical extraction: missing fields say
@@ -44,8 +47,8 @@ Formatting is deterministic from the canonical extraction: missing fields say
 
 ## Normal operation
 
-Extract new referral PDFs and send each review summary to the configured internal
-reviewer without changing Monday:
+Extract unreplied referral PDFs and reply on each Outlook thread with the review
+summary, addressed to the original sender, without changing Monday:
 
 ```powershell
 python run_pipeline.py outlook --send-review --max-messages 25
@@ -69,12 +72,22 @@ python run_pipeline.py failures
 python run_pipeline.py failures --requeue <sha256>
 ```
 
-After the authorized reviewer replies with the exact command shown in the email,
-poll replies and apply the approved Monday payload:
+After the original sender replies naturally (for example, `Confirm`), check the
+reply and optionally validate the confirmed destination payloads:
 
 ```powershell
-python run_pipeline.py approvals --execute
+python run_pipeline.py approvals
+python run_pipeline.py approvals --dry-run
 ```
+
+Clear replies such as `Confirm` are recognized locally. Ambiguous wording is
+classified with `OPENAI_API_KEY`, but approval still requires the expected sender,
+the same Outlook conversation, a message newer than the review, and all seven
+required referral fields. Dry-run performs no destination writes. The separate
+explicit `approvals --execute` command can create Monday once; DRK remains a
+pending draft and is never submitted.
+Supabase stores the correlated referral JSON and one idempotent classification
+record per reply; the raw email conversation remains in Outlook.
 
 If review delivery fails after extraction, resend from that run without repeating
 the LLM calls:
@@ -92,8 +105,7 @@ python run_pipeline.py outlook --apply --confirm-master-sheet-write
 The CLI defaults to 25 eligible new messages, uses the canonical Anthropic
 Files API extractor, performs optional Monday duplicate and agency lookups,
 stores timestamped audit artifacts under `tmp/inbox-runs/`, and prints progress.
-The approval command writes Monday first and then records a DRK handoff. DRK
-automatic patient creation is still disabled. Run the following for all options:
+DRK automatic patient creation remains unimplemented. Run the following for all options:
 
 ```powershell
 python run_pipeline.py outlook --help

@@ -22,6 +22,22 @@ def test_review_mail_sends_standalone_internal_html_message(monkeypatch) -> None
     assert posted[0][1]["saveToSentItems"] is True
 
 
+def test_review_mail_replies_on_source_thread(monkeypatch) -> None:
+    client = OutlookGraphClient(OutlookGraphConfig("tenant", "client", "secret", "inbox@example.test"))
+    posted = []
+    monkeypatch.setattr(client, "post_no_content", lambda path, payload: posted.append((path, payload)))
+
+    OutlookReviewMailbox(client).send_reply(
+        source_message_id="source-message",
+        recipient="sender@example.test",
+        html_body="<p>Review</p>",
+        text_body="Review",
+    )
+
+    assert posted[0][0] == "/users/inbox@example.test/messages/source-message/reply"
+    assert posted[0][1]["message"]["toRecipients"][0]["emailAddress"]["address"] == "sender@example.test"
+
+
 def test_review_mail_can_resend_legacy_plain_text(monkeypatch) -> None:
     client = OutlookGraphClient(OutlookGraphConfig("tenant", "client", "secret", "inbox@example.test"))
     posted = []

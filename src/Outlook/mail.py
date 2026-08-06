@@ -22,6 +22,7 @@ class InboundPdfAttachment:
     received_at: str | None = None
     subject: str | None = None
     sender: str | None = None
+    conversation_id: str | None = None
 
     @property
     def sha256(self) -> str:

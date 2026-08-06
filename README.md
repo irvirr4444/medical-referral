@@ -228,13 +228,17 @@ deliberately required before any Master Sheet item can be created. Do not apply
 against WCW's live board without approval because item-creation automations fan out
 to related boards.
 
-For the email-based human review path, configure `REVIEW_RECIPIENT_EMAIL` and
-Microsoft Graph `Mail.Read` plus `Mail.Send`, then run:
+For the email-based human review path, configure Microsoft Graph `Mail.Read` plus
+`Mail.Send` and backend Supabase credentials. `REVIEW_RECIPIENT_EMAIL` is only an
+optional override because review replies normally go to the original sender:
 
 ```powershell
 python run_pipeline.py outlook --send-review --max-messages 25
 python run_pipeline.py retries
 python run_pipeline.py failures
+python run_pipeline.py approvals
+python run_pipeline.py approvals --dry-run
+# Real Monday create; DRK remains pending:
 python run_pipeline.py approvals --execute
 ```
 
@@ -244,14 +248,20 @@ failures stay failed until `python run_pipeline.py failures --requeue <sha256>`.
 On Render, prefer the continuous background worker in `render.yaml` /
 `run_worker.py` so SQLite state and PDF artifacts live on a persistent disk.
 
-The review summary is rendered from the canonical extraction and sent as a
-separate email to the configured internal reviewer; it is never sent back to the
-referral source by default. Transient Anthropic, Outlook, and Monday failures are
-queued as `pending_retry` and drained by `retries`. Approval is bound to the
-configured reviewer, a one-time token, and a digest of those exact artifacts.
-The worker polls confirmations but creates Monday items only when
-`INTAKE_EXECUTE_APPROVALS=true`. The confirmed path records a DRK handoff after
-Monday; DRK automatic patient submission is not yet enabled.
+The review summary is rendered from the canonical extraction and sent to the
+original sender as a reply on the source Outlook thread. Unreplied threads are
+eligible for intake; transient Anthropic, Outlook, and Monday failures are queued
+as `pending_retry` and drained by `retries`. The sender can reply naturally, such as `Confirm`.
+Ambiguous wording is classified with OpenAI, while deterministic sender, thread,
+message-time, seven-required-field, and artifact checks remain mandatory. The
+default approval command only classifies replies; `--dry-run` validates without
+writes; `--execute` creates the Monday item once. DRK automatic patient submission
+is not implemented and remains a pending draft.
+
+Supabase `referral_reviews` stores the correlated canonical, intake-plan, Monday,
+and DRK JSON snapshots. `review_responses` records each Outlook response exactly
+once and atomically updates its review status. RLS blocks client access; only the
+worker's service-role credential can read or write these tables.
 
 ### How extraction works
 

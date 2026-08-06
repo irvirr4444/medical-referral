@@ -9,7 +9,7 @@ from referral_pipeline import runner
 from referral_pipeline.state import InboxState, STATUS_FAILED, STATUS_PENDING_RETRY
 
 
-def test_review_recipient_never_falls_back_to_referral_sender(monkeypatch) -> None:
+def test_review_recipient_defaults_to_referral_sender(monkeypatch) -> None:
     monkeypatch.delenv("REVIEW_RECIPIENT_EMAIL", raising=False)
     args = runner._parse_args(
         [
@@ -21,12 +21,28 @@ def test_review_recipient_never_falls_back_to_referral_sender(monkeypatch) -> No
         ]
     )
 
-    assert runner._review_recipient(options={"source_sender": "external@example.test"}, args=args) == ""
+    attachment = InboundPdfAttachment(
+        "outlook-graph",
+        "message-1",
+        "attachment-1",
+        "referral.pdf",
+        b"%PDF-1.4\n",
+        sender="external@example.test",
+    )
+    assert runner._review_recipient(
+        options={"source_sender": "external@example.test"},
+        args=args,
+        attachment=attachment,
+        manifest={"source_sender": "external@example.test"},
+    ) == "external@example.test"
 
     monkeypatch.setenv("REVIEW_RECIPIENT_EMAIL", "internal@example.test")
-    assert runner._review_recipient(options={"source_sender": "external@example.test"}, args=args) == (
-        "internal@example.test"
-    )
+    assert runner._review_recipient(
+        options={"source_sender": "external@example.test"},
+        args=args,
+        attachment=attachment,
+        manifest={"source_sender": "external@example.test"},
+    ) == "external@example.test"
 
 
 def test_process_claimed_job_defers_capacity_failures(tmp_path, monkeypatch) -> None:

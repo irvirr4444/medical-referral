@@ -110,6 +110,7 @@ def _attachment_from_job(job: AttachmentJob) -> InboundPdfAttachment:
         received_at=job.received_at,
         subject=job.subject,
         sender=str(options.get("source_sender") or "").strip() or None,
+        conversation_id=str(options.get("source_conversation_id") or "").strip() or None,
     )
 
 
@@ -117,11 +118,16 @@ def _review_recipient(
     *,
     options: dict[str, Any],
     args: argparse.Namespace,
+    attachment: InboundPdfAttachment,
+    manifest: dict[str, Any],
 ) -> str:
-    """Resolve only explicitly authorized internal review destinations."""
+    """Prefer an explicit override; otherwise reply to the original sender."""
     return (
         str(options.get("review_recipient") or "").strip()
         or str(getattr(args, "review_recipient", None) or "").strip()
+        or str(manifest.get("source_sender") or "").strip()
+        or str(getattr(attachment, "sender", None) or "").strip()
+        or str(options.get("source_sender") or "").strip()
         or os.getenv("REVIEW_RECIPIENT_EMAIL", "").strip()
     )
 
@@ -172,10 +178,13 @@ def process_claimed_job(
             recipient = _review_recipient(
                 options=options,
                 args=args,
+                attachment=attachment,
+                manifest=manifest,
             )
             if not recipient:
                 raise ValueError(
-                    "--send-review requires --review-recipient or REVIEW_RECIPIENT_EMAIL"
+                    "--send-review requires the original sender address, "
+                    "--review-recipient, or REVIEW_RECIPIENT_EMAIL"
                 )
             if graph_client is None:
                 graph_client = OutlookGraphClient(OutlookGraphConfig.from_environment())
@@ -277,6 +286,8 @@ def main(argv: list[str] | None = None) -> int:
             job_options = dict(options)
             if attachment.sender:
                 job_options["source_sender"] = attachment.sender
+            if attachment.conversation_id:
+                job_options["source_conversation_id"] = attachment.conversation_id
             job = state.enqueue(
                 attachment,
                 artifact_path=pdf_path,

@@ -11,10 +11,16 @@ def test_worker_once_runs_poll_retries_and_safe_approval_poll(tmp_path, monkeypa
         return 0
 
     class FakeApprovalProcessor:
-        def poll(self, *, max_messages: int, execute: bool):
+        def poll(self, *, max_messages: int, execute: bool, dry_run: bool):
             assert max_messages == 100
             assert execute is False
-            return {"accepted_confirmations": [], "ignored_confirmations": [], "executed": []}
+            assert dry_run is False
+            return {
+                "mode": "check_only",
+                "accepted_confirmations": [],
+                "ignored_confirmations": [],
+                "executed": [],
+            }
 
     results = worker.run_worker_loop(
         data_root=tmp_path / "data",
@@ -56,13 +62,18 @@ def test_worker_cycle_survives_runner_exceptions(tmp_path) -> None:
     assert "mailbox auth failed" in result["error"]
 
 
-def test_approval_cycle_only_executes_when_explicitly_enabled(tmp_path) -> None:
+def test_worker_execute_flag_is_restricted_to_dry_run(tmp_path) -> None:
     seen = []
 
     class FakeApprovalProcessor:
-        def poll(self, *, max_messages: int, execute: bool):
-            seen.append((max_messages, execute))
-            return {"accepted_confirmations": [], "ignored_confirmations": [], "executed": []}
+        def poll(self, *, max_messages: int, execute: bool, dry_run: bool):
+            seen.append((max_messages, execute, dry_run))
+            return {
+                "mode": "dry_run",
+                "accepted_confirmations": [],
+                "ignored_confirmations": [],
+                "executed": [],
+            }
 
     result = worker.run_approval_cycle(
         data_root=tmp_path,
@@ -72,5 +83,6 @@ def test_approval_cycle_only_executes_when_explicitly_enabled(tmp_path) -> None:
     )
 
     assert result["status"] == "ok"
-    assert result["execution_enabled"] is True
-    assert seen == [(50, True)]
+    assert result["execution_enabled"] is False
+    assert result["dry_run_enabled"] is True
+    assert seen == [(50, False, True)]

@@ -19,10 +19,15 @@ def _config() -> MasterSheetWriteConfig:
     )
 
 
-def _plan(*, outcome: str = "ready_for_human_approval", duplicate_status: str = "no_candidates_found") -> dict:
+def _plan(
+    *,
+    outcome: str = "ready_for_human_approval",
+    duplicate_status: str = "no_candidates_found",
+    duplicate_mode: str = "live-readonly",
+) -> dict:
     return {
         "outcome": outcome,
-        "monday_duplicate_check": {"status": duplicate_status},
+        "monday_duplicate_check": {"mode": duplicate_mode, "status": duplicate_status},
         "referral": {
             "patient_name": "Example, Patient",
             "patient_dob": "01/02/1980",
@@ -109,6 +114,16 @@ def test_duplicate_or_nonapproved_plan_is_blocked() -> None:
     assert "plan_outcome_is_manual_review_required" in review_preview["blockers"]
 
 
+def test_deliberately_disabled_duplicate_check_does_not_block_test_review() -> None:
+    preview = build_master_sheet_create_preview(
+        _plan(duplicate_status="not_checked", duplicate_mode="disabled"),
+        config=_config(),
+    )
+
+    assert not preview["blocked"]
+    assert "duplicate_check_is_not_checked" not in preview["blockers"]
+
+
 def test_preview_links_one_exact_agency_and_preserves_context_in_update() -> None:
     preview = build_master_sheet_create_preview(
         _plan(),
@@ -122,7 +137,7 @@ def test_preview_links_one_exact_agency_and_preserves_context_in_update() -> Non
     assert len(preview["post_create_actions"]) == 1
 
 
-def test_partial_referral_can_route_only_with_configured_case_manager() -> None:
+def test_partial_referral_is_blocked_even_with_configured_case_manager() -> None:
     plan = _plan(outcome="manual_review_required")
     plan["review_reasons"] = ["missing_supporting_fields"]
     plan["proposed_actions"] = [{"type": "route_partial_referral_to_case_manager"}]
@@ -130,7 +145,8 @@ def test_partial_referral_can_route_only_with_configured_case_manager() -> None:
 
     preview = build_master_sheet_create_preview(plan, config=configured)
 
-    assert not preview["blocked"]
+    assert preview["blocked"]
+    assert "plan_outcome_is_manual_review_required" in preview["blockers"]
     assert preview["column_values"]["owner"] == {"personsAndTeams": [{"id": 99, "kind": "person"}]}
     assert preview["column_values"]["sent"] == {"label": "Yes"}
     assert "sent_at" in preview["column_values"]
@@ -146,3 +162,25 @@ def test_apply_creates_item_then_update(monkeypatch) -> None:
 
     assert calls == ["item", "update"]
     assert result["applied_actions"] == [{"type": "create_update", "update_id": "2"}]
+
+
+def test_apply_persists_item_id_before_post_create_update(monkeypatch) -> None:
+    preview = build_master_sheet_create_preview(_plan(), config=_config())
+    calls: list[str] = []
+    monkeypatch.setattr(
+        master_sheet_writer,
+        "create_master_sheet_item",
+        lambda _preview: calls.append("item") or {"id": "1"},
+    )
+    monkeypatch.setattr(
+        master_sheet_writer,
+        "_create_item_update",
+        lambda **_kwargs: calls.append("update") or {"id": "2"},
+    )
+
+    apply_master_sheet_create(
+        preview,
+        on_item_created=lambda item: calls.append(f"persist:{item['id']}"),
+    )
+
+    assert calls == ["item", "persist:1", "update"]

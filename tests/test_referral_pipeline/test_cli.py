@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from referral_pipeline import cli as intake
 
 
@@ -69,6 +71,20 @@ def test_outlook_defaults_to_batch_and_dry_run(tmp_path, monkeypatch, capsys) ->
     assert latest["status"] == "ready"
     assert latest["item_name"] == "TEST Jamie Tester"
     assert "run_pipeline.py apply --confirm-master-sheet-write" in capsys.readouterr().out
+
+
+def test_approval_modes_are_explicit_and_mutually_exclusive() -> None:
+    parser = intake._build_parser()
+
+    default = parser.parse_args(["approvals"])
+    dry_run = parser.parse_args(["approvals", "--dry-run"])
+    execute = parser.parse_args(["approvals", "--execute"])
+
+    assert not default.dry_run and not default.execute
+    assert dry_run.dry_run and not dry_run.execute
+    assert execute.execute and not execute.dry_run
+    with pytest.raises(SystemExit):
+        parser.parse_args(["approvals", "--dry-run", "--execute"])
 
 
 def test_failures_command_lists_and_requeues(tmp_path, capsys) -> None:

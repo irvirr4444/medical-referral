@@ -10,7 +10,7 @@ import json
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from intake_extractor.models.schema import ReferralIntake
 from monday_api import monday_graphql
@@ -150,9 +150,19 @@ def create_master_sheet_item(preview: dict[str, Any]) -> dict[str, Any]:
     return item
 
 
-def apply_master_sheet_create(preview: dict[str, Any]) -> dict[str, Any]:
-    """Create a planned item and retain intake context in an item update."""
+def apply_master_sheet_create(
+    preview: dict[str, Any],
+    *,
+    on_item_created: Callable[[dict[str, Any]], None] | None = None,
+) -> dict[str, Any]:
+    """Create a planned item and retain intake context in an item update.
+
+    ``on_item_created`` runs immediately after Monday returns an item ID and
+    before any post-create updates, so callers can durably record the ID first.
+    """
     item = create_master_sheet_item(preview)
+    if on_item_created is not None:
+        on_item_created(item)
     applied_actions: list[dict[str, Any]] = []
     for action in preview.get("post_create_actions") or []:
         if action.get("type") == "create_update":
@@ -169,12 +179,11 @@ def _create_blockers(
     config: MasterSheetWriteConfig,
 ) -> list[str]:
     blockers: list[str] = []
-    review_reasons = set(plan.get("review_reasons") or [])
-    allowed_partial_route = plan.get("outcome") == "manual_review_required" and review_reasons == {"missing_supporting_fields"}
-    if plan.get("outcome") != "ready_for_human_approval" and not allowed_partial_route:
+    if plan.get("outcome") != "ready_for_human_approval":
         blockers.append(f"plan_outcome_is_{plan.get('outcome') or 'unknown'}")
     duplicate_status = duplicate.get("status")
-    if duplicate_status != "no_candidates_found":
+    duplicate_mode = duplicate.get("mode")
+    if duplicate_mode != "disabled" and duplicate_status != "no_candidates_found":
         blockers.append(f"duplicate_check_is_{duplicate_status or 'missing'}")
     if route_to_case_manager and not config.default_case_manager_id:
         blockers.append("case_manager_not_configured_for_required_route")

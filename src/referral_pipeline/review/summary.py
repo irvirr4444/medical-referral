@@ -107,7 +107,7 @@ def render_review_email(
         approval_allowed=approval_allowed,
     )
     return ReviewEmail(
-        subject=f"[WCW REFERRAL REVIEW] {review_id}",
+        subject=f"Referral Review: {presentation.patient_heading}",
         html_body=render_html(presentation),
         text_body=render_text(presentation),
         content_type="HTML",
@@ -308,16 +308,13 @@ def render_text(presentation: ReviewPresentation) -> str:
     if presentation.approval_allowed:
         lines.extend(
             [
-                "Confirm to create this patient's data in Monday and prepare the audited DRK handoff.",
+                'Reply with "Confirm" to push this patient to the '
+                "Monday.com Master Sheet and DRK.",
                 "",
-                "Automatic DRK patient submission is not enabled yet.",
-                "",
-                "To confirm, reply with this line only:",
-                "",
-                f"CONFIRMED {presentation.review_id} {presentation.token}",
-                "",
-                "To add information or correct a field, reply with the changes instead of the confirmation line.",
+                "To add information or correct a field, reply with the changes instead.",
                 "A new review must be generated before corrected data can be approved.",
+                "",
+                "Testing mode: confirmation performs a dry run only. No data is written to Monday or DRK.",
                 "",
             ]
         )
@@ -629,18 +626,13 @@ def _html_allergies(presentation: ReviewPresentation) -> str:
 def _html_action(presentation: ReviewPresentation) -> str:
     if presentation.approval_allowed:
         content = (
-            '<div style="margin-bottom:8px;">Confirm to create this patient&#39;s data in Monday '
-            "and prepare the audited DRK handoff.</div>"
-            '<div style="margin-bottom:8px;color:#627d98;">Automatic DRK patient submission '
-            "is not enabled yet.</div>"
-            '<div style="margin-bottom:8px;">To confirm, reply with this line only:</div>'
-            '<div style="font-family:Consolas,Monaco,monospace;background:#f0f4f8;'
-            'border:1px solid #d9e2ec;border-radius:4px;padding:10px 12px;">'
-            f"CONFIRMED {escape(presentation.review_id)} {escape(presentation.token)}"
-            "</div>"
-            '<div style="margin-top:12px;">To add information or correct a field, reply with '
-            "the changes instead of the confirmation line. A new review must be generated "
-            "before corrected data can be approved.</div>"
+            '<div style="margin-bottom:8px;"><strong>Reply with &quot;Confirm&quot; to push '
+            "this patient to the Monday.com Master Sheet and DRK.</strong></div>"
+            '<div style="margin-bottom:8px;">To add information or correct a field, reply with '
+            "the changes instead. A new review must be generated before corrected data can "
+            "be approved.</div>"
+            '<div style="margin-top:12px;color:#627d98;">Testing mode: confirmation performs '
+            "a dry run only. No data is written to Monday or DRK.</div>"
         )
     elif presentation.duplicate is not None:
         content = (

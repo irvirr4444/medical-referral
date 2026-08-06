@@ -55,7 +55,16 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--execute-approvals",
         action="store_true",
         default=_env_flag("INTAKE_EXECUTE_APPROVALS"),
-        help="Apply confirmed Monday previews; disabled unless explicitly enabled.",
+        help=(
+            "Deprecated for real writes. When set, the worker only validates confirmed "
+            "reviews with --dry-run semantics; Monday creates require the CLI approvals --execute command."
+        ),
+    )
+    parser.add_argument(
+        "--dry-run-approvals",
+        action="store_true",
+        default=_env_flag("INTAKE_DRY_RUN_APPROVALS"),
+        help="Validate confirmed reviews without writing Monday or DRK.",
     )
     parser.add_argument("--once", action="store_true", help="Run each enabled cycle once, then exit.")
     parser.add_argument("--skip-poll", action="store_true", help="Do not run Outlook referral discovery.")
@@ -161,11 +170,14 @@ def run_approval_cycle(
     data_root: Path,
     max_messages: int,
     execute: bool = False,
+    dry_run: bool = False,
     processor_factory: Callable[[Path], ApprovalProcessor] | None = None,
 ) -> dict:
-    """Poll reviewer replies and optionally apply confirmed Monday previews."""
+    """Poll reviewer replies. Workers never create Monday items."""
     state_db = data_root / "state.sqlite"
     started = time.perf_counter()
+    # Real Monday writes stay on the explicit CLI `--execute` path only.
+    worker_dry_run = bool(dry_run or execute)
     try:
         if processor_factory is None:
             client = OutlookGraphClient(OutlookGraphConfig.from_environment())
@@ -175,12 +187,17 @@ def run_approval_cycle(
             )
         else:
             processor = processor_factory(state_db)
-        result = processor.poll(max_messages=max_messages, execute=execute)
+        result = processor.poll(
+            max_messages=max_messages,
+            execute=False,
+            dry_run=worker_dry_run,
+        )
         failed = any(item.get("status") == "failed" for item in result["executed"])
         return {
             "kind": "approvals",
             "status": "failed" if failed else "ok",
-            "execution_enabled": execute,
+            "execution_enabled": False,
+            "dry_run_enabled": worker_dry_run,
             "elapsed_seconds": round(time.perf_counter() - started, 2),
             **result,
         }
@@ -189,7 +206,8 @@ def run_approval_cycle(
         return {
             "kind": "approvals",
             "status": "error",
-            "execution_enabled": execute,
+            "execution_enabled": False,
+            "dry_run_enabled": worker_dry_run,
             "error": str(error),
             "elapsed_seconds": round(time.perf_counter() - started, 2),
         }
@@ -212,6 +230,7 @@ def run_worker_loop(
     approval_interval_seconds: int = DEFAULT_APPROVAL_INTERVAL_SECONDS,
     max_approval_messages: int = DEFAULT_MAX_APPROVAL_MESSAGES,
     execute_approvals: bool = False,
+    dry_run_approvals: bool = False,
     skip_approvals: bool = False,
     approval_processor_factory: Callable[[Path], ApprovalProcessor] | None = None,
 ) -> list[dict]:
@@ -263,6 +282,7 @@ def run_worker_loop(
                 data_root=data_root,
                 max_messages=max_approval_messages,
                 execute=execute_approvals,
+                dry_run=dry_run_approvals,
                 processor_factory=approval_processor_factory,
             )
             results.append(result)
@@ -285,14 +305,15 @@ def main(argv: list[str] | None = None) -> int:
         level=logging.INFO if not args.quiet else logging.WARNING,
         format="%(levelname)s:%(name)s:%(message)s",
     )
+    dry_run_approvals = bool(args.dry_run_approvals or args.execute_approvals)
     logger.info(
-        "Starting intake worker data_root=%s poll=%ss retry=%ss approvals=%ss max_messages=%s execute_approvals=%s",
+        "Starting intake worker data_root=%s poll=%ss retry=%ss approvals=%ss max_messages=%s dry_run_approvals=%s",
         args.data_root,
         args.poll_interval_seconds,
         args.retry_interval_seconds,
         args.approval_interval_seconds,
         args.max_messages,
-        args.execute_approvals,
+        dry_run_approvals,
     )
     run_worker_loop(
         data_root=args.data_root.resolve(),
@@ -305,7 +326,8 @@ def main(argv: list[str] | None = None) -> int:
         skip_retries=args.skip_retries,
         approval_interval_seconds=args.approval_interval_seconds,
         max_approval_messages=args.max_approval_messages,
-        execute_approvals=args.execute_approvals,
+        execute_approvals=False,
+        dry_run_approvals=dry_run_approvals,
         skip_approvals=args.skip_approvals,
         quiet=args.quiet,
     )

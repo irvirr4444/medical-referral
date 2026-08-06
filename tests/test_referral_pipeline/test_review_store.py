@@ -12,6 +12,7 @@ def _add(store: ReviewStore) -> None:
         monday_preview_path="monday.json",
         drk_draft_path="drk.json",
         source_message_id="source-message",
+        source_conversation_id="conversation-1",
     )
 
 
@@ -49,6 +50,69 @@ def test_wrong_token_is_rejected(tmp_path) -> None:
         sender="reviewer@example.test",
         message_id="message-1",
     )
+
+
+def test_human_confirmation_is_bound_to_sender_thread_and_one_time(tmp_path) -> None:
+    store = ReviewStore(tmp_path / "state.sqlite")
+    _add(store)
+
+    assert store.find_confirmable_for_reply(
+        sender="attacker@example.test",
+        conversation_id="conversation-1",
+    ) is None
+    assert store.find_confirmable_for_reply(
+        sender="reviewer@example.test",
+        conversation_id="wrong-thread",
+    ) is None
+    found = store.find_confirmable_for_reply(
+        sender="REVIEWER@example.test",
+        conversation_id="conversation-1",
+    )
+    assert found is not None
+    assert store.confirm_by_context(
+        review_id=found.review_id,
+        sender="reviewer@example.test",
+        conversation_id="conversation-1",
+        message_id="reply-1",
+    )
+    assert not store.confirm_by_context(
+        review_id=found.review_id,
+        sender="reviewer@example.test",
+        conversation_id="conversation-1",
+        message_id="reply-2",
+    )
+
+
+def test_response_processing_atomically_records_correction_and_duplicate(tmp_path) -> None:
+    store = ReviewStore(tmp_path / "state.sqlite")
+    _add(store)
+
+    result = store.process_response(
+        review_id="review_abc123_xyz987",
+        message_id="reply-correction",
+        sender="reviewer@example.test",
+        conversation_id="conversation-1",
+        received_at="2026-08-06T10:00:00+00:00",
+        text="Do not confirm; the phone number needs correction.",
+        intent="correction",
+        classifier_source="local",
+        classifier_reason="explicit correction",
+    )
+
+    assert result == "needs_correction"
+    assert store.get("review_abc123_xyz987").status == "needs_correction"
+    assert store.response_exists("reply-correction")
+    assert store.process_response(
+        review_id="review_abc123_xyz987",
+        message_id="reply-correction",
+        sender="reviewer@example.test",
+        conversation_id="conversation-1",
+        received_at="2026-08-06T10:00:00+00:00",
+        text="Do not confirm; the phone number needs correction.",
+        intent="correction",
+        classifier_source="local",
+        classifier_reason="explicit correction",
+    ) == "duplicate"
 
 
 def test_find_active_returns_reusable_review(tmp_path) -> None:

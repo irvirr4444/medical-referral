@@ -46,6 +46,7 @@ class InboundPdfAttachment(Protocol):
     subject: str
     filename: str
     sender: str | None
+    conversation_id: str | None
 
 
 def process_inbound_pdf(
@@ -186,6 +187,7 @@ def process_inbound_pdf(
         "created_item_id": None if applied is None else applied["item"]["id"],
         "source_message_id": attachment.message_id,
         "source_sender": getattr(attachment, "sender", None),
+        "source_conversation_id": getattr(attachment, "conversation_id", None),
     }
     (output / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     return manifest

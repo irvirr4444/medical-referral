@@ -80,10 +80,14 @@ def test_summary_renders_readable_html_and_plain_text(tmp_path) -> None:
     assert "acetaminophen" in email.html_body
     assert "January 15, 1958" in email.html_body
     assert "1 Test Way, Fresno, CA, 93701" in email.html_body
-    assert "CONFIRMED review_abc123_xyz987 abcdefghijklmnop" in email.html_body
-    assert "CONFIRMED review_abc123_xyz987 abcdefghijklmnop" in email.text_body
-    assert "create this patient&#39;s data in Monday" in email.html_body
-    assert "prepare the audited DRK handoff" in email.text_body
+    assert "CONFIRMED review_" not in email.html_body
+    assert "abcdefghijklmnop" not in email.text_body
+    assert "Reply with &quot;Confirm&quot;" in email.html_body
+    assert (
+        'Reply with "Confirm" to push this patient to the '
+        "Monday.com Master Sheet and DRK."
+    ) in email.text_body
+    assert "dry run only" in email.text_body
     assert "correct a field" in email.text_body
     assert "Duplicate found in Monday" not in email.text_body
     assert "Clinical summary" in email.text_body

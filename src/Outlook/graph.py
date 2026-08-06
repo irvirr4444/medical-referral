@@ -151,6 +151,7 @@ class OutlookGraphClient:
                     received_at=str(message.get("receivedDateTime") or "") or None,
                     subject=str(message.get("subject") or "") or None,
                     sender=_message_sender(message),
+                    conversation_id=str(message.get("conversationId") or "") or None,
                 )
             )
         return accepted

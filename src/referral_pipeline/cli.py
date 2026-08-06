@@ -78,7 +78,7 @@ def _build_parser() -> argparse.ArgumentParser:
     outlook.add_argument("--send-review", action="store_true", help="Email the generated review summary instead of writing immediately.")
     outlook.add_argument(
         "--review-recipient",
-        help="Authorized internal reviewer email; defaults to REVIEW_RECIPIENT_EMAIL.",
+        help="Override reviewer email; by default the review reply goes to the original sender.",
     )
 
     apply = commands.add_parser(
@@ -93,9 +93,19 @@ def _build_parser() -> argparse.ArgumentParser:
 
     approvals = commands.add_parser(
         "approvals",
-        help="Read review replies and optionally execute exact confirmed Monday previews.",
+        help="Read review replies and optionally dry-run or execute confirmed Monday creates.",
     )
-    approvals.add_argument("--execute", action="store_true", help="Apply confirmed Monday previews and create DRK handoffs.")
+    mode = approvals.add_mutually_exclusive_group()
+    mode.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Validate confirmed Supabase JSON and destination drafts without writing Monday or DRK.",
+    )
+    mode.add_argument(
+        "--execute",
+        action="store_true",
+        help="Create the Monday item once for each confirmed review; DRK remains a pending draft.",
+    )
     approvals.add_argument("--max-messages", type=int, default=25)
     approvals.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
     approvals.add_argument("--state-db", type=Path)
@@ -107,7 +117,7 @@ def _build_parser() -> argparse.ArgumentParser:
     review_send.add_argument("--run", type=Path, required=True, help="Existing timestamped intake run directory.")
     review_send.add_argument(
         "--review-recipient",
-        help="Authorized internal reviewer email; defaults to REVIEW_RECIPIENT_EMAIL.",
+        help="Override reviewer email; defaults to the original sender stored on the run manifest.",
     )
     review_send.add_argument(
         "--config",
@@ -380,11 +390,14 @@ def _run_approvals(args: argparse.Namespace) -> int:
         raise IntakeCLIError("--max-messages must be at least 1")
     state_db = (args.state_db or args.output_root / "state.sqlite").resolve()
     mailbox = OutlookReviewMailbox(OutlookGraphClient(OutlookGraphConfig.from_environment()))
+    mode = "execute" if args.execute else ("dry_run" if args.dry_run else "check_only")
     print(f"[review] checking {args.max_messages} recent inbox messages")
-    print(f"[review] execution: {'enabled' if args.execute else 'disabled'}")
+    print(f"[review] mode: {mode}")
+    print(f"[review] writes attempted: {'yes' if args.execute else 'no'}")
     result = ApprovalProcessor(state_db=state_db, mailbox=mailbox).poll(
         max_messages=args.max_messages,
         execute=args.execute,
+        dry_run=args.dry_run,
     )
     print(json.dumps(result, indent=2))
     return 1 if any(item.get("status") == "failed" for item in result["executed"]) else 0
@@ -447,11 +460,13 @@ def _resend_review(args: argparse.Namespace) -> int:
     graph_client = OutlookGraphClient(OutlookGraphConfig.from_environment())
     recipient = (
         (args.review_recipient or "").strip()
+        or str(manifest.get("source_sender") or "").strip()
         or os.getenv("REVIEW_RECIPIENT_EMAIL", "").strip()
     )
     if not recipient:
         raise IntakeCLIError(
-            "review-send requires --review-recipient or REVIEW_RECIPIENT_EMAIL"
+            "review-send requires the original sender on the manifest, "
+            "--review-recipient, or REVIEW_RECIPIENT_EMAIL"
         )
     state_db = (args.state_db or run_dir.parent / "state.sqlite").resolve()
 

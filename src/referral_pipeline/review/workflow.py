@@ -4,13 +4,15 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import secrets
+from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from Outlook.review_mail import OutlookReviewMailbox
-from referral_pipeline.review.commands import parse_approval_command
-from referral_pipeline.review.store import ReviewStore
+from referral_pipeline.review.intent import IntentResult, classify_reply_intent
+from referral_pipeline.review.store import build_review_store
 from referral_pipeline.review.summary import render_review_email
 
 
@@ -32,9 +34,18 @@ def create_and_send_review(
     source_message_id = str(manifest.get("source_message_id") or "").strip()
     if not source_message_id:
         raise ReviewWorkflowError("source message ID is required to send the review as a reply")
+    source_conversation_id = str(manifest.get("source_conversation_id") or "").strip()
+    if not source_conversation_id:
+        raise ReviewWorkflowError("source conversation ID is required for human-readable confirmation")
     paths = _artifact_paths(manifest)
-    digest = artifact_digest(paths.values())
-    store = ReviewStore(state_db)
+    snapshots = {
+        "canonical": _load_json(paths["canonical"]),
+        "plan": _load_json(paths["plan"]),
+        "monday": _load_json(paths["monday"]),
+        "drk": _load_json(paths["drk"]),
+    }
+    digest = artifact_payload_digest(snapshots)
+    store = build_review_store(state_db)
     existing = store.find_active(
         artifact_digest=digest,
         source_message_id=source_message_id,
@@ -47,19 +58,17 @@ def create_and_send_review(
         text_body = existing.email_text_body or existing.email_body
         body_for_send = html_body if content_type == "HTML" and html_body else text_body
         review_id = existing.review_id
-        confirmation_source = text_body or existing.email_body or ""
         review_status = (
             "awaiting_confirmation"
             if existing.status in {"awaiting_confirmation", "review_send_failed"}
-            and "CONFIRMED " in confirmation_source
             else existing.status
         )
         if review_status == "review_send_failed":
             review_status = "awaiting_confirmation"
         try:
-            mailbox.send_review(
+            mailbox.send_reply(
+                source_message_id=source_message_id,
                 recipient=recipient,
-                subject=subject,
                 html_body=html_body,
                 text_body=text_body,
                 content_type=content_type,
@@ -99,7 +108,7 @@ def create_and_send_review(
 
     review_id = f"review_{digest[:12]}_{secrets.token_hex(3)}"
     token = secrets.token_urlsafe(18)
-    preview = _load_json(paths["monday"])
+    preview = snapshots["monday"]
     approval_allowed = not bool(preview.get("blocked"))
     review_status = "awaiting_confirmation" if approval_allowed else "needs_correction"
     email = render_review_email(
@@ -122,6 +131,12 @@ def create_and_send_review(
         monday_preview_path=str(paths["monday"].resolve()),
         drk_draft_path=str(paths["drk"].resolve()),
         source_message_id=source_message_id,
+        source_conversation_id=source_conversation_id,
+        source_attachment_sha256=str(manifest.get("attachment_sha256") or "") or None,
+        canonical_referral=snapshots["canonical"],
+        intake_plan=snapshots["plan"],
+        monday_preview=snapshots["monday"],
+        drk_draft=snapshots["drk"],
         status=review_status,
         email_subject=email.subject,
         email_html_body=email.html_body,
@@ -129,9 +144,9 @@ def create_and_send_review(
         email_content_type=email.content_type,
     )
     try:
-        mailbox.send_review(
+        mailbox.send_reply(
+            source_message_id=source_message_id,
             recipient=recipient,
-            subject=email.subject,
             html_body=email.html_body,
             text_body=email.text_body,
             content_type=email.content_type,
@@ -139,6 +154,14 @@ def create_and_send_review(
     except Exception as error:
         store.mark_failed(review_id, error=f"review email send failed: {error}", status="review_send_failed")
         raise
+    store.mark_sent(
+        review_id,
+        status=review_status,
+        email_subject=email.subject,
+        email_html_body=email.html_body,
+        email_text_body=email.text_body,
+        email_content_type=email.content_type,
+    )
 
     audit_path = _write_review_audit(
         paths["monday"].parent,
@@ -203,91 +226,303 @@ def _write_review_audit(
 
 
 class ApprovalProcessor:
-    def __init__(self, *, state_db: str | Path, mailbox: OutlookReviewMailbox) -> None:
-        self.store = ReviewStore(state_db)
+    def __init__(
+        self,
+        *,
+        state_db: str | Path,
+        mailbox: OutlookReviewMailbox,
+        intent_classifier: Callable[[str], IntentResult] = classify_reply_intent,
+    ) -> None:
+        self.state_db = Path(state_db)
+        self.store = build_review_store(state_db)
         self.mailbox = mailbox
+        self.intent_classifier = intent_classifier
 
-    def poll(self, *, max_messages: int = 25, execute: bool = False) -> dict[str, Any]:
+    def poll(
+        self,
+        *,
+        max_messages: int = 25,
+        execute: bool = False,
+        dry_run: bool = False,
+    ) -> dict[str, Any]:
+        if execute and dry_run:
+            raise ReviewWorkflowError("execute and dry_run modes are mutually exclusive")
         accepted: list[str] = []
+        corrections: list[str] = []
+        unclear: list[str] = []
+        duplicates: list[str] = []
         ignored: list[dict[str, str]] = []
         for reply in self.mailbox.list_replies(max_messages=max_messages):
-            command = parse_approval_command(reply.text)
-            if command is None:
+            if self.store.response_exists(reply.message_id):
+                duplicates.append(reply.message_id)
                 continue
-            if self.store.confirm(
-                review_id=command.review_id,
-                token=command.token,
+            conversation_id = (reply.conversation_id or "").strip()
+            if not conversation_id:
+                ignored.append({"message_id": reply.message_id, "reason": "missing_conversation_id"})
+                continue
+            review = self.store.find_confirmable_for_reply(
                 sender=reply.sender,
-                message_id=reply.message_id,
+                conversation_id=conversation_id,
+            )
+            if review is None:
+                continue
+            if reply.message_id == review.source_message_id or not _reply_is_after_review(
+                reply.received_at,
+                review.created_at,
             ):
-                accepted.append(command.review_id)
+                ignored.append(
+                    {
+                        "message_id": reply.message_id,
+                        "reason": "message_predates_review_request",
+                    }
+                )
+                continue
+
+            intent = self.intent_classifier(reply.text)
+            response_result = self.store.process_response(
+                review_id=review.review_id,
+                message_id=reply.message_id,
+                sender=reply.sender,
+                conversation_id=conversation_id,
+                received_at=reply.received_at,
+                text=reply.text,
+                intent=intent.intent,
+                classifier_source=intent.source,
+                classifier_reason=intent.reason,
+            )
+            if response_result == "duplicate":
+                duplicates.append(reply.message_id)
+                continue
+            if response_result == "confirmed":
+                accepted.append(review.review_id)
+            elif response_result == "needs_correction":
+                corrections.append(review.review_id)
+            elif response_result == "unclear":
+                unclear.append(review.review_id)
+                ignored.append(
+                    {
+                        "message_id": reply.message_id,
+                        "reason": f"intent_{intent.intent}:{intent.reason}",
+                    }
+                )
             else:
-                ignored.append({"message_id": reply.message_id, "reason": "authorization_or_state_mismatch"})
+                ignored.append(
+                    {"message_id": reply.message_id, "reason": response_result}
+                )
 
         applied: list[dict[str, Any]] = []
-        if execute:
+        if dry_run or execute:
             for review in self.store.confirmed():
+                if dry_run and review.status == "dry_run_completed":
+                    continue
                 try:
-                    applied.append(self._apply(review.review_id))
+                    if dry_run:
+                        applied.append(self._dry_run(review.review_id))
+                    else:
+                        applied.append(self._execute(review.review_id))
                 except Exception as error:
-                    self.store.mark_failed(review.review_id, error=str(error))
-                    applied.append({"review_id": review.review_id, "status": "failed", "error": str(error)})
+                    if dry_run:
+                        self.store.record_dry_run_failure(
+                            review.review_id,
+                            error=str(error),
+                        )
+                    else:
+                        self.store.mark_failed(review.review_id, error=str(error))
+                    applied.append(
+                        {
+                            "review_id": review.review_id,
+                            "status": "failed",
+                            "error": str(error),
+                            "writes_performed": False,
+                        }
+                    )
         return {
+            "mode": "execute" if execute else ("dry_run" if dry_run else "check_only"),
+            "writes_attempted": bool(execute),
             "accepted_confirmations": accepted,
+            "correction_or_denial_reviews": corrections,
+            "unclear_reviews": unclear,
+            "duplicate_response_messages": duplicates,
             "ignored_confirmations": ignored,
             "executed": applied,
         }
 
-    def _apply(self, review_id: str) -> dict[str, Any]:
-        from master_sheet_writer import apply_master_sheet_create
+    def _dry_run(self, review_id: str) -> dict[str, Any]:
+        review = self.store.get(review_id)
+        snapshots = _review_snapshots(review)
+        _assert_digest(review, snapshots)
+        if not os.getenv("MONDAY_DOT_COM_API_KEY", "").strip():
+            raise ReviewWorkflowError("MONDAY_DOT_COM_API_KEY is required for Monday execution")
+        preview = snapshots["monday"]
+        drk = snapshots["drk"]
+        if preview.get("blocked"):
+            raise ReviewWorkflowError(
+                "confirmed Monday preview is blocked: "
+                + ", ".join(str(item) for item in preview.get("blockers") or [])
+            )
+        missing_monday = [
+            field
+            for field in ("board_id", "group_id", "item_name", "column_values", "operation")
+            if field not in preview
+        ]
+        if missing_monday:
+            raise ReviewWorkflowError(
+                f"Monday preview is incomplete: missing {', '.join(missing_monday)}"
+            )
+        if preview.get("operation") != "create_item":
+            raise ReviewWorkflowError("Monday preview operation must be create_item")
+
+        result = {
+            "review_id": review_id,
+            "status": "dry_run_completed",
+            "writes_performed": False,
+            "monday": {
+                "would_create": True,
+                "blocked": False,
+                "board_id": preview.get("board_id"),
+                "group_id": preview.get("group_id"),
+                "item_name": preview.get("item_name"),
+                "source": "supabase" if review.monday_preview is not None else review.monday_preview_path,
+                "written": False,
+            },
+            "drk": {
+                "would_prepare_patient": True,
+                "ready_for_fill": bool(drk.get("ready_for_fill")),
+                "blockers": list(drk.get("blockers") or []),
+                "source": "supabase" if review.drk_draft is not None else review.drk_draft_path,
+                "written": False,
+                "status": "pending_draft",
+                "note": "DRK Create Patient submission is intentionally unfinished.",
+            },
+            "note": "Dry run only. No data was written to Monday or DRK.",
+        }
+        self.store.record_dry_run(review_id, result=result)
+        output_dir = _approval_output_dir(review, self.state_db)
+        result_path = output_dir / "approval-dry-run.json"
+        result_path.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        self.mailbox.send_reply(
+            source_message_id=review.source_message_id,
+            recipient=review.recipient,
+            content_type="HTML",
+            html_body=(
+                "<p><strong>Confirmation received.</strong></p>"
+                "<p>The Monday and DRK workflow dry run completed successfully. "
+                "No patient data was created or changed. DRK remains a pending draft.</p>"
+            ),
+            text_body=(
+                "Confirmation received.\n\n"
+                "The Monday and DRK workflow dry run completed successfully. "
+                "No patient data was created or changed. DRK remains a pending draft.\n"
+            ),
+        )
+        return {
+            "review_id": review_id,
+            "status": "dry_run_completed",
+            "writes_performed": False,
+            "dry_run_path": str(result_path),
+        }
+
+    def _execute(self, review_id: str) -> dict[str, Any]:
+        claim = self.store.claim_for_monday_execution(review_id)
+        if claim == "already_applied":
+            review = self.store.get(review_id)
+            return {
+                "review_id": review_id,
+                "status": "monday_applied_drk_pending",
+                "writes_performed": False,
+                "monday_item_id": review.monday_item_id,
+                "note": "Monday item was already created; DRK remains pending.",
+            }
+        if claim != "claimed":
+            raise ReviewWorkflowError(f"unable to claim review for Monday execution: {claim}")
 
         review = self.store.get(review_id)
-        paths = [
-            Path(review.canonical_path),
-            Path(review.intake_plan_path),
-            Path(review.monday_preview_path),
-            Path(review.drk_draft_path),
-        ]
-        if artifact_digest(paths) != review.artifact_digest:
-            raise ReviewWorkflowError("approved artifacts changed after the review email was sent")
-        preview = _load_json(Path(review.monday_preview_path))
+        snapshots = _review_snapshots(review)
+        _assert_digest(review, snapshots)
+        preview = snapshots["monday"]
         if preview.get("blocked"):
-            raise ReviewWorkflowError("approved Monday preview is blocked and cannot be applied")
-        if not self.store.begin_monday_apply(review_id):
-            raise ReviewWorkflowError("review is not in a confirmed state or is already being applied")
+            raise ReviewWorkflowError("confirmed Monday preview is blocked")
 
-        output_dir = Path(review.monday_preview_path).parent
-        result_path = output_dir / "master-sheet-apply-result.json"
-        if result_path.exists():
-            result = _load_json(result_path)
-        else:
-            result = apply_master_sheet_create({**preview, "mode": "apply"})
-            result_path.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-        item = result.get("item") or {}
-        item_id = str(item.get("id") or "")
-        if not item_id:
-            raise ReviewWorkflowError("Monday apply result did not contain an item ID")
+        from master_sheet_writer import apply_master_sheet_create
 
-        handoff_path = output_dir / "drk-handoff.json"
-        handoff = {
-            "review_id": review_id,
-            "status": "pending_guarded_drk_execution",
-            "monday_item_id": item_id,
-            "drk_draft_path": review.drk_draft_path,
-            "note": "DRK automatic Create Patient submission is intentionally not implemented.",
-        }
-        handoff_path.write_text(json.dumps(handoff, indent=2) + "\n", encoding="utf-8")
+        try:
+            applied = apply_master_sheet_create(
+                preview,
+                on_item_created=lambda item: self.store.mark_monday_item_created(
+                    review_id,
+                    item_id=str(item["id"]),
+                ),
+            )
+        except Exception as error:
+            current = self.store.get(review_id)
+            if current.monday_item_id:
+                self.store.mark_monday_applied(
+                    review_id,
+                    item_id=current.monday_item_id,
+                    drk_status="pending_draft",
+                )
+                return {
+                    "review_id": review_id,
+                    "status": "monday_applied_drk_pending",
+                    "writes_performed": True,
+                    "monday_item_id": current.monday_item_id,
+                    "post_create_error": str(error),
+                    "note": (
+                        "Monday item creation succeeded and its ID was persisted, "
+                        "but a post-create action failed. DRK remains pending."
+                    ),
+                }
+            raise
+        item_id = str(applied["item"]["id"])
         self.store.mark_monday_applied(
             review_id,
             item_id=item_id,
-            drk_status="pending_guarded_drk_execution",
+            drk_status="pending_draft",
+        )
+        output_dir = _approval_output_dir(review, self.state_db)
+        result = {
+            "review_id": review_id,
+            "status": "monday_applied_drk_pending",
+            "writes_performed": True,
+            "monday": {
+                "created": True,
+                "item_id": item_id,
+                "applied_actions": applied.get("applied_actions") or [],
+            },
+            "drk": {
+                "created": False,
+                "status": "pending_draft",
+                "note": "DRK Create Patient submission is intentionally unfinished.",
+            },
+        }
+        result_path = output_dir / "approval-execute-result.json"
+        result_path.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        self.mailbox.send_reply(
+            source_message_id=review.source_message_id,
+            recipient=review.recipient,
+            content_type="HTML",
+            html_body=(
+                "<p><strong>Confirmation received.</strong></p>"
+                f"<p>The patient was created in Monday.com (item {item_id}). "
+                "DRK remains a pending draft and was not submitted.</p>"
+            ),
+            text_body=(
+                "Confirmation received.\n\n"
+                f"The patient was created in Monday.com (item {item_id}). "
+                "DRK remains a pending draft and was not submitted.\n"
+            ),
         )
         return {
             "review_id": review_id,
             "status": "monday_applied_drk_pending",
+            "writes_performed": True,
             "monday_item_id": item_id,
-            "drk_handoff_path": str(handoff_path),
+            "result_path": str(result_path),
         }
+
+    def _apply(self, review_id: str) -> dict[str, Any]:
+        """Backward-compatible alias used by older tests; dry-run only. """
+        return self._dry_run(review_id)
 
 
 def artifact_digest(paths: Any) -> str:
@@ -298,6 +533,66 @@ def artifact_digest(paths: Any) -> str:
         digest.update(path.read_bytes())
         digest.update(b"\0")
     return digest.hexdigest()
+
+
+def artifact_payload_digest(snapshots: dict[str, dict[str, Any]]) -> str:
+    digest = hashlib.sha256()
+    for name in ("canonical", "plan", "monday", "drk"):
+        value = snapshots[name]
+        digest.update(name.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(
+            json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode(
+                "utf-8"
+            )
+        )
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def _assert_digest(review: Any, snapshots: dict[str, dict[str, Any]]) -> None:
+    if review.monday_preview is not None:
+        actual_digest = artifact_payload_digest(snapshots)
+    else:
+        actual_digest = artifact_digest(
+            [
+                Path(review.canonical_path),
+                Path(review.intake_plan_path),
+                Path(review.monday_preview_path),
+                Path(review.drk_draft_path),
+            ]
+        )
+    if actual_digest != review.artifact_digest:
+        raise ReviewWorkflowError("approved artifacts changed after the review email was sent")
+
+
+def _approval_output_dir(review: Any, state_db: Path) -> Path:
+    if review.monday_preview_path:
+        output_dir = Path(review.monday_preview_path).parent
+    else:
+        output_dir = state_db.parent / "approval-results" / review.review_id
+    output_dir.mkdir(parents=True, exist_ok=True)
+    return output_dir
+
+
+def _review_snapshots(review: Any) -> dict[str, dict[str, Any]]:
+    stored = {
+        "canonical": review.canonical_referral,
+        "plan": review.intake_plan,
+        "monday": review.monday_preview,
+        "drk": review.drk_draft,
+    }
+    if all(isinstance(value, dict) for value in stored.values()):
+        return stored
+    paths = {
+        "canonical": review.canonical_path,
+        "plan": review.intake_plan_path,
+        "monday": review.monday_preview_path,
+        "drk": review.drk_draft_path,
+    }
+    if not all(paths.values()):
+        raise ReviewWorkflowError("review artifacts are unavailable")
+    return {name: _load_json(Path(path)) for name, path in paths.items()}
 
 
 def _artifact_paths(manifest: dict[str, Any]) -> dict[str, Path]:
@@ -322,3 +617,14 @@ def _load_json(path: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ReviewWorkflowError(f"expected a JSON object: {path}")
     return value
+
+
+def _reply_is_after_review(received_at: str | None, review_created_at: str) -> bool:
+    if not received_at:
+        return False
+    try:
+        received = datetime.fromisoformat(received_at.replace("Z", "+00:00"))
+        created = datetime.fromisoformat(review_created_at.replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    return received > created
