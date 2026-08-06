@@ -41,8 +41,21 @@ class DuplicateCheck:
         }
 
 
-def referral_missing_fields(referral: ReferralIntake) -> tuple[list[str], list[str]]:
+def referral_missing_fields(
+    referral: ReferralIntake,
+    *,
+    field_status: dict[str, str] | None = None,
+) -> tuple[list[str], list[str]]:
     """Return workflow gaps without treating an extraction omission as an error."""
+    if field_status is not None:
+        complete = {"present", "explicitly_none"}
+        threshold_missing = [
+            field for field in THRESHOLD_FIELDS if field_status.get(field, "missing") not in complete
+        ]
+        supporting_missing = [
+            field for field in SUPPORTING_FIELDS if field_status.get(field, "missing") not in complete
+        ]
+        return threshold_missing, supporting_missing
     threshold_missing = [field for field in THRESHOLD_FIELDS if not getattr(referral, field)]
     supporting_values = {
         "referring_facility": referral.referring_facility,
@@ -53,13 +66,18 @@ def referral_missing_fields(referral: ReferralIntake) -> tuple[list[str], list[s
     return threshold_missing, supporting_missing
 
 
-def build_intake_plan(referral: ReferralIntake, *, duplicate_check: DuplicateCheck) -> dict[str, Any]:
+def build_intake_plan(
+    referral: ReferralIntake,
+    *,
+    duplicate_check: DuplicateCheck,
+    field_status: dict[str, str] | None = None,
+) -> dict[str, Any]:
     """Build a proposed workflow decision from one extracted referral.
 
     This intentionally produces recommendations only. The eventual Monday and
     DRK writers should consume an approved plan rather than duplicating rules.
     """
-    threshold_missing, supporting_missing = referral_missing_fields(referral)
+    threshold_missing, supporting_missing = referral_missing_fields(referral, field_status=field_status)
     actions: list[dict[str, Any]] = [
         {
             "type": "contact_referral_partner",
@@ -85,22 +103,22 @@ def build_intake_plan(referral: ReferralIntake, *, duplicate_check: DuplicateChe
     if threshold_missing:
         actions.append(
             {
-                "type": "route_missing_threshold_to_marketer",
-                "owner": "assigned marketer",
+                "type": "route_missing_information_to_intake_manager",
+                "owner": "information-box manager",
                 "status": "proposed",
                 "missing_fields": threshold_missing,
-                "reason": "The minimum threshold is name, DOB, phone, and address.",
+                "reason": "All seven referral fields must be complete before handoff.",
             }
         )
         review_reasons.append("missing_threshold_fields")
     elif supporting_missing:
         actions.append(
             {
-                "type": "route_partial_referral_to_case_manager",
-                "owner": "case manager",
+                "type": "route_missing_information_to_intake_manager",
+                "owner": "information-box manager",
                 "status": "proposed",
                 "missing_fields": supporting_missing,
-                "reason": "The referral meets the scheduling threshold but has supporting information to close.",
+                "reason": "The referral remains blocked until all seven required fields are complete.",
             }
         )
         review_reasons.append("missing_supporting_fields")
@@ -134,6 +152,7 @@ def build_intake_plan(referral: ReferralIntake, *, duplicate_check: DuplicateChe
             "threshold_missing": threshold_missing,
             "supporting_missing": supporting_missing,
             "field_labels": FIELD_LABELS,
+            "field_status": field_status or {},
         },
         "monday_duplicate_check": duplicate_check.to_dict(),
         "outcome": outcome,

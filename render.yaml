@@ -26,6 +26,12 @@ services:
         value: "100"
       - key: INTAKE_EXECUTE_APPROVALS
         value: "false"
+      - key: INTAKE_MONITOR_ENABLED
+        value: "false"
+      - key: INTAKE_MONITOR_INTERVAL_SECONDS
+        value: "3600"
+      - key: INTAKE_MONITOR_SEND_ALERTS
+        value: "false"
       - key: PYTHONUNBUFFERED
         value: "1"
       - key: ANTHROPIC_API_KEY
@@ -41,4 +47,12 @@ services:
       - key: REVIEW_RECIPIENT_EMAIL
         sync: false
       - key: MONDAY_DOT_COM_API_KEY
+        sync: false
+      - key: WORKFLOW_DATABASE_BACKEND
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: WORKFLOW_NOTIFICATION_RECIPIENTS
         sync: false

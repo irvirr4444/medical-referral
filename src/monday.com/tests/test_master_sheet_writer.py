@@ -122,7 +122,7 @@ def test_preview_links_one_exact_agency_and_preserves_context_in_update() -> Non
     assert len(preview["post_create_actions"]) == 1
 
 
-def test_partial_referral_can_route_only_with_configured_case_manager() -> None:
+def test_partial_referral_stays_blocked_even_with_configured_case_manager() -> None:
     plan = _plan(outcome="manual_review_required")
     plan["review_reasons"] = ["missing_supporting_fields"]
     plan["proposed_actions"] = [{"type": "route_partial_referral_to_case_manager"}]
@@ -130,10 +130,8 @@ def test_partial_referral_can_route_only_with_configured_case_manager() -> None:
 
     preview = build_master_sheet_create_preview(plan, config=configured)
 
-    assert not preview["blocked"]
-    assert preview["column_values"]["owner"] == {"personsAndTeams": [{"id": 99, "kind": "person"}]}
-    assert preview["column_values"]["sent"] == {"label": "Yes"}
-    assert "sent_at" in preview["column_values"]
+    assert preview["blocked"]
+    assert "plan_outcome_is_manual_review_required" in preview["blockers"]
 
 
 def test_apply_creates_item_then_update(monkeypatch) -> None:

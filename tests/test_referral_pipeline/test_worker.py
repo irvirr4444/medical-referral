@@ -74,3 +74,32 @@ def test_approval_cycle_only_executes_when_explicitly_enabled(tmp_path) -> None:
     assert result["status"] == "ok"
     assert result["execution_enabled"] is True
     assert seen == [(50, True)]
+
+
+def test_worker_runs_optional_monitor_cycle_without_enabling_alerts(tmp_path) -> None:
+    seen: list[dict] = []
+
+    def fake_monitor_cycle(**kwargs):
+        seen.append(kwargs)
+        return {"kind": "monitor", "status": "ok"}
+
+    results = worker.run_worker_loop(
+        data_root=tmp_path / "data",
+        poll_interval_seconds=60,
+        retry_interval_seconds=30,
+        max_messages=25,
+        max_jobs=10,
+        once=True,
+        skip_poll=True,
+        skip_retries=True,
+        skip_approvals=True,
+        monitor_enabled=True,
+        monitor_interval_seconds=300,
+        monitor_send_alerts=False,
+        monitor_cycle=fake_monitor_cycle,
+        sleep_fn=lambda _seconds: None,
+        clock=lambda: 0.0,
+    )
+
+    assert results == [{"kind": "monitor", "status": "ok"}]
+    assert seen[0]["send_alerts"] is False

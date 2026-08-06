@@ -76,6 +76,22 @@ errors. Approval execution is off unless `INTAKE_EXECUTE_APPROVALS=true`.
 Local one-shot commands (`outlook`, `retries`, `failures`, `approvals`) remain
 available for testing on any machine.
 
+## Workflow monitoring
+
+Steps 4-5 run as a separate read-only monitor. One manual cycle is:
+
+```powershell
+python run_pipeline.py monitor --live-monday --database-backend supabase
+python run_pipeline.py monitor-status --database-backend supabase
+```
+
+The first cycle establishes a baseline and evaluates overdue scheduling. Later
+cycles emit visit events only when an explicit Monday or DRK value changes. Email
+delivery requires `--send-alerts`; otherwise alerts remain in the database outbox.
+The continuous worker can include this cycle with `INTAKE_MONITOR_ENABLED=true`.
+See [docs/WORKFLOW_MONITORING.md](../../docs/WORKFLOW_MONITORING.md) for setup,
+data rules, and the normalized DRK snapshot contract.
+
 After the reviewer replies with the command printed in that email:
 
 ```powershell

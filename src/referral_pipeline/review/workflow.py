@@ -12,6 +12,8 @@ from Outlook.review_mail import OutlookReviewMailbox
 from referral_pipeline.review.commands import parse_approval_command
 from referral_pipeline.review.store import ReviewStore
 from referral_pipeline.review.summary import render_review_email
+from referral_pipeline.monitoring.models import PatientLink, utc_now
+from referral_pipeline.monitoring.observer import record_lifecycle_event
 
 
 class ReviewWorkflowError(RuntimeError):
@@ -34,6 +36,7 @@ def create_and_send_review(
         raise ReviewWorkflowError("source message ID is required to send the review as a reply")
     paths = _artifact_paths(manifest)
     digest = artifact_digest(paths.values())
+    entity_id = _workflow_entity_id(paths["canonical"], fallback_digest=digest)
     store = ReviewStore(state_db)
     existing = store.find_active(
         artifact_digest=digest,
@@ -75,6 +78,13 @@ def create_and_send_review(
             email_html_body=html_body,
             email_text_body=text_body,
             email_content_type=content_type,
+        )
+        record_lifecycle_event(
+            "review_requested",
+            entity_id=entity_id,
+            source="outlook",
+            event_key=f"review-requested:{review_id}",
+            details={"review_id": review_id, "recipient": recipient, "status": review_status, "reused": True},
         )
         audit_path = _write_review_audit(
             paths["monday"].parent,
@@ -139,6 +149,14 @@ def create_and_send_review(
     except Exception as error:
         store.mark_failed(review_id, error=f"review email send failed: {error}", status="review_send_failed")
         raise
+
+    record_lifecycle_event(
+        "review_requested",
+        entity_id=entity_id,
+        source="outlook",
+        event_key=f"review-requested:{review_id}",
+        details={"review_id": review_id, "recipient": recipient, "status": review_status, "reused": False},
+    )
 
     audit_path = _write_review_audit(
         paths["monday"].parent,
@@ -221,6 +239,17 @@ class ApprovalProcessor:
                 message_id=reply.message_id,
             ):
                 accepted.append(command.review_id)
+                confirmed_review = self.store.get(command.review_id)
+                record_lifecycle_event(
+                    "review_confirmed",
+                    entity_id=_workflow_entity_id(
+                        Path(confirmed_review.canonical_path),
+                        fallback_digest=confirmed_review.artifact_digest,
+                    ),
+                    source="outlook",
+                    event_key=f"review-confirmed:{reply.message_id}",
+                    details={"review_id": command.review_id, "confirmation_message_id": reply.message_id},
+                )
             else:
                 ignored.append({"message_id": reply.message_id, "reason": "authorization_or_state_mismatch"})
 
@@ -282,6 +311,30 @@ class ApprovalProcessor:
             item_id=item_id,
             drk_status="pending_guarded_drk_execution",
         )
+        entity_id = _workflow_entity_id(
+            Path(review.canonical_path),
+            fallback_digest=review.artifact_digest,
+        )
+        record_lifecycle_event(
+            "monday_item_created",
+            entity_id=entity_id,
+            source="monday",
+            event_key=f"monday-created:{review_id}:{item_id}",
+            details={"review_id": review_id, "monday_item_id": item_id},
+            patient_link=PatientLink(
+                entity_id=entity_id,
+                monday_item_id=item_id,
+                patient_label=str(preview.get("item_name") or "") or None,
+                updated_at=utc_now(),
+            ),
+        )
+        record_lifecycle_event(
+            "drk_handoff_created",
+            entity_id=entity_id,
+            source="drk",
+            event_key=f"drk-handoff:{review_id}",
+            details={"review_id": review_id, "status": "pending_guarded_drk_execution"},
+        )
         return {
             "review_id": review_id,
             "status": "monday_applied_drk_pending",
@@ -322,3 +375,9 @@ def _load_json(path: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ReviewWorkflowError(f"expected a JSON object: {path}")
     return value
+
+
+def _workflow_entity_id(canonical_path: Path, *, fallback_digest: str) -> str:
+    canonical = _load_json(canonical_path)
+    referral_id = str(canonical.get("referral_id") or "").strip()
+    return referral_id or f"referral:{fallback_digest}"

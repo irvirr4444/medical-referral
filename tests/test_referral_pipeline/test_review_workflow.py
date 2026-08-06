@@ -139,3 +139,12 @@ def test_create_and_send_review_reuses_active_request(tmp_path) -> None:
     assert (tmp_path / "review-email.html").is_file()
     assert (tmp_path / "review-email.txt").is_file()
     assert "CONFIRMED " in (tmp_path / "review-email.txt").read_text(encoding="utf-8")
+
+
+def test_workflow_entity_uses_canonical_referral_id(tmp_path) -> None:
+    from referral_pipeline.review.workflow import _workflow_entity_id
+
+    canonical = tmp_path / "canonical-referral.json"
+    _write(canonical, {"referral_id": "ref_source_hash"})
+
+    assert _workflow_entity_id(canonical, fallback_digest="artifact-hash") == "ref_source_hash"

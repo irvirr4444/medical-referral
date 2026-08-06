@@ -169,9 +169,7 @@ def _create_blockers(
     config: MasterSheetWriteConfig,
 ) -> list[str]:
     blockers: list[str] = []
-    review_reasons = set(plan.get("review_reasons") or [])
-    allowed_partial_route = plan.get("outcome") == "manual_review_required" and review_reasons == {"missing_supporting_fields"}
-    if plan.get("outcome") != "ready_for_human_approval" and not allowed_partial_route:
+    if plan.get("outcome") != "ready_for_human_approval":
         blockers.append(f"plan_outcome_is_{plan.get('outcome') or 'unknown'}")
     duplicate_status = duplicate.get("status")
     if duplicate_status != "no_candidates_found":

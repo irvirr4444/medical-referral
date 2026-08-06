@@ -5,6 +5,7 @@ pytest>=8.0.0
 python-dotenv>=1.0.0
 anthropic>=0.116.0
 requests>=2.32.0
+tzdata>=2025.1
 reportlab>=4.2.0
 selenium>=4.24.0
 selenium-wire>=5.1.0

@@ -1,0 +1,344 @@
+"""Backend-only Supabase Data API implementation of the workflow store."""
+
+from __future__ import annotations
+
+import os
+from typing import Any
+
+import requests
+
+from referral_pipeline.monitoring.models import (
+    NotificationRecord,
+    OperationalSnapshot,
+    PatientLink,
+    WorkflowCounter,
+    WorkflowEvent,
+    WorkflowException,
+    utc_now,
+)
+
+
+class SupabaseWorkflowError(RuntimeError):
+    pass
+
+
+class SupabaseWorkflowStore:
+    def __init__(self, *, url: str, service_role_key: str, timeout_seconds: float = 30.0) -> None:
+        self.url = url.rstrip("/")
+        self.service_role_key = service_role_key
+        self.timeout_seconds = timeout_seconds
+
+    @classmethod
+    def from_environment(cls) -> "SupabaseWorkflowStore":
+        url = os.getenv("SUPABASE_URL", "").strip()
+        key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+        if not url or not key:
+            raise SupabaseWorkflowError(
+                "Supabase monitoring requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY"
+            )
+        return cls(url=url, service_role_key=key)
+
+    def save_snapshot(self, snapshot: OperationalSnapshot) -> bool:
+        previous = self.latest_snapshot(snapshot.source, snapshot.external_id)
+        if previous is not None and previous.payload_digest == snapshot.payload_digest:
+            return False
+        self._request(
+            "POST",
+            "wcw_system_snapshots",
+            json_body={
+                "source": snapshot.source,
+                "external_id": snapshot.external_id,
+                "observed_at": snapshot.observed_at.isoformat(),
+                "payload_digest": snapshot.payload_digest,
+                "payload": snapshot.model_dump(mode="json"),
+            },
+            params={"on_conflict": "source,external_id,payload_digest"},
+            prefer="resolution=ignore-duplicates,return=minimal",
+        )
+        return True
+
+    def latest_snapshot(self, source: str, external_id: str) -> OperationalSnapshot | None:
+        rows = self._request(
+            "GET",
+            "wcw_system_snapshots",
+            params={
+                "select": "payload",
+                "source": f"eq.{source}",
+                "external_id": f"eq.{external_id}",
+                "order": "observed_at.desc",
+                "limit": "1",
+            },
+        )
+        return None if not rows else OperationalSnapshot.model_validate(rows[0]["payload"])
+
+    def record_event(self, event: WorkflowEvent) -> bool:
+        rows = self._request(
+            "POST",
+            "wcw_workflow_events",
+            json_body={
+                "event_key": event.event_key,
+                "event_type": event.event_type,
+                "entity_id": event.entity_id,
+                "source": event.source,
+                "occurred_at": event.occurred_at.isoformat(),
+                "details": event.details,
+            },
+            params={"on_conflict": "event_key"},
+            prefer="resolution=ignore-duplicates,return=representation",
+        )
+        return bool(rows)
+
+    def upsert_exception(self, exception: WorkflowException) -> bool:
+        existing = self._request(
+            "GET",
+            "wcw_workflow_exceptions",
+            params={
+                "select": "status,first_seen_at",
+                "exception_key": f"eq.{exception.exception_key}",
+                "limit": "1",
+            },
+        )
+        created_or_reopened = not existing or existing[0].get("status") == "resolved"
+        first_seen = existing[0].get("first_seen_at") if existing else exception.first_seen_at.isoformat()
+        self._upsert(
+            "wcw_workflow_exceptions",
+            {
+                "exception_key": exception.exception_key,
+                "exception_type": exception.exception_type,
+                "entity_id": exception.entity_id,
+                "severity": exception.severity,
+                "status": exception.status,
+                "first_seen_at": first_seen,
+                "last_seen_at": exception.last_seen_at.isoformat(),
+                "resolved_at": None if exception.resolved_at is None else exception.resolved_at.isoformat(),
+                "details": exception.details,
+            },
+            on_conflict="exception_key",
+        )
+        return created_or_reopened
+
+    def resolve_exceptions(self, *, entity_id: str, exception_type: str, resolved_at: str) -> int:
+        rows = self._request(
+            "PATCH",
+            "wcw_workflow_exceptions",
+            params={
+                "entity_id": f"eq.{entity_id}",
+                "exception_type": f"eq.{exception_type}",
+                "status": "eq.open",
+            },
+            json_body={"status": "resolved", "resolved_at": resolved_at, "last_seen_at": resolved_at},
+            prefer="return=representation",
+        )
+        return len(rows or [])
+
+    def enqueue_notification(self, notification: NotificationRecord) -> bool:
+        rows = self._request(
+            "POST",
+            "wcw_notification_outbox",
+            json_body={
+                "notification_key": notification.notification_key,
+                "exception_key": notification.exception_key,
+                "recipient": notification.recipient,
+                "subject": notification.subject,
+                "body": notification.body,
+                "status": notification.status,
+                "attempts": notification.attempts,
+                "last_error": notification.last_error,
+                "created_at": notification.created_at.isoformat(),
+            },
+            params={"on_conflict": "notification_key"},
+            prefer="resolution=ignore-duplicates,return=representation",
+        )
+        return bool(rows)
+
+    def pending_notifications(self, *, limit: int = 100) -> list[NotificationRecord]:
+        rows = self._request(
+            "GET",
+            "wcw_notification_outbox",
+            params={
+                "select": "notification_key,exception_key,recipient,subject,body,created_at,status,attempts,last_error",
+                "status": "in.(pending,failed)",
+                "order": "created_at.asc",
+                "limit": str(limit),
+            },
+        )
+        return [NotificationRecord.model_validate(row) for row in rows]
+
+    def mark_notifications_sent(self, keys: list[str]) -> None:
+        self._mark_notifications(keys, status="sent", error=None)
+
+    def mark_notifications_failed(self, keys: list[str], error: str) -> None:
+        self._mark_notifications(keys, status="failed", error=error)
+
+    def upsert_patient_link(self, link: PatientLink) -> None:
+        existing = self._request(
+            "GET",
+            "wcw_patient_links",
+            params={"select": "*", "entity_id": f"eq.{link.entity_id}", "limit": "1"},
+        )
+        current = existing[0] if existing else {}
+        self._upsert(
+            "wcw_patient_links",
+            {
+                "entity_id": link.entity_id,
+                "monday_item_id": link.monday_item_id or current.get("monday_item_id"),
+                "drk_patient_id": link.drk_patient_id or current.get("drk_patient_id"),
+                "patient_label": link.patient_label or current.get("patient_label"),
+                "identity_digest": link.identity_digest or current.get("identity_digest"),
+                "updated_at": link.updated_at.isoformat(),
+            },
+            on_conflict="entity_id",
+        )
+
+    def find_entity_id(
+        self, *, monday_item_id: str | None = None, drk_patient_id: str | None = None
+    ) -> str | None:
+        if not monday_item_id and not drk_patient_id:
+            return None
+        column, value = (
+            ("monday_item_id", monday_item_id)
+            if monday_item_id
+            else ("drk_patient_id", drk_patient_id)
+        )
+        rows = self._request(
+            "GET",
+            "wcw_patient_links",
+            params={"select": "entity_id", column: f"eq.{value}", "limit": "1"},
+        )
+        return None if not rows else str(rows[0]["entity_id"])
+
+    def get_counter(self, entity_id: str, counter_name: str) -> int:
+        rows = self._request(
+            "GET",
+            "wcw_workflow_counters",
+            params={
+                "select": "value",
+                "entity_id": f"eq.{entity_id}",
+                "counter_name": f"eq.{counter_name}",
+                "limit": "1",
+            },
+        )
+        return 0 if not rows else int(rows[0]["value"])
+
+    def set_counter(self, counter: WorkflowCounter) -> None:
+        self._upsert(
+            "wcw_workflow_counters",
+            {
+                "entity_id": counter.entity_id,
+                "counter_name": counter.counter_name,
+                "value": counter.value,
+                "updated_at": counter.updated_at.isoformat(),
+            },
+            on_conflict="entity_id,counter_name",
+        )
+
+    def record_cursor(self, source: str, cursor: str | None) -> None:
+        self._upsert(
+            "wcw_sync_cursors",
+            {"source": source, "cursor": cursor, "updated_at": utc_now().isoformat()},
+            on_conflict="source",
+        )
+
+    def status_summary(self) -> dict[str, object]:
+        return {
+            "backend": "supabase",
+            "snapshots": self._count("wcw_system_snapshots"),
+            "events": self._count("wcw_workflow_events"),
+            "open_exceptions": self._count("wcw_workflow_exceptions", status="eq.open"),
+            "pending_notifications": self._count(
+                "wcw_notification_outbox", status="in.(pending,failed)"
+            ),
+            "patient_links": self._count("wcw_patient_links"),
+        }
+
+    def _upsert(self, table: str, row: dict[str, Any], *, on_conflict: str) -> None:
+        self._request(
+            "POST",
+            table,
+            json_body=row,
+            params={"on_conflict": on_conflict},
+            prefer="resolution=merge-duplicates,return=minimal",
+        )
+
+    def _mark_notifications(self, keys: list[str], *, status: str, error: str | None) -> None:
+        for key in keys:
+            existing = self._request(
+                "GET",
+                "wcw_notification_outbox",
+                params={"select": "attempts", "notification_key": f"eq.{key}", "limit": "1"},
+            )
+            attempts = int(existing[0].get("attempts") or 0) + 1 if existing else 1
+            self._request(
+                "PATCH",
+                "wcw_notification_outbox",
+                params={"notification_key": f"eq.{key}"},
+                json_body={"status": status, "attempts": attempts, "last_error": error},
+                prefer="return=minimal",
+            )
+
+    def _count(self, table: str, **filters: str) -> int:
+        response = self._request_raw(
+            "GET",
+            table,
+            params={"select": "notification_key" if table == "wcw_notification_outbox" else "*", **filters},
+            prefer="count=exact",
+            extra_headers={"Range": "0-0"},
+        )
+        content_range = response.headers.get("Content-Range", "")
+        try:
+            return int(content_range.rsplit("/", 1)[1])
+        except (IndexError, ValueError):
+            return len(response.json() or [])
+
+    def _request(
+        self,
+        method: str,
+        table: str,
+        *,
+        params: dict[str, str] | None = None,
+        json_body: object | None = None,
+        prefer: str | None = None,
+    ) -> Any:
+        response = self._request_raw(
+            method,
+            table,
+            params=params,
+            json_body=json_body,
+            prefer=prefer,
+        )
+        if not response.content:
+            return []
+        return response.json()
+
+    def _request_raw(
+        self,
+        method: str,
+        table: str,
+        *,
+        params: dict[str, str] | None = None,
+        json_body: object | None = None,
+        prefer: str | None = None,
+        extra_headers: dict[str, str] | None = None,
+    ) -> requests.Response:
+        headers = {
+            "apikey": self.service_role_key,
+            "Authorization": f"Bearer {self.service_role_key}",
+            "Content-Type": "application/json",
+            **(extra_headers or {}),
+        }
+        if prefer:
+            headers["Prefer"] = prefer
+        response = requests.request(
+            method,
+            f"{self.url}/rest/v1/{table}",
+            headers=headers,
+            params=params,
+            json=json_body,
+            timeout=self.timeout_seconds,
+        )
+        if response.status_code >= 400:
+            detail = response.text[:1000]
+            raise SupabaseWorkflowError(
+                f"Supabase workflow request failed: {method} {table} HTTP {response.status_code}: {detail}"
+            )
+        return response
