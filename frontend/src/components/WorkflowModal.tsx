@@ -1,31 +1,6 @@
-import { COPY } from '../data/constants'
-import { ActivityFeed } from './ActivityFeed'
-import { CapacityCalculator } from './CapacityCalculator'
-import { NetworkPanel } from './NetworkPanel'
-import { OverviewImpactBoard } from './OverviewImpactBoard'
-import { PatientJourneyPanel } from './PatientJourneyPanel'
-import { OverviewScenarioSummary } from './ScenarioBoard'
-import './WorkflowModal.css'
+import { AutomationOverview } from '../features/automation/AutomationOverview'
 
-/** Overview page — capacity returned by period, command summary, network. */
+/** Overview page for the inspectable WCW automation workflow. */
 export function OverviewPage() {
-  return (
-    <>
-      <section className="workflow-page panel" aria-labelledby="workflow-page-title">
-        <div className="section-heading">
-          <div>
-            <p className="caption">Referral → Scheduling → Visit Workflow</p>
-            <h2 id="workflow-page-title">Overview</h2>
-            <p className="muted">{COPY.beforeAfterHeadline}</p>
-          </div>
-        </div>
-      </section>
-      <OverviewImpactBoard scope="overview" />
-      <OverviewScenarioSummary />
-      <ActivityFeed stage="overview" />
-      <NetworkPanel />
-      <CapacityCalculator />
-      <PatientJourneyPanel />
-    </>
-  )
+  return <AutomationOverview />
 }

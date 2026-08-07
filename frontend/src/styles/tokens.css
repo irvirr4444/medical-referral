@@ -38,7 +38,11 @@ body {
   font-family: var(--font-body);
   color: var(--navy);
   background:
-    radial-gradient(circle at top left, rgba(14, 124, 134, 0.08), transparent 32%),
+    radial-gradient(
+      circle at top left,
+      rgba(14, 124, 134, 0.08),
+      transparent 32%
+    ),
     linear-gradient(180deg, #eef2ef 0%, var(--paper) 28%, #eef1ef 100%);
   line-height: 1.5;
 }
@@ -80,6 +84,10 @@ a {
   padding: 1.25rem 0 3rem;
   display: grid;
   gap: 1.25rem;
+}
+
+.app-shell > * {
+  min-width: 0;
 }
 
 .panel {
@@ -151,7 +159,10 @@ a {
   border-radius: 10px;
   padding: 0.7rem 1rem;
   font-weight: 600;
-  transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+  transition:
+    transform 120ms ease,
+    background 120ms ease,
+    border-color 120ms ease;
 }
 
 .btn:disabled {
@@ -250,7 +261,7 @@ a {
 
 @media (max-width: 720px) {
   .app-shell {
-    width: min(100% - 1rem, 100%);
+    width: calc(100% - 1rem);
   }
 
   .grid-cards {

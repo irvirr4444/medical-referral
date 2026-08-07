@@ -7,12 +7,20 @@
 }
 
 .stage-ops-hero {
-  padding: 0.15rem 0.15rem 0.35rem;
+  padding: 0.35rem 0.15rem 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
 }
 
-.stage-ops-hero h2 {
+.stage-ops-hero h1 {
   margin: 0.15rem 0 0.35rem;
   font-size: clamp(1.35rem, 2vw, 1.75rem);
+}
+
+.stage-ops-hero .muted {
+  max-width: 820px;
 }
 
 .stage-compare {
