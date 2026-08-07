@@ -3,6 +3,7 @@ import { ActivityFeed } from './ActivityFeed'
 import { CapacityCalculator } from './CapacityCalculator'
 import { NetworkPanel } from './NetworkPanel'
 import { OverviewImpactBoard } from './OverviewImpactBoard'
+import { PatientJourneyPanel } from './PatientJourneyPanel'
 import { OverviewScenarioSummary } from './ScenarioBoard'
 import './WorkflowModal.css'
 
@@ -24,6 +25,7 @@ export function OverviewPage() {
       <ActivityFeed stage="overview" />
       <NetworkPanel />
       <CapacityCalculator />
+      <PatientJourneyPanel />
     </>
   )
 }

@@ -9,6 +9,7 @@ export type ScenarioCaseStatus =
   | 'completed'
   | 'escalated'
   | 'monitoring'
+  | 'upcoming'
 
 export type ScenarioActionVerb =
   | 'Review'
@@ -54,5 +55,5 @@ export interface ScenarioFilterState {
 }
 
 export function scenarioCaseIsOpen(status: ScenarioCaseStatus): boolean {
-  return status !== 'completed' && status !== 'escalated'
+  return status !== 'completed' && status !== 'escalated' && status !== 'upcoming'
 }

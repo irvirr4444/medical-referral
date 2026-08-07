@@ -1,18 +1,20 @@
-import { Play, RefreshCw } from 'lucide-react'
-import { WAITING_INBOX_COUNT, WORKFLOW_TAB_MINUTES } from '../data/constants'
+import { useEffect, useState } from 'react'
+import { WORKFLOW_TAB_MINUTES } from '../data/constants'
 import { FLOW_OPS, type FlowOpsPageId } from '../data/flowOps'
+import { scenarioCaseIsOpen } from '../data/scenarioTypes'
 import { scenariosForTab } from '../data/workflowScenarios'
 import { WORKFLOW_COMPARISONS } from '../data/workflowComparisons'
 import { useDemo } from '../state/useDemo'
 import { ActivityFeed } from './ActivityFeed'
 import { ImpactStrip } from './ImpactStrip'
 import { OverviewImpactBoard } from './OverviewImpactBoard'
-import { ReferralQueue } from './ReferralQueue'
 import { ReferralWorkspace } from './ReferralWorkspace'
 import { ScenarioBoard } from './ScenarioBoard'
 import { WorkflowSpine } from './WorkflowSpine'
 import './WorkflowModal.css'
 import './StageOperationsPage.css'
+
+type StageView = 'action' | 'metrics'
 
 function StageComparisonStrip({ pageId }: { pageId: FlowOpsPageId }) {
   const { state } = useDemo()
@@ -56,48 +58,25 @@ function StageComparisonStrip({ pageId }: { pageId: FlowOpsPageId }) {
   )
 }
 
-function IntakeActions() {
-  const { state, dispatch, runAutomation } = useDemo()
-  const waiting = state.referrals.filter((r) => r.inboxBatch && !r.processed).length
-  const inboxLabel = state.automationComplete
-    ? `${WAITING_INBOX_COUNT} processed`
-    : `${waiting || WAITING_INBOX_COUNT} waiting`
-
-  return (
-    <div className="stage-ops-actions panel">
-      <p className="caption" aria-live="polite">
-        Inbox <strong>{inboxLabel}</strong>
-        <span aria-hidden="true"> · </span>
-        Sync {state.lastInboxSyncLabel}
-      </p>
-      <div className="stage-ops-actions__buttons">
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={runAutomation}
-          disabled={state.automationRunning || state.automationComplete}
-          aria-label="Process referral inbox"
-        >
-          <Play size={16} aria-hidden="true" />
-          Process referral inbox
-        </button>
-        <button
-          type="button"
-          className="btn btn-secondary"
-          onClick={() => dispatch({ type: 'RESET' })}
-          aria-label="Reset day"
-        >
-          <RefreshCw size={16} aria-hidden="true" />
-          Reset day
-        </button>
-      </div>
-    </div>
-  )
+function openActionCount(scenarios: ReturnType<typeof scenariosForTab>) {
+  return new Set(
+    scenarios
+    .flatMap((scenario) => scenario.cases)
+      .filter((item) => scenarioCaseIsOpen(item.status))
+      .map((item) => item.patientName),
+  ).size
 }
 
-/** Operations-style live page for Flow sections 1–5. */
+/** Operations-style live page for Flow sections 1–7. */
 export function StageOperationsPage({ pageId }: { pageId: FlowOpsPageId }) {
+  const { state } = useDemo()
   const config = FLOW_OPS[pageId]
+  const [view, setView] = useState<StageView>('action')
+  const openCount = openActionCount(scenariosForTab(state.workflowScenarios, pageId))
+
+  useEffect(() => {
+    setView('action')
+  }, [pageId, state.journeyFocusCaseId])
 
   return (
     <>
@@ -107,21 +86,42 @@ export function StageOperationsPage({ pageId }: { pageId: FlowOpsPageId }) {
         <p className="muted">{config.blurb}</p>
       </header>
 
-      {pageId === 'intake' ? <IntakeActions /> : null}
+      <div className="stage-ops-tabs panel" role="tablist" aria-label={`${config.title} views`}>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={view === 'action'}
+          className={`stage-ops-tabs__tab ${view === 'action' ? 'is-active' : ''}`}
+          onClick={() => setView('action')}
+        >
+          Action
+          <span className="stage-ops-tabs__count">{openCount} patients</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={view === 'metrics'}
+          className={`stage-ops-tabs__tab ${view === 'metrics' ? 'is-active' : ''}`}
+          onClick={() => setView('metrics')}
+        >
+          Automation impact
+        </button>
+      </div>
 
-      <OverviewImpactBoard scope={pageId} />
-      <StageComparisonStrip pageId={pageId} />
-      <ScenarioBoard key={pageId} tab={pageId} />
-
-      {config.showImpact ? <ImpactStrip /> : null}
-      {config.showSpine ? <WorkflowSpine /> : null}
-      {config.showActivity ? <ActivityFeed stage={pageId} /> : null}
-      {config.showQueue ? (
-        <>
-          <ReferralQueue />
-          <ReferralWorkspace />
-        </>
-      ) : null}
+      {view === 'action' ? (
+        <div className="stage-ops-pane" role="tabpanel" aria-label="Action">
+          <ScenarioBoard key={pageId} tab={pageId} actionOnly />
+          {pageId === 'intake' ? <ReferralWorkspace /> : null}
+        </div>
+      ) : (
+        <div className="stage-ops-pane" role="tabpanel" aria-label="Automation impact">
+          <OverviewImpactBoard scope={pageId} />
+          <StageComparisonStrip pageId={pageId} />
+          {config.showImpact ? <ImpactStrip /> : null}
+          {config.showSpine ? <WorkflowSpine /> : null}
+          {config.showActivity ? <ActivityFeed stage={pageId} /> : null}
+        </div>
+      )}
     </>
   )
 }

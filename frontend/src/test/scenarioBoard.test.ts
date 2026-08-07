@@ -5,6 +5,7 @@ import {
   createInitialWorkflowScenarios,
   scenariosForTab,
 } from '../data/workflowScenarios'
+import { scenarioCaseIsOpen } from '../data/scenarioTypes'
 import { createInitialState, demoReducer } from '../state/demoReducer'
 
 describe('workflow scenario catalog', () => {
@@ -48,13 +49,21 @@ describe('workflow scenario catalog', () => {
 describe('scenario reducer actions', () => {
   it('resolves a scenario case, returns minutes, and appends activity', () => {
     let state = createInitialState()
-    const target = scenariosForTab(state.workflowScenarios, 'assignment')[0].cases[0]
+    const before = state.scenarioMinutesReturned
+    const target = scenariosForTab(state.workflowScenarios, 'assignment')
+      .flatMap((scenario) => scenario.cases.map((item) => ({ scenario, item })))
+      .find(
+        ({ scenario, item }) =>
+          scenario.bucket !== 'blocked' &&
+          scenario.bucket !== 'approval' &&
+          scenarioCaseIsOpen(item.status),
+      )!.item
     state = demoReducer(state, { type: 'RESOLVE_SCENARIO_CASE', id: target.id })
     const updated = state.workflowScenarios
       .flatMap((scenario) => scenario.cases)
       .find((item) => item.id === target.id)!
     expect(updated.status).toBe('completed')
-    expect(state.scenarioMinutesReturned).toBe(target.minutesReturned)
+    expect(state.scenarioMinutesReturned).toBe(before + target.minutesReturned)
     expect(state.activityFeed[0].text).toContain(target.patientName)
   })
 
@@ -62,7 +71,10 @@ describe('scenario reducer actions', () => {
     let state = createInitialState()
     const blocked = state.workflowScenarios
       .flatMap((scenario) => scenario.cases.map((item) => ({ scenario, item })))
-      .find(({ scenario, item }) => scenario.bucket === 'blocked' && item.status !== 'completed')!
+      .find(
+        ({ scenario, item }) =>
+          scenario.bucket === 'blocked' && scenarioCaseIsOpen(item.status),
+      )!
     state = demoReducer(state, { type: 'RESOLVE_SCENARIO_CASE', id: blocked.item.id })
     const updated = state.workflowScenarios
       .flatMap((scenario) => scenario.cases)
@@ -72,12 +84,13 @@ describe('scenario reducer actions', () => {
 
   it('resets scenario board with the day', () => {
     let state = createInitialState()
+    const initialMinutes = state.scenarioMinutesReturned
     const target = state.workflowScenarios[0].cases[0]
     state = demoReducer(state, { type: 'RESOLVE_SCENARIO_CASE', id: target.id })
     state = demoReducer(state, { type: 'SET_SCENARIO_FILTER', filter: 'blocked' })
     state = demoReducer(state, { type: 'RESET' })
-    expect(state.scenarioMinutesReturned).toBe(0)
+    expect(state.scenarioMinutesReturned).toBe(initialMinutes)
     expect(state.scenarioFilter).toBe('all')
-    expect(state.workflowScenarios[0].cases[0].status).not.toBe('completed')
+    expect(state.selectedJourneyPatientId).toBe('maria-alvarez')
   })
 })

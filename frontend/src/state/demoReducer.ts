@@ -13,6 +13,15 @@ import {
 } from '../data/lifecycle'
 import { createInitialReferrals } from '../data/referrals'
 import { createInitialActivityFeed } from '../data/activityFeed'
+import {
+  buildPatientJourney,
+  DEFAULT_JOURNEY_PATIENT_ID,
+  getJourneyPatient,
+  patientIdForJourneyCase,
+  reopenJourneyCases,
+  seedJourneyProgress,
+  sumCompletedJourneyCaseMinutes,
+} from '../data/patientJourney'
 import { createInitialWorkflowScenarios } from '../data/workflowScenarios'
 import type { ScenarioBucket } from '../data/scenarioTypes'
 import type {
@@ -50,6 +59,104 @@ export type DemoAction =
   | { type: 'RESOLVE_LIFECYCLE_CASE'; id: string }
   | { type: 'SET_SCENARIO_FILTER'; filter: ScenarioBucket | 'all' }
   | { type: 'RESOLVE_SCENARIO_CASE'; id: string }
+  | { type: 'SELECT_JOURNEY_PATIENT'; patientId: string }
+  | { type: 'FOCUS_JOURNEY_STEP'; caseId: string }
+  | { type: 'ADVANCE_JOURNEY' }
+  | { type: 'RESTART_JOURNEY' }
+
+function resolveScenarioCase(state: DemoState, caseId: string): DemoState {
+  let gained = 0
+  let activityText: string | null = null
+  let activityStage: DemoState['workflowScenarios'][number]['tab'] | null = null
+  const workflowScenarios = state.workflowScenarios.map((scenario) => ({
+    ...scenario,
+    cases: scenario.cases.map((item) => {
+      if (item.id !== caseId) return item
+      if (
+        item.status === 'completed' ||
+        item.status === 'escalated' ||
+        item.status === 'upcoming'
+      ) {
+        return item
+      }
+      gained = item.minutesReturned
+      activityStage = scenario.tab
+      const nextStatus =
+        scenario.bucket === 'approval' || scenario.bucket === 'blocked'
+          ? ('escalated' as const)
+          : ('completed' as const)
+      activityText = `${item.patientName}: ${item.resultLabel}`
+      return {
+        ...item,
+        status: nextStatus,
+        summary: item.resultLabel,
+      }
+    }),
+  }))
+  if (!activityText || !activityStage) return state
+  return {
+    ...state,
+    workflowScenarios,
+    scenarioMinutesReturned: state.scenarioMinutesReturned + gained,
+    activityFeed: [
+      {
+        id: `activity-live-${Date.now()}`,
+        time: 'Now',
+        text: `${activityText} · ${gained} min returned`,
+        stage: activityStage,
+      },
+      ...state.activityFeed,
+    ].slice(0, 48),
+  }
+}
+
+function focusJourneyStep(state: DemoState, caseId: string): DemoState {
+  const patient = getJourneyPatient(state.selectedJourneyPatientId)
+  const step = patient?.steps.find((item) => item.caseId === caseId)
+  if (!step || !patient) return state
+  return {
+    ...state,
+    journeyFocusCaseId: caseId,
+    activePage: step.stage,
+    scenarioFilter: 'all',
+    // Do not auto-open the PDF workspace — only "Review Referral" should.
+    selectedReferralId: null,
+  }
+}
+
+function focusPatientCurrentStep(state: DemoState, patientId: string): DemoState {
+  const withPatient = { ...state, selectedJourneyPatientId: patientId }
+  const journey = buildPatientJourney(withPatient.workflowScenarios, patientId)
+  const focusStep = journey.current ?? journey.steps[journey.steps.length - 1]
+  if (!focusStep) return withPatient
+  return focusJourneyStep(withPatient, focusStep.caseId)
+}
+
+/** After resolving a journey case, jump to that patient's next open stage tab. */
+function advanceJourneyAfterResolve(state: DemoState, resolvedCaseId: string): DemoState {
+  const patientId = patientIdForJourneyCase(resolvedCaseId)
+  if (!patientId) return state
+  const nextStep = buildPatientJourney(state.workflowScenarios, patientId).current
+  if (!nextStep || nextStep.status !== 'upcoming') {
+    return focusPatientCurrentStep(state, patientId)
+  }
+  const promoted = {
+    ...state,
+    workflowScenarios: state.workflowScenarios.map((scenario) => ({
+      ...scenario,
+      cases: scenario.cases.map((item) =>
+        item.id === nextStep.caseId ? { ...item, status: 'open' as const } : item,
+      ),
+    })),
+  }
+  return focusPatientCurrentStep(promoted, patientId)
+}
+
+function resolveScenarioCaseAndAdvance(state: DemoState, caseId: string): DemoState {
+  const resolved = resolveScenarioCase(state, caseId)
+  if (resolved === state) return state
+  return advanceJourneyAfterResolve(resolved, caseId)
+}
 
 function pushEvent(referral: ReferralRecord, event: Omit<AuditEvent, 'id'>): ReferralRecord {
   return {
@@ -143,6 +250,11 @@ function applyProcessing(referrals: ReferralRecord[]): ReferralRecord[] {
 }
 
 export function createInitialState(): DemoState {
+  const workflowScenarios = seedJourneyProgress(createInitialWorkflowScenarios())
+  const selectedJourneyPatientId = DEFAULT_JOURNEY_PATIENT_ID
+  const journey = buildPatientJourney(workflowScenarios, selectedJourneyPatientId)
+  const focusCaseId = journey.current?.caseId ?? journey.steps[0]?.caseId ?? null
+
   return {
     referrals: createInitialReferrals(),
     automationStep: 'idle',
@@ -163,9 +275,11 @@ export function createInitialState(): DemoState {
     lifecycleRunning: false,
     lifecycleMessage: null,
     lifecycleMinutesReturned: 0,
-    workflowScenarios: createInitialWorkflowScenarios(),
+    workflowScenarios,
     scenarioFilter: 'all',
-    scenarioMinutesReturned: 0,
+    scenarioMinutesReturned: sumCompletedJourneyCaseMinutes(workflowScenarios),
+    journeyFocusCaseId: focusCaseId,
+    selectedJourneyPatientId,
   }
 }
 
@@ -220,49 +334,54 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
       return { ...state, howCalculatedOpen: !state.howCalculatedOpen }
 
     case 'SET_ACTIVE_PAGE':
-      return { ...state, activePage: action.page, scenarioFilter: 'all' }
+      return {
+        ...state,
+        activePage: action.page,
+        scenarioFilter: 'all',
+        selectedReferralId: null,
+      }
 
     case 'SET_SCENARIO_FILTER':
       return { ...state, scenarioFilter: action.filter }
 
-    case 'RESOLVE_SCENARIO_CASE': {
-      let gained = 0
-      let activityText: string | null = null
-      let activityStage: DemoState['workflowScenarios'][number]['tab'] | null = null
-      const workflowScenarios = state.workflowScenarios.map((scenario) => ({
-        ...scenario,
-        cases: scenario.cases.map((item) => {
-          if (item.id !== action.id) return item
-          if (item.status === 'completed' || item.status === 'escalated') return item
-          gained = item.minutesReturned
-          activityStage = scenario.tab
-          const nextStatus =
-            scenario.bucket === 'approval' || scenario.bucket === 'blocked'
-              ? ('escalated' as const)
-              : ('completed' as const)
-          activityText = `${item.patientName}: ${item.resultLabel}`
-          return {
-            ...item,
-            status: nextStatus,
-            summary: item.resultLabel,
-          }
-        }),
-      }))
-      if (!activityText || !activityStage) return state
-      return {
-        ...state,
-        workflowScenarios,
-        scenarioMinutesReturned: state.scenarioMinutesReturned + gained,
-        activityFeed: [
-          {
-            id: `activity-live-${Date.now()}`,
-            time: 'Now',
-            text: `${activityText} · ${gained} min returned`,
-            stage: activityStage,
-          },
-          ...state.activityFeed,
-        ].slice(0, 48),
+    case 'RESOLVE_SCENARIO_CASE':
+      return resolveScenarioCaseAndAdvance(state, action.id)
+
+    case 'SELECT_JOURNEY_PATIENT':
+      return focusPatientCurrentStep(state, action.patientId)
+
+    case 'FOCUS_JOURNEY_STEP':
+      return focusJourneyStep(state, action.caseId)
+
+    case 'ADVANCE_JOURNEY': {
+      const journey = buildPatientJourney(
+        state.workflowScenarios,
+        state.selectedJourneyPatientId,
+      )
+      if (journey.current) {
+        return resolveScenarioCaseAndAdvance(state, journey.current.caseId)
       }
+      const focusStep = journey.steps[journey.steps.length - 1]
+      if (!focusStep) return state
+      return focusJourneyStep(state, focusStep.caseId)
+    }
+
+    case 'RESTART_JOURNEY': {
+      const patientId = state.selectedJourneyPatientId
+      const patient = getJourneyPatient(patientId)
+      if (!patient) return state
+      const beforeMinutes = sumCompletedJourneyCaseMinutes(state.workflowScenarios, patientId)
+      const workflowScenarios = reopenJourneyCases(state.workflowScenarios, patientId)
+      const afterMinutes = sumCompletedJourneyCaseMinutes(workflowScenarios, patientId)
+      const refund = Math.max(0, beforeMinutes - afterMinutes)
+      return focusPatientCurrentStep(
+        {
+          ...state,
+          workflowScenarios,
+          scenarioMinutesReturned: Math.max(0, state.scenarioMinutesReturned - refund),
+        },
+        patientId,
+      )
     }
 
     case 'UPDATE_IMPACT_ASSUMPTIONS':

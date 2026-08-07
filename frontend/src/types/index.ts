@@ -215,4 +215,8 @@ export interface DemoState {
   workflowScenarios: import('../data/scenarioTypes').WorkflowScenario[]
   scenarioFilter: import('../data/scenarioTypes').ScenarioBucket | 'all'
   scenarioMinutesReturned: number
+  /** Case highlighted by the patient journey spine. */
+  journeyFocusCaseId: string | null
+  /** Active patient on the journey spine roster. */
+  selectedJourneyPatientId: string
 }

@@ -1,8 +1,13 @@
 import type { FlowOpsPageId } from './flowOps'
-import type { ScenarioCase, WorkflowScenario } from './scenarioTypes'
+import { JOURNEY_PATIENTS } from './patientJourney'
+import {
+  scenarioCaseIsOpen,
+  type ScenarioCase,
+  type WorkflowScenario,
+} from './scenarioTypes'
 
 export function createInitialWorkflowScenarios(): WorkflowScenario[] {
-  return [
+  const scenarios: WorkflowScenario[] = [
     {
       id: 'intake-received',
       tab: 'intake',
@@ -536,11 +541,11 @@ export function createInitialWorkflowScenarios(): WorkflowScenario[] {
         },
         {
           id: 'ho-ack-2',
-          patientName: 'Anita Gomez',
+          patientName: 'Linda Nguyen',
           summary: 'Corrected ack naming Kim Lopez',
           detail: 'CM corrected after human territory review.',
           owner: 'Kim Lopez',
-          facilityOrContext: 'Rancho Cucamonga SNF',
+          facilityOrContext: 'Harborview Assisted Living',
           status: 'open',
           minutesReturned: 5,
           actionLabel: 'Review acknowledgement',
@@ -958,11 +963,11 @@ export function createInitialWorkflowScenarios(): WorkflowScenario[] {
       cases: [
         {
           id: 'eod-inc-1',
-          patientName: 'Anita Gomez',
+          patientName: 'Linda Nguyen',
           summary: 'Date present · status blank',
           detail: 'Appointment date filled but Scheduled status empty.',
           owner: 'Kim Lopez',
-          facilityOrContext: 'Rancho Cucamonga SNF',
+          facilityOrContext: 'Harborview Assisted Living',
           status: 'waiting_human',
           minutesReturned: 8,
           actionLabel: 'Review inconsistency',
@@ -1221,11 +1226,11 @@ export function createInitialWorkflowScenarios(): WorkflowScenario[] {
       cases: [
         {
           id: 'wk-ns1-1',
-          patientName: 'Samuel Ortiz',
+          patientName: 'Robert Williams',
           summary: 'Week 1 not seen',
           detail: 'Returned to next weekly cycle · counter = 1.',
           owner: 'Kim Lopez',
-          facilityOrContext: 'Burbank Retirement Villa West',
+          facilityOrContext: 'CareBridge Home Health',
           status: 'open',
           minutesReturned: 7,
           actionLabel: 'Process not-seen outcome',
@@ -1558,8 +1563,530 @@ export function createInitialWorkflowScenarios(): WorkflowScenario[] {
           humanOnly: false,
         },
       ],
-    }
+    },
+    ...journeyContinuityScenarios(),
   ]
+  return addGeneratedJourneyCases(scenarios)
+}
+
+/** Extra happy-path cases so each journey patient has a full Intake→Weekly thread. */
+function journeyContinuityScenarios(): WorkflowScenario[] {
+  return [
+    {
+      id: 'journey-intake-ready',
+      tab: 'intake',
+      title: 'Journey continuity · ready to confirm',
+      branchLabel: 'Ready',
+      bucket: 'ready',
+      description: 'Additional patients mid-journey who already cleared extraction.',
+      rule: 'Prepare human-review summary, Monday.com preview, and DRK draft.',
+      humanControlNote: 'Confirmation and Create Patient remain human-controlled.',
+      actionVerb: 'Confirm',
+      cases: [
+        {
+          id: 'in-ready-4',
+          patientName: 'Helen Park',
+          summary: 'Anaheim packet ready for confirm',
+          detail: '7/7 complete · duplicate clear · destinations prepared.',
+          owner: 'Farrah Go',
+          facilityOrContext: 'Anaheim Healthcare Center',
+          status: 'open',
+          minutesReturned: 28,
+          actionLabel: 'Confirm referral',
+          resultLabel: 'Confirmed for handoff',
+          humanOnly: true,
+        },
+        {
+          id: 'in-ready-5',
+          patientName: 'Anita Gomez',
+          summary: 'Belmont Village referral ready',
+          detail: '7/7 complete · DRK chart ready for assisted entry.',
+          owner: 'Charlie Catado',
+          facilityOrContext: 'Belmont Village Senior Living - Burbank',
+          status: 'open',
+          minutesReturned: 27,
+          actionLabel: 'Confirm referral',
+          resultLabel: 'Confirmed for handoff',
+          humanOnly: true,
+        },
+        {
+          id: 'in-ready-6',
+          patientName: 'Samuel Ortiz',
+          summary: 'Home-health packet ready',
+          detail: '7/7 complete · no blocking duplicate.',
+          owner: 'Braxton Rickert',
+          facilityOrContext: 'Burbank Retirement Villa West',
+          status: 'open',
+          minutesReturned: 26,
+          actionLabel: 'Confirm referral',
+          resultLabel: 'Confirmed for handoff',
+          humanOnly: true,
+        },
+      ],
+    },
+    {
+      id: 'journey-handoff-dest',
+      tab: 'handoff',
+      title: 'Journey continuity · destinations',
+      branchLabel: 'Independent writes',
+      bucket: 'ready',
+      description: 'Destination write outcomes for patients further along the path.',
+      rule: 'Monday and DRK writes are independent; retry only the failed side.',
+      humanControlNote: 'Create Patient remains human-controlled.',
+      actionVerb: 'Verify',
+      cases: [
+        {
+          id: 'ho-dest-4',
+          patientName: 'Helen Park',
+          summary: 'Both destinations succeeded',
+          detail: 'Monday item created · DRK draft ready.',
+          owner: 'Guarded Monday create',
+          facilityOrContext: 'Master Sheet',
+          status: 'open',
+          minutesReturned: 12,
+          actionLabel: 'Verify destinations',
+          resultLabel: 'Handoff complete',
+          humanOnly: false,
+        },
+        {
+          id: 'ho-dest-5',
+          patientName: 'Robert Williams',
+          summary: 'Both destinations succeeded',
+          detail: 'Monday item created · DRK draft ready.',
+          owner: 'Guarded Monday create',
+          facilityOrContext: 'Master Sheet',
+          status: 'open',
+          minutesReturned: 12,
+          actionLabel: 'Verify destinations',
+          resultLabel: 'Handoff complete',
+          humanOnly: false,
+        },
+        {
+          id: 'ho-ack-3',
+          patientName: 'Patricia Johnson',
+          summary: 'Acknowledgement draft ready',
+          detail: 'Naming Cole Winfield on the original referral thread.',
+          owner: 'Cole Winfield',
+          facilityOrContext: 'Community Care Services',
+          status: 'open',
+          minutesReturned: 5,
+          actionLabel: 'Review acknowledgement',
+          resultLabel: 'Acknowledgement approved to send',
+          humanOnly: true,
+        },
+      ],
+    },
+    {
+      id: 'journey-assignment',
+      tab: 'assignment',
+      title: 'Journey continuity · territory match',
+      branchLabel: 'CM suggested',
+      bucket: 'ready',
+      description: 'Territory suggestions for patients mid-journey.',
+      rule: 'Suggest CM from ZIP/territory; human confirms assignment.',
+      humanControlNote: 'Assignment confirmation stays human-owned.',
+      actionVerb: 'Assign',
+      cases: [
+        {
+          id: 'ho-one-4',
+          patientName: 'Helen Park',
+          summary: 'Placentia ZIP → Farrah Go',
+          detail: 'Suggested CM fgo@westcoastwound.com · Anaheim route.',
+          owner: 'Intake → Farrah Go',
+          facilityOrContext: 'Anaheim Healthcare Center',
+          status: 'open',
+          minutesReturned: 8,
+          actionLabel: 'Assign case manager',
+          resultLabel: 'Farrah Go assigned',
+          humanOnly: true,
+        },
+        {
+          id: 'ho-one-5',
+          patientName: 'Patricia Johnson',
+          summary: 'Territory match → Cole Winfield',
+          detail: 'Suggested CM cwinfield@westcoastwound.com.',
+          owner: 'Intake → Cole Winfield',
+          facilityOrContext: 'Community Care Services',
+          status: 'open',
+          minutesReturned: 8,
+          actionLabel: 'Assign case manager',
+          resultLabel: 'Cole Winfield assigned',
+          humanOnly: true,
+        },
+        {
+          id: 'ho-one-6',
+          patientName: 'Linda Nguyen',
+          summary: 'Burbank ZIP → Charlie Catado',
+          detail: 'Suggested CM ccatado@westcoastwound.com.',
+          owner: 'Intake → Charlie Catado',
+          facilityOrContext: 'Harborview Assisted Living',
+          status: 'open',
+          minutesReturned: 8,
+          actionLabel: 'Assign case manager',
+          resultLabel: 'Charlie Catado assigned',
+          humanOnly: true,
+        },
+        {
+          id: 'ho-one-7',
+          patientName: 'Robert Williams',
+          summary: 'Riverside ZIP → Braxton Rickert',
+          detail: 'Suggested CM brickert@westcoastwound.com.',
+          owner: 'Intake → Braxton Rickert',
+          facilityOrContext: 'CareBridge Home Health',
+          status: 'open',
+          minutesReturned: 8,
+          actionLabel: 'Assign case manager',
+          resultLabel: 'Braxton Rickert assigned',
+          humanOnly: true,
+        },
+      ],
+    },
+    {
+      id: 'journey-provider',
+      tab: 'provider',
+      title: 'Journey continuity · provider confirm',
+      branchLabel: 'Provider suggested',
+      bucket: 'ready',
+      description: 'Provider suggestions for patients mid-journey.',
+      rule: 'Suggest provider; CM confirms before contact.',
+      humanControlNote: 'Provider selection does not imply notification was sent.',
+      actionVerb: 'Confirm',
+      cases: [
+        {
+          id: 'sc-one-4',
+          patientName: 'James Carter',
+          summary: 'Coastal LA provider suggested',
+          detail: 'One approved provider on Carla route list.',
+          owner: 'Carla Bustillo',
+          facilityOrContext: 'Oak Valley Hospital',
+          status: 'open',
+          minutesReturned: 10,
+          actionLabel: 'Confirm provider',
+          resultLabel: 'Provider confirmed',
+          humanOnly: true,
+        },
+        {
+          id: 'sc-one-5',
+          patientName: 'Linda Nguyen',
+          summary: 'Burbank-route provider suggested',
+          detail: 'One approved provider near Harborview.',
+          owner: 'Charlie Catado',
+          facilityOrContext: 'Harborview Assisted Living',
+          status: 'open',
+          minutesReturned: 10,
+          actionLabel: 'Confirm provider',
+          resultLabel: 'Provider confirmed',
+          humanOnly: true,
+        },
+        {
+          id: 'sc-one-6',
+          patientName: 'Robert Williams',
+          summary: 'Inland Empire provider suggested',
+          detail: 'One approved provider on Braxton route list.',
+          owner: 'Braxton Rickert',
+          facilityOrContext: 'CareBridge Home Health',
+          status: 'open',
+          minutesReturned: 10,
+          actionLabel: 'Confirm provider',
+          resultLabel: 'Provider confirmed',
+          humanOnly: true,
+        },
+      ],
+    },
+    {
+      id: 'journey-scheduling',
+      tab: 'scheduling',
+      title: 'Journey continuity · windows',
+      branchLabel: 'Windows ready',
+      bucket: 'ready',
+      description: 'Schedule windows for patients mid-journey.',
+      rule: 'Show options; CM and provider retain acceptance.',
+      humanControlNote: '24–48 hours is a target, not a guarantee.',
+      actionVerb: 'Confirm',
+      cases: [
+        {
+          id: 'sc-win-4',
+          patientName: 'Linda Nguyen',
+          summary: 'Two Belmont windows',
+          detail: 'Thu 1:15 · Fri 9:40 along Charlie route.',
+          owner: 'Charlie Catado',
+          facilityOrContext: 'Harborview Assisted Living',
+          status: 'open',
+          minutesReturned: 13,
+          actionLabel: 'Present schedule options',
+          resultLabel: 'Options sent to CM',
+          humanOnly: true,
+        },
+        {
+          id: 'sc-win-5',
+          patientName: 'Robert Williams',
+          summary: 'Three Riverside windows',
+          detail: 'Mon 10:00 · Tue 2:20 · Wed 11:15 along Braxton route.',
+          owner: 'Braxton Rickert',
+          facilityOrContext: 'CareBridge Home Health',
+          status: 'open',
+          minutesReturned: 14,
+          actionLabel: 'Present schedule options',
+          resultLabel: 'Options sent to CM',
+          humanOnly: true,
+        },
+      ],
+    },
+    {
+      id: 'journey-eod',
+      tab: 'end-of-day',
+      title: 'Journey continuity · fully scheduled',
+      branchLabel: 'Clear',
+      bucket: 'ready',
+      description: 'End-of-day clears for patients mid-journey.',
+      rule: 'Advance patient into the weekly schedule.',
+      humanControlNote: 'Automation only verifies field agreement.',
+      actionVerb: 'Verify',
+      cases: [
+        {
+          id: 'eod-ok-3',
+          patientName: 'James Carter',
+          summary: 'Friday appointment complete',
+          detail: 'All three scheduling fields agree.',
+          owner: 'Carla Bustillo',
+          facilityOrContext: 'Oak Valley Hospital',
+          status: 'open',
+          minutesReturned: 4,
+          actionLabel: 'Verify scheduled',
+          resultLabel: 'Entered weekly schedule',
+          humanOnly: false,
+        },
+        {
+          id: 'eod-ok-4',
+          patientName: 'Thomas Reed',
+          summary: 'Wednesday appointment complete',
+          detail: 'All three scheduling fields agree.',
+          owner: 'Charlie Catado',
+          facilityOrContext: 'Lakeside Vascular Clinic',
+          status: 'open',
+          minutesReturned: 4,
+          actionLabel: 'Verify scheduled',
+          resultLabel: 'Entered weekly schedule',
+          humanOnly: false,
+        },
+        {
+          id: 'eod-ok-5',
+          patientName: 'Helen Park',
+          summary: 'Tuesday appointment complete',
+          detail: 'All three scheduling fields agree.',
+          owner: 'Farrah Go',
+          facilityOrContext: 'Anaheim Healthcare Center',
+          status: 'open',
+          minutesReturned: 4,
+          actionLabel: 'Verify scheduled',
+          resultLabel: 'Entered weekly schedule',
+          humanOnly: false,
+        },
+        {
+          id: 'eod-ok-6',
+          patientName: 'Robert Williams',
+          summary: 'Monday appointment complete',
+          detail: 'All three scheduling fields agree.',
+          owner: 'Braxton Rickert',
+          facilityOrContext: 'CareBridge Home Health',
+          status: 'open',
+          minutesReturned: 4,
+          actionLabel: 'Verify scheduled',
+          resultLabel: 'Entered weekly schedule',
+          humanOnly: false,
+        },
+      ],
+    },
+    {
+      id: 'journey-weekly',
+      tab: 'weekly',
+      title: 'Journey continuity · weekly cycle',
+      branchLabel: 'Continue cycle',
+      bucket: 'ready',
+      description: 'Weekly outcomes for patients mid-journey.',
+      rule: 'Keep monitoring recorded visit statuses.',
+      humanControlNote: 'No clinical inference beyond recorded statuses.',
+      actionVerb: 'Verify',
+      cases: [
+        {
+          id: 'wk-cont-3',
+          patientName: 'Linda Nguyen',
+          summary: 'Remains on weekly schedule',
+          detail: 'Seen prior week · continues active weekly loop.',
+          owner: 'Charlie Catado',
+          facilityOrContext: 'Harborview Assisted Living',
+          status: 'open',
+          minutesReturned: 3,
+          actionLabel: 'Continue weekly cycle',
+          resultLabel: 'Next visit queued',
+          humanOnly: false,
+        },
+        {
+          id: 'wk-journey-pad',
+          patientName: 'Dorothy Lane',
+          summary: 'Stable monitoring placeholder',
+          detail: 'Keeps journey continuity queue at two examples.',
+          owner: 'Cole Winfield',
+          facilityOrContext: 'Community Care Services',
+          status: 'open',
+          minutesReturned: 3,
+          actionLabel: 'Continue weekly cycle',
+          resultLabel: 'Next visit queued',
+          humanOnly: false,
+        },
+      ],
+    },
+  ]
+}
+
+const GENERATED_JOURNEY_STAGE_COPY: Record<
+  FlowOpsPageId,
+  {
+    title: string
+    branchLabel: string
+    description: string
+    rule: string
+    actionVerb: WorkflowScenario['actionVerb']
+    resultLabel: string
+    minutesReturned: number
+    humanOnly: boolean
+  }
+> = {
+  intake: {
+    title: 'Journey intake follow-through',
+    branchLabel: 'Intake ready',
+    description: 'Demo patients entering the same guarded intake path.',
+    rule: 'Verify the referral before handoff.',
+    actionVerb: 'Confirm',
+    resultLabel: 'Referral cleared for handoff',
+    minutesReturned: 24,
+    humanOnly: true,
+  },
+  handoff: {
+    title: 'Journey handoff follow-through',
+    branchLabel: 'Handoff ready',
+    description: 'Acknowledgement and destination work prepared for review.',
+    rule: 'Verify destinations before assignment.',
+    actionVerb: 'Verify',
+    resultLabel: 'Handoff verified',
+    minutesReturned: 10,
+    humanOnly: false,
+  },
+  assignment: {
+    title: 'Journey assignment follow-through',
+    branchLabel: 'Assignment ready',
+    description: 'Territory-based case-manager suggestion prepared.',
+    rule: 'Confirm the suggested case manager.',
+    actionVerb: 'Assign',
+    resultLabel: 'Case manager assigned',
+    minutesReturned: 8,
+    humanOnly: true,
+  },
+  provider: {
+    title: 'Journey provider follow-through',
+    branchLabel: 'Provider ready',
+    description: 'A route-compatible provider suggestion is ready.',
+    rule: 'Confirm provider before contact.',
+    actionVerb: 'Confirm',
+    resultLabel: 'Provider confirmed',
+    minutesReturned: 10,
+    humanOnly: true,
+  },
+  scheduling: {
+    title: 'Journey scheduling follow-through',
+    branchLabel: 'Windows ready',
+    description: 'Route-aware appointment windows are ready.',
+    rule: 'Present options and retain human acceptance.',
+    actionVerb: 'Confirm',
+    resultLabel: 'Schedule options confirmed',
+    minutesReturned: 12,
+    humanOnly: true,
+  },
+  'end-of-day': {
+    title: 'Journey end-of-day follow-through',
+    branchLabel: 'EOD ready',
+    description: 'Scheduling fields are ready for end-of-day verification.',
+    rule: 'Verify agreement before weekly entry.',
+    actionVerb: 'Verify',
+    resultLabel: 'Entered weekly schedule',
+    minutesReturned: 5,
+    humanOnly: false,
+  },
+  weekly: {
+    title: 'Journey weekly follow-through',
+    branchLabel: 'Weekly ready',
+    description: 'Recorded weekly outcome is ready to synchronize.',
+    rule: 'Process the recorded visit outcome.',
+    actionVerb: 'Record',
+    resultLabel: 'Weekly outcome synchronized',
+    minutesReturned: 7,
+    humanOnly: false,
+  },
+}
+
+function balancedChunks<T>(items: T[], maxSize = 4): T[][] {
+  const chunks: T[][] = []
+  for (let index = 0; index < items.length; index += maxSize) {
+    chunks.push(items.slice(index, index + maxSize))
+  }
+  const last = chunks[chunks.length - 1]
+  const previous = chunks[chunks.length - 2]
+  if (last?.length === 1 && previous && previous.length > 2) {
+    last.unshift(previous.pop() as T)
+  }
+  return chunks
+}
+
+/**
+ * Adds the missing stages for snapshot patients. Their current step remains a
+ * real scenario case; generated steps only provide a complete path before/after it.
+ */
+function addGeneratedJourneyCases(scenarios: WorkflowScenario[]): WorkflowScenario[] {
+  const existingIds = new Set(scenarios.flatMap((scenario) => scenario.cases.map((item) => item.id)))
+  const byStage = new Map<FlowOpsPageId, ScenarioCase[]>()
+
+  for (const patient of JOURNEY_PATIENTS) {
+    for (const journeyStep of patient.steps) {
+      if (existingIds.has(journeyStep.caseId)) continue
+      const copy = GENERATED_JOURNEY_STAGE_COPY[journeyStep.stage]
+      const cases = byStage.get(journeyStep.stage) ?? []
+      cases.push({
+        id: journeyStep.caseId,
+        patientName: patient.patientName,
+        summary: journeyStep.shortLabel,
+        detail: `${patient.scenarioLabel} · ${patient.context}`,
+        owner: 'Journey follow-through',
+        facilityOrContext: patient.context,
+        status: 'open',
+        minutesReturned: copy.minutesReturned,
+        actionLabel: journeyStep.shortLabel,
+        resultLabel: copy.resultLabel,
+        humanOnly: copy.humanOnly,
+      })
+      byStage.set(journeyStep.stage, cases)
+    }
+  }
+
+  const generated: WorkflowScenario[] = []
+  for (const [stage, cases] of byStage) {
+    const copy = GENERATED_JOURNEY_STAGE_COPY[stage]
+    balancedChunks(cases).forEach((chunk, index) => {
+      generated.push({
+        id: `journey-generated-${stage}-${index + 1}`,
+        tab: stage,
+        title: copy.title,
+        branchLabel: copy.branchLabel,
+        bucket: 'ready',
+        description: copy.description,
+        rule: copy.rule,
+        humanControlNote: 'Clinical and final operational decisions remain human-controlled.',
+        actionVerb: copy.actionVerb,
+        cases: chunk,
+      })
+    })
+  }
+
+  return [...scenarios, ...generated]
 }
 
 export function scenariosForTab(
@@ -1588,7 +2115,7 @@ export function countScenarioBuckets(scenarios: WorkflowScenario[]) {
     counts[scenario.bucket] += 1
     for (const item of scenario.cases) {
       counts.totalCases += 1
-      if (item.status !== 'completed' && item.status !== 'escalated') counts.openCases += 1
+      if (scenarioCaseIsOpen(item.status)) counts.openCases += 1
     }
   }
   return counts

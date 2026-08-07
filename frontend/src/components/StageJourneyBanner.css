@@ -1,0 +1,32 @@
+.stage-journey-banner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 0.85rem;
+  border: 1px solid rgba(14, 124, 134, 0.28);
+  background:
+    linear-gradient(135deg, rgba(14, 124, 134, 0.08), transparent 50%),
+    #fff;
+}
+
+.stage-journey-banner__eyebrow {
+  margin: 0 0 0.15rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--teal);
+}
+
+.stage-journey-banner h3 {
+  margin: 0 0 0.15rem;
+  font-size: 1.05rem;
+}
+
+.stage-journey-banner .muted {
+  margin: 0;
+  font-size: 0.88rem;
+}
