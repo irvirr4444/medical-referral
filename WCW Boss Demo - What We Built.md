@@ -20,21 +20,23 @@ Automation prepares information and monitors deadlines. **WCW employees retain p
 
 | Tab | What it shows |
 | --- | --- |
-| **Overview** | Company-wide impact (today / week / month), command summary, live activity, WCW network, annual capacity projection |
-| **1. Referral intake** | Inbox processing, live work queues, exceptions, referral workspace + PDFs |
-| **2. Handoff** | Acknowledgements, Monday.com / DRK destination prep |
+| **Overview** | Company-wide impact, patients requiring attention, live activity, WCW network, annual capacity projection, and the live patient census |
+| **1. Referral intake** | Action worklist + automation impact for inbox / extraction / confirm |
+| **2. Handoff** | Acknowledgements and Monday.com / DRK destination prep |
 | **3. Assignment** | Territory → case-manager matching (one / none / multi) |
 | **4. Provider selection** | Company-provider suggestions and coverage exceptions |
 | **5. Scheduling** | Route windows, one-hour response monitoring |
 | **6. End-of-day check** | Unscheduled / inconsistent field exception list for management |
 | **7. Weekly visit cycle** | Seen / not-seen, holds, healed/expired, discharge approvals |
 
-Every stage tab also has:
+Every stage tab (1–7) is split into two views:
 
-- **Stage impact board** — time returned by *this* part of the workflow (Today / This week / This month)
-- **Before → With automation** comparison for that stage
-- **Live work queue** — interactive cases the boss can click through
-- **Stage-specific live activity**
+| Sub-tab | Purpose |
+| --- | --- |
+| **Action** | Patients who need something *now* on this stage — one card per patient, primary action first |
+| **Automation impact** | Time returned by this stage (Today / This week / This month), before→after comparison, and stage activity |
+
+Clicking a stage Action resolves or escalates that patient’s open item, returns minutes, posts to the activity feed, and — if they are on a live patient path — **advances them to the next stage tab automatically**.
 
 ---
 
@@ -47,8 +49,12 @@ Shows time returned plus volume (patients, pages, destinations prepared, duplica
 
 **Important for the pitch:** stage impact boards **add up to Overview**. Intake + Handoff + Assignment + Provider + Scheduling + End-of-day + Weekly = Overview totals for the same period.
 
-### Live workflow command summary
-Cross-stage queue counts: queues, live cases, open actions, approval / blocked queues.
+### Patients requiring attention
+Replaces the old opaque “queues / live cases / open actions” summary.
+
+- **One number that matters:** unique patients who need action (each patient counted once under their highest-priority open item)
+- Split into **Ready to process · Needs follow-up · Blocked or awaiting approval**
+- **Where the work is now** — bar chart across all seven stages; **click any stage to jump straight into that stage’s Action view** (scrolls to the top)
 
 ### Live activity
 Cross-stage operational events from today’s work.
@@ -68,60 +74,63 @@ Adjustable referrals/day, manual minutes, working days, etc.
 - **Assisted minutes locked at 8** (focused review — not editable)
 - “Full-time staff capacity returned” = time freed for the team (not a headcount cut)
 
+### Live patient census (bottom of Overview)
+Interactive spine for walking a real patient through Intake → Weekly.
+
+- **24 patients** seeded across the seven stages with **distinct live queue paths** (ready confirm, missing fields, unreachable partner, territory conflict, no provider coverage, one-hour no-reply, end-of-day exceptions, third not-seen, healed/expired, holds, and more)
+- Progress is real: Intake patients show **0 of 7**, mid-path patients show **2–5 of 7**, weekly patients show **6 of 7**
+- **Choose patient** opens a searchable modal grouped by current stage
+- Advance resolves the current open step, returns minutes, and jumps into the matching stage Action queue with that patient highlighted
+- Click any earlier/later spine step to jump there without resolving
+- PDF workspace does **not** auto-open when you land on Intake — only when staff click **Review Referral**
+
 ---
 
-## Stage pages — live work queues
+## Stage Action pages
 
-Each stage has a **Live work queue** (not labeled “scenarios”).
+Designed for a boss demo, not a dense branch catalog:
 
-- Filter: All / Ready / Attention / Blocked / Approval (only filters that exist on that stage)
-- Sub-tabs: one documented branch at a time
-- Cases: patient, rule, owner, minutes returned, human-controlled where needed
-- Clicking an action completes or escalates the case, returns minutes, and posts to that stage’s activity feed
+- **Action / Automation impact** tabs so the eye is not split between “what needs doing” and “what time came back”
+- Action view: compact **patient worklist** (one card per patient, most urgent open item first)
+- Filters: All / Ready / Attention / Blocked / Approval (only filters that exist on that stage)
+- Automation impact view: stage impact board + before→after comparison + live activity
+- Intake Action no longer shows the redundant “Process referral inbox / Reset day” strip — the worklist *is* the action surface
+- Future steps on a patient’s path stay **upcoming** (hidden from Action counts) until the prior step is cleared
 
-### Coverage built so far (examples per branch)
+### Coverage leadership can walk
 
-| Stage | What leadership sees |
+| Stage | Example paths in the live census |
 | --- | --- |
-| **Intake** | New docs, field classification, complete vs needs info, unreachable partner, duplicates, private review draft |
-| **Handoff** | Not eligible, acknowledgement, destination writes |
-| **Assignment** | One territory match, no match, multiple matches |
-| **Provider** | Clear match, ambiguous, no coverage, selected but not contacted |
-| **Scheduling** | Route windows, confirm within hour, no confirm |
-| **End-of-day** | Consistent fields, blank/conflict, exception list, resolvable vs escalate |
-| **Weekly** | Visit outcomes, missed visits, healed/expired, holds, return-ready, discharge approval |
-
-**Active exceptions & approvals** sit on each stage (intake and others), scoped to that stage — not dumped on Overview.
-
----
-
-## Intake extras (tab 1)
-
-- **Process referral inbox** / **Reset day**
-- Hybrid non-zero start: board already shows mid-morning work; Process inbox *adds* to totals
-- Workflow spine, today’s impact strip, referral inbox queue
-- Referral workspace with extracted fields + source PDF review (sample PDFs)
+| **Intake** | New packet, ready to confirm, missing fields, needs information, unreachable partner, duplicates, private review draft |
+| **Handoff** | Acknowledgement prepared, destination write outcomes, not eligible for handoff |
+| **Assignment** | One territory match, no match, multiple matches / facility vs residence conflict |
+| **Provider** | Clear match, ambiguous match, no coverage, selected but not contacted |
+| **Scheduling** | Route windows, confirm within hour, no confirm within one hour |
+| **End-of-day** | Already notified, uncovered unscheduled, resolvable by CM/lead, management escalation |
+| **Weekly** | Seen, early not-seen, third not-seen, healed QA, expired discharge, hold remain |
 
 ---
 
 ## What we intentionally avoided
 
 - Demo / simulation / “illustrative only” chrome that breaks executive trust  
+- The word **“scenario”** anywhere in the UI copy (queues, actions, and care paths instead)  
 - Claiming the bot makes clinical or discharge decisions  
 - Presenting capacity as headcount reduction  
 - One combined “Handoff & assignment” or “Provider & scheduling” tab — those are separate so each automation’s time saved is visible  
+- Auto-opening the PDF modal just because Intake was selected  
 
 ---
 
 ## How to walk the boss through it (suggested 8–10 min)
 
-1. **Overview** — Today impact → This week → This month. Point at network cards. Open capacity projection; note assisted minutes fixed at 8 and “staff capacity returned.”
-2. **Intake** — Process inbox once. Open a live queue branch. Resolve one ready case and one exception. Show PDF vs extracted fields.
-3. **Assignment** — One match vs no match vs multi match. Emphasize human confirm.
-4. **Provider + Scheduling** — Suggestion vs send/confirm remains human-controlled; one-hour timer story.
-5. **End-of-day** — One exception list instead of auditing every board.
+1. **Overview** — Today impact → This week → This month. Point at **Patients requiring attention** (unique patients, not opaque queue math). Click a stage bar to jump into Action.
+2. **Live patient census** — Choose patient → pick someone mid-path (e.g. Assignment or Weekly). Show **X of 7 complete**. Advance once and land on the next Action tab.
+3. **Intake Action** — Resolve a ready patient; watch them move to Handoff. Open PDF only via Review Referral if you want the extraction story.
+4. **Assignment / Provider / Scheduling** — One match vs conflict vs no coverage; one-hour timer story. Emphasize human confirm.
+5. **End-of-day** — Exception list and management escalations in Action; impact on Automation impact.
 6. **Weekly** — Missed visits / holds / discharge *review* (approval stays human).
-7. Back to **Overview** — stage times still roll up; annual capacity if they want the yearly number.
+7. Back to **Overview** — stage times still roll up; patient counts update as you clear work; annual capacity if they want the yearly number.
 
 ---
 
@@ -133,9 +142,10 @@ Each stage has a **Live work queue** (not labeled “scenarios”).
 | Workflow rules mapped from Flow + pipeline docs | Sample patients and PDFs |
 | Capacity math from assumptions (36 → 8 min model) | Historical week/month priors for the impact board |
 | Human-control language everywhere decisions matter | Interactive “resolve” actions are local demo state |
+| 24-patient census mapped onto real queue branches | Generated follow-through steps fill the rest of each path |
 
 ---
 
 ## Bottom line for leadership
 
-This console shows **where time comes back**, **which cases still need people**, and **that automation prepares work while WCW keeps control** — across intake through the weekly visit cycle, with impact that rolls from each stage up to the company Overview.
+This console shows **which patients need people right now**, **where those patients sit in the path**, and **that automation prepares work while WCW keeps control** — across intake through the weekly visit cycle, with impact that rolls from each stage up to the company Overview.
