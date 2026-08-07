@@ -17,8 +17,15 @@ def dispatch_pending_notifications(
     store: WorkflowStore,
     send_email: SendEmail,
     limit: int = 100,
+    exception_key_prefix: str | None = None,
 ) -> dict[str, object]:
     pending = store.pending_notifications(limit=limit)
+    if exception_key_prefix is not None:
+        pending = [
+            notification
+            for notification in pending
+            if notification.exception_key.startswith(exception_key_prefix)
+        ]
     by_recipient: dict[str, list[NotificationRecord]] = defaultdict(list)
     for notification in pending:
         by_recipient[notification.recipient].append(notification)
@@ -27,7 +34,13 @@ def dispatch_pending_notifications(
     failed: list[dict[str, str]] = []
     for recipient, records in by_recipient.items():
         keys = [record.notification_key for record in records]
-        subject = f"[WCW WORKFLOW] {len(records)} exception{'s' if len(records) != 1 else ''} require review"
+        prefix = "WCW HEALTH" if all(
+            record.exception_key.startswith("health:") for record in records
+        ) else "WCW WORKFLOW"
+        subject = (
+            f"[{prefix}] {len(records)} exception"
+            f"{'s' if len(records) != 1 else ''} require review"
+        )
         body = _digest_body(records)
         try:
             send_email(recipient, subject, body)

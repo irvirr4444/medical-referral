@@ -7,6 +7,7 @@ import sqlite3
 from pathlib import Path
 
 from referral_pipeline.monitoring.models import (
+    ComponentHealth,
     NotificationRecord,
     OperationalSnapshot,
     PatientLink,
@@ -188,6 +189,13 @@ class SQLiteWorkflowStore:
                 ),
             )
 
+    def list_patient_links(self) -> list[PatientLink]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT * FROM wcw_patient_links ORDER BY updated_at, entity_id"
+            ).fetchall()
+        return [PatientLink.model_validate(dict(row)) for row in rows]
+
     def find_entity_id(
         self, *, monday_item_id: str | None = None, drk_patient_id: str | None = None
     ) -> str | None:
@@ -236,6 +244,56 @@ class SQLiteWorkflowStore:
                 (source, cursor, utc_now().isoformat()),
             )
 
+    def read_cursor(self, source: str) -> str | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT cursor FROM wcw_sync_cursors WHERE source = ?",
+                (source,),
+            ).fetchone()
+        return None if row is None or row[0] is None else str(row[0])
+
+    def component_health(self, component: str) -> ComponentHealth | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM wcw_component_health WHERE component = ?",
+                (component,),
+            ).fetchone()
+        return None if row is None else ComponentHealth.model_validate(dict(row))
+
+    def list_component_health(self) -> list[ComponentHealth]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT * FROM wcw_component_health ORDER BY component"
+            ).fetchall()
+        return [ComponentHealth.model_validate(dict(row)) for row in rows]
+
+    def upsert_component_health(self, health: ComponentHealth) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO wcw_component_health
+                    (component, status, last_attempt_at, last_success_at,
+                     consecutive_failures, duration_seconds, error_code)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(component) DO UPDATE SET
+                    status = excluded.status,
+                    last_attempt_at = excluded.last_attempt_at,
+                    last_success_at = excluded.last_success_at,
+                    consecutive_failures = excluded.consecutive_failures,
+                    duration_seconds = excluded.duration_seconds,
+                    error_code = excluded.error_code
+                """,
+                (
+                    health.component,
+                    health.status,
+                    health.last_attempt_at.isoformat(),
+                    None if health.last_success_at is None else health.last_success_at.isoformat(),
+                    health.consecutive_failures,
+                    health.duration_seconds,
+                    health.error_code,
+                ),
+            )
+
     def status_summary(self) -> dict[str, object]:
         with self._connect() as connection:
             counts = {
@@ -244,6 +302,9 @@ class SQLiteWorkflowStore:
                 "open_exceptions": connection.execute("SELECT COUNT(*) FROM wcw_workflow_exceptions WHERE status = 'open'").fetchone()[0],
                 "pending_notifications": connection.execute("SELECT COUNT(*) FROM wcw_notification_outbox WHERE status IN ('pending', 'failed')").fetchone()[0],
                 "patient_links": connection.execute("SELECT COUNT(*) FROM wcw_patient_links").fetchone()[0],
+                "unhealthy_components": connection.execute(
+                    "SELECT COUNT(*) FROM wcw_component_health WHERE status != 'healthy'"
+                ).fetchone()[0],
             }
         return {"backend": "sqlite", **counts}
 
@@ -338,5 +399,14 @@ CREATE TABLE IF NOT EXISTS wcw_sync_cursors (
     source TEXT PRIMARY KEY,
     cursor TEXT,
     updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS wcw_component_health (
+    component TEXT PRIMARY KEY,
+    status TEXT NOT NULL,
+    last_attempt_at TEXT NOT NULL,
+    last_success_at TEXT,
+    consecutive_failures INTEGER NOT NULL DEFAULT 0,
+    duration_seconds REAL,
+    error_code TEXT
 );
 """

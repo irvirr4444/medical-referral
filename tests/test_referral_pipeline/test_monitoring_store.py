@@ -7,6 +7,7 @@ from referral_pipeline.monitoring.models import (
     OperationalSnapshot,
     WorkflowEvent,
     WorkflowException,
+    PatientLink,
 )
 from referral_pipeline.monitoring.sqlite_store import SQLiteWorkflowStore
 
@@ -59,6 +60,7 @@ def test_sqlite_store_is_idempotent_for_snapshots_events_and_notifications(tmp_p
     store.mark_notifications_sent(["notification-1"])
     assert store.pending_notifications() == []
     assert store.status_summary()["snapshots"] == 1
+    assert store.status_summary()["unhealthy_components"] == 0
 
 
 def test_resolving_exception_allows_a_deliberate_reopen(tmp_path) -> None:
@@ -77,3 +79,20 @@ def test_resolving_exception_allows_a_deliberate_reopen(tmp_path) -> None:
         resolved_at=NOW.isoformat(),
     ) == 1
     assert store.upsert_exception(exception) is True
+
+
+def test_store_lists_patient_links_and_round_trip_cursor(tmp_path) -> None:
+    store = SQLiteWorkflowStore(tmp_path / "workflow.sqlite")
+    store.upsert_patient_link(
+        PatientLink(
+            entity_id="ref-1",
+            monday_item_id="monday-1",
+            drk_patient_id="123",
+            patient_label="Synthetic Patient",
+            updated_at=NOW,
+        )
+    )
+    store.record_cursor("drk_live_rotation", "123")
+
+    assert store.list_patient_links()[0].drk_patient_id == "123"
+    assert store.read_cursor("drk_live_rotation") == "123"

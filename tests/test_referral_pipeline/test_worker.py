@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from referral_pipeline import worker
+from referral_pipeline.monitoring.sqlite_store import SQLiteWorkflowStore
 
 
 def test_worker_once_runs_poll_retries_and_safe_approval_poll(tmp_path, monkeypatch) -> None:
@@ -38,6 +39,12 @@ def test_worker_once_runs_poll_retries_and_safe_approval_poll(tmp_path, monkeypa
     assert calls[1][calls[1].index("--monday-mode") + 1] == "live-readonly"
     assert str(tmp_path / "data" / "state.sqlite") in calls[0]
     assert str(tmp_path / "data" / "state.sqlite") in calls[1]
+    health = SQLiteWorkflowStore(tmp_path / "data" / "workflow-monitor.sqlite")
+    assert {item.component for item in health.list_component_health()} == {
+        "poll",
+        "retries",
+        "approvals",
+    }
 
 
 def test_worker_cycle_survives_runner_exceptions(tmp_path) -> None:
@@ -96,6 +103,9 @@ def test_worker_runs_optional_monitor_cycle_without_enabling_alerts(tmp_path) ->
         monitor_enabled=True,
         monitor_interval_seconds=300,
         monitor_send_alerts=False,
+        live_drk=True,
+        drk_max_patients=4,
+        drk_live_profile_dir=tmp_path / "drk-profile",
         monitor_cycle=fake_monitor_cycle,
         sleep_fn=lambda _seconds: None,
         clock=lambda: 0.0,
@@ -103,3 +113,5 @@ def test_worker_runs_optional_monitor_cycle_without_enabling_alerts(tmp_path) ->
 
     assert results == [{"kind": "monitor", "status": "ok"}]
     assert seen[0]["send_alerts"] is False
+    assert seen[0]["live_drk"] is True
+    assert seen[0]["drk_max_patients"] == 4

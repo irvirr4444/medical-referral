@@ -32,6 +32,10 @@ services:
         value: "3600"
       - key: INTAKE_MONITOR_SEND_ALERTS
         value: "false"
+      - key: INTAKE_LIVE_DRK_ENABLED
+        value: "false"
+      - key: INTAKE_DRK_MAX_PATIENTS_PER_CYCLE
+        value: "10"
       - key: PYTHONUNBUFFERED
         value: "1"
       - key: ANTHROPIC_API_KEY

@@ -14,6 +14,7 @@ clinical outcome, or write status changes back to either system.
 - `wcw_notification_outbox`: deduplicated alerts waiting to be sent.
 - `wcw_workflow_counters`: consecutive explicit `Not Seen` counts.
 - `wcw_sync_cursors`: the last successful source observation time.
+- `wcw_component_health`: PHI-free latest worker-cycle health and failure count.
 
 Steps 1-3 also write lifecycle events when `WORKFLOW_DATABASE_BACKEND` is set:
 preview ready/needs attention, review requested, review confirmed, Monday item
@@ -22,8 +23,9 @@ or repeat the primary intake operation.
 
 ## Supabase setup
 
-1. Apply `supabase/migrations/202608060001_create_workflow_monitoring.sql` through
-   the Supabase migration workflow or SQL editor.
+1. Apply `supabase/migrations/202608060001_create_workflow_monitoring.sql` and
+   `supabase/migrations/202608070001_create_component_health.sql` through the
+   Supabase migration workflow or SQL editor.
 2. Put `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in local/server environment
    configuration, never in source control or browser code.
 3. Set `WORKFLOW_DATABASE_BACKEND=supabase`.
@@ -74,7 +76,7 @@ Repeated identical outcomes count as separate visits only when DRK supplies a ne
 `visit_event_id`, `visit_id`, `appointment_id`, or `visit_date`; polling the same
 status repeatedly never inflates the counter.
 
-## Optional DRK snapshot
+## DRK read sources
 
 Until a stable read-only DRK adapter is available, the monitor accepts normalized
 JSON. It can be a list or `{ "patients": [...] }`:
@@ -103,6 +105,38 @@ Run both sources together:
 python run_pipeline.py monitor --live-monday --drk-snapshot path\to\drk-status.json --database-backend supabase
 ```
 
+The monitor can also normalize card directories produced by the existing
+Selenium `drk_emr.read_patient` command:
+
+```powershell
+python run_pipeline.py monitor --live-monday --drk-capture-dir output\drk-browser-profile --database-backend supabase
+```
+
+The adapter reads exact keys configured in
+`src/referral_pipeline/monitoring/drk_capture_profile.example.json`. It records
+which card and JSON path supplied every normalized value and lists unavailable
+monitoring fields. It never derives a patient ID from a folder name or treats a
+generic DRK status as a visit outcome. Extend the profile only after observing
+and verifying the corresponding DRK field. Selenium capture remains a separate
+authorized read step in this replay mode.
+
+For continuous operation, a separate production reader lives under
+`src/drk_emr/live_reader`. It does not alter or import the legacy debugging CLI.
+It logs in once per bounded batch, navigates directly by verified numeric DRK
+patient ID, captures only supported same-host JSON responses, normalizes them in
+memory, and closes the browser at the end of the cycle. Raw card files are not
+written by this path.
+
+```powershell
+python run_pipeline.py monitor --live-monday --live-drk --drk-max-patients 10 --database-backend supabase
+```
+
+Only database links containing both a Monday item ID and a DRK patient ID are
+eligible. Inactive Monday groups/statuses are excluded. A durable round-robin
+cursor bounds each cycle and prevents the first patients from being reread
+forever. If there are no linked eligible patients, the cycle succeeds with zero
+attempts rather than searching DRK by name.
+
 ## Continuous operation
 
 Monitoring is disabled by default in the worker. Enable it deliberately:
@@ -111,18 +145,47 @@ Monitoring is disabled by default in the worker. Enable it deliberately:
 INTAKE_MONITOR_ENABLED=true
 INTAKE_MONITOR_INTERVAL_SECONDS=3600
 INTAKE_MONITOR_SEND_ALERTS=false
+INTAKE_LIVE_DRK_ENABLED=false
+INTAKE_DRK_MAX_PATIENTS_PER_CYCLE=10
 ```
+
+Enable live DRK only on a single Chrome-capable worker after `EMR_URL`,
+`EMR_USERNAME`, and `EMR_PASSWORD` are configured. The current native Render
+runtime does not itself guarantee a Chrome installation; use a Chrome-capable
+container/VM or verify the runtime before changing the flag. The dedicated
+browser profile contains authenticated session data and must stay on restricted
+durable storage. Do not run multiple workers against the same profile directory.
+
+Live DRK reports independent `drk_reader` health. A patient-level failure does
+not discard successful snapshots from the same batch; repeated partial or total
+failures degrade health and eventually queue an operational alert.
 
 `tmp/monitoring/last-run.json` for manual runs, or the worker data root's
 `monitoring/last-run.json`, provides a small machine-readable status surface for a
 future read-only UI. The immediate operator view is `monitor-status` plus the
 exception and notification tables.
 
+Worker health is enabled by default and records `poll`, `retries`, `approvals`,
+and `monitor` cycle outcomes without raw exception text or patient data. A
+component is degraded after an initial failure and failed after three consecutive
+failures by default. Failure/recovery notifications use the existing outbox and
+remain unsent unless `INTAKE_HEALTH_SEND_ALERTS=true`.
+
+```powershell
+python run_pipeline.py health --database-backend supabase --stale-after-seconds 7200
+```
+
+The command returns a nonzero exit code when a component is failed or stale, so
+it can later back a deployment health check. A dead process cannot update its own
+heartbeat; an external scheduler or hosting monitor must call this command to
+detect that case.
+
 ## Remaining business gates
 
 - Confirm the exact WCW end-of-day cutoff and alert recipients.
 - Confirm the authoritative meaning/labels for scheduled, seen, hold, healed,
   expired, and discharged.
-- Provide a stable DRK status export/API contract and exact Monday-to-DRK linkage.
+- Verify DRK encounter/status field aliases and populate exact Monday-to-DRK patient links.
+- Provision and validate Chrome on the authorized continuous-reader host.
 - Confirm the routing schedule source. No provider-route assignment is inferred.
 - Complete vendor security and BAA review before storing production PHI in a cloud database.

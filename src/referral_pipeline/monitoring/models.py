@@ -100,5 +100,15 @@ class WorkflowCounter(StrictModel):
     updated_at: datetime
 
 
+class ComponentHealth(StrictModel):
+    component: str
+    status: Literal["healthy", "degraded", "failed"]
+    last_attempt_at: datetime
+    last_success_at: datetime | None = None
+    consecutive_failures: int = 0
+    duration_seconds: float | None = None
+    error_code: str | None = None
+
+
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)

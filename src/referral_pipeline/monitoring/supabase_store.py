@@ -8,6 +8,7 @@ from typing import Any
 import requests
 
 from referral_pipeline.monitoring.models import (
+    ComponentHealth,
     NotificationRecord,
     OperationalSnapshot,
     PatientLink,
@@ -190,6 +191,13 @@ class SupabaseWorkflowStore:
             on_conflict="entity_id",
         )
 
+    def list_patient_links(self) -> list[PatientLink]:
+        rows = self._all_rows(
+            "wcw_patient_links",
+            params={"select": "*", "order": "updated_at.asc,entity_id.asc"},
+        )
+        return [PatientLink.model_validate(row) for row in rows]
+
     def find_entity_id(
         self, *, monday_item_id: str | None = None, drk_patient_id: str | None = None
     ) -> str | None:
@@ -239,6 +247,37 @@ class SupabaseWorkflowStore:
             on_conflict="source",
         )
 
+    def read_cursor(self, source: str) -> str | None:
+        rows = self._request(
+            "GET",
+            "wcw_sync_cursors",
+            params={"select": "cursor", "source": f"eq.{source}", "limit": "1"},
+        )
+        return None if not rows or rows[0].get("cursor") is None else str(rows[0]["cursor"])
+
+    def component_health(self, component: str) -> ComponentHealth | None:
+        rows = self._request(
+            "GET",
+            "wcw_component_health",
+            params={"select": "*", "component": f"eq.{component}", "limit": "1"},
+        )
+        return None if not rows else ComponentHealth.model_validate(rows[0])
+
+    def list_component_health(self) -> list[ComponentHealth]:
+        rows = self._request(
+            "GET",
+            "wcw_component_health",
+            params={"select": "*", "order": "component.asc"},
+        )
+        return [ComponentHealth.model_validate(row) for row in rows]
+
+    def upsert_component_health(self, health: ComponentHealth) -> None:
+        self._upsert(
+            "wcw_component_health",
+            health.model_dump(mode="json"),
+            on_conflict="component",
+        )
+
     def status_summary(self) -> dict[str, object]:
         return {
             "backend": "supabase",
@@ -249,6 +288,9 @@ class SupabaseWorkflowStore:
                 "wcw_notification_outbox", status="in.(pending,failed)"
             ),
             "patient_links": self._count("wcw_patient_links"),
+            "unhealthy_components": self._count(
+                "wcw_component_health", status="neq.healthy"
+            ),
         }
 
     def _upsert(self, table: str, row: dict[str, Any], *, on_conflict: str) -> None:
@@ -289,6 +331,28 @@ class SupabaseWorkflowStore:
             return int(content_range.rsplit("/", 1)[1])
         except (IndexError, ValueError):
             return len(response.json() or [])
+
+    def _all_rows(
+        self,
+        table: str,
+        *,
+        params: dict[str, str],
+        page_size: int = 1000,
+    ) -> list[dict[str, Any]]:
+        rows: list[dict[str, Any]] = []
+        offset = 0
+        while True:
+            response = self._request_raw(
+                "GET",
+                table,
+                params=params,
+                extra_headers={"Range": f"{offset}-{offset + page_size - 1}"},
+            )
+            page = response.json() or []
+            rows.extend(page)
+            if len(page) < page_size:
+                return rows
+            offset += page_size
 
     def _request(
         self,

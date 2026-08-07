@@ -574,7 +574,7 @@ def main(argv: list[str] | None = None) -> int:
             return _run_retries(args)
         if args.command == "failures":
             return _run_failures(args)
-        if args.command in {"monitor", "monitor-status"}:
+        if args.command in {"monitor", "monitor-status", "health"}:
             return run_monitoring_command(args)
         return _resend_review(args)
     except (IntakeCLIError, ValueError) as error:

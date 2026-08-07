@@ -55,3 +55,18 @@ def test_monitor_command_processes_snapshot_into_database_and_report(tmp_path, c
     assert report["exceptions_created"] == 1
     assert report["notifications"] == {"sent": 0, "mode": "outbox-only"}
     assert '"open_exceptions": 1' in capsys.readouterr().out
+
+
+def test_health_command_reports_empty_store_without_failure(tmp_path, capsys) -> None:
+    exit_code = intake.main(
+        [
+            "health",
+            "--database-backend",
+            "sqlite",
+            "--sqlite-path",
+            str(tmp_path / "workflow.sqlite"),
+        ]
+    )
+
+    assert exit_code == 0
+    assert '"overall_status": "no_data"' in capsys.readouterr().out

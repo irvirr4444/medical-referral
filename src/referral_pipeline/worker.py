@@ -14,6 +14,8 @@ from typing import Callable
 from Outlook.graph import OutlookGraphClient, OutlookGraphConfig
 from Outlook.review_mail import OutlookReviewMailbox
 from referral_pipeline.monitoring.config import DEFAULT_CONFIG_PATH
+from referral_pipeline.monitoring.drk_capture import DEFAULT_PROFILE_PATH
+from referral_pipeline.monitoring.health import WorkerHealthReporter, create_worker_health_reporter
 from referral_pipeline.monitoring.worker_cycle import run_monitor_cycle
 from referral_pipeline.review.workflow import ApprovalProcessor
 from referral_pipeline.runner import main as run_inbound_main
@@ -80,13 +82,56 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--monitor-database-backend", choices=("sqlite", "supabase"))
     parser.add_argument("--monitor-sqlite-path", type=Path)
+    parser.add_argument(
+        "--health",
+        action=argparse.BooleanOptionalAction,
+        default=_env_flag("INTAKE_HEALTH_ENABLED", default=True),
+        help="Persist PHI-free component health; enabled by default.",
+    )
+    parser.add_argument(
+        "--health-send-alerts",
+        action=argparse.BooleanOptionalAction,
+        default=_env_flag("INTAKE_HEALTH_SEND_ALERTS"),
+        help="Send queued health transition alerts; disabled by default.",
+    )
+    parser.add_argument(
+        "--health-failure-threshold",
+        type=int,
+        default=int(os.getenv("INTAKE_HEALTH_FAILURE_THRESHOLD", "3")),
+    )
     parser.add_argument("--drk-snapshot", type=Path, help="Optional normalized DRK read-only snapshot.")
+    parser.add_argument(
+        "--drk-capture-dir",
+        type=Path,
+        help="Optional DRK Selenium capture root to normalize during monitoring.",
+    )
+    parser.add_argument("--drk-capture-profile", type=Path, default=DEFAULT_PROFILE_PATH)
+    parser.add_argument(
+        "--live-drk",
+        action=argparse.BooleanOptionalAction,
+        default=_env_flag("INTAKE_LIVE_DRK_ENABLED"),
+        help="Continuously read bounded active-patient batches from DRK; disabled by default.",
+    )
+    parser.add_argument(
+        "--drk-max-patients",
+        type=int,
+        default=int(os.getenv("INTAKE_DRK_MAX_PATIENTS_PER_CYCLE", "10")),
+    )
+    parser.add_argument("--drk-live-profile-dir", type=Path)
     parser.add_argument("--once", action="store_true", help="Run each enabled cycle once, then exit.")
     parser.add_argument("--skip-poll", action="store_true", help="Do not run Outlook referral discovery.")
     parser.add_argument("--skip-retries", action="store_true", help="Do not drain due retry jobs.")
     parser.add_argument("--skip-approvals", action="store_true", help="Do not poll review confirmations.")
     parser.add_argument("--quiet", action="store_true")
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    configured_drk_sources = sum(
+        (args.drk_snapshot is not None, args.drk_capture_dir is not None, args.live_drk)
+    )
+    if configured_drk_sources > 1:
+        parser.error("choose only one DRK source: snapshot, capture directory, or live DRK")
+    if args.live_drk and not args.monitor:
+        parser.error("--live-drk requires --monitor")
+    return args
 
 
 def _new_run_dir(output_root: Path) -> Path:
@@ -245,7 +290,16 @@ def run_worker_loop(
     monitor_database_backend: str | None = None,
     monitor_sqlite_path: Path | None = None,
     drk_snapshot: Path | None = None,
+    drk_capture_dir: Path | None = None,
+    drk_capture_profile: Path = DEFAULT_PROFILE_PATH,
+    live_drk: bool = False,
+    drk_max_patients: int = 10,
+    drk_live_profile_dir: Path | None = None,
     monitor_cycle: Callable[..., dict] = run_monitor_cycle,
+    health_enabled: bool = True,
+    health_send_alerts: bool = False,
+    health_failure_threshold: int = 3,
+    health_reporter: WorkerHealthReporter | None = None,
 ) -> list[dict]:
     """Run intake, approval, and optional monitoring cycles independently."""
     if poll_interval_seconds < 1:
@@ -256,9 +310,32 @@ def run_worker_loop(
         raise ValueError("approval_interval_seconds must be at least 1")
     if monitor_interval_seconds < 1:
         raise ValueError("monitor_interval_seconds must be at least 1")
+    if health_failure_threshold < 1:
+        raise ValueError("health_failure_threshold must be at least 1")
+    if drk_max_patients < 1:
+        raise ValueError("drk_max_patients must be at least 1")
 
     data_root.mkdir(parents=True, exist_ok=True)
     (data_root / "inbox-runs").mkdir(parents=True, exist_ok=True)
+
+    effective_health_reporter = health_reporter
+    if health_enabled and effective_health_reporter is None:
+        try:
+            effective_health_reporter = create_worker_health_reporter(
+                data_root=data_root,
+                database_backend=monitor_database_backend,
+                sqlite_path=monitor_sqlite_path,
+                config_path=monitor_config_path,
+                failure_threshold=health_failure_threshold,
+                send_alerts=health_send_alerts,
+            )
+        except Exception:  # noqa: BLE001 - health reporting cannot stop intake
+            logger.exception("Unable to initialize worker health persistence")
+            effective_health_reporter = None
+
+    def record_health(result: dict) -> None:
+        if effective_health_reporter is not None:
+            effective_health_reporter.record(result)
 
     results: list[dict] = []
     now = clock()
@@ -277,6 +354,7 @@ def run_worker_loop(
                 run_main=run_main,
             )
             results.append(result)
+            record_health(result)
             print(json.dumps(result, indent=2), flush=True)
             next_poll_at = clock() + poll_interval_seconds
 
@@ -289,6 +367,7 @@ def run_worker_loop(
                 run_main=run_main,
             )
             results.append(result)
+            record_health(result)
             print(json.dumps(result, indent=2), flush=True)
             next_retry_at = clock() + retry_interval_seconds
 
@@ -301,6 +380,7 @@ def run_worker_loop(
                 processor_factory=approval_processor_factory,
             )
             results.append(result)
+            record_health(result)
             print(json.dumps(result, indent=2), flush=True)
             next_approval_at = clock() + approval_interval_seconds
 
@@ -313,8 +393,14 @@ def run_worker_loop(
                 database_backend=monitor_database_backend,
                 sqlite_path=monitor_sqlite_path,
                 drk_snapshot=drk_snapshot,
+                drk_capture_dir=drk_capture_dir,
+                drk_capture_profile=drk_capture_profile,
+                live_drk=live_drk,
+                drk_max_patients=drk_max_patients,
+                drk_live_profile_dir=drk_live_profile_dir,
             )
             results.append(result)
+            record_health(result)
             print(json.dumps(result, indent=2), flush=True)
             next_monitor_at = clock() + monitor_interval_seconds
 
@@ -370,6 +456,14 @@ def main(argv: list[str] | None = None) -> int:
         monitor_database_backend=args.monitor_database_backend,
         monitor_sqlite_path=args.monitor_sqlite_path,
         drk_snapshot=args.drk_snapshot,
+        drk_capture_dir=args.drk_capture_dir,
+        drk_capture_profile=args.drk_capture_profile,
+        live_drk=args.live_drk,
+        drk_max_patients=args.drk_max_patients,
+        drk_live_profile_dir=args.drk_live_profile_dir,
+        health_enabled=args.health,
+        health_send_alerts=args.health_send_alerts,
+        health_failure_threshold=args.health_failure_threshold,
         quiet=args.quiet,
     )
     return 0
