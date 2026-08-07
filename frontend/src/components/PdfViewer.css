@@ -1,0 +1,29 @@
+.pdf-viewer {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.pdf-viewer__toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.pdf-viewer__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.pdf-viewer__frame {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #edf0ee;
+  min-height: 28rem;
+  overflow: auto;
+  padding: 0.75rem;
+  display: flex;
+  justify-content: center;
+}

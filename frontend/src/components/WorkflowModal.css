@@ -1,0 +1,76 @@
+.workflow-page {
+  padding: 1.35rem 1.5rem;
+}
+
+.workflow-page .caption {
+  margin-bottom: 0.25rem;
+}
+
+.stage-ops-hero {
+  padding: 0.15rem 0.15rem 0.35rem;
+}
+
+.stage-ops-hero h2 {
+  margin: 0.15rem 0 0.35rem;
+  font-size: clamp(1.35rem, 2vw, 1.75rem);
+}
+
+.stage-compare {
+  padding: 1.1rem 1.25rem;
+}
+
+.stage-compare__meta {
+  margin-bottom: 0.85rem;
+}
+
+.workflow-modal__metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.1rem;
+}
+
+.workflow-modal__metrics article {
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.85rem;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.workflow-modal__metrics strong {
+  font-size: 1.35rem;
+}
+
+.workflow-modal__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.workflow-modal__grid article {
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.workflow-modal__grid ol {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.workflow-modal__value {
+  margin-top: 1rem;
+  font-weight: 500;
+}
+
+@media (max-width: 800px) {
+  .workflow-modal__metrics,
+  .workflow-modal__grid {
+    grid-template-columns: 1fr;
+  }
+}

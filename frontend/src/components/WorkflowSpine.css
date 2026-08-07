@@ -1,0 +1,117 @@
+.workflow-spine {
+  position: sticky;
+  top: 0.75rem;
+  z-index: 20;
+  padding: 1.1rem 1.25rem 1.25rem;
+  backdrop-filter: blur(8px);
+}
+
+.workflow-spine__track {
+  list-style: none;
+  display: flex;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  overflow-x: auto;
+}
+
+.workflow-spine__track > li {
+  display: flex;
+  align-items: center;
+  flex: 1 1 0;
+  min-width: 8.5rem;
+}
+
+.workflow-spine__stage {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: white;
+  border-radius: 12px;
+  padding: 0.75rem;
+  text-align: left;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.workflow-spine__stage.is-reached {
+  border-color: rgba(14, 124, 134, 0.35);
+  background: var(--teal-soft);
+}
+
+.workflow-spine__stage.is-active {
+  box-shadow: inset 0 0 0 2px var(--teal);
+}
+
+.workflow-spine__dot {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  background: var(--gray);
+}
+
+.workflow-spine__stage.is-reached .workflow-spine__dot {
+  background: var(--teal);
+}
+
+.workflow-spine__label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.workflow-spine__count {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+}
+
+.workflow-spine__connector {
+  width: 0.75rem;
+  height: 2px;
+  background: var(--border);
+  flex: 0 0 auto;
+}
+
+.workflow-spine__tokens {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 0.85rem;
+  min-height: 0.85rem;
+}
+
+.workflow-spine__token {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 999px;
+  background: var(--teal);
+  display: inline-block;
+}
+
+.workflow-spine__steps {
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem 1rem;
+  font-size: 0.88rem;
+}
+
+.workflow-spine__steps li {
+  display: flex;
+  gap: 0.4rem;
+  color: var(--gray);
+}
+
+.workflow-spine__steps li.is-done {
+  color: var(--navy);
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .workflow-spine {
+    position: static;
+  }
+
+  .workflow-spine__steps {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,18 @@
+.impact-strip {
+  padding: 1.25rem 1.4rem;
+}
+
+.impact-strip__drawer {
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  border-radius: 12px;
+  background: var(--paper);
+  border: 1px solid var(--border);
+}
+
+.impact-strip__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: flex-end;
+}
