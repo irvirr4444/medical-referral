@@ -1,8 +1,6 @@
-import { Clock3, Database } from 'lucide-react'
 import { ArtifactSections } from './ArtifactSections'
 import type {
   AutomationMicrostep,
-  AutomationRunFixture,
   MicrostepExample,
 } from './types'
 import './Microstep.css'
@@ -32,11 +30,9 @@ function ValueList({
 
 export function MicrostepDetail({
   step,
-  run,
   example,
 }: {
   step: AutomationMicrostep
-  run: AutomationRunFixture
   example: MicrostepExample
 }) {
   const hasPatientWalkthrough = Boolean(
@@ -54,22 +50,6 @@ export function MicrostepDetail({
           <p>{step.description}</p>
         </div>
       </header>
-
-      <div
-        className="microstep-detail__receipt"
-        aria-label="Microstep execution receipt"
-      >
-        <span>
-          <Clock3 size={17} aria-hidden="true" />
-          <strong>{example.duration}</strong>
-          Processing time
-        </span>
-        <span>
-          <Database size={17} aria-hidden="true" />
-          <strong>{run.label}</strong>
-          Workflow run
-        </span>
-      </div>
 
       {hasPatientWalkthrough ? (
         <>

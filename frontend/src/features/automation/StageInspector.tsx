@@ -62,7 +62,7 @@ export function StageInspector({
             onSelect={setSelectedStepId}
           />
         </div>
-        <MicrostepDetail step={selectedStep} run={run} example={example} />
+        <MicrostepDetail step={selectedStep} example={example} />
       </section>
     </div>
   )

@@ -1,4 +1,10 @@
-import { ArrowRight, Eye, GitBranch, MessageSquareText } from 'lucide-react'
+import {
+  ArrowRight,
+  Eye,
+  GitBranch,
+  MessageSquareText,
+  Target,
+} from 'lucide-react'
 import { useDemo } from '../../state/useDemo'
 import { AUTOMATION_STAGES } from './stages'
 import './AutomationOverview.css'
@@ -19,16 +25,19 @@ export function AutomationOverview() {
     >
       <section className="automation-overview__hero panel">
         <div>
-          <p className="caption">WCW automation inspection console</p>
           <h1 id="automation-overview-title">
-            Understand every step from referral to visit review
+            Referral Intake Process
           </h1>
-          <p className="automation-overview__lead">
-            This console explains what starts each automation, what information
-            it receives, what it produces, and where a WCW employee keeps
-            control. Open any stage to inspect every microstep in execution
-            order.
-          </p>
+          <div className="automation-overview__goal">
+            <span className="automation-overview__goal-label">
+              <Target size={18} aria-hidden="true" />
+              Goal
+            </span>
+            <p>
+              Ensure every valid referral becomes a scheduled, continuously
+              tracked patient case through treatment completion or discharge.
+            </p>
+          </div>
         </div>
       </section>
 
