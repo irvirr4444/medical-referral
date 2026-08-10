@@ -57,16 +57,10 @@
   gap: 0.18rem;
 }
 
-.microstep-list__copy strong,
-.microstep-list__copy > span:not(.automation-run-status) {
+.microstep-list__copy strong {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.microstep-list__copy > span:not(.automation-run-status) {
-  color: var(--gray);
-  font-size: 0.8rem;
 }
 
 .microstep-detail {
@@ -83,18 +77,10 @@
 }
 
 .microstep-detail__header h2 {
-  margin: 0.25rem 0 0.45rem;
+  margin: 0 0 0.45rem;
   font-size: 1.55rem;
 }
 
-.microstep-detail__badges {
-  flex: 0 0 auto;
-  display: flex;
-  flex-wrap: wrap;
-  align-content: flex-start;
-  justify-content: flex-end;
-  gap: 0.4rem;
-}
 
 .microstep-detail__receipt {
   display: grid;
@@ -164,28 +150,6 @@
   overflow-wrap: anywhere;
 }
 
-.microstep-validation {
-  display: flex;
-  gap: 0.8rem;
-  margin: 1rem 0;
-  padding: 1rem;
-  border-left: 4px solid var(--teal);
-  border-radius: 0 11px 11px 0;
-  background: var(--teal-soft);
-}
-
-.microstep-validation svg {
-  flex: 0 0 auto;
-  color: var(--teal);
-}
-
-.microstep-validation h3 {
-  margin-bottom: 0.25rem;
-}
-
-.microstep-validation p + p {
-  margin-top: 0.5rem;
-}
 
 @media (max-width: 980px) {
   .microstep-list ol {
@@ -210,7 +174,4 @@
     flex-direction: column;
   }
 
-  .microstep-detail__badges {
-    justify-content: flex-start;
-  }
 }

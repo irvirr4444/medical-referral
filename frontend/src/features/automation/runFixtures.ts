@@ -1,7 +1,14 @@
 import type { FlowOpsPageId } from '../../data/flowOps'
-import type { AutomationRunFixture } from './types'
+import {
+  BUTLER_RUN_FIXTURE,
+  snapshotToExample,
+  type AutomationMicrostep,
+  type AutomationRunFixture,
+  type MicrostepExample,
+} from './types'
 
 export const AUTOMATION_RUNS: AutomationRunFixture[] = [
+  BUTLER_RUN_FIXTURE,
   {
     id: 'synthetic-complete',
     label: 'Complete referral walkthrough',
@@ -20,14 +27,14 @@ export const AUTOMATION_RUNS: AutomationRunFixture[] = [
   },
 ]
 
-export function exampleForRun(
+function genericExampleForRun(
   run: AutomationRunFixture,
-  step: import('./types').AutomationMicrostep,
+  step: AutomationMicrostep,
   stageId: FlowOpsPageId,
-) {
+): MicrostepExample {
   if (run.id === 'synthetic-exception' && stageId !== 'intake') {
     return {
-      status: 'waiting' as const,
+      status: 'waiting',
       duration: 'Not started',
       inputs: [
         {
@@ -46,4 +53,26 @@ export function exampleForRun(
   return run.id === 'synthetic-exception' && step.exceptionExample
     ? step.exceptionExample
     : step.example
+}
+
+export function exampleForRun(
+  run: AutomationRunFixture,
+  step: AutomationMicrostep,
+  stageId: FlowOpsPageId,
+): MicrostepExample {
+  if (stageId === 'intake' && run.intakeSnapshots?.[step.id]) {
+    const snapshot = run.intakeSnapshots[step.id]
+    return snapshotToExample(snapshot, run.patientName ?? 'Unknown patient')
+  }
+
+  return genericExampleForRun(run, step, stageId)
+}
+
+export function snapshotForRun(
+  run: AutomationRunFixture,
+  stepId: string,
+  stageId: FlowOpsPageId,
+) {
+  if (stageId !== 'intake') return null
+  return run.intakeSnapshots?.[stepId] ?? null
 }

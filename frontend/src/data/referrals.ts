@@ -135,6 +135,125 @@ function drkDraft(
 }
 
 export function createInitialReferrals(): ReferralRecord[] {
+  const butlerWalkthrough: ReferralRecord = {
+      id: 'alva-butler',
+      patientName: 'BUTLER, ALVA',
+      receivedAt: '9:14 AM',
+      sender: 'chart-export@provider-network.example',
+      subject: 'Chart export — wound care referral',
+      referralSource: 'Provider chart export',
+      pdfFilename: 'BUTLER, ALVA demo.pdf',
+      samplePdf: 'BUTLER, ALVA demo.pdf',
+      pageCount: 3,
+      dateOfBirth: 'October 4, 1940',
+      phone: '(260) 438-4646',
+      address: '5316 FISHERSOUND LN, APOLLO BEACH FL 33572',
+      homeHealthOrHospice: 'Not documented on chart',
+      diagnosis:
+        'Atherosclerotic heart disease; dilated cardiomyopathy; localized edema; bilateral lower-leg muscle wasting',
+      insurance: 'MEDICARE PART B · FLORIDA BLUE',
+      requestedService: 'Not documented on chart export',
+      referringProvider: 'YVETTE GUZMAN, APRN DNP',
+      medications: [],
+      allergies: ['No known drug allergies documented'],
+      clinicalSummary:
+        'EHR patient chart export with cardiopulmonary and metabolic comorbidities, localized edema, and bilateral lower-leg muscle wasting. G-tube feeding and thickened liquids noted.',
+      requiredFields: fields({
+        patient_name: {
+          value: 'BUTLER, ALVA',
+          evidenceQuote: 'BUTLER, ALVA',
+        },
+        date_of_birth: {
+          value: 'October 4, 1940',
+          evidenceQuote: '10/04/1940',
+        },
+        contact_number: {
+          value: '(260) 438-4646',
+          evidenceQuote: '(260) 438-4646',
+        },
+        patient_address: {
+          value: '5316 FISHERSOUND LN, APOLLO BEACH FL 33572',
+          evidenceQuote: '5316 FISHERSOUND LN, APOLLO BEACH FL 33572',
+        },
+        home_health: {
+          value: 'Not documented',
+          status: 'missing',
+          evidenceQuote: 'No home-health or hospice agency documented',
+          confidence: 0.72,
+        },
+        clinical: {
+          value:
+            'Cardiopulmonary and metabolic comorbidities with localized edema and bilateral lower-leg muscle wasting',
+          evidenceQuote: 'Diagnosis list and clinical summary documented across chart pages.',
+          evidencePage: 2,
+        },
+        insurance: {
+          value: 'MEDICARE PART B · FLORIDA BLUE',
+          evidenceQuote: 'MEDICARE PART B 4FM5A30MN88; FLORIDA BLUE VNF651M57250',
+          evidencePage: 3,
+        },
+      }),
+      completenessScore: '6/7',
+      duplicateStatus: 'clear',
+      outcome: 'needs_information',
+      minutesReturned: 24,
+      demoPurpose: 'Canonical Butler walkthrough with one missing required field',
+      nextAction: 'Call referral partner to confirm home-health or hospice agency',
+      mondayPreview: mondayPreview(
+        'BUTLER, ALVA',
+        'Provider chart export',
+        'Localized edema; bilateral lower-leg muscle wasting',
+        ['Home-health or hospice agency missing'],
+      ),
+      drkDraft: drkDraft(
+        'BUTLER, ALVA',
+        'October 4, 1940',
+        '(260) 438-4646',
+        '5316 FISHERSOUND LN, APOLLO BEACH FL 33572',
+        'Localized edema; bilateral lower-leg muscle wasting',
+        'MEDICARE PART B',
+        'Not documented on chart export',
+        ['Source patient ID 6227 is not an MRN', 'Home-health agency missing'],
+      ),
+      impactReceipt: {
+        pagesAnalyzed: 3,
+        valuesExtracted: 31,
+        requiredFieldsVerified: 6,
+        duplicateSearches: 2,
+        destinationRecordsPrepared: 0,
+        manualActionsAvoided: 9,
+        minutesReturned: 24,
+      },
+      stage: 'extracted',
+      confirmed: false,
+      followUpPrepared: true,
+      followUpMessage:
+        'Please confirm whether the patient has a current home-health or hospice agency.',
+      followUpOwner: 'Info-box agent',
+      mondayStatus: 'not_ready',
+      drkStatus: 'not_ready',
+      timeline: [
+        ...initialTimeline('9:14 AM', 'alva-butler'),
+        {
+          id: 'alva-butler-extracted',
+          timestamp: '9:17 AM',
+          label: 'Canonical extraction completed',
+          result: '6 of 7 required fields complete',
+          actor: 'Canonical PDF extractor',
+          humanRequired: false,
+        },
+        {
+          id: 'alva-butler-review',
+          timestamp: '9:18 AM',
+          label: 'Review email sent',
+          result: 'Awaiting human approval',
+          actor: 'Microsoft Graph / Outlook',
+          humanRequired: true,
+        },
+      ],
+      processed: true,
+    }
+
   const inboxBatch: ReferralRecord[] = [
     {
       id: 'maria-alvarez',
@@ -737,5 +856,5 @@ export function createInitialReferrals(): ReferralRecord[] {
     },
   ]
 
-  return [...inboxBatch, ...createPriorBatchReferrals()]
+  return [butlerWalkthrough, ...inboxBatch, ...createPriorBatchReferrals()]
 }

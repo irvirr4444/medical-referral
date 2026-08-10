@@ -31,7 +31,7 @@ describe('automation inspection console', () => {
     ).not.toBeInTheDocument()
 
     await user.click(
-      screen.getByRole('button', { name: /Walk through one referral/i }),
+      screen.getByRole('button', { name: /Inspect Referral intake/i }),
     )
 
     expect(
@@ -51,13 +51,20 @@ describe('automation inspection console', () => {
     expect(
       screen.getByRole('heading', { name: /Discover the referral email/i }),
     ).toBeInTheDocument()
+    expect(document.querySelector('.automation-run-status')).toBeNull()
+    expect(
+      screen.queryByLabelText(/Inspect workflow run/i),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /Walk through one referral/i }),
+    ).not.toBeInTheDocument()
   })
 
-  it('switches run evidence, records contextual feedback, and opens the referral workspace', async () => {
+  it('shows Butler walkthrough evidence across microsteps', async () => {
     const user = userEvent.setup()
     render(<App />)
     await user.click(
-      screen.getByRole('button', { name: /Walk through one referral/i }),
+      screen.getByRole('button', { name: /Inspect Referral intake/i }),
     )
 
     await user.click(
@@ -65,46 +72,22 @@ describe('automation inspection console', () => {
         name: /Evaluate the seven required fields/i,
       }),
     )
-    expect(screen.getByText('7 of 7 fields complete')).toBeInTheDocument()
-
-    await user.selectOptions(
-      screen.getByLabelText(/Inspect workflow run/i),
-      'synthetic-exception',
-    )
-    expect(
-      screen.getByText('6 of 7 complete; insurance missing'),
-    ).toBeInTheDocument()
-
-    await user.selectOptions(
-      screen.getByLabelText(/Feedback type/i),
-      'missing-context',
-    )
-    await user.type(
-      screen.getByLabelText(/^Comment$/i),
-      'Show the insurance page evidence here.',
-    )
-    await user.click(screen.getByRole('button', { name: /Add feedback/i }))
-    expect(
-      screen.getByText('Show the insurance page evidence here.'),
-    ).toBeInTheDocument()
+    const outputPanel = screen.getByLabelText(/Produced output/i)
+    expect(outputPanel).toHaveTextContent('Seven-field completeness review')
+    expect(outputPanel).toHaveTextContent('Not documented')
 
     await user.click(
       screen.getByRole('button', {
-        name: /Open extracted referral workspace/i,
+        name: /Extract referral information/i,
       }),
     )
+    expect(screen.getByLabelText(/Produced output/i)).toHaveTextContent(
+      'Canonical referral extraction',
+    )
     expect(
-      screen.getByRole('dialog', { name: /Maria Alvarez/i }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole('tab', { name: /Monday\.com/i }),
-    ).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: /DRK draft/i })).toBeInTheDocument()
-    expect(
-      screen.getByRole('tab', { name: /Confirmation/i }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole('tab', { name: /Audit timeline/i }),
-    ).toBeInTheDocument()
+      screen.queryByRole('button', {
+        name: /Open extracted referral workspace/i,
+      }),
+    ).not.toBeInTheDocument()
   })
 })
