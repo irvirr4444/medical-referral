@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import App from '../App'
@@ -35,6 +35,24 @@ describe('automation inspection console', () => {
     expect(screen.getAllByText(/vs yesterday/i).length).toBeGreaterThan(0)
     expect(screen.getByText(/\+3 \(20%\)/)).toBeInTheDocument()
 
+    await user.click(
+      screen.getByRole('button', { name: /View patients for New referrals/i }),
+    )
+    const patientDialog = screen.getByRole('dialog', { name: /New referrals/i })
+    expect(patientDialog).toBeInTheDocument()
+    expect(within(patientDialog).getAllByRole('listitem')).toHaveLength(8)
+    expect(
+      screen.queryByText(/Sample patients for today/i),
+    ).not.toBeInTheDocument()
+    await user.type(screen.getByRole('searchbox', { name: /Search patients/i }), 'zzzz')
+    expect(screen.getByText(/No patients match your search/i)).toBeInTheDocument()
+    await user.click(
+      screen.getByRole('button', { name: /Close patient list/i }),
+    )
+    expect(
+      screen.queryByRole('dialog', { name: /New referrals/i }),
+    ).not.toBeInTheDocument()
+
     await user.click(screen.getByRole('tab', { name: /This week/i }))
     expect(screen.getByRole('tab', { name: /This week/i })).toHaveAttribute(
       'aria-selected',
@@ -48,11 +66,18 @@ describe('automation inspection console', () => {
 
     await user.click(screen.getByRole('tab', { name: /Pick dates/i }))
     expect(
-      screen.getByRole('dialog', { name: /Pick a date range/i }),
+      screen.getByRole('dialog', { name: /Select reporting period/i }),
     ).toBeInTheDocument()
-    expect(screen.getByLabelText(/Start date/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/End date/i)).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /Apply dates/i }))
+    expect(screen.getByRole('tab', { name: /^Day$/i })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /^Month$/i })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+    expect(screen.getByRole('tab', { name: /^Year$/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole('tab', { name: /Custom range/i }),
+    ).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Confirm/i }))
     expect(screen.getByText('112')).toBeInTheDocument()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(screen.getByRole('tab', { name: /Pick dates/i })).toHaveAttribute(

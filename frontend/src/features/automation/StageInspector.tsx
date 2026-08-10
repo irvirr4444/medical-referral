@@ -28,8 +28,7 @@ export function StageInspector({
           <div>
             <h2>{stage.microsteps.length} steps</h2>
             <p className="muted">
-              Choose a step to see the patient data available and the output
-              created.
+              Choose a step to see the automation output.
             </p>
           </div>
           <MicrostepList

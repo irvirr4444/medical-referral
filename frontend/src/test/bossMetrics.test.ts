@@ -64,8 +64,8 @@ describe('bossMetrics', () => {
     expect(bossPeriodById('today', 'weekly').metrics.map((m) => m.label)).toEqual([
       'Patients seen',
       'Missed visits',
-      'Patients on hold',
-      'Ready for discharge review',
+      'Placed on hold',
+      'Discharge reviews needed',
     ])
   })
 

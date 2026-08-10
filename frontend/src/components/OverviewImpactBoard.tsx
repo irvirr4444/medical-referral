@@ -1,4 +1,12 @@
-import { CalendarDays, Info, Minus, TrendingDown, TrendingUp, X } from 'lucide-react'
+import {
+  CalendarDays,
+  Info,
+  Minus,
+  Search,
+  TrendingDown,
+  TrendingUp,
+  X,
+} from 'lucide-react'
 import { useMemo, useState } from 'react'
 import {
   bossPeriodById,
@@ -7,10 +15,13 @@ import {
   BOSS_DEMO_TODAY,
   emptyBossPeriodView,
   formatMetricDelta,
+  type BossMetricCard,
   type BossMetricsScope,
   type BossPeriodId,
   type BossPeriodView,
 } from '../data/bossMetrics'
+import { buildBossMetricPatients } from '../data/bossMetricPatients'
+import { DatePeriodPicker } from './DatePeriodPicker'
 import './OverviewImpactBoard.css'
 
 export function OverviewImpactBoard({
@@ -27,17 +38,16 @@ export function OverviewImpactBoard({
     [scope],
   )
   const headingId = `boss-metrics-heading-${scope}`
-  const startInputId = `boss-metrics-start-${scope}`
-  const endInputId = `boss-metrics-end-${scope}`
 
   const [selectedId, setSelectedId] = useState<BossPeriodId>('today')
   const [pickerOpen, setPickerOpen] = useState(false)
   const [customStart, setCustomStart] = useState('2026-08-01')
   const [customEnd, setCustomEnd] = useState(BOSS_DEMO_TODAY)
-  const [draftStart, setDraftStart] = useState('2026-08-01')
-  const [draftEnd, setDraftEnd] = useState(BOSS_DEMO_TODAY)
   const [appliedCustom, setAppliedCustom] = useState<BossPeriodView | null>(null)
-  const [customError, setCustomError] = useState<string | null>(null)
+  const [selectedMetric, setSelectedMetric] = useState<BossMetricCard | null>(
+    null,
+  )
+  const [patientQuery, setPatientQuery] = useState('')
 
   const active = useMemo(() => {
     if (selectedId === 'custom') {
@@ -46,31 +56,51 @@ export function OverviewImpactBoard({
     return bossPeriodById(selectedId, scope)
   }, [appliedCustom, scope, selectedId])
 
+  const metricPatients = useMemo(() => {
+    if (!selectedMetric) return []
+    return buildBossMetricPatients(
+      scope,
+      selectedMetric.id,
+      selectedMetric.label,
+    )
+  }, [scope, selectedMetric])
+
+  const visiblePatients = useMemo(() => {
+    const query = patientQuery.trim().toLowerCase()
+    if (!query) return metricPatients
+    return metricPatients.filter((patient) =>
+      [
+        patient.name,
+        patient.id,
+        patient.owner,
+        patient.status,
+        patient.dateOfBirth,
+        patient.phone,
+        patient.address,
+      ].some((value) => value.toLowerCase().includes(query)),
+    )
+  }, [metricPatients, patientQuery])
+
+  const closePatientList = () => {
+    setSelectedMetric(null)
+    setPatientQuery('')
+  }
+
   const openPicker = () => {
-    setDraftStart(customStart)
-    setDraftEnd(customEnd)
-    setCustomError(null)
     setPickerOpen(true)
   }
 
   const closePicker = () => {
     setPickerOpen(false)
-    setCustomError(null)
   }
 
-  const applyCustomRange = () => {
-    const next = buildCustomBossMetrics(draftStart, draftEnd, scope)
-    if (!next) {
-      setCustomError(
-        'Choose a valid range where the end date is on or after the start date.',
-      )
-      return
-    }
-    setCustomStart(draftStart)
-    setCustomEnd(draftEnd)
+  const applyCustomRange = (start: string, end: string) => {
+    const next = buildCustomBossMetrics(start, end, scope)
+    if (!next) return
+    setCustomStart(start)
+    setCustomEnd(end)
     setAppliedCustom(next)
     setSelectedId('custom')
-    setCustomError(null)
     setPickerOpen(false)
   }
 
@@ -127,38 +157,127 @@ export function OverviewImpactBoard({
               trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus
             return (
               <li key={metric.id}>
-                <div className="impact-board__stat-top">
-                  <strong>{metric.value}</strong>
-                  <span
-                    className={`impact-board__delta is-${trend}`}
-                    title={active.comparisonHoverLabel}
-                    aria-label={`${formatMetricDelta(metric.delta)}, ${metric.deltaPercent}% ${active.comparisonHoverLabel}`}
-                  >
-                    <TrendIcon size={14} aria-hidden="true" />
-                    {formatMetricDelta(metric.delta)} ({metric.deltaPercent}%)
-                  </span>
-                </div>
-                <span className="impact-board__stat-label">
-                  {metric.label}
-                  <span
-                    className="impact-board__metric-info"
-                    tabIndex={0}
-                    aria-label={metric.meaning}
-                  >
-                    <Info size={14} aria-hidden="true" />
-                    <span className="impact-board__tooltip" role="tooltip">
-                      {metric.meaning}
+                <button
+                  type="button"
+                  className="impact-board__stat-card"
+                  onClick={() => {
+                    setSelectedMetric(metric)
+                    setPatientQuery('')
+                  }}
+                  aria-label={`View patients for ${metric.label}`}
+                >
+                  <span className="impact-board__stat-top">
+                    <strong>{metric.value}</strong>
+                    <span
+                      className={`impact-board__delta is-${trend}`}
+                      title={active.comparisonHoverLabel}
+                      aria-label={`${formatMetricDelta(metric.delta)}, ${metric.deltaPercent}% ${active.comparisonHoverLabel}`}
+                    >
+                      <TrendIcon size={14} aria-hidden="true" />
+                      {formatMetricDelta(metric.delta)} ({metric.deltaPercent}%)
                     </span>
                   </span>
-                </span>
-                <span className="impact-board__comparison">
-                  {active.comparisonLabel}
-                </span>
+                  <span className="impact-board__stat-label">
+                    {metric.label}
+                    <span
+                      className="impact-board__metric-info"
+                      aria-label={metric.meaning}
+                    >
+                      <Info size={14} aria-hidden="true" />
+                      <span className="impact-board__tooltip" role="tooltip">
+                        {metric.meaning}
+                      </span>
+                    </span>
+                  </span>
+                  <span className="impact-board__comparison">
+                    {active.comparisonLabel}
+                  </span>
+                </button>
               </li>
             )
           })}
         </ul>
       </article>
+
+      {selectedMetric ? (
+        <div
+          className="impact-board__backdrop"
+          role="presentation"
+          onClick={closePatientList}
+        >
+          <section
+            className="impact-board__modal impact-board__patient-modal panel"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={`metric-patients-title-${scope}`}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header className="impact-board__modal-header">
+              <div>
+                <h2 id={`metric-patients-title-${scope}`}>
+                  {selectedMetric.label}
+                </h2>
+                <p className="impact-board__patient-count">
+                  {visiblePatients.length === metricPatients.length
+                    ? `${metricPatients.length} patients`
+                    : `${visiblePatients.length} of ${metricPatients.length} patients`}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="impact-board__modal-close"
+                aria-label="Close patient list"
+                onClick={closePatientList}
+              >
+                <X size={16} aria-hidden="true" />
+              </button>
+            </header>
+
+            <label className="impact-board__patient-search">
+              <Search size={16} aria-hidden="true" />
+              <input
+                type="search"
+                value={patientQuery}
+                onChange={(event) => setPatientQuery(event.target.value)}
+                placeholder="Search patient, referral ID, or case manager"
+                aria-label="Search patients"
+              />
+            </label>
+
+            <div className="impact-board__patient-list" role="list">
+              {visiblePatients.map((patient) => (
+                <article
+                  key={patient.id}
+                  className="impact-board__patient-row"
+                  role="listitem"
+                >
+                  <span className="impact-board__patient-avatar" aria-hidden="true">
+                    {patient.name
+                      .split(' ')
+                      .map((part) => part[0])
+                      .join('')}
+                  </span>
+                  <span className="impact-board__patient-copy">
+                    <strong>{patient.name}</strong>
+                    <small>
+                      DOB: {patient.dateOfBirth} · {patient.phone}
+                    </small>
+                    <small>{patient.address}</small>
+                  </span>
+                  <span className="impact-board__patient-status">
+                    <strong>{patient.status}</strong>
+                  </span>
+                </article>
+              ))}
+              {visiblePatients.length === 0 ? (
+                <p className="impact-board__patient-empty">
+                  No patients match your search.
+                </p>
+              ) : null}
+            </div>
+          </section>
+        </div>
+      ) : null}
 
       {pickerOpen ? (
         <div
@@ -167,70 +286,19 @@ export function OverviewImpactBoard({
           onClick={closePicker}
         >
           <section
-            className="impact-board__modal panel"
+            className="impact-board__modal impact-board__date-modal panel"
             role="dialog"
             aria-modal="true"
             aria-labelledby={`boss-date-picker-title-${scope}`}
             onClick={(event) => event.stopPropagation()}
           >
-            <header className="impact-board__modal-header">
-              <div>
-                <h2 id={`boss-date-picker-title-${scope}`}>Pick a date range</h2>
-                <p className="muted">Choose start and end dates for these metrics.</p>
-              </div>
-              <button
-                type="button"
-                className="impact-board__modal-close"
-                aria-label="Close date picker"
-                onClick={closePicker}
-              >
-                <X size={16} aria-hidden="true" />
-              </button>
-            </header>
-
-            <div className="impact-board__modal-fields">
-              <label htmlFor={startInputId}>
-                <span>Start date</span>
-                <input
-                  id={startInputId}
-                  type="date"
-                  value={draftStart}
-                  onChange={(event) => setDraftStart(event.target.value)}
-                />
-              </label>
-              <label htmlFor={endInputId}>
-                <span>End date</span>
-                <input
-                  id={endInputId}
-                  type="date"
-                  value={draftEnd}
-                  onChange={(event) => setDraftEnd(event.target.value)}
-                />
-              </label>
-            </div>
-
-            {customError ? (
-              <p className="impact-board__error" role="alert">
-                {customError}
-              </p>
-            ) : null}
-
-            <div className="impact-board__modal-actions">
-              <button
-                type="button"
-                className="impact-board__modal-cancel"
-                onClick={closePicker}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="impact-board__modal-apply"
-                onClick={applyCustomRange}
-              >
-                Apply dates
-              </button>
-            </div>
+            <DatePeriodPicker
+              titleId={`boss-date-picker-title-${scope}`}
+              initialStart={customStart}
+              initialEnd={customEnd}
+              onCancel={closePicker}
+              onApply={applyCustomRange}
+            />
           </section>
         </div>
       ) : null}
