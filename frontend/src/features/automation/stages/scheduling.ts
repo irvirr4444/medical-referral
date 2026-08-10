@@ -6,7 +6,7 @@ export const SCHEDULING_STAGE: AutomationStageDefinition = {
   title: '5. Scheduling',
   shortTitle: 'Scheduling',
   purpose:
-    'Coordinate a confirmed appointment from approved provider availability and route constraints.',
+    'Schedule the patient within 24–48 hours based on provider availability and record the appointment in Monday.com and DRK.',
   trigger: 'A WCW employee confirms the provider selected for the referral.',
   successDefinition:
     'The appointment is confirmed and reconciled across approved systems, or its blocker is explicit.',

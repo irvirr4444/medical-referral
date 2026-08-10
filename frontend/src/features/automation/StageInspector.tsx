@@ -21,39 +21,14 @@ export function StageInspector({
   return (
     <div className="stage-inspector">
       <section
-        className="stage-inspector__definition panel"
-        aria-labelledby="stage-definition-title"
-      >
-        <div className="stage-inspector__definition-copy">
-          <p className="caption">Stage definition</p>
-          <h2 id="stage-definition-title">
-            What this stage is responsible for
-          </h2>
-          <p>{stage.purpose}</p>
-        </div>
-        <dl className="stage-inspector__facts">
-          <div>
-            <dt>Starts when</dt>
-            <dd>{stage.trigger}</dd>
-          </div>
-          <div>
-            <dt>Successful when</dt>
-            <dd>{stage.successDefinition}</dd>
-          </div>
-        </dl>
-      </section>
-
-      <section
         className="stage-inspector__workspace panel"
-        aria-label={`${stage.shortTitle} microsteps`}
+        aria-label={`${stage.shortTitle} steps`}
       >
         <div className="stage-inspector__rail">
           <div>
-            <p className="caption">Execution order</p>
-            <h2>{stage.microsteps.length} microsteps</h2>
+            <h2>{stage.microsteps.length} steps</h2>
             <p className="muted">
-              Select a step to inspect progressive patient data and the output
-              produced at that step.
+              Choose a step to see the automation output.
             </p>
           </div>
           <MicrostepList

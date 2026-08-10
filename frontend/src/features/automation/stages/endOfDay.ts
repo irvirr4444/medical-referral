@@ -6,7 +6,7 @@ export const END_OF_DAY_STAGE: AutomationStageDefinition = {
   title: '6. End-of-day check',
   shortTitle: 'End-of-day check',
   purpose:
-    "Find referrals that should be scheduled but remain unresolved after WCW's configured cutoff.",
+    'Identify referrals still unscheduled at the end of the day, prompt lead follow-up, and escalate unresolved cases to management.',
   trigger:
     "The monitoring worker reaches the approved end-of-day cutoff in WCW's timezone.",
   successDefinition:

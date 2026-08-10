@@ -6,7 +6,7 @@ export const ASSIGNMENT_STAGE: AutomationStageDefinition = {
   title: '3. Assignment',
   shortTitle: 'Assignment',
   purpose:
-    'Recommend the correct WCW owner from patient location, referral source, and approved territory rules.',
+    "Assign the correct case manager based on patient location and route missing-information follow-up to the referral source's assigned marketer.",
   trigger: 'An approved referral has completed its destination handoff.',
   successDefinition:
     'One eligible case manager or marketer is confirmed, or a clear exception is routed to a human.',

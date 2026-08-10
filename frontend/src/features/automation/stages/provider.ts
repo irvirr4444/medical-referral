@@ -6,7 +6,7 @@ export const PROVIDER_STAGE: AutomationStageDefinition = {
   title: '4. Provider selection',
   shortTitle: 'Provider selection',
   purpose:
-    'Prepare an explainable provider shortlist while keeping the clinical and operational selection human-controlled.',
+    "Help the case manager select an approved provider for the patient's area and escalate unavailable coverage to Nicole for review.",
   trigger:
     'The referral has an assigned WCW owner and a verified service location.',
   successDefinition:

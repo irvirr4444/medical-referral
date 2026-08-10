@@ -33,6 +33,11 @@ body,
   min-height: 100%;
 }
 
+html,
+body {
+  overscroll-behavior: none;
+}
+
 body {
   margin: 0;
   font-family: var(--font-body);

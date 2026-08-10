@@ -74,7 +74,7 @@ export function MicrostepDetail({
       {hasPatientWalkthrough ? (
         <>
           <div className="microstep-detail__patient">
-            <p className="caption">Patient in this microstep</p>
+            <p className="caption">Patient in this step</p>
             <strong>{example.patientName}</strong>
             <span className="muted">
               {example.referralId} · {example.executedAt}

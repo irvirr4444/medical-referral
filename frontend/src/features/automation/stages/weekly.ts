@@ -6,7 +6,7 @@ export const WEEKLY_STAGE: AutomationStageDefinition = {
   title: '7. Weekly visit cycle',
   shortTitle: 'Weekly visit cycle',
   purpose:
-    'Observe recorded visit outcomes and surface review work without making clinical or discharge decisions.',
+    'Track weekly visit outcomes, reschedule missed visits, manage holds, and route healing, expiration, or repeated noncompliance for discharge review.',
   trigger:
     'The weekly monitor runs for active linked patients with expected visit activity.',
   successDefinition:
