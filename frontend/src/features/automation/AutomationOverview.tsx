@@ -1,10 +1,5 @@
-import {
-  ArrowRight,
-  Eye,
-  GitBranch,
-  MessageSquareText,
-  Target,
-} from 'lucide-react'
+import { ArrowRight, Target } from 'lucide-react'
+import { OverviewImpactBoard } from '../../components/OverviewImpactBoard'
 import { useDemo } from '../../state/useDemo'
 import { AUTOMATION_STAGES } from './stages'
 import './AutomationOverview.css'
@@ -41,45 +36,7 @@ export function AutomationOverview() {
         </div>
       </section>
 
-      <section
-        className="automation-guide panel"
-        aria-labelledby="automation-guide-title"
-      >
-        <div className="section-heading">
-          <div>
-            <p className="caption">How to use this console</p>
-            <h2 id="automation-guide-title">
-              Inspect, verify, and improve the workflow
-            </h2>
-          </div>
-        </div>
-        <div className="automation-guide__grid">
-          <article>
-            <GitBranch size={22} aria-hidden="true" />
-            <h3>Follow the sequence</h3>
-            <p>
-              See the trigger, purpose, and expected handoff for every
-              step.
-            </p>
-          </article>
-          <article>
-            <Eye size={22} aria-hidden="true" />
-            <h3>Inspect inputs and outputs</h3>
-            <p>
-              Compare what the automation received with what it produced and
-              validated.
-            </p>
-          </article>
-          <article>
-            <MessageSquareText size={22} aria-hidden="true" />
-            <h3>Comment in context</h3>
-            <p>
-              Attach feedback to the exact run and step that needs
-              correction.
-            </p>
-          </article>
-        </div>
-      </section>
+      <OverviewImpactBoard />
 
       <section
         className="automation-stage-map panel"

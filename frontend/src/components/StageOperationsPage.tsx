@@ -2,6 +2,7 @@ import { Target } from 'lucide-react'
 import { FLOW_OPS, type FlowOpsPageId } from '../data/flowOps'
 import { StageInspector } from '../features/automation/StageInspector'
 import { automationStage } from '../features/automation/stages'
+import { OverviewImpactBoard } from './OverviewImpactBoard'
 import './WorkflowModal.css'
 
 /** Inspectable automation page shared by workflow sections 1-7. */
@@ -23,7 +24,8 @@ export function StageOperationsPage({ pageId }: { pageId: FlowOpsPageId }) {
           </div>
         </div>
       </header>
-      <StageInspector key={pageId} stage={stage} />
+      <OverviewImpactBoard key={pageId} scope={pageId} />
+      <StageInspector key={`${pageId}-inspector`} stage={stage} />
     </>
   )
 }
