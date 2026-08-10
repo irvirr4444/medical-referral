@@ -1,0 +1,21 @@
+{
+  "timezone": "America/Los_Angeles",
+  "end_of_day": "17:00",
+  "notification_recipients": [],
+  "scheduling": {
+    "sent_to_case_manager_labels": ["Yes"],
+    "scheduled_status_labels": ["Scheduled"],
+    "scheduling_complete_labels": ["Yes"],
+    "inactive_group_fragments": ["Discharged", "Lost"],
+    "inactive_visit_statuses": ["Deceased", "Immediate DC", "INACTIVE/DC'D"]
+  },
+  "visits": {
+    "seen_statuses": ["Seen"],
+    "not_seen_statuses": ["Not Seen"],
+    "hold_statuses": ["On Holds List", "Hospitalized"],
+    "healed_statuses": ["Healed", "QA - WX HEALED"],
+    "expired_statuses": ["Deceased", "Expired"],
+    "discharged_status_prefixes": ["DC -", "INACTIVE/DC"],
+    "not_seen_review_threshold": 3
+  }
+}

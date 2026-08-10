@@ -14,6 +14,8 @@ from Outlook.review_mail import OutlookReviewMailbox
 from referral_pipeline.review.intent import IntentResult, classify_reply_intent
 from referral_pipeline.review.store import build_review_store
 from referral_pipeline.review.summary import render_review_email
+from referral_pipeline.monitoring.models import PatientLink, utc_now
+from referral_pipeline.monitoring.observer import record_lifecycle_event
 
 
 class ReviewWorkflowError(RuntimeError):
@@ -45,6 +47,7 @@ def create_and_send_review(
         "drk": _load_json(paths["drk"]),
     }
     digest = artifact_payload_digest(snapshots)
+    entity_id = _workflow_entity_id(paths["canonical"], fallback_digest=digest)
     store = build_review_store(state_db)
     existing = store.find_active(
         artifact_digest=digest,
@@ -84,6 +87,13 @@ def create_and_send_review(
             email_html_body=html_body,
             email_text_body=text_body,
             email_content_type=content_type,
+        )
+        record_lifecycle_event(
+            "review_requested",
+            entity_id=entity_id,
+            source="outlook",
+            event_key=f"review-requested:{review_id}",
+            details={"review_id": review_id, "recipient": recipient, "status": review_status, "reused": True},
         )
         audit_path = _write_review_audit(
             paths["monday"].parent,
@@ -161,6 +171,14 @@ def create_and_send_review(
         email_html_body=email.html_body,
         email_text_body=email.text_body,
         email_content_type=email.content_type,
+    )
+
+    record_lifecycle_event(
+        "review_requested",
+        entity_id=entity_id,
+        source="outlook",
+        event_key=f"review-requested:{review_id}",
+        details={"review_id": review_id, "recipient": recipient, "status": review_status, "reused": False},
     )
 
     audit_path = _write_review_audit(
@@ -295,6 +313,19 @@ class ApprovalProcessor:
                 continue
             if response_result == "confirmed":
                 accepted.append(review.review_id)
+                record_lifecycle_event(
+                    "review_confirmed",
+                    entity_id=_workflow_entity_id(
+                        Path(review.canonical_path),
+                        fallback_digest=review.artifact_digest,
+                    ),
+                    source="outlook",
+                    event_key=f"review-confirmed:{reply.message_id}",
+                    details={
+                        "review_id": review.review_id,
+                        "confirmation_message_id": reply.message_id,
+                    },
+                )
             elif response_result == "needs_correction":
                 corrections.append(review.review_id)
             elif response_result == "unclear":
@@ -512,6 +543,30 @@ class ApprovalProcessor:
                 "DRK remains a pending draft and was not submitted.\n"
             ),
         )
+        entity_id = _workflow_entity_id(
+            Path(review.canonical_path),
+            fallback_digest=review.artifact_digest,
+        )
+        record_lifecycle_event(
+            "monday_item_created",
+            entity_id=entity_id,
+            source="monday",
+            event_key=f"monday-created:{review_id}:{item_id}",
+            details={"review_id": review_id, "monday_item_id": item_id},
+            patient_link=PatientLink(
+                entity_id=entity_id,
+                monday_item_id=item_id,
+                patient_label=str(preview.get("item_name") or "") or None,
+                updated_at=utc_now(),
+            ),
+        )
+        record_lifecycle_event(
+            "drk_handoff_created",
+            entity_id=entity_id,
+            source="drk",
+            event_key=f"drk-handoff:{review_id}",
+            details={"review_id": review_id, "status": "pending_guarded_drk_execution"},
+        )
         return {
             "review_id": review_id,
             "status": "monday_applied_drk_pending",
@@ -628,3 +683,9 @@ def _reply_is_after_review(received_at: str | None, review_created_at: str) -> b
     except ValueError:
         return False
     return received > created
+
+
+def _workflow_entity_id(canonical_path: Path, *, fallback_digest: str) -> str:
+    canonical = _load_json(canonical_path)
+    referral_id = str(canonical.get("referral_id") or "").strip()
+    return referral_id or f"referral:{fallback_digest}"

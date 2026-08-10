@@ -34,6 +34,8 @@ FIELD_COLUMNS: dict[str, str] = {
     "case_manager": "deal_owner",
     "sent_to_cm": "status7__1",
     "referral_sent_to_provider": "status3__1",
+    "provider": "mirror03__1",
+    "due_date": "date_mm2gybh5",
     "appointment_date": "date9__1",
     "scheduling_complete": "status0__1",
     "scheduled_status": "color_mkq3gga",
@@ -50,6 +52,8 @@ DEFAULT_RESULT_FIELDS = (
     "referral_received",
     "case_manager",
     "sent_to_cm",
+    "provider",
+    "due_date",
     "scheduled_status",
     "scheduling_complete",
     "visit_status",
@@ -89,6 +93,7 @@ query ($boardIds: [ID!], $limit: Int!) {
       items {
         id
         name
+        updated_at
         group { id title }
         column_values { id text }
       }
@@ -104,6 +109,7 @@ query ($cursor: String!, $limit: Int!) {
     items {
       id
       name
+      updated_at
       group { id title }
       column_values { id text }
     }
@@ -118,6 +124,7 @@ query ($boardId: ID!, $columns: [ItemsPageByColumnValuesQuery!]!, $limit: Int!) 
     items {
       id
       name
+      updated_at
       group { id title }
       column_values { id text }
     }
@@ -138,6 +145,7 @@ query ($boardIds: [ID!], $term: CompareValue!, $limit: Int!) {
       items {
         id
         name
+        updated_at
         group { id title }
         column_values { id text }
       }

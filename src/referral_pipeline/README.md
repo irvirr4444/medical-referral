@@ -87,6 +87,36 @@ Workers never execute real Monday creates.
 Local one-shot commands (`outlook`, `retries`, `failures`, `approvals`) remain
 available for testing on any machine.
 
+## Workflow monitoring
+
+Steps 4-5 run as a separate read-only monitor. One manual cycle is:
+
+```powershell
+python run_pipeline.py monitor --live-monday --database-backend supabase
+python run_pipeline.py monitor-status --database-backend supabase
+python run_pipeline.py health --database-backend supabase
+```
+
+The first cycle establishes a baseline and evaluates overdue scheduling. Later
+cycles emit visit events only when an explicit Monday or DRK value changes. Email
+delivery requires `--send-alerts`; otherwise alerts remain in the database outbox.
+The continuous worker can include this cycle with `INTAKE_MONITOR_ENABLED=true`.
+It persists PHI-free poll/retry/approval/monitor health by default. Existing DRK
+Selenium card captures can be supplied with `--drk-capture-dir`; normalization
+does not perform a DRK login or infer missing visit values.
+
+Continuous DRK reads are a separate opt-in path:
+
+```powershell
+python run_worker.py --monitor --live-drk --drk-max-patients 10
+```
+
+This requires a Chrome-capable host, DRK credentials, and stored Monday-to-DRK
+patient links. It uses one authenticated browser per bounded batch and leaves the
+legacy `drk_emr.read_patient` CLI available for debugging/replay captures.
+See [docs/WORKFLOW_MONITORING.md](../../docs/WORKFLOW_MONITORING.md) for setup,
+data rules, and the normalized DRK snapshot contract.
+
 After the original sender replies naturally to confirm:
 
 ```powershell

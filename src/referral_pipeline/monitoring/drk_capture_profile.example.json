@@ -1,0 +1,28 @@
+{
+  "identity_cards": [
+    "patient_information"
+  ],
+  "encounter_cards": [
+    "encounters"
+  ],
+  "status_cards": [
+    "patient_information",
+    "pipeline"
+  ],
+  "field_aliases": {
+    "patient_id": ["id", "patientId"],
+    "patient_name": ["fullName", "patientName", "displayName"],
+    "first_name": ["firstName"],
+    "last_name": ["lastName"],
+    "dob": ["dateOfBirth", "dob"],
+    "provider": ["providerName", "assignedProviderName", "renderingProviderName"],
+    "appointment_date": ["appointmentDate", "appointmentDateTime", "scheduledDate", "dateOfService"],
+    "visit_status": ["visitStatus", "encounterStatus"],
+    "visit_outcome": ["visitOutcome", "outcome"],
+    "visit_event_id": ["visitId", "encounterId", "appointmentId"],
+    "progress_note_status": ["progressNoteStatus", "noteStatus"],
+    "source_updated_at": ["updatedAt", "lastUpdated", "modifiedAt"],
+    "qa_hold_reason": ["qaHoldReason", "holdReason"],
+    "discharge_reason": ["dischargeReason"]
+  }
+}

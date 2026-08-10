@@ -215,6 +215,10 @@ python run_pipeline.py outlook
 python run_pipeline.py apply --confirm-master-sheet-write
 ```
 
+Step 4 scheduling monitoring and Step 5 visit monitoring are documented in
+[docs/WORKFLOW_MONITORING.md](docs/WORKFLOW_MONITORING.md). They are read-only
+against Monday and DRK; alerts and the continuous worker are separately opt-in.
+
 The first command processes eligible new messages, performs read-only Monday and
 agency lookups, and saves exact Master Sheet previews. The second command applies that
 latest unblocked preview without rerunning extraction. For a controlled one-command

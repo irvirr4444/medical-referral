@@ -388,3 +388,12 @@ def test_create_and_send_review_reuses_active_request(tmp_path) -> None:
     email_text = (tmp_path / "review-email.txt").read_text(encoding="utf-8")
     assert "Reply with confirm if you wanna insert this client into monday and DRK" in email_text
     assert "CONFIRMED " not in email_text
+
+
+def test_workflow_entity_uses_canonical_referral_id(tmp_path) -> None:
+    from referral_pipeline.review.workflow import _workflow_entity_id
+
+    canonical = tmp_path / "canonical-referral.json"
+    _write(canonical, {"referral_id": "ref_source_hash"})
+
+    assert _workflow_entity_id(canonical, fallback_digest="artifact-hash") == "ref_source_hash"

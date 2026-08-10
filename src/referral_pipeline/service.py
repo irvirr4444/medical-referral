@@ -33,6 +33,7 @@ from master_sheet_writer import (
     build_master_sheet_create_preview,
     load_master_sheet_write_config,
 )
+from referral_pipeline.monitoring.observer import record_lifecycle_event
 
 Extractor = Callable[..., Any]
 
@@ -98,7 +99,11 @@ def process_inbound_pdf(
         records_file=monday_records_file,
         include_full_row=include_full_row,
     )
-    plan = build_intake_plan(referral, duplicate_check=duplicate)
+    plan = build_intake_plan(
+        referral,
+        duplicate_check=duplicate,
+        field_status=_canonical_seven_field_status(result),
+    )
     plan["source"] = {
         "kind": "inbound_email_pdf",
         "path": str(pdf),
@@ -172,6 +177,7 @@ def process_inbound_pdf(
         )
 
     manifest = {
+        "referral_id": result.referral_id if isinstance(result, CanonicalReferral) else None,
         "attachment_sha256": attachment.sha256,
         "filename": attachment.filename,
         "plan_path": str(plan_path),
@@ -190,6 +196,19 @@ def process_inbound_pdf(
         "source_conversation_id": getattr(attachment, "conversation_id", None),
     }
     (output / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    record_lifecycle_event(
+        "intake_preview_ready" if not preview["blocked"] else "intake_needs_attention",
+        entity_id=result.referral_id if isinstance(result, CanonicalReferral) else f"referral:{attachment.sha256}",
+        source="intake",
+        event_key=f"intake:{attachment.sha256}:{plan['outcome']}",
+        details={
+            "attachment_sha256": attachment.sha256,
+            "outcome": plan["outcome"],
+            "duplicate_status": plan["monday_duplicate_check"]["status"],
+            "master_sheet_blocked": preview["blocked"],
+            "master_sheet_blockers": preview["blockers"],
+        },
+    )
     return manifest
 
 
@@ -206,6 +225,25 @@ def _referral_from_extraction(result: Any) -> ReferralIntake:
     if isinstance(referral, dict):
         return ReferralIntake.model_validate(referral)
     raise TypeError("The extractor did not return a ReferralIntake or an object with .referral.")
+
+
+def _canonical_seven_field_status(result: Any) -> dict[str, str] | None:
+    referral = getattr(result, "referral", result)
+    if not isinstance(referral, CanonicalReferral):
+        return None
+    paths = {
+        "patient_name": "patient.name",
+        "patient_dob": "patient.date_of_birth",
+        "patient_phone": "patient.phones",
+        "patient_address": "patient.address",
+        "referring_facility": "home_health_or_hospice",
+        "clinical_information": "clinical",
+        "insurance_information": "insurances",
+    }
+    return {
+        field: referral.field_quality[path].status if path in referral.field_quality else "missing"
+        for field, path in paths.items()
+    }
 
 
 def _duplicate_check(

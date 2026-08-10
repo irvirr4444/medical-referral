@@ -26,6 +26,7 @@ from referral_pipeline.review.workflow import ApprovalProcessor  # noqa: E402
 from referral_pipeline.review.workflow import create_and_send_review  # noqa: E402
 from referral_pipeline.runner import main as run_inbound_main  # noqa: E402
 from referral_pipeline.state import InboxState  # noqa: E402
+from referral_pipeline.monitoring.cli import add_monitoring_commands, run_monitoring_command  # noqa: E402
 
 
 DEFAULT_OUTPUT_ROOT = Path("tmp") / "inbox-runs"
@@ -163,6 +164,8 @@ def _build_parser() -> argparse.ArgumentParser:
         metavar="SHA256",
         help="Move one permanent failure back onto the discovery queue for a deliberate retry.",
     )
+
+    add_monitoring_commands(commands)
 
     return parser
 
@@ -586,8 +589,10 @@ def main(argv: list[str] | None = None) -> int:
             return _run_retries(args)
         if args.command == "failures":
             return _run_failures(args)
+        if args.command in {"monitor", "monitor-status", "health"}:
+            return run_monitoring_command(args)
         return _resend_review(args)
-    except IntakeCLIError as error:
+    except (IntakeCLIError, ValueError) as error:
         print(f"intake: error: {error}", file=sys.stderr)
         return 2
 
