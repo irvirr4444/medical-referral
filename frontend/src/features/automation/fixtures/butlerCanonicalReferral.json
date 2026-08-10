@@ -1,0 +1,174 @@
+{
+  "schema_version": 1,
+  "referral_id": "ref_demo_butler_alva_001",
+  "source": {
+    "email_id": "AAMkAGButlerDemo001",
+    "attachment_id": "att-butler-demo-pdf",
+    "file_name": "BUTLER, ALVA demo.pdf",
+    "pdf_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "page_count": 3,
+    "sent_by": "chart-export@provider-network.example",
+    "extraction": {
+      "primary_model": "claude-opus-5",
+      "models_attempted": ["claude-opus-5"],
+      "pass_models": ["claude-opus-5", "claude-opus-5"],
+      "fallback_used": false
+    }
+  },
+  "document_type": "EHR patient chart",
+  "patient": {
+    "name": {
+      "first": "Alva",
+      "last": "Butler",
+      "full": "BUTLER, ALVA"
+    },
+    "date_of_birth": "1940-10-04",
+    "age": 85,
+    "sex_or_gender": "M",
+    "ssn": null,
+    "mrn": null,
+    "source_patient_id": "6227",
+    "source_patient_id_label": "PATIENT ID/#",
+    "phones": [{ "number": "(260) 438-4646", "type": "Home" }],
+    "email": "Dandydeby@aol.com",
+    "address": {
+      "line_1": "5316 FISHERSOUND LN",
+      "line_2": null,
+      "city": "APOLLO BEACH",
+      "state": "FL",
+      "postal_code": "33572",
+      "country": "US"
+    },
+    "emergency_contact": null
+  },
+  "referral_source": {
+    "organization": {
+      "name": null,
+      "contact_name": null,
+      "phone": "(813) 417-4767",
+      "fax": null,
+      "email": null,
+      "address": null
+    },
+    "provider_name": "YVETTE GUZMAN, APRN DNP",
+    "referral_or_order_date": null
+  },
+  "home_health_or_hospice": {
+    "organization": {
+      "name": null,
+      "contact_name": null,
+      "phone": null,
+      "fax": null,
+      "email": null,
+      "address": null
+    },
+    "hospice": null,
+    "palliative_care": null
+  },
+  "admission": {
+    "admission_date": null,
+    "facility": {
+      "name": null,
+      "contact_name": null,
+      "phone": null,
+      "fax": null,
+      "email": null,
+      "address": null
+    },
+    "place_of_service": null,
+    "medicare_admission": null
+  },
+  "clinical": {
+    "summary": "Complex cardiopulmonary and metabolic comorbidities with localized edema and bilateral lower-leg muscle wasting. G-tube feeding and thickened liquids noted.",
+    "wound_order_included": null,
+    "diagnoses": [
+      { "code": "I25.10", "description": "Atherosclerotic heart disease of native coronary artery without angina", "is_primary": true, "status": "Current" },
+      { "code": "I42.0", "description": "Dilated cardiomyopathy", "status": "Current" },
+      { "code": "I48.0", "description": "Paroxysmal atrial fibrillation", "status": "Current" },
+      { "code": "N18.31", "description": "Chronic kidney disease stage 3A", "status": "Current" },
+      { "code": "R60.0", "description": "Localized edema", "status": "Current" },
+      { "code": "E43", "description": "Severe protein-calorie malnutrition", "status": "Current" },
+      { "code": "N39.0", "description": "Urinary tract infection", "status": "Current" },
+      { "code": "K59.00", "description": "Constipation", "status": "Current" },
+      { "code": "E11.65", "description": "Type 2 diabetes mellitus with hyperglycemia", "status": "Current" },
+      { "code": "E03.9", "description": "Hypothyroidism", "status": "Current" },
+      { "code": "M62.562", "description": "Muscle wasting/atrophy of left lower leg", "status": "Current" },
+      { "code": "M62.561", "description": "Muscle wasting/atrophy of right lower leg", "status": "Current" }
+    ],
+    "medications": [],
+    "allergies": [],
+    "diagnoses_section_present": true,
+    "medications_section_present": true,
+    "allergies_section_present": true,
+    "no_known_allergies_explicit": true,
+    "notes": [
+      "Additional prescriber: COLE, MELISSA, APRN DNP.",
+      "G-tube feeding / thickened liquids noted.",
+      "Medication list intentionally excluded from requested_services in review."
+    ]
+  },
+  "insurances": [
+    {
+      "payer_name": "MEDICARE PART B",
+      "policy_number": "4FM5A30MN88",
+      "group_number": null,
+      "insurance_type": "Primary"
+    },
+    {
+      "payer_name": "FLORIDA BLUE",
+      "policy_number": "VNF651M57250",
+      "group_number": null,
+      "insurance_type": "Secondary"
+    }
+  ],
+  "requested_services": [],
+  "field_quality": {
+    "patient.name": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [1],
+      "evidence_quote": "BUTLER, ALVA"
+    },
+    "patient.date_of_birth": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [1],
+      "evidence_quote": "10/04/1940"
+    },
+    "patient.phones": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [1],
+      "evidence_quote": "(260) 438-4646"
+    },
+    "patient.address": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [1],
+      "evidence_quote": "5316 FISHERSOUND LN, APOLLO BEACH FL 33572"
+    },
+    "home_health_or_hospice": {
+      "status": "missing",
+      "confidence": "medium",
+      "evidence_pages": [],
+      "evidence_quote": null
+    },
+    "clinical": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [2],
+      "evidence_quote": "Diagnosis list and clinical summary documented across chart pages."
+    },
+    "insurances": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [3],
+      "evidence_quote": "MEDICARE PART B 4FM5A30MN88; FLORIDA BLUE VNF651M57250"
+    }
+  },
+  "warnings": [
+    "This is not a clean referral form; it is an EHR patient chart export.",
+    "Provider street address was not treated as a referring facility name.",
+    "Home-health or hospice agency is not documented on the chart."
+  ]
+}

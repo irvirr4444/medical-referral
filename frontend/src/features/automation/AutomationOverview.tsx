@@ -1,7 +1,6 @@
 import { ArrowRight, Eye, GitBranch, MessageSquareText } from 'lucide-react'
 import { useDemo } from '../../state/useDemo'
 import { AUTOMATION_STAGES } from './stages'
-import { ImplementationBadge } from './StatusBadge'
 import './AutomationOverview.css'
 
 export function AutomationOverview() {
@@ -31,14 +30,6 @@ export function AutomationOverview() {
             order.
           </p>
         </div>
-        <button
-          type="button"
-          className="btn btn-primary automation-overview__walkthrough"
-          onClick={() => openStage('intake')}
-        >
-          Walk through one referral
-          <ArrowRight size={18} aria-hidden="true" />
-        </button>
       </section>
 
       <section
@@ -108,7 +99,6 @@ export function AutomationOverview() {
                   <span className="automation-stage-card__number">
                     {AUTOMATION_STAGES.indexOf(stage) + 1}
                   </span>
-                  <ImplementationBadge status={stage.implementationStatus} />
                 </span>
                 <strong>{stage.shortTitle}</strong>
                 <span>{stage.purpose}</span>

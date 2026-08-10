@@ -1,13 +1,12 @@
-import { ArrowRight, Clock3, Database, ShieldCheck } from 'lucide-react'
-import { FeedbackPanel } from './FeedbackPanel'
-import { ImplementationBadge, RunStatusBadge } from './StatusBadge'
+import { Clock3, Database } from 'lucide-react'
+import { ArtifactSections } from './ArtifactSections'
 import type {
   AutomationMicrostep,
   AutomationRunFixture,
   MicrostepExample,
-  MicrostepFeedback,
 } from './types'
 import './Microstep.css'
+import './ArtifactSections.css'
 
 function ValueList({
   title,
@@ -35,18 +34,15 @@ export function MicrostepDetail({
   step,
   run,
   example,
-  feedback,
-  onAddFeedback,
 }: {
   step: AutomationMicrostep
   run: AutomationRunFixture
   example: MicrostepExample
-  feedback: MicrostepFeedback[]
-  onAddFeedback: (
-    category: MicrostepFeedback['category'],
-    comment: string,
-  ) => void
 }) {
+  const hasPatientWalkthrough = Boolean(
+    example.patientName && example.artifactSections?.length,
+  )
+
   return (
     <article
       className="microstep-detail"
@@ -54,13 +50,8 @@ export function MicrostepDetail({
     >
       <header className="microstep-detail__header">
         <div>
-          <p className="caption">{step.system}</p>
           <h2 id={`microstep-${step.id}`}>{step.name}</h2>
           <p>{step.description}</p>
-        </div>
-        <div className="microstep-detail__badges">
-          <ImplementationBadge status={step.implementationStatus} />
-          <RunStatusBadge status={example.status} />
         </div>
       </header>
 
@@ -80,24 +71,55 @@ export function MicrostepDetail({
         </span>
       </div>
 
-      <div className="microstep-detail__io">
-        <ValueList title="Input" values={example.inputs} />
-        <ArrowRight className="microstep-detail__arrow" aria-hidden="true" />
-        <ValueList title="Output" values={example.outputs} />
-      </div>
+      {hasPatientWalkthrough ? (
+        <>
+          <div className="microstep-detail__patient">
+            <p className="caption">Patient in this microstep</p>
+            <strong>{example.patientName}</strong>
+            <span className="muted">
+              {example.referralId} · {example.executedAt}
+            </span>
+          </div>
 
-      <section className="microstep-validation">
-        <ShieldCheck size={22} aria-hidden="true" />
-        <div>
-          <h3>Validation and handoff</h3>
-          <p>{example.validation}</p>
-          <p>
-            <strong>Next:</strong> {step.next}
-          </p>
+          {example.knownAtThisPoint?.length ? (
+            <section className="microstep-detail__known" aria-label="Known at this point">
+              <h3>Known at this point</h3>
+              <dl>
+                {example.knownAtThisPoint.map((item) => (
+                  <div key={`${item.label}-${item.value}`}>
+                    <dt>{item.label}</dt>
+                    <dd>{item.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          ) : null}
+
+          <section className="microstep-detail__artifact" aria-label="Produced output">
+            <h3>Output produced in this step</h3>
+            <dl className="microstep-detail__artifact-meta">
+              <div>
+                <dt>Artifact</dt>
+                <dd>{example.artifactTitle}</dd>
+              </div>
+              <div>
+                <dt>Execution</dt>
+                <dd>{example.executionId}</dd>
+              </div>
+            </dl>
+            <ArtifactSections
+              sections={example.artifactSections ?? []}
+              artifactId={example.artifactId ?? step.id}
+            />
+          </section>
+        </>
+      ) : (
+        <div className="microstep-detail__io">
+          <ValueList title="Input" values={example.inputs} />
+          <ValueList title="Output" values={example.outputs} />
         </div>
-      </section>
+      )}
 
-      <FeedbackPanel feedback={feedback} onAdd={onAddFeedback} />
     </article>
   )
 }

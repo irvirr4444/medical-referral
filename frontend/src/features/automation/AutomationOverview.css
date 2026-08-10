@@ -7,7 +7,7 @@
   min-height: 240px;
   padding: clamp(1.5rem, 4vw, 3.5rem);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: 1fr;
   align-items: end;
   gap: 2rem;
   overflow: hidden;
@@ -39,15 +39,6 @@
   max-width: 760px;
   color: var(--navy-soft);
   font-size: 1.05rem;
-}
-
-.automation-overview__walkthrough {
-  position: relative;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-  white-space: nowrap;
 }
 
 .automation-guide,
@@ -154,16 +145,6 @@
   padding-top: 1rem;
   color: var(--teal);
   font-weight: 650;
-}
-
-@media (max-width: 980px) {
-  .automation-overview__hero {
-    grid-template-columns: 1fr;
-  }
-
-  .automation-overview__walkthrough {
-    justify-self: start;
-  }
 }
 
 @media (max-width: 720px) {

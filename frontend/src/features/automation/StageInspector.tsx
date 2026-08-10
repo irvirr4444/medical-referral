@@ -1,55 +1,22 @@
 import { useState } from 'react'
-import { ExternalLink } from 'lucide-react'
-import { AUTOMATION_RUNS, exampleForRun } from './runFixtures'
+import { exampleForRun } from './runFixtures'
 import { MicrostepDetail } from './MicrostepDetail'
 import { MicrostepList } from './MicrostepList'
-import { RunSelector } from './RunSelector'
-import type {
-  AutomationRunFixture,
-  AutomationStageDefinition,
-  MicrostepFeedback,
-} from './types'
+import { BUTLER_RUN_FIXTURE } from './types'
+import type { AutomationStageDefinition } from './types'
 import './StageInspector.css'
 
 export function StageInspector({
   stage,
-  onOpenReferralWorkspace,
 }: {
   stage: AutomationStageDefinition
-  onOpenReferralWorkspace?: () => void
 }) {
-  const [selectedRunId, setSelectedRunId] = useState<
-    AutomationRunFixture['id']
-  >(AUTOMATION_RUNS[0].id)
   const [selectedStepId, setSelectedStepId] = useState(stage.microsteps[0].id)
-  const [feedback, setFeedback] = useState<MicrostepFeedback[]>([])
-  const run =
-    AUTOMATION_RUNS.find((item) => item.id === selectedRunId) ??
-    AUTOMATION_RUNS[0]
+  const run = BUTLER_RUN_FIXTURE
   const selectedStep =
     stage.microsteps.find((item) => item.id === selectedStepId) ??
     stage.microsteps[0]
   const example = exampleForRun(run, selectedStep, stage.id)
-  const stepFeedback = feedback.filter(
-    (item) => item.runId === run.id && item.stepId === selectedStep.id,
-  )
-
-  const addFeedback = (
-    category: MicrostepFeedback['category'],
-    comment: string,
-  ) => {
-    setFeedback((current) => [
-      ...current,
-      {
-        id: `${run.id}-${selectedStep.id}-${current.length + 1}`,
-        runId: run.id,
-        stepId: selectedStep.id,
-        category,
-        comment,
-        createdAt: 'Added just now',
-      },
-    ])
-  }
 
   return (
     <div className="stage-inspector">
@@ -74,25 +41,7 @@ export function StageInspector({
             <dd>{stage.successDefinition}</dd>
           </div>
         </dl>
-        {onOpenReferralWorkspace ? (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={onOpenReferralWorkspace}
-          >
-            Open extracted referral workspace
-            <ExternalLink size={16} aria-hidden="true" />
-          </button>
-        ) : null}
       </section>
-
-      <RunSelector
-        runs={AUTOMATION_RUNS}
-        selectedRunId={selectedRunId}
-        onChange={(runId) =>
-          setSelectedRunId(runId as AutomationRunFixture['id'])
-        }
-      />
 
       <section
         className="stage-inspector__workspace panel"
@@ -103,25 +52,17 @@ export function StageInspector({
             <p className="caption">Execution order</p>
             <h2>{stage.microsteps.length} microsteps</h2>
             <p className="muted">
-              Select a step to inspect its input, output, validation, and
-              feedback.
+              Select a step to inspect progressive patient data and the output
+              produced at that step.
             </p>
           </div>
           <MicrostepList
             steps={stage.microsteps}
-            stageId={stage.id}
-            run={run}
             selectedStepId={selectedStep.id}
             onSelect={setSelectedStepId}
           />
         </div>
-        <MicrostepDetail
-          step={selectedStep}
-          run={run}
-          example={example}
-          feedback={stepFeedback}
-          onAddFeedback={addFeedback}
-        />
+        <MicrostepDetail step={selectedStep} run={run} example={example} />
       </section>
     </div>
   )
