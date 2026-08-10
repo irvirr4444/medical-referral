@@ -6,7 +6,7 @@ export const HANDOFF_STAGE: AutomationStageDefinition = {
   title: '2. Handoff',
   shortTitle: 'Handoff',
   purpose:
-    'Convert an approved intake plan into traceable destination actions and a clear team handoff.',
+    'Acknowledge the referral source, send the referral to the assigned case manager and face-sheet team, and record the handoff in Monday.com and DRK.',
   trigger:
     'The guarded intake approval gate authorizes downstream preparation.',
   successDefinition:

@@ -26,7 +26,7 @@ export function AutomationOverview() {
       <section className="automation-overview__hero panel">
         <div>
           <h1 id="automation-overview-title">
-            Referral Intake Process
+            Referral Intake & Scheduling
           </h1>
           <div className="automation-overview__goal">
             <span className="automation-overview__goal-label">
@@ -59,7 +59,7 @@ export function AutomationOverview() {
             <h3>Follow the sequence</h3>
             <p>
               See the trigger, purpose, and expected handoff for every
-              microstep.
+              step.
             </p>
           </article>
           <article>
@@ -74,7 +74,7 @@ export function AutomationOverview() {
             <MessageSquareText size={22} aria-hidden="true" />
             <h3>Comment in context</h3>
             <p>
-              Attach feedback to the exact run and microstep that needs
+              Attach feedback to the exact run and step that needs
               correction.
             </p>
           </article>
@@ -87,12 +87,7 @@ export function AutomationOverview() {
       >
         <div className="section-heading">
           <div>
-            <p className="caption">The complete workflow</p>
             <h2 id="automation-stage-map-title">Seven inspectable stages</h2>
-            <p className="muted">
-              Status describes current implementation maturity, not whether a
-              clinical decision has been automated.
-            </p>
           </div>
         </div>
         <ol className="automation-stage-map__grid">
@@ -112,7 +107,7 @@ export function AutomationOverview() {
                 <strong>{stage.shortTitle}</strong>
                 <span>{stage.purpose}</span>
                 <span className="automation-stage-card__footer">
-                  {stage.microsteps.length} microsteps
+                  {stage.microsteps.length} steps
                   <ArrowRight size={16} aria-hidden="true" />
                 </span>
               </button>

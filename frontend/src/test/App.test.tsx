@@ -17,7 +17,7 @@ describe('automation inspection console', () => {
     )
     expect(
       screen.getByRole('heading', {
-        name: /Understand every step from referral to visit review/i,
+        name: /Referral Intake & Scheduling/i,
       }),
     ).toBeInTheDocument()
     expect(
@@ -39,11 +39,11 @@ describe('automation inspection console', () => {
     ).toHaveAttribute('aria-current', 'page')
     expect(
       screen.getByRole('heading', {
-        name: /What this stage is responsible for/i,
+        name: /1\. Referral intake/i,
       }),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('navigation', { name: /Automation microsteps/i }),
+      screen.getByRole('navigation', { name: /Automation steps/i }),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('button', { name: /Discover the referral email/i }),

@@ -6,7 +6,7 @@ export const INTAKE_STAGE: AutomationStageDefinition = {
   title: '1. Referral intake',
   shortTitle: 'Referral intake',
   purpose:
-    'Turn an inbound referral PDF into verified, reviewable information without allowing uncertain data to silently continue.',
+    'Verify every inbound referral PDF, capture the required patient information, and route missing or uncertain data for human follow-up.',
   trigger:
     'A new Outlook message reaches the monitored inbox with at least one PDF attachment.',
   successDefinition:

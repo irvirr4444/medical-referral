@@ -12,7 +12,7 @@ export function MicrostepList({
   onSelect: (stepId: string) => void
 }) {
   return (
-    <nav className="microstep-list" aria-label="Automation microsteps">
+    <nav className="microstep-list" aria-label="Automation steps">
       <ol>
         {steps.map((step, index) => {
           const selected = step.id === selectedStepId
