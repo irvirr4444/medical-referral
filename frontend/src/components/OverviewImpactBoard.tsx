@@ -7,7 +7,7 @@ import {
   TrendingUp,
   X,
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   bossPeriodById,
   buildBossPeriodViews,
@@ -48,6 +48,112 @@ export function OverviewImpactBoard({
     null,
   )
   const [patientQuery, setPatientQuery] = useState('')
+  const modalOpen = pickerOpen || selectedMetric !== null
+
+  useEffect(() => {
+    if (!modalOpen) return
+
+    const scrollY = window.scrollY
+    const body = document.body
+    const root = document.documentElement
+    const previousBodyStyles = {
+      overflow: body.style.overflow,
+      paddingRight: body.style.paddingRight,
+      position: body.style.position,
+      top: body.style.top,
+      left: body.style.left,
+      right: body.style.right,
+      width: body.style.width,
+    }
+    const previousRootStyles = {
+      overflow: root.style.overflow,
+      overscrollBehavior: root.style.overscrollBehavior,
+    }
+    const scrollbarWidth =
+      window.innerWidth - root.clientWidth
+
+    root.style.overflow = 'hidden'
+    root.style.overscrollBehavior = 'none'
+    body.style.overflow = 'hidden'
+    body.style.position = 'fixed'
+    body.style.top = `-${scrollY}px`
+    body.style.left = '0'
+    body.style.right = '0'
+    body.style.width = '100%'
+    if (scrollbarWidth > 0) {
+      body.style.paddingRight = `${scrollbarWidth}px`
+    }
+
+    const canScroll = (target: EventTarget | null, deltaY: number) => {
+      if (!(target instanceof Element)) return false
+      let scrollable = target.closest<HTMLElement>('[data-modal-scroll]')
+      while (scrollable) {
+        if (scrollable.scrollHeight > scrollable.clientHeight) {
+          if (deltaY < 0 && scrollable.scrollTop > 0) return true
+          if (
+            deltaY > 0 &&
+            scrollable.scrollTop + scrollable.clientHeight <
+              scrollable.scrollHeight
+          ) {
+            return true
+          }
+        }
+        scrollable =
+          scrollable.parentElement?.closest<HTMLElement>(
+            '[data-modal-scroll]',
+          ) ?? null
+      }
+      return deltaY === 0
+    }
+
+    const preventWheelScroll = (event: WheelEvent) => {
+      if (!canScroll(event.target, event.deltaY)) event.preventDefault()
+    }
+
+    let previousTouchY: number | null = null
+    const rememberTouch = (event: TouchEvent) => {
+      previousTouchY = event.touches[0]?.clientY ?? null
+    }
+    const preventTouchScroll = (event: TouchEvent) => {
+      const currentTouchY = event.touches[0]?.clientY
+      if (previousTouchY === null || currentTouchY === undefined) {
+        event.preventDefault()
+        return
+      }
+      const deltaY = previousTouchY - currentTouchY
+      previousTouchY = currentTouchY
+      if (!canScroll(event.target, deltaY)) event.preventDefault()
+    }
+
+    document.addEventListener('wheel', preventWheelScroll, {
+      passive: false,
+      capture: true,
+    })
+    document.addEventListener('touchstart', rememberTouch, {
+      passive: true,
+      capture: true,
+    })
+    document.addEventListener('touchmove', preventTouchScroll, {
+      passive: false,
+      capture: true,
+    })
+
+    return () => {
+      document.removeEventListener('wheel', preventWheelScroll, {
+        capture: true,
+      })
+      document.removeEventListener('touchstart', rememberTouch, {
+        capture: true,
+      })
+      document.removeEventListener('touchmove', preventTouchScroll, {
+        capture: true,
+      })
+      root.style.overflow = previousRootStyles.overflow
+      root.style.overscrollBehavior = previousRootStyles.overscrollBehavior
+      Object.assign(body.style, previousBodyStyles)
+      if (scrollY > 0) window.scrollTo(0, scrollY)
+    }
+  }, [modalOpen])
 
   const active = useMemo(() => {
     if (selectedId === 'custom') {
@@ -210,6 +316,7 @@ export function OverviewImpactBoard({
             role="dialog"
             aria-modal="true"
             aria-labelledby={`metric-patients-title-${scope}`}
+            data-modal-scroll
             onClick={(event) => event.stopPropagation()}
           >
             <header className="impact-board__modal-header">
@@ -244,7 +351,11 @@ export function OverviewImpactBoard({
               />
             </label>
 
-            <div className="impact-board__patient-list" role="list">
+            <div
+              className="impact-board__patient-list"
+              role="list"
+              data-modal-scroll
+            >
               {visiblePatients.map((patient) => (
                 <article
                   key={patient.id}
@@ -290,6 +401,7 @@ export function OverviewImpactBoard({
             role="dialog"
             aria-modal="true"
             aria-labelledby={`boss-date-picker-title-${scope}`}
+            data-modal-scroll
             onClick={(event) => event.stopPropagation()}
           >
             <DatePeriodPicker

@@ -251,7 +251,9 @@
   display: grid;
   place-items: center;
   padding: 1rem;
+  overflow: hidden;
   background: rgba(18, 35, 63, 0.42);
+  overscroll-behavior: none;
 }
 
 .impact-board__modal {
@@ -260,6 +262,8 @@
   display: grid;
   gap: 1rem;
   box-shadow: 0 24px 48px rgba(18, 35, 63, 0.18);
+  overscroll-behavior: contain;
+  touch-action: auto;
 }
 
 .impact-board__patient-modal {
@@ -272,6 +276,12 @@
   width: min(760px, 100%);
   max-height: min(760px, calc(100vh - 2rem));
   overflow: auto;
+}
+
+.impact-board__date-modal:has(
+    .date-period-picker__calendars:not(.has-two)
+  ) {
+  width: min(620px, 100%);
 }
 
 .date-period-picker__modes {
@@ -343,7 +353,7 @@
 
 .date-period-picker__calendars {
   display: grid;
-  grid-template-columns: minmax(280px, 360px);
+  grid-template-columns: minmax(280px, 440px);
   justify-content: center;
 }
 
@@ -384,7 +394,7 @@
 }
 
 .date-period-picker__days button {
-  aspect-ratio: 1;
+  min-height: 2.65rem;
   min-width: 0;
   border-radius: 8px;
   font-size: 0.82rem;
@@ -413,6 +423,15 @@
   background: var(--teal);
   color: #fff;
   font-weight: 800;
+}
+
+.date-period-picker__days button.is-selected:hover:not(:disabled),
+.date-period-picker__month-grid button.is-selected:hover:not(:disabled),
+.date-period-picker__year-grid button.is-selected:hover:not(:disabled) {
+  border-color: var(--teal);
+  background: var(--teal);
+  color: #fff;
+  filter: brightness(0.94);
 }
 
 .date-period-picker__month-grid,

@@ -60,7 +60,11 @@ function calendarDays(month: Date): Date[] {
   const first = startOfMonth(month)
   const gridStart = new Date(first)
   gridStart.setUTCDate(first.getUTCDate() - first.getUTCDay())
-  return Array.from({ length: 42 }, (_, index) => {
+  const requiredCells = Math.max(
+    35,
+    Math.ceil((first.getUTCDay() + endOfMonth(month).getUTCDate()) / 7) * 7,
+  )
+  return Array.from({ length: requiredCells }, (_, index) => {
     const day = new Date(gridStart)
     day.setUTCDate(gridStart.getUTCDate() + index)
     return day
@@ -184,6 +188,44 @@ export function DatePeriodPicker({
     setEnd(toIso(yearEnd > maxDate ? maxDate : yearEnd))
   }
 
+  const changeMode = (nextMode: PickerMode) => {
+    setMode(nextMode)
+    const anchor = parseIso(end || start || BOSS_DEMO_TODAY)
+
+    if (nextMode === 'day') {
+      const iso = toIso(anchor)
+      setStart(iso)
+      setEnd(iso)
+      setVisibleMonth(startOfMonth(anchor))
+      return
+    }
+
+    if (nextMode === 'month') {
+      const monthStart = startOfMonth(anchor)
+      const monthEnd = endOfMonth(anchor)
+      setVisibleYear(anchor.getUTCFullYear())
+      setStart(toIso(monthStart))
+      setEnd(toIso(monthEnd > maxDate ? maxDate : monthEnd))
+      return
+    }
+
+    if (nextMode === 'year') {
+      const yearStart = new Date(Date.UTC(anchor.getUTCFullYear(), 0, 1))
+      const yearEnd = new Date(Date.UTC(anchor.getUTCFullYear(), 11, 31))
+      setVisibleYear(anchor.getUTCFullYear())
+      setStart(toIso(yearStart))
+      setEnd(toIso(yearEnd > maxDate ? maxDate : yearEnd))
+      return
+    }
+
+    const anchorMonth = startOfMonth(anchor)
+    setVisibleMonth(
+      addMonths(anchorMonth, 1) > startOfMonth(maxDate)
+        ? addMonths(startOfMonth(maxDate), -1)
+        : anchorMonth,
+    )
+  }
+
   const summary =
     start && end
       ? start === end
@@ -220,15 +262,7 @@ export function DatePeriodPicker({
             role="tab"
             aria-selected={mode === item.id}
             className={mode === item.id ? 'is-active' : ''}
-            onClick={() => {
-              setMode(item.id)
-              if (
-                item.id === 'range' &&
-                addMonths(visibleMonth, 1) > startOfMonth(maxDate)
-              ) {
-                setVisibleMonth(addMonths(startOfMonth(maxDate), -1))
-              }
-            }}
+            onClick={() => changeMode(item.id)}
           >
             {item.label}
           </button>
