@@ -44,6 +44,13 @@ export type DemoAction =
   | { type: 'SET_SPINE_FILTER'; stage: WorkflowStage | 'all' }
   | { type: 'TOGGLE_HOW_CALCULATED' }
   | { type: 'SET_ACTIVE_PAGE'; page: string }
+  | {
+      type: 'OPEN_PATIENT_PROFILE'
+      returnPage: string
+      metricId: string | null
+    }
+  | { type: 'CLOSE_PATIENT_PROFILE'; reopenList?: boolean }
+  | { type: 'CLEAR_REOPEN_PATIENT_METRIC' }
   | { type: 'UPDATE_IMPACT_ASSUMPTIONS'; patch: Partial<ImpactAssumptions> }
   | { type: 'PREPARE_FOLLOW_UP'; id: string }
   | { type: 'RESOLVE_DUPLICATE'; id: string; decision: 'different' | 'keep_blocked' }
@@ -280,6 +287,8 @@ export function createInitialState(): DemoState {
     scenarioMinutesReturned: sumCompletedJourneyCaseMinutes(workflowScenarios),
     journeyFocusCaseId: focusCaseId,
     selectedJourneyPatientId,
+    patientProfileReturnPage: null,
+    reopenPatientMetricId: null,
   }
 }
 
@@ -339,7 +348,33 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
         activePage: action.page,
         scenarioFilter: 'all',
         selectedReferralId: null,
+        patientProfileReturnPage: null,
+        reopenPatientMetricId: null,
       }
+
+    case 'OPEN_PATIENT_PROFILE':
+      return {
+        ...state,
+        patientProfileReturnPage: action.returnPage,
+        reopenPatientMetricId: action.metricId,
+        selectedReferralId: null,
+      }
+
+    case 'CLOSE_PATIENT_PROFILE': {
+      const returnPage = state.patientProfileReturnPage ?? state.activePage
+      const reopenMetricId = action.reopenList
+        ? state.reopenPatientMetricId
+        : null
+      return {
+        ...state,
+        patientProfileReturnPage: null,
+        activePage: returnPage,
+        reopenPatientMetricId: reopenMetricId,
+      }
+    }
+
+    case 'CLEAR_REOPEN_PATIENT_METRIC':
+      return { ...state, reopenPatientMetricId: null }
 
     case 'SET_SCENARIO_FILTER':
       return { ...state, scenarioFilter: action.filter }

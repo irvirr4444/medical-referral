@@ -521,6 +521,7 @@
 }
 
 .impact-board__patient-row {
+  width: 100%;
   min-height: 4.75rem;
   display: grid;
   grid-template-columns: 2.35rem minmax(0, 1fr) minmax(160px, 0.8fr);
@@ -530,6 +531,24 @@
   border: 1px solid var(--border);
   border-radius: 11px;
   background: #f8faf9;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+.impact-board__patient-row.is-interactive {
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.impact-board__patient-row.is-interactive:hover,
+.impact-board__patient-row.is-interactive:focus-visible {
+  border-color: rgba(14, 124, 134, 0.45);
+  background: #f1f8f8;
+  box-shadow: 0 8px 18px rgba(18, 35, 63, 0.08);
 }
 
 .impact-board__patient-avatar {

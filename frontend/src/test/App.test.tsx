@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import App from '../App'
@@ -44,6 +44,80 @@ describe('automation inspection console', () => {
     expect(
       screen.queryByText(/Sample patients for today/i),
     ).not.toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole('button', { name: /Open profile for Alva Butler/i }),
+    )
+    expect(
+      screen.queryByRole('dialog', { name: /New referrals/i }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('navigation', { name: /Primary/i }),
+    ).not.toBeInTheDocument()
+    const profilePage = screen.getByRole('main', { name: /Alva Butler/i })
+    expect(profilePage).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/patients/butler-alva')
+    expect(profilePage).toHaveTextContent('BUTLER, ALVA')
+    expect(profilePage).toHaveTextContent('(260) 438-4646')
+    expect(profilePage).toHaveTextContent('MEDICARE PART B')
+    expect(profilePage).toHaveTextContent(
+      /No requested services documented in the canonical referral/i,
+    )
+    expect(profilePage).toHaveTextContent(/Not in Monday.com yet/i)
+    expect(profilePage).toHaveTextContent(/Not in DRK yet/i)
+    expect(profilePage).toHaveTextContent(/1\. Referral intake/i)
+    expect(profilePage).toHaveTextContent(
+      /Step 12 of 13: Interpret the reviewer reply/i,
+    )
+    expect(
+      screen.queryByRole('button', { name: /Back to list/i }),
+    ).not.toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole('button', { name: /Open clinical summary details/i }),
+    )
+    const clinicalDialog = screen.getByRole('dialog', {
+      name: /Clinical summary/i,
+    })
+    expect(clinicalDialog).toHaveTextContent(/cardiopulmonary/i)
+    expect(clinicalDialog).toHaveTextContent(/Clinical notes/i)
+    await user.click(screen.getByRole('button', { name: /Close details/i }))
+    expect(
+      screen.queryByRole('dialog', { name: /Clinical summary/i }),
+    ).not.toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole('button', { name: /Open diagnosis details/i }),
+    )
+    const diagnosesDialog = screen.getByRole('dialog', {
+      name: /^Diagnosis$/i,
+    })
+    expect(diagnosesDialog).toHaveTextContent('I25.10')
+    expect(diagnosesDialog).toHaveTextContent(/12 documented diagnoses/i)
+    expect(diagnosesDialog).toHaveTextContent(/Primary/i)
+    await user.click(screen.getByRole('button', { name: /Close details/i }))
+
+    await user.click(
+      screen.getByRole('button', { name: /Open insurance details/i }),
+    )
+    const insuranceDialog = screen.getByRole('dialog', {
+      name: /^Insurance$/i,
+    })
+    expect(insuranceDialog).toHaveTextContent('MEDICARE PART B')
+    expect(insuranceDialog).toHaveTextContent(/2 insurance records/i)
+    await user.click(screen.getByRole('button', { name: /Close details/i }))
+
+    window.history.back()
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/')
+    })
+    expect(
+      screen.getByRole('navigation', { name: /Primary/i }),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole('button', { name: /View patients for New referrals/i }),
+    )
     await user.type(screen.getByRole('searchbox', { name: /Search patients/i }), 'zzzz')
     expect(screen.getByText(/No patients match your search/i)).toBeInTheDocument()
     await user.click(

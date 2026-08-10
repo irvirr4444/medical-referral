@@ -22,6 +22,8 @@ import {
 } from '../data/bossMetrics'
 import { buildBossMetricPatients } from '../data/bossMetricPatients'
 import { DatePeriodPicker } from './DatePeriodPicker'
+import { useDemo } from '../state/useDemo'
+import { useNavigate } from 'react-router-dom'
 import './OverviewImpactBoard.css'
 
 export function OverviewImpactBoard({
@@ -29,6 +31,8 @@ export function OverviewImpactBoard({
 }: {
   scope?: BossMetricsScope
 }) {
+  const { state, dispatch } = useDemo()
+  const navigate = useNavigate()
   const periodTabs = useMemo(
     () =>
       buildBossPeriodViews(scope).map((period) => ({
@@ -162,6 +166,17 @@ export function OverviewImpactBoard({
     return bossPeriodById(selectedId, scope)
   }, [appliedCustom, scope, selectedId])
 
+  useEffect(() => {
+    if (!state.reopenPatientMetricId) return
+    const metric = active.metrics.find(
+      (item) => item.id === state.reopenPatientMetricId,
+    )
+    if (metric) {
+      setSelectedMetric(metric)
+      setPatientQuery('')
+    }
+  }, [active.metrics, state.reopenPatientMetricId])
+
   const metricPatients = useMemo(() => {
     if (!selectedMetric) return []
     return buildBossMetricPatients(
@@ -190,6 +205,9 @@ export function OverviewImpactBoard({
   const closePatientList = () => {
     setSelectedMetric(null)
     setPatientQuery('')
+    if (state.reopenPatientMetricId) {
+      dispatch({ type: 'CLEAR_REOPEN_PATIENT_METRIC' })
+    }
   }
 
   const openPicker = () => {
@@ -269,6 +287,9 @@ export function OverviewImpactBoard({
                   onClick={() => {
                     setSelectedMetric(metric)
                     setPatientQuery('')
+                    if (state.reopenPatientMetricId) {
+                      dispatch({ type: 'CLEAR_REOPEN_PATIENT_METRIC' })
+                    }
                   }}
                   aria-label={`View patients for ${metric.label}`}
                 >
@@ -356,30 +377,61 @@ export function OverviewImpactBoard({
               role="list"
               data-modal-scroll
             >
-              {visiblePatients.map((patient) => (
-                <article
-                  key={patient.id}
-                  className="impact-board__patient-row"
-                  role="listitem"
-                >
-                  <span className="impact-board__patient-avatar" aria-hidden="true">
-                    {patient.name
-                      .split(' ')
-                      .map((part) => part[0])
-                      .join('')}
-                  </span>
-                  <span className="impact-board__patient-copy">
-                    <strong>{patient.name}</strong>
-                    <small>
-                      DOB: {patient.dateOfBirth} · {patient.phone}
-                    </small>
-                    <small>{patient.address}</small>
-                  </span>
-                  <span className="impact-board__patient-status">
-                    <strong>{patient.status}</strong>
-                  </span>
-                </article>
-              ))}
+              {visiblePatients.map((patient) => {
+                const openProfile = () => {
+                  if (!patient.profileId || !selectedMetric) return
+                  dispatch({
+                    type: 'OPEN_PATIENT_PROFILE',
+                    returnPage: state.activePage,
+                    metricId: selectedMetric.id,
+                  })
+                  navigate(`/patients/${patient.profileId}`)
+                }
+
+                const rowContent = (
+                  <>
+                    <span
+                      className="impact-board__patient-avatar"
+                      aria-hidden="true"
+                    >
+                      {patient.name
+                        .split(' ')
+                        .map((part) => part[0])
+                        .join('')}
+                    </span>
+                    <span className="impact-board__patient-copy">
+                      <strong>{patient.name}</strong>
+                      <small>
+                        DOB: {patient.dateOfBirth} · {patient.phone}
+                      </small>
+                      <small>{patient.address}</small>
+                    </span>
+                    <span className="impact-board__patient-status">
+                      <strong>{patient.status}</strong>
+                      {patient.profileId ? <small>View profile</small> : null}
+                    </span>
+                  </>
+                )
+
+                return (
+                  <div key={patient.id} role="listitem">
+                    {patient.profileId ? (
+                      <button
+                        type="button"
+                        className="impact-board__patient-row is-interactive"
+                        onClick={openProfile}
+                        aria-label={`Open profile for ${patient.name}`}
+                      >
+                        {rowContent}
+                      </button>
+                    ) : (
+                      <article className="impact-board__patient-row">
+                        {rowContent}
+                      </article>
+                    )}
+                  </div>
+                )
+              })}
               {visiblePatients.length === 0 ? (
                 <p className="impact-board__patient-empty">
                   No patients match your search.

@@ -219,4 +219,8 @@ export interface DemoState {
   journeyFocusCaseId: string | null
   /** Active patient on the journey spine roster. */
   selectedJourneyPatientId: string
+  /** Page to restore when leaving the patient profile. */
+  patientProfileReturnPage: string | null
+  /** Metric list to reopen after returning from a patient profile. */
+  reopenPatientMetricId: string | null
 }

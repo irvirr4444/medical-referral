@@ -1,4 +1,5 @@
 import type { BossMetricsScope } from './bossMetrics'
+import { BUTLER_PROFILE_ID, getPatientProfile } from './patientProfiles'
 
 export interface BossMetricPatient {
   id: string
@@ -8,6 +9,7 @@ export interface BossMetricPatient {
   dateOfBirth: string
   phone: string
   address: string
+  profileId?: string
 }
 
 const DEMO_PATIENTS = [
@@ -73,14 +75,33 @@ function hash(value: string): number {
   return [...value].reduce((total, character) => total + character.charCodeAt(0), 0)
 }
 
+function buildButlerPatient(metricLabel: string): BossMetricPatient {
+  const profile = getPatientProfile(BUTLER_PROFILE_ID)
+  if (!profile) {
+    throw new Error('Butler Alva profile is required for demo patient lists.')
+  }
+
+  return {
+    id: profile.referralId,
+    name: profile.identity.displayName,
+    owner: 'Unassigned',
+    status: metricLabel,
+    dateOfBirth: profile.identity.dateOfBirth ?? '—',
+    phone: profile.identity.phone ?? '—',
+    address: profile.identity.address ?? '—',
+    profileId: BUTLER_PROFILE_ID,
+  }
+}
+
 export function buildBossMetricPatients(
   scope: BossMetricsScope,
   metricId: string,
   metricLabel: string,
 ): BossMetricPatient[] {
   const offset = hash(`${scope}-${metricId}`) % DEMO_PATIENTS.length
+  const butler = buildButlerPatient(metricLabel)
 
-  return Array.from({ length: 8 }, (_, index) => {
+  const demoPatients = Array.from({ length: 7 }, (_, index) => {
     const patient = DEMO_PATIENTS[(offset + index) % DEMO_PATIENTS.length]
     return {
       id: `REF-${String(24018 + offset * 7 + index).padStart(5, '0')}`,
@@ -92,4 +113,6 @@ export function buildBossMetricPatients(
       address: patient.address,
     }
   })
+
+  return [butler, ...demoPatients]
 }
