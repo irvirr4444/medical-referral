@@ -17,7 +17,7 @@ describe('automation inspection console', () => {
     )
     expect(
       screen.getByRole('heading', {
-        name: /Understand every step from referral to visit review/i,
+        name: /Referral Intake Process/i,
       }),
     ).toBeInTheDocument()
     expect(
