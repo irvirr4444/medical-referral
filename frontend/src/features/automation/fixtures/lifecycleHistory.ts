@@ -243,6 +243,23 @@ export function lifecycleHistoryForStep(
   run: AutomationRunFixture,
   example: MicrostepExample,
 ): LifecycleHistoryEntry[] {
+  if (stageId === 'intake') {
+    const snapshot = run.intakeSnapshots?.[step.id]
+    if (!snapshot) return []
+
+    return [
+      {
+        id: `${run.id}-${step.id}`,
+        runId: run.id.toUpperCase(),
+        patientName: run.patientName ?? 'Walkthrough patient',
+        occurredAt: snapshot.executedAt,
+        status: snapshot.status,
+        input: snapshot.input,
+        output: snapshot.output,
+      },
+    ]
+  }
+
   if (!['scheduling', 'end-of-day', 'weekly'].includes(stageId)) return []
 
   const latest: LifecycleHistoryEntry = {

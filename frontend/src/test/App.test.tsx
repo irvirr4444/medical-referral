@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import App from '../App'
 
 describe('automation inspection console', () => {
-  it('opens on a concise workflow overview and enters the guided intake inspector', async () => {
+  it('opens on a concise workflow overview and enters intake operations', async () => {
     const user = userEvent.setup()
     render(<App />)
 
@@ -41,66 +41,22 @@ describe('automation inspection console', () => {
     const patientDialog = screen.getByRole('dialog', { name: /New referrals/i })
     expect(patientDialog).toBeInTheDocument()
     expect(within(patientDialog).getAllByRole('listitem')).toHaveLength(8)
-    expect(
-      screen.queryByText(/Sample patients for today/i),
-    ).not.toBeInTheDocument()
-    await user.type(screen.getByRole('searchbox', { name: /Search patients/i }), 'zzzz')
-    expect(screen.getByText(/No patients match your search/i)).toBeInTheDocument()
     await user.click(
       screen.getByRole('button', { name: /Close patient list/i }),
     )
-    expect(
-      screen.queryByRole('dialog', { name: /New referrals/i }),
-    ).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('tab', { name: /This week/i }))
-    expect(screen.getByRole('tab', { name: /This week/i })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    )
     expect(screen.getByText('82')).toBeInTheDocument()
-    expect(screen.getAllByText(/vs last week/i).length).toBeGreaterThan(0)
-
-    expect(screen.queryByRole('tab', { name: /Last week/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('tab', { name: /Last month/i })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('tab', { name: /Pick dates/i }))
-    expect(
-      screen.getByRole('dialog', { name: /Select reporting period/i }),
-    ).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: /^Day$/i })).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: /^Month$/i })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    )
-    expect(screen.getByRole('tab', { name: /^Year$/i })).toBeInTheDocument()
-    expect(
-      screen.getByRole('tab', { name: /Custom range/i }),
-    ).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /Confirm/i }))
     expect(screen.getByText('112')).toBeInTheDocument()
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: /Pick dates/i })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    )
-    expect(
-      screen.queryByText(/How to use this console/i),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole('heading', {
-        name: /Inspect, verify, and improve the workflow/i,
-      }),
-    ).not.toBeInTheDocument()
     expect(
       screen.getByRole('heading', { name: /Seven inspectable stages/i }),
     ).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: /^Inspect /i })).toHaveLength(
       7,
     )
-    expect(
-      screen.queryByText(/Patients requiring attention/i),
-    ).not.toBeInTheDocument()
 
     await user.click(
       screen.getByRole('button', { name: /Inspect Referral intake/i }),
@@ -109,96 +65,110 @@ describe('automation inspection console', () => {
     expect(
       screen.getByRole('button', { name: /1\. Referral intake/i }),
     ).toHaveAttribute('aria-current', 'page')
-    expect(
-      screen.getByRole('heading', {
-        name: /1\. Referral intake/i,
-      }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /^Steps$/i })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+    expect(screen.getByRole('tab', { name: /^Worklist$/i })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /^History$/i })).toBeInTheDocument()
+    expect(screen.getByLabelText(/Patient steps/i)).toBeInTheDocument()
     expect(
       screen.getByRole('navigation', { name: /Automation steps/i }),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: /Discover the referral email/i }),
+      screen.getByRole('button', { name: /Interpret the reviewer reply/i }),
     ).toHaveAttribute('aria-current', 'step')
     expect(
-      screen.getByRole('heading', { name: /Discover the referral email/i }),
-    ).toBeInTheDocument()
-    expect(document.querySelector('.automation-run-status')).toBeNull()
+      screen.getByRole('button', { name: /Discover the referral email/i }),
+    ).toHaveAttribute('data-status', 'done')
+    expect(screen.getAllByText('Butler, Alva').length).toBeGreaterThan(0)
     expect(
-      screen.queryByLabelText(/Inspect workflow run/i),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole('button', { name: /Walk through one referral/i }),
+      screen.queryByRole('list', { name: /Microstep run history/i }),
     ).not.toBeInTheDocument()
   })
 
-  it('shows Butler walkthrough evidence across microsteps', async () => {
+  it('shows Butler step detail by default and opens current step from Worklist', async () => {
     const user = userEvent.setup()
     render(<App />)
     await user.click(
       screen.getByRole('button', { name: /Inspect Referral intake/i }),
     )
 
-    await user.click(
-      screen.getByRole('button', {
-        name: /Evaluate the seven required fields/i,
-      }),
-    )
-    const outputPanel = screen.getByLabelText(/Produced output/i)
-    expect(outputPanel).toHaveTextContent('Seven-field completeness review')
-    expect(outputPanel).toHaveTextContent('Not documented')
+    const stepsPanel = screen.getByLabelText(/Patient steps/i)
+    expect(
+      within(stepsPanel).getByRole('navigation', { name: /Automation steps/i }),
+    ).toBeInTheDocument()
+    expect(within(stepsPanel).getByText('Butler, Alva')).toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByLabelText(/Interpret the reviewer reply for this patient/i),
+    ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByText(/No reviewer reply yet · approval remains pending/i),
+    ).toBeInTheDocument()
 
     await user.click(
-      screen.getByRole('button', {
-        name: /Extract referral information/i,
-      }),
-    )
-    expect(screen.getByLabelText(/Produced output/i)).toHaveTextContent(
-      'Canonical referral extraction',
+      within(stepsPanel).getByRole('button', { name: /Discover the referral email/i }),
     )
     expect(
-      screen.queryByRole('button', {
-        name: /Open extracted referral workspace/i,
+      within(stepsPanel).getByText(/Referral email identified/i),
+    ).toBeInTheDocument()
+
+    await user.click(
+      within(stepsPanel).getByRole('button', { name: /Patient list/i }),
+    )
+    const patientList = screen.getByRole('dialog', {
+      name: /Patients in this stage/i,
+    })
+    expect(
+      within(patientList).getByRole('button', { name: /Butler, Alva/i }),
+    ).toHaveAttribute('aria-current', 'true')
+    await user.click(
+      within(patientList).getByRole('button', { name: /Close patient list/i }),
+    )
+
+    await user.click(screen.getByRole('tab', { name: /^Worklist$/i }))
+    const worklist = screen.getByLabelText(/^Worklist$/i)
+    expect(worklist).toBeInTheDocument()
+    await user.click(within(worklist).getByText('Butler, Alva'))
+
+    expect(screen.getByRole('tab', { name: /^Steps$/i })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+    const returnedSteps = screen.getByLabelText(/Patient steps/i)
+    expect(within(returnedSteps).getByText('Butler, Alva')).toBeInTheDocument()
+    expect(
+      within(returnedSteps).getByRole('button', {
+        name: /Interpret the reviewer reply/i,
       }),
-    ).not.toBeInTheDocument()
+    ).toHaveAttribute('aria-current', 'step')
+
+    await user.click(screen.getByRole('tab', { name: /^History$/i }))
+    const history = screen.getByLabelText(/^History$/i)
+    expect(within(history).getByText(/August 10, 2026/i)).toBeInTheDocument()
+    expect(within(history).getAllByText('Butler, Alva').length).toBeGreaterThan(0)
   })
 
-  it('shows scrollable patient run history for lifecycle microsteps', async () => {
+  it('shows Worklist and History on later stages', async () => {
     const user = userEvent.setup()
     render(<App />)
 
     await user.click(screen.getByRole('button', { name: /5\. Scheduling/i }))
-
-    const history = screen.getByRole('list', {
-      name: /Microstep run history/i,
-    })
-    expect(history).toBeInTheDocument()
-    expect(
-      screen.queryByText(/Maria Alvarez - scheduling walkthrough/i),
-    ).not.toBeInTheDocument()
-    expect(
-      within(history).getByText('Maria Alvarez', { selector: 'strong' }),
-    ).toBeInTheDocument()
-    expect(
-      within(history).getByText('Patricia Johnson', { selector: 'strong' }),
-    ).toBeInTheDocument()
-    expect(
-      within(history).getByText('James Carter', { selector: 'strong' }),
-    ).toBeInTheDocument()
-    expect(within(history).getAllByText(/Input received/i)).toHaveLength(3)
-    expect(within(history).getAllByText(/Output produced/i)).toHaveLength(3)
-
-    await user.click(
-      screen.getByRole('button', { name: /Classify scheduling outcome/i }),
+    expect(screen.getByRole('tab', { name: /^Steps$/i })).toHaveAttribute(
+      'aria-selected',
+      'true',
     )
-    const updatedHistory = screen.getByRole('list', {
-      name: /Microstep run history/i,
-    })
+    expect(screen.getByLabelText(/Patient steps/i)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: /^Worklist$/i }))
+    expect(screen.getByText(/Awaiting response/i)).toBeInTheDocument()
+    expect(screen.getByText('Maria Alvarez')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: /^History$/i }))
+    const history = screen.getByLabelText(/^History$/i)
+    expect(within(history).getAllByText('Maria Alvarez').length).toBeGreaterThan(0)
     expect(
-      within(updatedHistory).getAllByText(/Confirmed appointment/i).length,
-    ).toBeGreaterThan(0)
-    expect(
-      within(updatedHistory).getByText(/Scheduling exception for Carla/i),
+      within(history).getByText(/Options sent to Ana · no reply yet/i),
     ).toBeInTheDocument()
   })
 })

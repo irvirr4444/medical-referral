@@ -58,18 +58,21 @@ function historyDate(value: string): HistoryDate {
 export function MicrostepHistory({
   step,
   entries,
+  compact = false,
 }: {
   step: AutomationMicrostep
   entries: LifecycleHistoryEntry[]
+  /** Intake-only: date/time + output produced, no patient/run/status chrome. */
+  compact?: boolean
 }) {
   return (
     <article
-      className="microstep-history"
+      className={`microstep-history${compact ? ' microstep-history--compact' : ''}`}
       aria-labelledby={`microstep-${step.id}`}
     >
       <header className="microstep-history__header">
         <div>
-          <p className="caption">Run history</p>
+          {!compact ? <p className="caption">Run history</p> : null}
           <h2 id={`microstep-${step.id}`}>{step.name}</h2>
           <p>{step.description}</p>
         </div>
@@ -100,31 +103,51 @@ export function MicrostepHistory({
                     aria-hidden="true"
                   />
                 )}
+                {compact ? (
+                  <time
+                    className="microstep-history__gutter-time"
+                    dateTime={occurredAt.dateTime}
+                  >
+                    {occurredAt.time}
+                  </time>
+                ) : null}
               </div>
               <article>
-                <header className="microstep-history__entry-header">
-                  <div>
-                    <strong>{entry.patientName}</strong>
-                    {index === 0 ? (
-                      <span className="microstep-history__latest">Latest</span>
-                    ) : null}
+                {compact ? null : (
+                  <>
+                    <header className="microstep-history__entry-header">
+                      <div>
+                        <strong>{entry.patientName}</strong>
+                        {index === 0 ? (
+                          <span className="microstep-history__latest">Latest</span>
+                        ) : null}
+                      </div>
+                      <time dateTime={occurredAt.dateTime}>{occurredAt.time}</time>
+                    </header>
+                    <p className="microstep-history__run">
+                      Run {entry.runId} | {STATUS_LABELS[entry.status]}
+                    </p>
+                  </>
+                )}
+                {compact ? (
+                  <div className="microstep-history__change microstep-history__change--output-only">
+                    <section>
+                      <p>{entry.output}</p>
+                    </section>
                   </div>
-                  <time dateTime={occurredAt.dateTime}>{occurredAt.time}</time>
-                </header>
-                <p className="microstep-history__run">
-                  Run {entry.runId} | {STATUS_LABELS[entry.status]}
-                </p>
-                <div className="microstep-history__change">
-                  <section>
-                    <span>Input received</span>
-                    <p>{entry.input}</p>
-                  </section>
-                  <ArrowRight size={18} aria-hidden="true" />
-                  <section>
-                    <span>Output produced</span>
-                    <p>{entry.output}</p>
-                  </section>
-                </div>
+                ) : (
+                  <div className="microstep-history__change">
+                    <section>
+                      <span>Input received</span>
+                      <p>{entry.input}</p>
+                    </section>
+                    <ArrowRight size={18} aria-hidden="true" />
+                    <section>
+                      <span>Output produced</span>
+                      <p>{entry.output}</p>
+                    </section>
+                  </div>
+                )}
               </article>
             </li>
           )

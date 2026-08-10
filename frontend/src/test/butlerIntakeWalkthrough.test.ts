@@ -3,6 +3,7 @@ import {
   BUTLER_INTAKE_SNAPSHOTS,
   BUTLER_INTAKE_STEP_IDS,
 } from '../features/automation/fixtures/butlerIntakeSnapshots'
+import { lifecycleHistoryForStep } from '../features/automation/fixtures/lifecycleHistory'
 import { BUTLER_RUN_FIXTURE } from '../features/automation/types'
 import {
   AUTOMATION_RUNS,
@@ -23,38 +24,53 @@ describe('Butler intake walkthrough fixtures', () => {
     expect(new Set(artifactIds).size).toBe(13)
   })
 
-  it('progressively reveals Butler identity and extraction output', () => {
+  it('defines one explicit input and output for every intake step', () => {
+    for (const stepId of BUTLER_INTAKE_STEP_IDS) {
+      const snapshot = BUTLER_INTAKE_SNAPSHOTS[stepId]
+      expect(snapshot.input.trim().length).toBeGreaterThan(0)
+      expect(snapshot.output.trim().length).toBeGreaterThan(0)
+      expect(snapshot.executedAt).toMatch(/August 10, 2026 at/)
+    }
+  })
+
+  it('keeps step-scoped input and output free of premature patient contact data', () => {
     const discover = BUTLER_INTAKE_SNAPSHOTS['discover-email']
+    const validate = BUTLER_INTAKE_SNAPSHOTS['validate-pdf']
     const extract = BUTLER_INTAKE_SNAPSHOTS['extract-referral']
     const verify = BUTLER_INTAKE_SNAPSHOTS['verify-required-fields']
 
-    expect(discover.knownAtThisPoint.map((item) => item.label)).not.toContain(
-      'Date of birth',
-    )
-    expect(extract.knownAtThisPoint.map((item) => item.label)).toContain(
-      'Date of birth',
-    )
-    expect(extract.artifactSections.some((section) => section.id === 'demographics')).toBe(
-      true,
-    )
-    expect(
-      verify.artifactSections[0]?.fields.some((field) =>
-        field.label.includes('Home health'),
-      ),
-    ).toBe(true)
+    expect(discover.input).not.toMatch(/1940-10-04/)
+    expect(discover.output).not.toMatch(/1940-10-04/)
+    expect(validate.input).toMatch(/\.pdf/i)
+    expect(validate.output).toMatch(/Valid PDF/i)
+    expect(extract.input).toMatch(/Valid PDF/i)
+    expect(extract.output).toMatch(/Canonical referral JSON/i)
+    expect(verify.input).toMatch(/Canonical referral JSON/i)
+    expect(verify.output).toMatch(/6 of 7/)
+    expect(verify.output).toMatch(/agency missing/i)
   })
 
-  it('preserves source patient ID separately from MRN in extraction output', () => {
-    const demographics = BUTLER_INTAKE_SNAPSHOTS['extract-referral'].artifactSections.find(
-      (section) => section.id === 'demographics',
+  it('routes intake through a single history entry using snapshot input and output', () => {
+    const stage = automationStage('intake')
+    const extractStep = stage.microsteps.find(
+      (step) => step.id === 'extract-referral',
+    )!
+    const example = exampleForRun(BUTLER_RUN_FIXTURE, extractStep, stage.id)
+    const history = lifecycleHistoryForStep(
+      stage.id,
+      extractStep,
+      BUTLER_RUN_FIXTURE,
+      example,
     )
-    const sourceId = demographics?.fields.find((field) =>
-      field.label.includes('Source patient ID'),
-    )
-    const mrn = demographics?.fields.find((field) => field.label === 'MRN')
 
-    expect(sourceId?.value).toBe('6227')
-    expect(mrn?.value).toMatch(/Not documented/)
+    expect(history).toHaveLength(1)
+    expect(history[0].input).toBe(
+      BUTLER_INTAKE_SNAPSHOTS['extract-referral'].input,
+    )
+    expect(history[0].output).toBe(
+      BUTLER_INTAKE_SNAPSHOTS['extract-referral'].output,
+    )
+    expect(history[0].occurredAt).toBe('August 10, 2026 at 9:17 AM')
   })
 
   it('uses Butler snapshots when the Butler run is selected on intake', () => {
@@ -64,7 +80,18 @@ describe('Butler intake walkthrough fixtures', () => {
 
     expect(example.patientName).toBe('BUTLER, ALVA')
     expect(example.artifactTitle).toBe('Canonical referral extraction')
-    expect(example.artifactSections?.length).toBeGreaterThan(3)
+    expect(example.inputs).toEqual([
+      {
+        label: 'Input received',
+        value: BUTLER_INTAKE_SNAPSHOTS['extract-referral'].input,
+      },
+    ])
+    expect(example.outputs).toEqual([
+      {
+        label: 'Output produced',
+        value: BUTLER_INTAKE_SNAPSHOTS['extract-referral'].output,
+      },
+    ])
   })
 
   it('defaults the automation run list to Butler first', () => {

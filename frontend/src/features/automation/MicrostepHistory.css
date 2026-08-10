@@ -53,6 +53,14 @@
   display: grid;
   place-items: center;
   align-self: start;
+  gap: 0.35rem;
+}
+
+.microstep-history__gutter-time {
+  color: var(--gray);
+  font-size: 0.68rem;
+  text-align: center;
+  line-height: 1.2;
 }
 
 .microstep-history__date {
@@ -160,6 +168,27 @@
 .microstep-history__change p {
   margin: 0.22rem 0 0;
   overflow-wrap: anywhere;
+}
+
+.microstep-history--compact .microstep-history__header h2 {
+  margin-top: 0;
+}
+
+.microstep-history--compact .microstep-history__entry-header--compact {
+  justify-content: flex-end;
+  margin-bottom: 0.55rem;
+}
+
+.microstep-history--compact .microstep-history__change {
+  margin-top: 0;
+}
+
+.microstep-history__change--output-only {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.microstep-history__change--output-only p {
+  margin: 0;
 }
 
 @media (max-width: 720px) {

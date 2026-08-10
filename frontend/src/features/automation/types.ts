@@ -57,6 +57,10 @@ export interface MicrostepExecutionSnapshot {
   executedAt: string
   artifactTitle: string
   validation: string
+  /** Concrete value this step received. */
+  input: string
+  /** Concrete value this step produced. */
+  output: string
   knownAtThisPoint: AutomationValue[]
   artifactSections: ArtifactSection[]
 }
@@ -118,16 +122,8 @@ export function snapshotToExample(
     artifactTitle: snapshot.artifactTitle,
     knownAtThisPoint: snapshot.knownAtThisPoint,
     artifactSections: snapshot.artifactSections,
-    inputs: snapshot.knownAtThisPoint.map((item) => ({
-      label: item.label,
-      value: item.value,
-    })),
-    outputs: [
-      {
-        label: snapshot.artifactTitle,
-        value: snapshot.artifactSections[0]?.fields[0]?.value ?? 'Produced',
-      },
-    ],
+    inputs: [{ label: 'Input received', value: snapshot.input }],
+    outputs: [{ label: 'Output produced', value: snapshot.output }],
   }
 }
 

@@ -156,6 +156,8 @@ export function buildButlerIntakeSnapshots(
   const pdfName = record.source.file_name
   const sha = record.source.pdf_sha256
   const emailId = record.source.email_id ?? 'unknown'
+  const patientName = patientDisplayName(record.patient)
+  const dob = record.patient.date_of_birth ?? '—'
   const completeCount = REQUIRED_FIELD_PATHS.filter(
     ({ path }) => {
       const status = record.field_quality[path]?.status
@@ -171,6 +173,8 @@ export function buildButlerIntakeSnapshots(
       artifactTitle: 'Discovered referral email',
       validation:
         'The message has a stable Microsoft message ID and received timestamp.',
+      input: 'Unread Outlook message in info@westcostwound.com',
+      output: `Referral email identified · attachment ${pdfName}`,
       knownAtThisPoint: [
         { label: 'Inbox', value: 'info@westcostwound.com' },
         { label: 'Subject', value: 'Chart export — wound care referral' },
@@ -197,6 +201,8 @@ export function buildButlerIntakeSnapshots(
       artifactTitle: 'PDF validation result',
       validation:
         'Filename ends in .pdf and content starts with the PDF file signature.',
+      input: `${pdfName} · application/pdf`,
+      output: 'Valid PDF accepted for intake processing',
       knownAtThisPoint: identityKnown(record),
       artifactSections: [
         {
@@ -220,6 +226,8 @@ export function buildButlerIntakeSnapshots(
       artifactTitle: 'Document fingerprint',
       validation:
         'A completed fingerprint is skipped; failed work may be retried safely.',
+      input: 'Validated PDF bytes',
+      output: `SHA-256 fingerprint recorded · not previously completed`,
       knownAtThisPoint: identityKnown(record),
       artifactSections: [
         {
@@ -242,6 +250,8 @@ export function buildButlerIntakeSnapshots(
       artifactTitle: 'Canonical referral extraction',
       validation:
         'The response must satisfy the referral schema before it is accepted.',
+      input: `Valid PDF · ${pdfName}`,
+      output: `Canonical referral JSON for ${patientName}`,
       knownAtThisPoint: identityAndContact(record),
       artifactSections: buildExtractionSections(record),
     }),
@@ -252,6 +262,8 @@ export function buildButlerIntakeSnapshots(
       artifactTitle: 'Seven-field completeness review',
       validation:
         'Name, DOB, phone, address, agency, wound information, and insurance are evaluated separately.',
+      input: 'Canonical referral JSON',
+      output: `${completeCount} of 7 required fields complete · home-health agency missing`,
       knownAtThisPoint: identityAndContact(record),
       artifactSections: buildRequiredFieldSections(record),
     }),
@@ -262,6 +274,8 @@ export function buildButlerIntakeSnapshots(
       artifactTitle: 'Seven-field handoff gate',
       validation:
         'All seven required fields must be complete or explicitly none before handoff.',
+      input: `${completeCount} of 7 fields complete · agency missing`,
+      output: 'Handoff blocked · missing home-health or hospice agency',
       knownAtThisPoint: identityAndContact(record),
       artifactSections: [
         {
@@ -297,6 +311,8 @@ export function buildButlerIntakeSnapshots(
       artifactTitle: 'Monday.com duplicate search',
       validation:
         'Name-only matches never authorize patient creation or blocking.',
+      input: `${patientName} · DOB ${dob}`,
+      output: 'No matching Monday.com candidate found',
       knownAtThisPoint: identityAndContact(record),
       artifactSections: [
         {
@@ -306,7 +322,7 @@ export function buildButlerIntakeSnapshots(
           fields: [
             {
               label: 'Query identity',
-              value: `${patientDisplayName(record.patient)} · ${record.patient.date_of_birth}`,
+              value: `${patientName} · ${dob}`,
             },
             { label: 'Candidates found', value: '0' },
             { label: 'Result', value: 'No matching Monday.com candidate found' },
@@ -321,6 +337,8 @@ export function buildButlerIntakeSnapshots(
       artifactTitle: 'DRK chart search',
       validation:
         'Any candidate requires DOB confirmation before it can be treated as the same patient.',
+      input: `${patientName} · DOB ${dob}`,
+      output: 'No exact DRK chart match found',
       knownAtThisPoint: identityAndContact(record),
       artifactSections: [
         {
@@ -330,7 +348,7 @@ export function buildButlerIntakeSnapshots(
           fields: [
             {
               label: 'Query identity',
-              value: `${patientDisplayName(record.patient)} · ${record.patient.date_of_birth}`,
+              value: `${patientName} · ${dob}`,
             },
             {
               label: 'Source patient ID',
@@ -349,6 +367,8 @@ export function buildButlerIntakeSnapshots(
       executedAt: 'August 10, 2026 at 9:17 AM',
       artifactTitle: 'Duplicate classification',
       validation: 'Probable and exact matches are blocked for human review.',
+      input: 'Monday: 0 candidates · DRK: 0 exact matches',
+      output: 'Distinct patient · creation eligible after approval',
       knownAtThisPoint: identityAndContact(record),
       artifactSections: [
         {
@@ -374,6 +394,8 @@ export function buildButlerIntakeSnapshots(
       artifactTitle: 'Human review email draft',
       validation:
         'The message states what is missing and never claims a write already occurred.',
+      input: `Completeness ${completeCount}/7 · duplicate clear · agency missing`,
+      output: 'Review email draft with blockers and approval instructions',
       knownAtThisPoint: identityAndContact(record),
       artifactSections: [
         {
@@ -381,7 +403,7 @@ export function buildButlerIntakeSnapshots(
           title: 'Review summary',
           defaultExpanded: true,
           fields: [
-            { label: 'Patient', value: patientDisplayName(record.patient) },
+            { label: 'Patient', value: patientName },
             { label: 'Referral ID', value: record.referral_id },
             {
               label: 'Completeness',
@@ -409,6 +431,8 @@ export function buildButlerIntakeSnapshots(
       artifactTitle: 'Review request delivery',
       validation:
         'The outbound message is linked to one referral and one review request.',
+      input: 'Review email draft addressed to WCW reviewer',
+      output: 'Review request delivered · message ID stored',
       knownAtThisPoint: identityAndContact(record),
       artifactSections: [
         {
@@ -428,10 +452,12 @@ export function buildButlerIntakeSnapshots(
     'interpret-reply': snap('interpret-reply', {
       status: 'waiting',
       duration: 'Pending',
-      executedAt: 'Awaiting reviewer reply',
+      executedAt: 'August 10, 2026 at 9:18 AM',
       artifactTitle: 'Reviewer reply classification',
       validation:
         'Ambiguous replies remain pending and cannot trigger external writes.',
+      input: 'Outbound review request awaiting reply',
+      output: 'No reviewer reply yet · approval remains pending',
       knownAtThisPoint: identityAndContact(record),
       artifactSections: [
         {
@@ -453,9 +479,11 @@ export function buildButlerIntakeSnapshots(
     'gate-destinations': snap('gate-destinations', {
       status: 'waiting',
       duration: 'Not authorized',
-      executedAt: 'Blocked pending approval and completeness',
+      executedAt: 'August 10, 2026 at 9:18 AM',
       artifactTitle: 'Destination authorization gate',
       validation: 'The gate is atomic and idempotent.',
+      input: 'Field gate blocked · duplicate clear · approval pending',
+      output: 'Monday and DRK destination actions denied',
       knownAtThisPoint: identityAndContact(record),
       artifactSections: [
         {
