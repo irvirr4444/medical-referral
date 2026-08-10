@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { exampleForRun } from './runFixtures'
+import { exampleForRun, runForStage } from './runFixtures'
 import { MicrostepDetail } from './MicrostepDetail'
+import { MicrostepHistory } from './MicrostepHistory'
 import { MicrostepList } from './MicrostepList'
-import { BUTLER_RUN_FIXTURE } from './types'
+import { lifecycleHistoryForStep } from './fixtures/lifecycleHistory'
 import type { AutomationStageDefinition } from './types'
 import './StageInspector.css'
 
@@ -12,11 +13,12 @@ export function StageInspector({
   stage: AutomationStageDefinition
 }) {
   const [selectedStepId, setSelectedStepId] = useState(stage.microsteps[0].id)
-  const run = BUTLER_RUN_FIXTURE
+  const run = runForStage(stage.id)
   const selectedStep =
     stage.microsteps.find((item) => item.id === selectedStepId) ??
     stage.microsteps[0]
   const example = exampleForRun(run, selectedStep, stage.id)
+  const history = lifecycleHistoryForStep(stage.id, selectedStep, run, example)
 
   return (
     <div className="stage-inspector">
@@ -37,7 +39,11 @@ export function StageInspector({
             onSelect={setSelectedStepId}
           />
         </div>
-        <MicrostepDetail step={selectedStep} run={run} example={example} />
+        {history.length ? (
+          <MicrostepHistory step={selectedStep} entries={history} />
+        ) : (
+          <MicrostepDetail step={selectedStep} run={run} example={example} />
+        )}
       </section>
     </div>
   )

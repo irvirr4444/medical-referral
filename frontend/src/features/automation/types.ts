@@ -87,6 +87,9 @@ export type AutomationRunId =
   | 'synthetic-complete'
   | 'synthetic-exception'
   | 'butler-alva'
+  | 'maria-scheduling'
+  | 'evelyn-end-of-day'
+  | 'gloria-weekly'
 
 export interface AutomationRunFixture {
   id: AutomationRunId

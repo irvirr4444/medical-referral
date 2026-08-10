@@ -6,6 +6,10 @@ import {
   type AutomationRunFixture,
   type MicrostepExample,
 } from './types'
+import {
+  walkthroughExampleForStep,
+  walkthroughRunForStage,
+} from './fixtures/lifecycleWalkthroughs'
 
 export const AUTOMATION_RUNS: AutomationRunFixture[] = [
   BUTLER_RUN_FIXTURE,
@@ -60,12 +64,21 @@ export function exampleForRun(
   step: AutomationMicrostep,
   stageId: FlowOpsPageId,
 ): MicrostepExample {
+  const walkthroughExample = walkthroughExampleForStep(stageId, step)
+  if (walkthroughExample && walkthroughRunForStage(stageId)?.id === run.id) {
+    return walkthroughExample
+  }
+
   if (stageId === 'intake' && run.intakeSnapshots?.[step.id]) {
     const snapshot = run.intakeSnapshots[step.id]
     return snapshotToExample(snapshot, run.patientName ?? 'Unknown patient')
   }
 
   return genericExampleForRun(run, step, stageId)
+}
+
+export function runForStage(stageId: FlowOpsPageId): AutomationRunFixture {
+  return walkthroughRunForStage(stageId) ?? BUTLER_RUN_FIXTURE
 }
 
 export function snapshotForRun(

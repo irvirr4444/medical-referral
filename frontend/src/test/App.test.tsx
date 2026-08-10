@@ -162,4 +162,43 @@ describe('automation inspection console', () => {
       }),
     ).not.toBeInTheDocument()
   })
+
+  it('shows scrollable patient run history for lifecycle microsteps', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: /5\. Scheduling/i }))
+
+    const history = screen.getByRole('list', {
+      name: /Microstep run history/i,
+    })
+    expect(history).toBeInTheDocument()
+    expect(
+      screen.queryByText(/Maria Alvarez - scheduling walkthrough/i),
+    ).not.toBeInTheDocument()
+    expect(
+      within(history).getByText('Maria Alvarez', { selector: 'strong' }),
+    ).toBeInTheDocument()
+    expect(
+      within(history).getByText('Patricia Johnson', { selector: 'strong' }),
+    ).toBeInTheDocument()
+    expect(
+      within(history).getByText('James Carter', { selector: 'strong' }),
+    ).toBeInTheDocument()
+    expect(within(history).getAllByText(/Input received/i)).toHaveLength(3)
+    expect(within(history).getAllByText(/Output produced/i)).toHaveLength(3)
+
+    await user.click(
+      screen.getByRole('button', { name: /Classify scheduling outcome/i }),
+    )
+    const updatedHistory = screen.getByRole('list', {
+      name: /Microstep run history/i,
+    })
+    expect(
+      within(updatedHistory).getAllByText(/Confirmed appointment/i).length,
+    ).toBeGreaterThan(0)
+    expect(
+      within(updatedHistory).getByText(/Scheduling exception for Carla/i),
+    ).toBeInTheDocument()
+  })
 })
