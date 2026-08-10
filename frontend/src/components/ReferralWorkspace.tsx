@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
+import { useEscapeDismiss } from '../hooks/useEscapeDismiss'
 import { useDemo } from '../state/useDemo'
 import { DuplicateBadge, FieldStatusBadge, OutcomeBadge } from './StatusBadges'
 import { PdfViewer } from './PdfViewer'
@@ -17,14 +18,9 @@ export function ReferralWorkspace() {
     setActiveTab('overview')
   }, [selectedReferral?.id])
 
-  useEffect(() => {
-    if (!selectedReferral) return
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') dispatch({ type: 'SELECT_REFERRAL', id: null })
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [dispatch, selectedReferral])
+  useEscapeDismiss(Boolean(selectedReferral), () =>
+    dispatch({ type: 'SELECT_REFERRAL', id: null }),
+  )
 
   if (!selectedReferral) return null
 

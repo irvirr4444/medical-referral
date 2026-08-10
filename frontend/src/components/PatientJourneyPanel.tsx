@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Check, Circle, Search, Users, Waypoints, X } from 'lucide-react'
 import {
   buildJourneyRoster,
@@ -6,6 +6,7 @@ import {
   JOURNEY_STAGE_ORDER,
   type JourneyStepView,
 } from '../data/patientJourney'
+import { useEscapeDismiss } from '../hooks/useEscapeDismiss'
 import { useDemo } from '../state/useDemo'
 import './PatientJourneyPanel.css'
 
@@ -49,14 +50,7 @@ export function PatientJourneyPanel() {
       ? `${journey.current.actionLabel} →`
       : 'Advance journey'
 
-  useEffect(() => {
-    if (!pickerOpen) return
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setPickerOpen(false)
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [pickerOpen])
+  useEscapeDismiss(pickerOpen, () => setPickerOpen(false))
 
   return (
     <>

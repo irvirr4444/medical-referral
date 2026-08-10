@@ -6,6 +6,7 @@ import {
   WCW_NETWORK,
   WCW_PROVIDERS,
 } from '../data/wcw'
+import { useEscapeDismiss } from '../hooks/useEscapeDismiss'
 import './NetworkPanel.css'
 
 type RosterTab = 'caseManagers' | 'providers' | 'facilities'
@@ -71,6 +72,9 @@ export function NetworkPanel() {
     setOpen(true)
   }
 
+  const closeRoster = () => setOpen(false)
+  useEscapeDismiss(open, closeRoster)
+
   return (
     <section className="network-panel panel" aria-labelledby="network-heading">
       <div className="network-panel__summary">
@@ -101,7 +105,7 @@ export function NetworkPanel() {
         <div
           className="network-drawer-backdrop"
           role="presentation"
-          onClick={() => setOpen(false)}
+          onClick={closeRoster}
         >
           <aside
             className="network-drawer panel"
@@ -115,7 +119,7 @@ export function NetworkPanel() {
                 <p className="caption">WCW Network</p>
                 <h3 id="roster-title">Roster</h3>
               </div>
-              <button type="button" className="btn btn-ghost" onClick={() => setOpen(false)}>
+              <button type="button" className="btn btn-ghost" onClick={closeRoster}>
                 Close
               </button>
             </header>

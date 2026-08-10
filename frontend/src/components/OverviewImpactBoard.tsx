@@ -21,6 +21,7 @@ import {
   type BossPeriodView,
 } from '../data/bossMetrics'
 import { buildBossMetricPatients } from '../data/bossMetricPatients'
+import { useEscapeDismiss } from '../hooks/useEscapeDismiss'
 import { DatePeriodPicker } from './DatePeriodPicker'
 import './OverviewImpactBoard.css'
 
@@ -199,6 +200,9 @@ export function OverviewImpactBoard({
   const closePicker = () => {
     setPickerOpen(false)
   }
+
+  useEscapeDismiss(selectedMetric !== null, closePatientList)
+  useEscapeDismiss(pickerOpen, closePicker)
 
   const applyCustomRange = (start: string, end: string) => {
     const next = buildCustomBossMetrics(start, end, scope)
