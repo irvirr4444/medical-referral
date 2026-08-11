@@ -9,6 +9,12 @@ import {
   patientsForStage,
   stepsForPatient,
 } from './ops'
+import {
+  applyHumanDecisions,
+  humanGateForStep,
+  type HumanGateDefinition,
+} from './ops/humanGates'
+import type { HumanDecisionRecord } from './ops/types'
 import type { FlowOpsPageId } from '../../data/flowOps'
 import type { AutomationMicrostep } from './types'
 import './StageOps.css'
@@ -18,23 +24,29 @@ export function StagePatientSteps({
   microsteps,
   selectedPatientId,
   onSelectPatient,
+  decisions,
+  onRecordDecision,
 }: {
   stageId: FlowOpsPageId
   microsteps: AutomationMicrostep[]
   selectedPatientId: string
   onSelectPatient: (patientId: string, patientName: string) => void
+  decisions: HumanDecisionRecord[]
+  onRecordDecision: (input: {
+    stageId: FlowOpsPageId
+    patientId: string
+    patientName: string
+    stepId: string
+    gate: HumanGateDefinition
+  }) => void
 }) {
   const [query, setQuery] = useState('')
   const [listOpen, setListOpen] = useState(false)
   const [selectedStepId, setSelectedStepId] = useState(microsteps[0]?.id ?? '')
-  const [confirmedByPatient, setConfirmedByPatient] = useState<
-    Record<string, Record<string, true>>
-  >({})
 
   useEffect(() => {
     setListOpen(false)
     setQuery('')
-    setConfirmedByPatient({})
   }, [stageId])
 
   const patients = patientsForStage(stageId)
@@ -52,34 +64,30 @@ export function StagePatientSteps({
     patients[0]?.patientId
   const activePatient =
     patients.find((patient) => patient.patientId === activeId) ?? patients[0]
-  const rawSteps = activePatient
-    ? stepsForPatient(stageId, activePatient.patientId)
-    : []
-  const patientConfirmed = activePatient
-    ? confirmedByPatient[activePatient.patientId] ?? {}
-    : {}
-  const steps = useMemo(
+  const rawSteps = useMemo(
     () =>
-      rawSteps.map((step) =>
-        patientConfirmed[step.stepId]
-          ? {
-              ...step,
-              status: 'done' as const,
-              summary:
-                step.status === 'done'
-                  ? step.summary
-                  : `${step.summary} · confirmation recorded`,
-            }
-          : step,
-      ),
-    [rawSteps, patientConfirmed],
+      activePatient ? stepsForPatient(stageId, activePatient.patientId) : [],
+    [activePatient, stageId],
+  )
+  const patientDecisions = useMemo(
+    () =>
+      activePatient
+        ? decisions.filter(
+            (decision) =>
+              decision.stageId === stageId &&
+              decision.patientId === activePatient.patientId,
+          )
+        : [],
+    [activePatient, decisions, stageId],
+  )
+  const steps = useMemo(
+    () => applyHumanDecisions(rawSteps, patientDecisions),
+    [patientDecisions, rawSteps],
   )
 
   const stepStatuses = useMemo(() => {
     const map: Record<string, (typeof steps)[number]['status']> = {}
-    for (const step of steps) {
-      map[step.stepId] = step.status
-    }
+    for (const step of steps) map[step.stepId] = step.status
     return map
   }, [steps])
 
@@ -92,48 +100,37 @@ export function StagePatientSteps({
     if (focusStepId) setSelectedStepId(focusStepId)
   }, [activePatient?.patientId, focusStepId, stageId])
 
+  const selectedProgress = steps.find((step) => step.stepId === selectedStepId)
+  const selectedDecision = patientDecisions.find(
+    (decision) => decision.stepId === selectedStepId,
+  )
   const stepDetail =
     activePatient && selectedStepId
       ? detailForPatientStep(
           stageId,
           activePatient.patientId,
           selectedStepId,
+          selectedProgress,
         )
       : null
-  const detailWithConfirm =
-    stepDetail && patientConfirmed[selectedStepId]
-      ? {
-          ...stepDetail,
-          progress: stepDetail.progress
-            ? {
-                ...stepDetail.progress,
-                status: 'done' as const,
-                summary:
-                  stepDetail.progress.status === 'done'
-                    ? stepDetail.progress.summary
-                    : `${stepDetail.progress.summary} · confirmation recorded`,
-              }
-            : stepDetail.progress,
-        }
-      : stepDetail
-
+  const gate = humanGateForStep(stageId, selectedStepId)
   const canConfirmSelected = Boolean(
-    stepDetail?.progress &&
+    gate &&
+      stepDetail?.progress &&
       (stepDetail.progress.status === 'waiting' ||
         stepDetail.progress.status === 'blocked' ||
         stepDetail.progress.status === 'current'),
   )
-  const isSelectedConfirmed = Boolean(patientConfirmed[selectedStepId])
 
   const confirmSelectedStep = () => {
-    if (!activePatient || !selectedStepId) return
-    setConfirmedByPatient((current) => ({
-      ...current,
-      [activePatient.patientId]: {
-        ...(current[activePatient.patientId] ?? {}),
-        [selectedStepId]: true,
-      },
-    }))
+    if (!activePatient || !selectedStepId || !gate) return
+    onRecordDecision({
+      stageId,
+      patientId: activePatient.patientId,
+      patientName: activePatient.patientName,
+      stepId: selectedStepId,
+      gate,
+    })
   }
 
   const closePatientList = () => {
@@ -181,12 +178,19 @@ export function StagePatientSteps({
                 </span>
               </button>
             </div>
-            {detailWithConfirm ? (
+            {stepDetail ? (
               <StagePatientStepDetail
-                detail={detailWithConfirm}
+                detail={stepDetail}
                 canConfirm={canConfirmSelected}
-                isConfirmed={isSelectedConfirmed}
+                isConfirmed={Boolean(selectedDecision)}
                 onConfirm={confirmSelectedStep}
+                actionLabel={
+                  stepDetail.progress?.status === 'blocked'
+                    ? gate?.blockedActionLabel ?? gate?.actionLabel
+                    : gate?.actionLabel
+                }
+                confirmedLabel={gate?.confirmedLabel}
+                decision={selectedDecision}
               />
             ) : null}
           </>
@@ -274,7 +278,7 @@ export function StagePatientSteps({
                         <strong>{patient.patientName}</strong>
                         <small>
                           {progress
-                            ? `${patientStatusLabel(progress.status)} · ${progress.stepName}`
+                            ? `${patientStatusLabel(progress.status)} - ${progress.stepName}`
                             : 'Complete'}
                         </small>
                       </span>

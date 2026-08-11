@@ -1,9 +1,13 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import App from '../App'
 
 describe('automation inspection console', () => {
+  beforeEach(() => {
+    window.sessionStorage.clear()
+  })
+
   it('opens on a concise workflow overview and enters intake operations', async () => {
     const user = userEvent.setup()
     render(<App />)
@@ -168,7 +172,39 @@ describe('automation inspection console', () => {
     const history = screen.getByLabelText(/^History$/i)
     expect(within(history).getAllByText('Maria Alvarez').length).toBeGreaterThan(0)
     expect(
-      within(history).getByText(/Options sent to Ana · no reply yet/i),
+      within(history).getAllByText(/Awaiting provider response/i).length,
+    ).toBeGreaterThan(0)
+  })
+
+  it('records a human decision, advances the patient, and keeps it in history', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: /3\. Assignment/i }))
+    const steps = screen.getByLabelText(/Patient steps/i)
+    expect(within(steps).getByText('Marcus Feldman')).toBeInTheDocument()
+
+    await user.click(
+      within(steps).getByRole('button', {
+        name: /Confirm recommended owner/i,
+      }),
+    )
+
+    expect(
+      within(steps).getByRole('button', {
+        name: /Confirm the responsible owner/i,
+      }),
+    ).toHaveAttribute('aria-current', 'step')
+
+    await user.click(screen.getByRole('tab', { name: /^History$/i }))
+    expect(
+      screen.getByText(/case-manager or marketer routing decision was recorded/i),
     ).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /2\. Handoff/i }))
+    await user.click(screen.getByRole('button', { name: /3\. Assignment/i }))
+    expect(
+      screen.getByRole('button', { name: /Choose the correct routing branch/i }),
+    ).toHaveAttribute('data-status', 'done')
   })
 })

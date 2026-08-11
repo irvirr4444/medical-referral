@@ -1,6 +1,7 @@
 import { Clock3 } from 'lucide-react'
 import { ArtifactSections } from './ArtifactSections'
 import { parseOpsDate, detailForPatientStep } from './ops'
+import type { HumanDecisionRecord } from './ops/types'
 import './ArtifactSections.css'
 import './StageOps.css'
 
@@ -11,11 +12,17 @@ export function StagePatientStepDetail({
   canConfirm = false,
   isConfirmed = false,
   onConfirm,
+  actionLabel,
+  confirmedLabel,
+  decision,
 }: {
   detail: PatientStepDetail
   canConfirm?: boolean
   isConfirmed?: boolean
   onConfirm?: () => void
+  actionLabel?: string
+  confirmedLabel?: string
+  decision?: HumanDecisionRecord
 }) {
   const { microstep, progress, example } = detail
   if (!microstep || !progress) {
@@ -26,14 +33,28 @@ export function StagePatientStepDetail({
   const rich = Boolean(example?.artifactSections?.length)
   const showConfirmationPanel = canConfirm || isConfirmed
   const confirmationCopy = isConfirmed
-    ? 'Confirmed and recorded in this patient trail.'
+    ? `${confirmedLabel ?? 'Confirmed'} and recorded in this patient trail.`
     : progress.status === 'blocked'
       ? 'Blocked pending confirmation before this stage can proceed.'
       : progress.status === 'current'
         ? 'Ready for confirmation now.'
         : 'Awaiting confirmation.'
-  const confirmationCta =
-    progress.status === 'blocked' ? 'Resolve and confirm' : 'Confirm step'
+  const confirmationCta = actionLabel ?? 'Confirm step'
+  const artifactSections = decision
+    ? [
+        ...(example?.artifactSections ?? []),
+        {
+          id: 'human-decision',
+          title: 'Human decision',
+          defaultExpanded: true,
+          fields: [
+            { label: 'Decision', value: decision.actionLabel },
+            { label: 'Result', value: decision.summary },
+            { label: 'Recorded', value: decision.occurredAt },
+          ],
+        },
+      ]
+    : example?.artifactSections ?? []
 
   return (
     <article
@@ -45,7 +66,7 @@ export function StagePatientStepDetail({
           <div className="stage-ops-step-detail__title">
             <h2>{microstep.name}</h2>
             <span className="stage-ops-steps__badge">
-              {statusLabel(progress.status)}
+              {statusLabel(progress.status, showConfirmationPanel)}
             </span>
           </div>
           <p>{microstep.description}</p>
@@ -97,7 +118,7 @@ export function StagePatientStepDetail({
             aria-label="Produced output"
           >
             <ArtifactSections
-              sections={example.artifactSections ?? []}
+              sections={artifactSections}
               artifactId={example.artifactId ?? microstep.id}
             />
           </section>
@@ -118,16 +139,16 @@ export function StagePatientStepDetail({
   )
 }
 
-function statusLabel(status: string) {
+function statusLabel(status: string, isHumanGate: boolean) {
   switch (status) {
     case 'done':
       return 'Done'
     case 'current':
       return 'Here'
     case 'waiting':
-      return 'Awaiting confirmation'
+      return isHumanGate ? 'Awaiting confirmation' : 'Waiting'
     case 'blocked':
-      return 'Blocked pending confirmation'
+      return isHumanGate ? 'Blocked pending confirmation' : 'Blocked'
     default:
       return 'Next'
   }

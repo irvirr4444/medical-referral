@@ -6,7 +6,7 @@ export const PROVIDER_STAGE: AutomationStageDefinition = {
   title: '4. Provider selection',
   shortTitle: 'Provider selection',
   purpose:
-    "Help the case manager select an approved provider for the patient's area and escalate unavailable coverage to Nicole for review.",
+    "Match each patient with an approved provider based on service area, care needs, and availability.",
   trigger:
     'The referral has an assigned WCW owner and a verified service location.',
   successDefinition:
@@ -15,23 +15,23 @@ export const PROVIDER_STAGE: AutomationStageDefinition = {
   microsteps: [
     step({
       id: 'load-provider-context',
-      name: 'Load provider-selection context',
+      name: 'Load patient and service-area details',
       description:
-        'Collect location, wound-service needs, payer context, and assignment.',
+        'Collect the patient location, wound-care needs, and assigned case manager.',
       system: 'Workflow database',
-      next: 'Load the active provider roster',
+      next: 'Find approved providers serving the area',
       input: 'Assigned referral and clinical summary',
-      output: 'Provider-selection context',
+      output: 'Patient and service-area details',
       validation: 'Clinical source values remain linked to their evidence.',
       implementationStatus: 'planned',
     }),
     step({
       id: 'load-provider-roster',
-      name: 'Load the active provider roster',
+      name: 'Find approved providers serving the area',
       description:
         'Read current provider status and WCW-approved coverage data.',
       system: 'Provider roster adapter',
-      next: 'Apply eligibility filters',
+      next: 'Check provider eligibility',
       input: 'Versioned provider roster',
       output: 'Active provider candidates',
       validation:
@@ -40,11 +40,11 @@ export const PROVIDER_STAGE: AutomationStageDefinition = {
     }),
     step({
       id: 'filter-providers',
-      name: 'Apply eligibility filters',
+      name: 'Check provider eligibility',
       description:
         'Filter candidates by territory, service capability, and confirmed business rules.',
       system: 'Provider rules',
-      next: 'Rank candidates',
+      next: 'Rank suitable providers',
       input: 'Active providers and referral context',
       output: 'Eligible provider set with exclusion reasons',
       validation:
@@ -53,11 +53,11 @@ export const PROVIDER_STAGE: AutomationStageDefinition = {
     }),
     step({
       id: 'rank-providers',
-      name: 'Rank provider candidates',
+      name: 'Rank suitable providers',
       description:
         'Order eligible providers using explainable operational criteria.',
       system: 'Provider ranking',
-      next: 'Classify provider coverage',
+      next: 'Identify coverage gaps',
       input: 'Eligible provider set',
       output: 'Ranked shortlist with location and coverage rationale',
       validation: 'Ranking does not make a clinical decision.',
@@ -65,22 +65,24 @@ export const PROVIDER_STAGE: AutomationStageDefinition = {
     }),
     step({
       id: 'classify-provider-result',
-      name: 'Classify provider coverage',
-      description: 'Identify clear, ambiguous, and no-coverage outcomes.',
+      name: 'Identify coverage gaps',
+      description:
+        'Identify clear matches, ambiguous coverage, and areas with no available provider.',
       system: 'Provider policy',
-      next: 'Request human selection',
+      next: 'Case manager confirms the provider',
       input: 'Ranked shortlist',
-      output: 'One recommendation or a coverage exception',
-      validation: 'Ambiguous and uncovered cases require human action.',
+      output: 'Provider recommendation or coverage gap',
+      validation:
+        'Ambiguous and uncovered cases are sent to Nicole for human review.',
       implementationStatus: 'planned',
     }),
     step({
       id: 'confirm-provider',
-      name: 'Confirm the provider',
+      name: 'Case manager confirms the provider',
       description:
         'Allow the responsible employee to approve or replace the recommendation.',
       system: 'Human approval',
-      next: 'Record and verify provider',
+      next: 'Record and verify the selected provider',
       input: 'Shortlist and selection evidence',
       output: 'Confirmed provider or management escalation',
       validation: 'The approving person and chosen reason are recorded.',
@@ -88,7 +90,7 @@ export const PROVIDER_STAGE: AutomationStageDefinition = {
     }),
     step({
       id: 'write-provider',
-      name: 'Record and verify provider',
+      name: 'Record and verify the selected provider',
       description:
         'Update the approved systems and create the provider-selection audit event.',
       system: 'Monday / DRK adapters',

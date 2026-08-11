@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { StageNowBoard } from './StageNowBoard'
 import { StageActivityFeed } from './StageActivityFeed'
 import { StagePatientSteps } from './StagePatientSteps'
+import { useHumanDecisions } from './useHumanDecisions'
 import {
   defaultNowSectionId,
   defaultPatientIdForStage,
@@ -24,6 +25,7 @@ export function StageInspector({
   const [selectedPatientId, setSelectedPatientId] = useState(() =>
     defaultPatientIdForStage(stage.id),
   )
+  const { decisions, recordDecision } = useHumanDecisions()
 
   useEffect(() => {
     setTab('steps')
@@ -67,6 +69,8 @@ export function StageInspector({
             microsteps={stage.microsteps}
             selectedPatientId={selectedPatientId}
             onSelectPatient={(patientId) => openPatientOnThisStage(patientId)}
+            decisions={decisions}
+            onRecordDecision={recordDecision}
           />
         ) : null}
 
@@ -82,6 +86,7 @@ export function StageInspector({
         {tab === 'history' ? (
           <StageActivityFeed
             stageId={stage.id}
+            decisions={decisions}
             onSelectPatient={(patientId) => openPatientOnThisStage(patientId)}
           />
         ) : null}

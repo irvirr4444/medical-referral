@@ -2,16 +2,33 @@ import { useEffect, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { activityFeedForStage, parseOpsDate } from './ops'
 import type { FlowOpsPageId } from '../../data/flowOps'
+import type { HumanDecisionRecord } from './ops/types'
 import './StageOps.css'
 
 export function StageActivityFeed({
   stageId,
+  decisions,
   onSelectPatient,
 }: {
   stageId: FlowOpsPageId
+  decisions: HumanDecisionRecord[]
   onSelectPatient: (patientId: string, patientName: string) => void
 }) {
-  const days = activityFeedForStage(stageId)
+  const days = activityFeedForStage(
+    stageId,
+    decisions
+      .filter((decision) => decision.stageId === stageId)
+      .map((decision) => ({
+        id: decision.id,
+        stageId: decision.stageId,
+        eventType: 'human-decision',
+        patientId: decision.patientId,
+        patientName: decision.patientName,
+        occurredAt: decision.occurredAt,
+        summary: decision.summary,
+        status: 'resolved' as const,
+      })),
+  )
   const [collapsedDays, setCollapsedDays] = useState<Set<string>>(() => new Set())
 
   useEffect(() => {

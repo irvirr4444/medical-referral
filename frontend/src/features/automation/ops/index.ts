@@ -22,6 +22,10 @@ import {
   STAGE_ORDER,
 } from './fixtures/patientJourneys'
 import { PATIENT_STEP_BREAKDOWNS } from './fixtures/patientSteps'
+import {
+  heroArtifactSections,
+  heroPatientIdForStage,
+} from './fixtures/heroPatientArtifacts'
 import { automationStage } from '../stages'
 import { BUTLER_INTAKE_SNAPSHOTS } from '../fixtures/butlerIntakeSnapshots'
 import {
@@ -29,6 +33,7 @@ import {
   type MicrostepExample,
   type MicrostepRunStatus,
 } from '../types'
+import { humanGateForStep } from './humanGates'
 
 const FIXTURES: Record<FlowOpsPageId, StageOpsFixture> = {
   intake: INTAKE_OPS_FIXTURE,
@@ -87,6 +92,10 @@ export function patientsForStage(stageId: FlowOpsPageId): StagePatientRef[] {
 
 export function defaultPatientIdForStage(stageId: FlowOpsPageId): string {
   const patients = patientsForStage(stageId)
+  const heroPatientId = heroPatientIdForStage(stageId)
+  if (heroPatientId && patients.some((patient) => patient.patientId === heroPatientId)) {
+    return heroPatientId
+  }
   if (stageId === 'intake') {
     return (
       patients.find((patient) => patient.patientId === 'butler-alva')
@@ -118,10 +127,14 @@ export function detailForPatientStep(
   stageId: FlowOpsPageId,
   patientId: string,
   stepId: string,
+  progressOverride?: PatientStepProgress & {
+    stepName: string
+    description: string
+  },
 ) {
   const stage = automationStage(stageId)
   const microstep = stage.microsteps.find((item) => item.id === stepId)
-  const progress =
+  const progress = progressOverride ??
     stepsForPatient(stageId, patientId).find((row) => row.stepId === stepId) ??
     null
   const patientName =
@@ -171,6 +184,8 @@ function synthesizeStepExample({
   progress: PatientStepProgress & { stepName: string; description: string }
 }): MicrostepExample {
   const facts = progress.detail
+  const heroSections = heroArtifactSections(stageId, patientId, progress.stepId)
+  const humanGate = humanGateForStep(stageId, progress.stepId)
   const runStatus = toRunStatus(progress.status)
   const knownAtThisPoint = facts?.knownAtThisPoint ?? [
     { label: 'Patient', value: patientName },
@@ -190,9 +205,13 @@ function synthesizeStepExample({
         progress.status === 'upcoming'
           ? 'Not in scope yet'
           : progress.status === 'waiting'
-            ? 'Awaiting confirmation'
+            ? humanGate
+              ? 'Awaiting human confirmation'
+              : 'Waiting on workflow input'
             : progress.status === 'blocked'
-              ? 'Blocked pending confirmation'
+              ? humanGate
+                ? 'Blocked pending human decision'
+                : 'Blocked by an unresolved workflow condition'
               : 'Confirmed or not required'
     },
     {
@@ -201,7 +220,7 @@ function synthesizeStepExample({
         progress.status === 'upcoming'
           ? 'Not reached yet'
           : progress.status === 'waiting' || progress.status === 'blocked'
-            ? `After confirmation: ${microstep.next}`
+            ? `${humanGate ? 'After the human decision' : 'After this condition clears'}: ${microstep.next}`
             : microstep.next,
     },
     {
@@ -236,17 +255,19 @@ function synthesizeStepExample({
     executionId: `${patientId}-${progress.stepId}`,
     artifactId: `${patientId}-${progress.stepId}-artifact`,
     knownAtThisPoint,
-    artifactSections: [
-      {
-        id: 'outcome',
-        title:
-          progress.status === 'upcoming'
-            ? 'Queued for this patient'
-            : 'What happened for this patient',
-        defaultExpanded: true,
-        fields,
-      },
-    ],
+    artifactSections:
+      heroSections ??
+      [
+        {
+          id: 'outcome',
+          title:
+            progress.status === 'upcoming'
+              ? 'Queued for this patient'
+              : 'What happened for this patient',
+          defaultExpanded: true,
+          fields,
+        },
+      ],
     inputs: [
       {
         label: 'Patient context',
@@ -286,14 +307,17 @@ function progressStatusLabel(status: PatientStepProgress['status']) {
   }
 }
 
-export function activityFeedForStage(stageId: FlowOpsPageId): Array<{
+export function activityFeedForStage(
+  stageId: FlowOpsPageId,
+  supplementalEvents: OpsEvent[] = [],
+): Array<{
   key: string
   label: string
   month: string
   day: string
   messages: ActivityFeedMessage[]
 }> {
-  const events = [...FIXTURES[stageId].events].sort(
+  const events = [...FIXTURES[stageId].events, ...supplementalEvents].sort(
     (a, b) =>
       parseOpsDate(b.occurredAt).timeMs - parseOpsDate(a.occurredAt).timeMs,
   )

@@ -72,6 +72,17 @@ export interface PatientStepProgress {
   detail?: PatientStepDetailFacts
 }
 
+export interface HumanDecisionRecord {
+  id: string
+  stageId: FlowOpsPageId
+  patientId: string
+  patientName: string
+  stepId: string
+  actionLabel: string
+  summary: string
+  occurredAt: string
+}
+
 export interface StagePatientRef {
   patientId: string
   patientName: string

@@ -6,45 +6,32 @@ export const WEEKLY_STAGE: AutomationStageDefinition = {
   title: '7. Weekly visit cycle',
   shortTitle: 'Weekly visit cycle',
   purpose:
-    'Track weekly visit outcomes, reschedule missed visits, manage holds, and route healing, expiration, or repeated noncompliance for discharge review.',
+    'Track weekly visits, missed appointments, holds, healing, expiration, and conditions requiring discharge review.',
   trigger:
     'The weekly monitor runs for active linked patients with expected visit activity.',
   successDefinition:
-    'Meaningful status changes produce deduplicated events and the correct human review exception.',
+    'Every recorded visit outcome leads to the correct follow-up, hold tracking, or human review.',
   implementationStatus: 'partial',
   microsteps: [
     step({
       id: 'start-weekly-cycle',
-      name: 'Start the weekly cycle',
+      name: 'Load the weekly patient schedule',
       description:
-        'Confirm source health and define the patient window for this monitoring run.',
+        'Confirm source health and load active patients due for this weekly review.',
       system: 'Monitoring worker',
-      next: 'Load active patient links',
+      next: 'Check the DRK progress note',
       input: 'Worker configuration and last successful cursor',
-      output: 'One bounded weekly cycle',
+      output: 'Patients due for weekly visit review',
       validation: 'A failed source cannot be interpreted as no visit.',
       implementationStatus: 'partial',
     }),
     step({
-      id: 'load-active-links',
-      name: 'Load active patient links',
-      description:
-        'Select only patients with internal, Monday, and DRK identities needed for monitoring.',
-      system: 'Workflow database',
-      next: 'Read visit status',
-      input: 'Active patient links and due window',
-      output: 'Bounded linked-patient set',
-      validation:
-        'The live reader never searches all patients indiscriminately.',
-      implementationStatus: 'partial',
-    }),
-    step({
       id: 'read-visit-status',
-      name: 'Read recorded visit status',
+      name: 'Check the DRK progress note',
       description:
         'Collect Monday and DRK values for visit outcome, hold, healing, expiration, and discharge.',
       system: 'Monday and DRK readers',
-      next: 'Normalize the status',
+      next: 'Record Seen or Not Seen',
       input: 'Linked Monday item and DRK chart IDs',
       output: 'Timestamped visit-status snapshots',
       validation: 'Raw source values retain their source and observation time.',
@@ -52,11 +39,11 @@ export const WEEKLY_STAGE: AutomationStageDefinition = {
     }),
     step({
       id: 'normalize-visit-status',
-      name: 'Normalize visit status',
+      name: 'Record Seen or Not Seen',
       description:
-        'Map explicit source values into the supported workflow vocabulary.',
-      system: 'Visit normalizer',
-      next: 'Compare with the previous snapshot',
+        'Translate the recorded visit result into the status used by the WCW workflow.',
+      system: 'Visit status service',
+      next: 'Check healing, expiration, and hold status',
       input: 'Source-specific visit values',
       output:
         'Seen, not seen, hold, returned, healed, expired, discharged, or indeterminate',
@@ -65,23 +52,23 @@ export const WEEKLY_STAGE: AutomationStageDefinition = {
     }),
     step({
       id: 'detect-visit-change',
-      name: 'Detect meaningful changes',
+      name: 'Check healing, expiration, and hold status',
       description:
-        'Compare current and previous normalized snapshots to avoid duplicate events.',
-      system: 'Workflow observer',
-      next: 'Update the not-seen counter',
-      input: 'Current and previous normalized snapshots',
-      output: 'New event or no meaningful change',
-      validation: 'Repeated identical polls do not create new workflow events.',
+        'Check whether the patient healed, expired, entered a hold, or is ready to return.',
+      system: 'Visit status service',
+      next: 'Update the consecutive Not Seen count',
+      input: 'Recorded visit, patient status, and previous state',
+      output: 'Continue care, hold action, QA review, or discharge-review condition',
+      validation: 'Clinical and discharge decisions always remain human-controlled.',
       implementationStatus: 'partial',
     }),
     step({
       id: 'update-not-seen-counter',
-      name: 'Update consecutive not-seen count',
+      name: 'Update the consecutive Not Seen count',
       description:
         'Increment on explicit not-seen events and reset after an explicit seen event.',
       system: 'Visit policy',
-      next: 'Classify review requirements',
+      next: 'Route cases needing human review',
       input: 'Meaningful seen or not-seen event',
       output: 'Updated consecutive-not-seen count',
       validation: 'Missing or indeterminate data never increments the count.',
@@ -89,11 +76,11 @@ export const WEEKLY_STAGE: AutomationStageDefinition = {
     }),
     step({
       id: 'classify-weekly-review',
-      name: 'Classify human review requirements',
+      name: 'Route cases needing human review',
       description:
         'Create review work for third not-seen, healed, expired, hold, or discharge-related changes.',
       system: 'Visit policy',
-      next: 'Create a deduplicated exception',
+      next: 'Prepare the responsible team action',
       input: 'Normalized event and counters',
       output: 'No action, management review, QA review, or hold tracking',
       validation: 'The automation never discharges a patient automatically.',
@@ -101,20 +88,20 @@ export const WEEKLY_STAGE: AutomationStageDefinition = {
     }),
     step({
       id: 'create-weekly-exception',
-      name: 'Create a deduplicated exception',
+      name: 'Prepare the responsible team action',
       description:
-        'Persist the review reason, evidence, patient link, and responsible recipient.',
-      system: 'Workflow exception store',
-      next: 'Notify the responsible team',
+        'Prepare the rescheduling, hold, QA, or discharge-review task with its supporting evidence.',
+      system: 'Workflow task service',
+      next: 'Update systems and notify the team',
       input: 'Review classification and source evidence',
-      output: 'One open exception with a stable deduplication key',
+      output: 'One clear action assigned to the responsible team',
       validation:
         'Existing unresolved exceptions are updated rather than duplicated.',
       implementationStatus: 'partial',
     }),
     step({
       id: 'notify-and-reconcile',
-      name: 'Notify and reconcile',
+      name: 'Update WCW systems and notify the team',
       description:
         'Send the review summary, then resolve it only after a later explicit source update.',
       system: 'Notification and monitoring workers',

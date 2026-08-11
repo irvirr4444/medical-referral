@@ -115,4 +115,25 @@ describe('stage operations fixtures', () => {
     expect(butler?.currentStageId).toBe('intake')
     expect(butler?.stages[0].outcomes.length).toBeGreaterThan(0)
   })
+
+  it('uses detailed hero artifacts for each post-intake stage', () => {
+    const heroes: Array<[FlowOpsPageId, string, string]> = [
+      ['handoff', 'maria-alvarez', 'load-approved-plan'],
+      ['assignment', 'marcus-feldman', 'classify-assignment'],
+      ['provider', 'helen-park', 'rank-providers'],
+      ['scheduling', 'maria-alvarez', 'generate-windows'],
+      ['end-of-day', 'frank-owens', 'read-eod-sources'],
+      ['weekly', 'arthur-kim', 'read-visit-status'],
+    ]
+
+    for (const [stageId, patientId, stepId] of heroes) {
+      expect(defaultPatientIdForStage(stageId)).toBe(patientId)
+      const detail = detailForPatientStep(stageId, patientId, stepId)
+      expect(detail.example?.artifactSections?.map((section) => section.id)).toEqual([
+        'patient-context',
+        'step-receipt',
+      ])
+      expect(detail.example?.artifactSections?.[1]?.fields).toHaveLength(3)
+    }
+  })
 })

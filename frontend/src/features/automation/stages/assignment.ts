@@ -6,7 +6,7 @@ export const ASSIGNMENT_STAGE: AutomationStageDefinition = {
   title: '3. Assignment',
   shortTitle: 'Assignment',
   purpose:
-    "Assign the correct case manager based on patient location and route missing-information follow-up to the referral source's assigned marketer.",
+    "Assign complete referrals to the correct case manager by location. Route incomplete referrals to the referral source's marketer for follow-up.",
   trigger: 'An approved referral has completed its destination handoff.',
   successDefinition:
     'One eligible case manager or marketer is confirmed, or a clear exception is routed to a human.',
@@ -14,7 +14,7 @@ export const ASSIGNMENT_STAGE: AutomationStageDefinition = {
   microsteps: [
     step({
       id: 'load-assignment-context',
-      name: 'Load assignment context',
+      name: 'Load patient, source, and completeness',
       description:
         'Collect patient location, facility, referral source, and current ownership.',
       system: 'Workflow database',
@@ -27,7 +27,7 @@ export const ASSIGNMENT_STAGE: AutomationStageDefinition = {
     }),
     step({
       id: 'normalize-location',
-      name: 'Normalize the service location',
+      name: 'Verify the service location',
       description:
         'Resolve the patient address or facility into a consistent territory input.',
       system: 'Location normalizer',
@@ -39,7 +39,7 @@ export const ASSIGNMENT_STAGE: AutomationStageDefinition = {
     }),
     step({
       id: 'load-territories',
-      name: 'Load approved territory rules',
+      name: 'Load the current ownership rules',
       description: 'Read the current WCW owner and coverage configuration.',
       system: 'Assignment configuration',
       next: 'Match eligible owners',
@@ -50,7 +50,7 @@ export const ASSIGNMENT_STAGE: AutomationStageDefinition = {
     }),
     step({
       id: 'match-owner',
-      name: 'Match eligible owners',
+      name: 'Find case-manager and marketer candidates',
       description:
         'Find case-manager and marketer candidates for the normalized location.',
       system: 'Assignment matcher',
@@ -62,19 +62,19 @@ export const ASSIGNMENT_STAGE: AutomationStageDefinition = {
     }),
     step({
       id: 'classify-assignment',
-      name: 'Classify the assignment result',
+      name: 'Choose the correct routing branch',
       description:
-        'Separate one clear match from no-match and multiple-match exceptions.',
+        'Send complete referrals toward case-manager assignment and missing-information follow-up toward the source marketer.',
       system: 'Assignment policy',
       next: 'Request human confirmation',
       input: 'Ranked owner candidates',
-      output: 'Clear match, conflict, or uncovered territory',
+      output: 'Case-manager branch, marketer follow-up branch, or ownership exception',
       validation: 'Conflicts never auto-assign a patient.',
       implementationStatus: 'planned',
     }),
     step({
       id: 'confirm-assignment',
-      name: 'Confirm the assignment',
+      name: 'Confirm the responsible owner',
       description:
         'Present the recommendation and evidence to the responsible WCW employee.',
       system: 'Human approval',
@@ -87,7 +87,7 @@ export const ASSIGNMENT_STAGE: AutomationStageDefinition = {
     }),
     step({
       id: 'write-assignment',
-      name: 'Write and verify ownership',
+      name: 'Record and verify the assignment',
       description:
         'Update the authorized systems and record the assignment event.',
       system: 'Monday / DRK adapters',

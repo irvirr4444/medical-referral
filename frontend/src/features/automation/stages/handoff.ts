@@ -6,7 +6,7 @@ export const HANDOFF_STAGE: AutomationStageDefinition = {
   title: '2. Handoff',
   shortTitle: 'Handoff',
   purpose:
-    'Acknowledge the referral source, send the referral to the the CM and face-sheet team, and record the handoff in Monday.com and DRK.',
+    'Acknowledge the referral source, route the approved referral to the case manager and face-sheet team, and record it in Monday.com and DRK.',
   trigger:
     'The guarded intake approval gate authorizes downstream preparation.',
   successDefinition:
@@ -15,11 +15,11 @@ export const HANDOFF_STAGE: AutomationStageDefinition = {
   microsteps: [
     step({
       id: 'load-approved-plan',
-      name: 'Load the approved intake plan',
+      name: 'Load the confirmed referral',
       description:
-        'Read the immutable approved referral version and its authorization record.',
+        'Read the exact referral version and human approval that authorized the handoff.',
       system: 'Workflow database',
-      next: 'Map Monday fields',
+      next: 'Acknowledge the referral source',
       input: 'Approved referral run and execution token',
       output: 'Locked destination plan',
       validation:
@@ -27,27 +27,26 @@ export const HANDOFF_STAGE: AutomationStageDefinition = {
     }),
     step({
       id: 'map-monday-fields',
-      name: 'Map the Monday.com fields',
+      name: 'Acknowledge the referral source',
       description:
-        'Translate canonical referral values into explicit Master Sheet column values.',
-      system: 'Monday mapper',
-      next: 'Resolve agency relation',
-      input: 'Canonical referral JSON',
-      output:
-        'Patient name, DOB, phone, receipt date, agency details, and structured update text',
-      validation: 'Only configured WCW column IDs may be written.',
+        'Send a receipt confirmation to the referral partner and copy the assigned case manager.',
+      system: 'Outlook delivery',
+      next: 'Route the referral internally',
+      input: 'Referral source contact and approved summary',
+      output: 'Acknowledgment email with delivery receipt',
+      validation: 'The message references the correct patient and referral source.',
     }),
     step({
       id: 'resolve-agency',
-      name: 'Resolve the referring agency',
+      name: 'Route the referral internally',
       description:
-        'Find one exact Accounts-board agency match before creating a relation.',
-      system: 'Monday agency lookup',
-      next: 'Create the Master Sheet item',
-      input: 'Referring facility and agency phone',
-      output: 'One exact agency relation candidate',
+        'Send the confirmed referral to the assigned case manager and face-sheet team.',
+      system: 'Workflow routing',
+      next: 'Create the Monday.com record',
+      input: 'Approved referral, assignment context, and agency lookup',
+      output: 'Internal routing receipt and resolved agency relation',
       validation:
-        'Zero or multiple matches remain unresolved for human review.',
+        'Ambiguous agency or owner matches remain visible for human review.',
       exception: {
         input: 'Agency name with two possible Accounts matches',
         output: 'Agency relation withheld; two candidates reported',
@@ -56,8 +55,9 @@ export const HANDOFF_STAGE: AutomationStageDefinition = {
     }),
     step({
       id: 'write-monday',
-      name: 'Create the Monday.com item',
-      description: 'Apply the approved payload with an idempotency key.',
+      name: 'Create the Monday.com record',
+      description:
+        'Map the approved referral into explicit Master Sheet columns and create the item once.',
       system: 'Monday writer',
       next: 'Prepare the DRK action',
       input: 'Approved Master Sheet payload',
@@ -67,7 +67,7 @@ export const HANDOFF_STAGE: AutomationStageDefinition = {
     }),
     step({
       id: 'prepare-drk',
-      name: 'Prepare the DRK chart action',
+      name: 'Prepare the DRK patient record',
       description:
         'Map demographics, contact, insurance, diagnosis, and referral details to DRK fields.',
       system: 'DRK mapper',
@@ -80,7 +80,7 @@ export const HANDOFF_STAGE: AutomationStageDefinition = {
     }),
     step({
       id: 'apply-drk',
-      name: 'Perform assisted DRK entry',
+      name: 'Create or update the DRK chart',
       description:
         'Use the approved DRK action in the authenticated EMR session.',
       system: 'DRK browser automation',
@@ -93,7 +93,7 @@ export const HANDOFF_STAGE: AutomationStageDefinition = {
     }),
     step({
       id: 'link-destinations',
-      name: 'Link destination identifiers',
+      name: 'Link the Monday.com and DRK records',
       description:
         'Store the Monday item, DRK chart, and internal referral relationship.',
       system: 'Workflow database',
@@ -106,7 +106,7 @@ export const HANDOFF_STAGE: AutomationStageDefinition = {
     }),
     step({
       id: 'reconcile-handoff',
-      name: 'Verify and audit the handoff',
+      name: 'Verify the completed handoff',
       description:
         'Read back destination state and record success, pending work, or a partial failure.',
       system: 'Reconciliation worker',
