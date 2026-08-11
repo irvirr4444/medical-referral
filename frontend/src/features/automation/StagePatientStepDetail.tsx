@@ -1,8 +1,6 @@
 import { Clock3 } from 'lucide-react'
-import { ArtifactSections } from './ArtifactSections'
 import { parseOpsDate, detailForPatientStep } from './ops'
 import type { HumanDecisionRecord } from './ops/types'
-import './ArtifactSections.css'
 import './StageOps.css'
 
 type PatientStepDetail = ReturnType<typeof detailForPatientStep>
@@ -14,14 +12,21 @@ export function StagePatientStepDetail({
   onConfirm,
   actionLabel,
   confirmedLabel,
+  options = [],
   decision,
 }: {
   detail: PatientStepDetail
   canConfirm?: boolean
   isConfirmed?: boolean
-  onConfirm?: () => void
+  onConfirm?: (selectedOption?: string) => void
   actionLabel?: string
   confirmedLabel?: string
+  options?: Array<{
+    value: string
+    label: string
+    detail?: string
+    recommended?: boolean
+  }>
   decision?: HumanDecisionRecord
 }) {
   const { microstep, progress, example } = detail
@@ -30,8 +35,14 @@ export function StagePatientStepDetail({
   }
 
   const when = progress.occurredAt ? parseOpsDate(progress.occurredAt) : null
-  const rich = Boolean(example?.artifactSections?.length)
+  const actionFields = (example?.actionFields ?? []).map((field) =>
+    decision?.selectedOption ? { ...field, value: decision.selectedOption } : field,
+  )
   const showConfirmationPanel = canConfirm || isConfirmed
+  const fieldSectionTitle =
+    showConfirmationPanel && !isConfirmed
+      ? 'Proposed updates'
+      : actionFieldSectionTitle(microstep.id)
   const confirmationCopy = isConfirmed
     ? `${confirmedLabel ?? 'Confirmed'} and recorded in this patient trail.`
     : progress.status === 'blocked'
@@ -40,22 +51,6 @@ export function StagePatientStepDetail({
         ? 'Ready for confirmation now.'
         : 'Awaiting confirmation.'
   const confirmationCta = actionLabel ?? 'Confirm step'
-  const artifactSections = decision
-    ? [
-        ...(example?.artifactSections ?? []),
-        {
-          id: 'human-decision',
-          title: 'Human decision',
-          defaultExpanded: true,
-          fields: [
-            { label: 'Decision', value: decision.actionLabel },
-            { label: 'Result', value: decision.summary },
-            { label: 'Recorded', value: decision.occurredAt },
-          ],
-        },
-      ]
-    : example?.artifactSections ?? []
-
   return (
     <article
       className={`stage-ops-step-detail is-${progress.status}`}
@@ -79,10 +74,37 @@ export function StagePatientStepDetail({
         ) : null}
       </header>
 
-      <section className="stage-ops-step-detail__outcome" aria-label="Outcome">
-        <p className="caption">Outcome summary</p>
+      <section className="stage-ops-step-detail__outcome" aria-label="Result">
+        <p className="caption">Result</p>
         <strong>{progress.summary}</strong>
       </section>
+
+      {actionFields.length > 0 && progress.status !== 'upcoming' ? (
+        <section
+          className="stage-ops-step-detail__changes"
+          aria-label={fieldSectionTitle}
+        >
+          <h3>{fieldSectionTitle}</h3>
+          <div className="stage-ops-step-detail__change-table" role="table">
+            <div className="stage-ops-step-detail__change-head" role="row">
+              <span role="columnheader">Field</span>
+              <span role="columnheader">Value</span>
+              <span role="columnheader">System field</span>
+            </div>
+            {actionFields.map((field) => (
+              <div
+                key={`${field.label}-${field.meta ?? field.fieldPath ?? ''}`}
+                className="stage-ops-step-detail__change-row"
+                role="row"
+              >
+                <strong role="cell">{field.label}</strong>
+                <span role="cell">{field.value}</span>
+                <small role="cell">{field.meta ?? field.fieldPath ?? 'Workflow'}</small>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {showConfirmationPanel ? (
         <section
@@ -93,14 +115,36 @@ export function StagePatientStepDetail({
             <p className="caption">Confirmation</p>
             <strong>{confirmationCopy}</strong>
           </div>
-          <button
-            type="button"
-            className={`stage-ops-step-detail__confirm${isConfirmed ? ' is-confirmed' : ''}${canConfirm && !isConfirmed ? ' is-actionable' : ''}`}
-            onClick={onConfirm}
-            disabled={isConfirmed || !canConfirm}
-          >
-            {isConfirmed ? 'Confirmed' : confirmationCta}
-          </button>
+          {options.length > 0 && !isConfirmed ? (
+            <div className="stage-ops-step-detail__choices" aria-label="Available choices">
+              {options.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={`stage-ops-step-detail__choice${option.recommended ? ' is-recommended' : ''}`}
+                  onClick={() => onConfirm?.(option.value)}
+                  disabled={!canConfirm}
+                >
+                  <span>
+                    <strong>{option.label}</strong>
+                    {option.recommended ? <em>Recommended</em> : null}
+                  </span>
+                  {option.detail ? <small>{option.detail}</small> : null}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <button
+              type="button"
+              className={`stage-ops-step-detail__confirm${isConfirmed ? ' is-confirmed' : ''}${canConfirm && !isConfirmed ? ' is-actionable' : ''}`}
+              onClick={() => onConfirm?.()}
+              disabled={isConfirmed || !canConfirm}
+            >
+              {isConfirmed
+                ? decision?.selectedOption ?? 'Confirmed'
+                : confirmationCta}
+            </button>
+          )}
         </section>
       ) : null}
 
@@ -111,30 +155,6 @@ export function StagePatientStepDetail({
         </p>
       ) : null}
 
-      {rich && example ? (
-        <>
-          <section
-            className="microstep-detail__artifact"
-            aria-label="Produced output"
-          >
-            <ArtifactSections
-              sections={artifactSections}
-              artifactId={example.artifactId ?? microstep.id}
-            />
-          </section>
-        </>
-      ) : progress.status !== 'upcoming' ? (
-        <section className="stage-ops-step-detail__facts" aria-label="Step facts">
-          <div>
-            <p className="caption">System</p>
-            <strong>{microstep.system}</strong>
-          </div>
-          <div>
-            <p className="caption">Next</p>
-            <strong>{microstep.next}</strong>
-          </div>
-        </section>
-      ) : null}
     </article>
   )
 }
@@ -144,7 +164,7 @@ function statusLabel(status: string, isHumanGate: boolean) {
     case 'done':
       return 'Done'
     case 'current':
-      return 'Here'
+      return 'In progress'
     case 'waiting':
       return isHumanGate ? 'Awaiting confirmation' : 'Waiting'
     case 'blocked':
@@ -152,4 +172,18 @@ function statusLabel(status: string, isHumanGate: boolean) {
     default:
       return 'Next'
   }
+}
+
+const WRITE_ACTIONS = new Set([
+  'create-monday-record',
+  'create-update-drk',
+  'assign-owner',
+  'record-provider',
+  'confirm-record-appointment',
+  'record-visit-outcome',
+  'apply-weekly-rules',
+])
+
+function actionFieldSectionTitle(stepId: string) {
+  return WRITE_ACTIONS.has(stepId) ? 'Field updates' : 'Action data'
 }

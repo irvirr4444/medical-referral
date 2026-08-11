@@ -137,20 +137,12 @@ const WEEKLY_CASES: HistoryCase[] = [
 function schedulingMoment(historyCase: HistoryCase, stepId: string): HistoryMoment {
   const value = historyCase.values
   switch (stepId) {
-    case 'load-scheduling-context':
-      return { input: historyCase.patientName, output: value.context }
-    case 'read-availability':
+    case 'send-referral-provider':
       return { input: value.context, output: value.delivery }
-    case 'generate-windows':
-      return { input: value.delivery, output: value.providerResponse }
-    case 'present-windows':
-      return { input: value.providerResponse, output: value.availability }
-    case 'monitor-response':
-      return { input: value.availability, output: value.options }
-    case 'classify-response':
-      return { input: value.options, output: value.confirmation }
-    case 'write-appointment':
-      return { input: value.confirmation, output: value.write }
+    case 'capture-provider-response':
+      return { input: value.delivery, output: `${value.providerResponse}; ${value.availability}` }
+    case 'confirm-record-appointment':
+      return { input: value.options, output: `${value.confirmation}; ${value.write}` }
     default:
       return { input: value.write, output: value.reconcile }
   }
@@ -159,20 +151,12 @@ function schedulingMoment(historyCase: HistoryCase, stepId: string): HistoryMome
 function endOfDayMoment(historyCase: HistoryCase, stepId: string): HistoryMoment {
   const value = historyCase.values
   switch (stepId) {
-    case 'start-eod-cycle':
-      return { input: 'Cutoff configuration and reader health', output: value.health }
-    case 'load-due-referrals':
-      return { input: 'Active referrals due by cutoff', output: value.due }
-    case 'read-eod-sources':
+    case 'find-unscheduled':
       return { input: value.due, output: value.owner }
-    case 'normalize-scheduling':
+    case 'notify-owner':
       return { input: value.owner, output: value.followup }
-    case 'dedupe-eod-alerts':
-      return { input: value.followup, output: value.tracking }
-    case 'create-eod-exceptions':
+    case 'escalate-unresolved':
       return { input: value.tracking, output: value.escalation }
-    case 'notify-eod':
-      return { input: value.escalation, output: value.verification }
     default:
       return { input: value.verification, output: value.weekly }
   }
@@ -181,19 +165,11 @@ function endOfDayMoment(historyCase: HistoryCase, stepId: string): HistoryMoment
 function weeklyMoment(historyCase: HistoryCase, stepId: string): HistoryMoment {
   const value = historyCase.values
   switch (stepId) {
-    case 'start-weekly-cycle':
-      return { input: 'Reader health and weekly schedule date', output: value.schedule }
-    case 'read-visit-status':
-      return { input: value.schedule, output: value.progress }
-    case 'normalize-visit-status':
+    case 'record-visit-outcome':
       return { input: value.progress, output: value.outcome }
-    case 'detect-visit-change':
-      return { input: value.outcome, output: value.condition }
-    case 'update-not-seen-counter':
-      return { input: value.condition, output: value.counter }
-    case 'classify-weekly-review':
+    case 'apply-weekly-rules':
       return { input: value.counter, output: value.review }
-    case 'create-weekly-exception':
+    case 'assign-follow-up':
       return { input: value.review, output: value.action }
     default:
       return { input: value.action, output: value.notification }

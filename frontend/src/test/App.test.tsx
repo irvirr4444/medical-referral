@@ -186,15 +186,15 @@ describe('automation inspection console', () => {
 
     await user.click(
       within(steps).getByRole('button', {
-        name: /Confirm recommended owner/i,
+        name: /Cole Ramirez/i,
       }),
     )
 
     expect(
       within(steps).getByRole('button', {
-        name: /Confirm the responsible owner/i,
+        name: /^Assign Owner/i,
       }),
-    ).toHaveAttribute('aria-current', 'step')
+    ).toHaveAttribute('data-status', 'done')
 
     await user.click(screen.getByRole('tab', { name: /^History$/i }))
     expect(
@@ -204,7 +204,23 @@ describe('automation inspection console', () => {
     await user.click(screen.getByRole('button', { name: /2\. Handoff/i }))
     await user.click(screen.getByRole('button', { name: /3\. Assignment/i }))
     expect(
-      screen.getByRole('button', { name: /Choose the correct routing branch/i }),
+      screen.getByRole('button', { name: /^Assign Owner/i }),
+    ).toHaveAttribute('data-status', 'done')
+  })
+
+  it('records an alternate provider choice in the destination fields', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: /4\. Provider selection/i }))
+    const steps = screen.getByLabelText(/Patient steps/i)
+    await user.click(
+      within(steps).getByRole('button', { name: /Dr\. Mina Patel/i }),
+    )
+
+    expect(within(steps).getAllByText('Dr. Mina Patel').length).toBeGreaterThan(1)
+    expect(
+      within(steps).getByRole('button', { name: /^Record Provider Selection/i }),
     ).toHaveAttribute('data-status', 'done')
   })
 })

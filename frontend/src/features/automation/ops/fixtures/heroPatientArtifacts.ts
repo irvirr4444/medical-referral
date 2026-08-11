@@ -1,10 +1,11 @@
 import type { FlowOpsPageId } from '../../../../data/flowOps'
-import type { ArtifactSection } from '../../types'
+import type { ArtifactField, ArtifactSection } from '../../types'
 
 type StepEvidence = {
   received: string
   produced: string
   evidence: string
+  fields: ArtifactField[]
 }
 
 type HeroStory = {
@@ -23,18 +24,54 @@ const HERO_STORIES: Partial<Record<FlowOpsPageId, HeroStory>> = {
     context: [
       { label: 'Referral source', value: 'Riverside Home Health' },
       { label: 'Approved by', value: 'Braxton - Intake' },
-      { label: 'Required fields', value: '7 of 7 confirmed' },
-      { label: 'Duplicate result', value: 'No Monday or DRK match' },
     ],
     steps: {
-      'load-approved-plan': receipt('Approved referral v3', 'Locked handoff plan', 'Approval CONF-1042'),
-      'map-monday-fields': receipt('Referral source and reviewer contacts', 'Acknowledgment sent; CM copied', 'Outlook message ACK-8821'),
-      'resolve-agency': receipt('Complete referral and territory context', 'Routed to Ana Torres and Face Sheet Team', 'Routing rule Riverside-02'),
-      'write-monday': receipt('Explicit Master Sheet column payload', 'Monday item 5816018427 created', '8 columns verified by read-back'),
-      'prepare-drk': receipt('Demographics, insurance, and wound summary', 'DRK Create Patient draft ready', '12 mapped fields; 0 unresolved'),
-      'apply-drk': receipt('Approved DRK draft', 'DRK chart 204918 created', 'Browser receipt DRK-204918'),
-      'link-destinations': receipt('Monday 5816018427 and DRK 204918', 'Cross-system patient link stored', 'Link PAT-MA-1042'),
-      'reconcile-handoff': receipt('Destination receipts and patient link', 'Handoff verified', 'Monday and DRK values agree'),
+      'notify-referral-source': receipt(
+        'Approved referral and source contact',
+        'Acknowledgment delivered',
+        'Outlook message ACK-8821',
+        [
+          field('Recipient', 'Riverside Home Health', 'Outlook To'),
+          field('Delivery status', 'Delivered at 10:04 AM', 'Outlook'),
+        ],
+      ),
+      'create-monday-record': receipt(
+        'Approved patient fields',
+        'Monday item 5816018427 created',
+        '8 fields verified by read-back',
+        [
+          field('Patient name', 'Maria Alvarez', 'Name'),
+          field('Date of birth', '02/14/1958', 'Patient DoB'),
+          field('Phone', '(555) 014-2381', 'Phone'),
+          field('Address', '4821 Palm Grove Dr, Riverside, CA', 'Patient Address'),
+          field('Agency', 'Riverside Home Health', 'Company'),
+          field('Wound information', 'Lower-leg wound evaluation', 'Wound / Clinical Info'),
+          field('Insurance', 'Medicare', 'Insurance'),
+          field('Intake status', 'In intake', 'Stage'),
+        ],
+      ),
+      'create-update-drk': receipt(
+        'Approved referral and duplicate-clear result',
+        'DRK chart 204918 created',
+        'Browser receipt DRK-204918',
+        [
+          field('Patient', 'Maria Alvarez', 'DRK Patient Name'),
+          field('DOB', '02/14/1958', 'DRK Date of Birth'),
+          field('Insurance', 'Medicare', 'DRK Insurance'),
+          field('Referral PDF', 'REF-2026-0810-1042.pdf', 'DRK Documents'),
+          field('Chart ID', '204918', 'DRK Chart ID'),
+        ],
+      ),
+      'verify-handoff': receipt(
+        'Monday.com and DRK receipts',
+        'Handoff verified',
+        'Destination values agree',
+        [
+          field('Monday.com item', '5816018427', 'Verified'),
+          field('DRK chart', '204918', 'Verified'),
+          field('Handoff status', 'Complete', 'Workflow status'),
+        ],
+      ),
     },
   },
   assignment: {
@@ -43,18 +80,28 @@ const HERO_STORIES: Partial<Record<FlowOpsPageId, HeroStory>> = {
     referralId: 'REF-2026-0810-0930',
     context: [
       { label: 'Service address', value: '1718 W 162nd St, Gardena, CA 90247' },
-      { label: 'Referral completeness', value: 'Complete - normal CM branch' },
-      { label: 'Referral source', value: 'South Bay Physician Group' },
-      { label: 'Current owner', value: 'Unassigned' },
+      { label: 'Referral completeness', value: 'Complete' },
     ],
     steps: {
-      'load-assignment-context': receipt('Linked referral and service address', 'Assignment context ready', 'Address and source verified'),
-      'normalize-location': receipt('Gardena residential address', 'Gardena, 90247, residence', 'USPS-normalized location'),
-      'load-territories': receipt('Territory rules v12', 'South Bay coverage rules loaded', 'Rules active August 1, 2026'),
-      'match-owner': receipt('90247 and active staff roster', 'Cole Ramirez ranked first', 'Territory match; active caseload 18'),
-      'classify-assignment': receipt('Complete referral and ranked candidates', 'Case-manager branch selected', 'No missing-info marketer follow-up'),
-      'confirm-assignment': receipt('Cole recommendation and match evidence', 'Awaiting WCW confirmation', 'Human gate ASSIGN-0930'),
-      'write-assignment': receipt('Confirmed owner', 'Monday and DRK owner fields ready', 'Destination write plan ASSIGN-0930'),
+      'determine-owner': receipt(
+        'Location, source, and missing fields',
+        'Cole Ramirez recommended',
+        'South Bay territory rule v12',
+        [
+          field('Routing branch', 'Case manager', 'Assignment rule'),
+          field('Territory', 'South Bay', 'Coverage area'),
+          field('Recommended owner', 'Cole Ramirez', 'Owner candidate'),
+        ],
+      ),
+      'assign-owner': receipt(
+        'Cole Ramirez and routing reason',
+        'Awaiting owner selection and write',
+        'Human gate ASSIGN-0930',
+        [
+          field('Monday.com owner', 'Cole Ramirez', 'Case Manager'),
+          field('DRK owner', 'Cole Ramirez', 'Assigned Case Manager'),
+        ],
+      ),
     },
   },
   provider: {
@@ -64,17 +111,36 @@ const HERO_STORIES: Partial<Record<FlowOpsPageId, HeroStory>> = {
     context: [
       { label: 'Service area', value: 'Torrance, CA 90503' },
       { label: 'Care need', value: 'Lower-leg wound evaluation' },
-      { label: 'Case manager', value: 'Cole Ramirez' },
-      { label: 'Insurance', value: 'Medicare' },
     ],
     steps: {
-      'load-provider-context': receipt('Patient, location, and wound summary', 'Provider search context ready', 'Clinical source linked to referral PDF'),
-      'load-provider-roster': receipt('Approved roster updated 8:45 AM', '5 active South Bay providers', 'Roster source WCW Provider Board'),
-      'filter-providers': receipt('Coverage, capability, and service radius', '3 eligible; 2 excluded', 'Exclusions show radius and availability'),
-      'rank-providers': receipt('3 eligible providers', 'Dr. Lee ranked first', '4.2 miles; wound care; capacity available'),
-      'classify-provider-result': receipt('Ranked shortlist', 'Clear recommendation', 'No coverage gap or ambiguity'),
-      'confirm-provider': receipt('Dr. Lee plus two alternatives', 'Awaiting case-manager confirmation', 'Human gate PROVIDER-0850'),
-      'write-provider': receipt('Confirmed provider', 'Monday and DRK updates ready', 'Read-back required after write'),
+      'find-eligible-providers': receipt(
+        'Location, care need, and active roster',
+        '3 eligible providers found',
+        'WCW Provider Board updated 8:45 AM',
+        [
+          field('Service area', 'Torrance, CA 90503', 'Provider search'),
+          field('Eligible providers', '3', 'Candidate count'),
+          field('Excluded providers', '2', 'Outside coverage'),
+        ],
+      ),
+      'select-provider': receipt(
+        '3 eligible providers',
+        'Dr. Sofia Lee recommended',
+        '4.2 miles; wound care; capacity available',
+        [
+          field('Recommended provider', 'Dr. Sofia Lee', 'Provider selection'),
+          field('Match reason', 'Coverage, distance, capacity', 'Selection reason'),
+        ],
+      ),
+      'record-provider': receipt(
+        'Dr. Lee and two alternatives',
+        'Awaiting provider selection and write',
+        'Human gate PROVIDER-0850',
+        [
+          field('Monday.com provider', 'Dr. Sofia Lee', 'Provider'),
+          field('DRK provider', 'Dr. Sofia Lee', 'Rendering Provider'),
+        ],
+      ),
     },
   },
   scheduling: {
@@ -83,19 +149,45 @@ const HERO_STORIES: Partial<Record<FlowOpsPageId, HeroStory>> = {
     referralId: 'REF-2026-0810-1042',
     context: [
       { label: 'Selected provider', value: 'Dr. Sofia Lee' },
-      { label: 'Patient availability', value: 'Weekdays after 9:00 AM' },
-      { label: 'Service address', value: '4821 Palm Grove Dr, Riverside' },
       { label: 'Target', value: 'Visit within 24-48 hours' },
     ],
     steps: {
-      'load-scheduling-context': receipt('Confirmed provider and patient contact', 'Scheduling context ready', 'Phone and address verified'),
-      'read-availability': receipt('Approved referral package', 'Referral delivered to Dr. Lee', 'Delivery receipt 10:06 AM'),
-      'generate-windows': receipt('Delivery receipt and 11:06 AM deadline', 'Awaiting provider response', 'Response timer active'),
-      'present-windows': receipt('Provider response and route', 'Tuesday and Wednesday availability read', 'Schedule observed 10:24 AM'),
-      'monitor-response': receipt('Availability and route constraints', 'Two appointment options ranked', 'Both options inside 48-hour target'),
-      'classify-response': receipt('Two appointment options', 'Human appointment decision required', 'No destination write before confirmation'),
-      'write-appointment': receipt('Confirmed date and time', 'Monday and DRK payloads ready', 'Idempotency key APPT-MA-1042'),
-      'reconcile-appointment': receipt('Write receipts and expected slot', 'Scheduling read-back pending', 'Expected values must agree'),
+      'send-referral-provider': receipt(
+        'Approved referral and selected provider',
+        'Referral delivered to Dr. Lee',
+        'Delivery receipt 10:06 AM',
+        [
+          field('Provider', 'Dr. Sofia Lee', 'Referral recipient'),
+          field('Referral sent', 'August 10 at 10:06 AM', 'Referral Sent to Provider'),
+        ],
+      ),
+      'capture-provider-response': receipt(
+        'Provider delivery and response window',
+        'Provider accepted; two slots available',
+        'Response received at 10:24 AM',
+        [
+          field('Provider response', 'Accepted', 'Response status'),
+          field('Available slots', 'Aug 11 10:00 AM; Aug 12 1:30 PM', 'Availability'),
+        ],
+      ),
+      'confirm-record-appointment': receipt(
+        'Two route-compatible appointment choices',
+        'Awaiting slot selection and write',
+        'Idempotency key APPT-MA-1042',
+        [
+          field('Monday.com appointment', '08/11/2026 10:00 AM', 'Appointment Date'),
+          field('DRK appointment', '08/11/2026 10:00 AM', 'Appointment'),
+        ],
+      ),
+      'verify-scheduling': receipt(
+        'Appointment write receipts',
+        'Scheduling complete',
+        'Monday.com and DRK values agree',
+        [
+          field('Scheduled status', 'Scheduled', 'Monday.com'),
+          field('Scheduling complete', 'Yes', 'Monday.com'),
+        ],
+      ),
     },
   },
   'end-of-day': {
@@ -104,19 +196,46 @@ const HERO_STORIES: Partial<Record<FlowOpsPageId, HeroStory>> = {
     referralId: 'REF-2026-0810-0724',
     context: [
       { label: 'Case manager', value: 'Ana Torres' },
-      { label: 'Scheduling due', value: 'August 10, 2026 by 5:00 PM' },
-      { label: 'Appointment state', value: 'No confirmed appointment' },
-      { label: 'Current blocker', value: 'Provider response overdue' },
+      { label: 'Scheduling due', value: 'August 10 by 5:00 PM' },
     ],
     steps: {
-      'start-eod-cycle': receipt('5:00 PM cutoff and healthy readers', 'EOD cycle EOD-0810 opened', 'Monday and DRK sources current'),
-      'load-due-referrals': receipt('Active referrals due today', 'Frank Owens included', 'Incomplete scheduling detected'),
-      'read-eod-sources': receipt('Monday item and DRK chart', 'Ana Torres; provider response overdue', 'Both systems lack an appointment'),
-      'normalize-scheduling': receipt('Patient, owner, and blocker', 'Lead and Ana notified', 'Notification delivered at 5:01 PM'),
-      'dedupe-eod-alerts': receipt('Follow-up and refreshed status', 'Blocker remains unresolved', 'Single active follow-up retained'),
-      'create-eod-exceptions': receipt('Unresolved follow-up history', 'Escalation to Nicole prepared', 'Exception EOD-FRANK-0810'),
-      'notify-eod': receipt('Refreshed Monday and DRK state', 'Patient still unscheduled', 'No explicit appointment evidence'),
-      'resolve-eod': receipt('Unresolved scheduling exception', 'Weekly-cycle entry held', 'Scheduling must be verified first'),
+      'find-unscheduled': receipt(
+        'Active referrals due by 5:00 PM',
+        'Frank Owens requires follow-up',
+        'Monday.com and DRK contain no appointment',
+        [
+          field('Scheduled status', 'Not scheduled', 'Monday.com'),
+          field('Blocker', 'Provider response overdue', 'Scheduling blocker'),
+          field('Responsible owner', 'Ana Torres', 'Case Manager'),
+        ],
+      ),
+      'notify-owner': receipt(
+        'Patient, owner, and blocker',
+        'Lead and Ana notified',
+        'Delivered at 5:01 PM',
+        [
+          field('Recipients', 'Ana Torres; Intake Lead', 'Notification'),
+          field('Follow-up status', 'Delivered', 'Workflow status'),
+        ],
+      ),
+      'escalate-unresolved': receipt(
+        'Unresolved blocker and follow-up history',
+        'Escalation to Nicole prepared',
+        'Exception EOD-FRANK-0810',
+        [
+          field('Escalation owner', 'Nicole', 'Management owner'),
+          field('Escalation reason', 'Provider response overdue', 'Reason'),
+        ],
+      ),
+      'verify-resolution': receipt(
+        'Refreshed appointment fields',
+        'Patient remains unscheduled',
+        'Weekly-cycle entry held',
+        [
+          field('Final scheduling state', 'Unresolved', 'Workflow status'),
+          field('Weekly-cycle entry', 'Held', 'Next action'),
+        ],
+      ),
     },
   },
   weekly: {
@@ -126,28 +245,74 @@ const HERO_STORIES: Partial<Record<FlowOpsPageId, HeroStory>> = {
     context: [
       { label: 'Visit date', value: 'August 10, 2026' },
       { label: 'Provider', value: 'Dr. Sofia Lee' },
-      { label: 'Previous Not Seen count', value: '1' },
-      { label: 'Current patient state', value: 'Hospitalized - hold review' },
     ],
     steps: {
-      'start-weekly-cycle': receipt('Weekly cursor and healthy source status', 'Arthur Kim loaded for review', 'Expected visit activity found'),
-      'read-visit-status': receipt('DRK chart 198204', 'Hospitalization note found', 'Progress note recorded August 10 at 4:42 PM'),
-      'normalize-visit-status': receipt('Hospitalization note and visit record', 'Visit marked Not Seen', 'Explicit visit outcome retained'),
-      'detect-visit-change': receipt('Visit result and previous state', 'Hospitalization hold identified', 'Hold prevents discharge-count action'),
-      'update-not-seen-counter': receipt('Not Seen plus active hold', 'Counter remains 1', 'Hold policy suppresses increment'),
-      'classify-weekly-review': receipt('Hold state and source evidence', 'Hold tracking review required', 'No automatic clinical decision'),
-      'create-weekly-exception': receipt('Review classification', 'Hold-team action prepared', 'Owner: WCW hold team'),
-      'notify-and-reconcile': receipt('Open hold action', 'Awaiting human follow-up', 'Resolution requires a later explicit source update'),
+      'record-visit-outcome': receipt(
+        'Current DRK progress note',
+        'Visit recorded as Not Seen',
+        'Hospitalization note at 4:42 PM',
+        [
+          field('Visit status', 'Not Seen', 'Monday.com Visit Status'),
+          field('Source note', 'Hospitalized', 'DRK progress note'),
+        ],
+      ),
+      'apply-weekly-rules': receipt(
+        'Not Seen plus previous patient state',
+        'Hospitalization hold identified',
+        'Hold suppresses Not Seen increment',
+        [
+          field('Patient status', 'On hold - hospitalized', 'Patient Status'),
+          field('Consecutive Not Seen', '1 - unchanged', 'Not Seen Count'),
+          field('Required action', 'Hold review', 'Workflow action'),
+        ],
+      ),
+      'assign-follow-up': receipt(
+        'Hold review and supporting note',
+        'Hold-team action assigned',
+        'Existing action updated; no duplicate',
+        [
+          field('Assigned team', 'WCW Hold Team', 'Follow-up owner'),
+          field('Action', 'Review hospitalization hold', 'Follow-up type'),
+        ],
+      ),
+      'verify-weekly-result': receipt(
+        'Status write and follow-up receipt',
+        'Weekly cycle remains open',
+        'Awaiting explicit return-to-care update',
+        [
+          field('Cycle state', 'Open - on hold', 'Workflow status'),
+          field('Next check', 'Next weekly monitor', 'Monitor schedule'),
+        ],
+      ),
     },
   },
 }
 
-function receipt(received: string, produced: string, evidence: string): StepEvidence {
-  return { received, produced, evidence }
+function field(label: string, value: string, destination: string): ArtifactField {
+  return { label, value, meta: destination }
+}
+
+function receipt(
+  received: string,
+  produced: string,
+  evidence: string,
+  fields: ArtifactField[],
+): StepEvidence {
+  return { received, produced, evidence, fields }
 }
 
 export function heroPatientIdForStage(stageId: FlowOpsPageId): string | undefined {
   return HERO_STORIES[stageId]?.patientId
+}
+
+export function heroActionFields(
+  stageId: FlowOpsPageId,
+  patientId: string,
+  stepId: string,
+): ArtifactField[] | undefined {
+  const story = HERO_STORIES[stageId]
+  if (!story || story.patientId !== patientId) return undefined
+  return story.steps[stepId]?.fields
 }
 
 export function heroArtifactSections(
@@ -161,22 +326,14 @@ export function heroArtifactSections(
 
   return [
     {
-      id: 'patient-context',
-      title: 'Patient and referral context',
+      id: 'technical-details',
+      title: 'Technical details',
       fields: [
-        { label: 'Patient', value: story.patientName },
         { label: 'Referral / chart ID', value: story.referralId },
+        { label: 'Input', value: evidence.received },
+        { label: 'Output', value: evidence.produced },
+        { label: 'Evidence', value: evidence.evidence },
         ...story.context,
-      ],
-    },
-    {
-      id: 'step-receipt',
-      title: 'What this step received and produced',
-      defaultExpanded: true,
-      fields: [
-        { label: 'Input received', value: evidence.received },
-        { label: 'Output produced', value: evidence.produced },
-        { label: 'Evidence / receipt', value: evidence.evidence },
       ],
     },
   ]

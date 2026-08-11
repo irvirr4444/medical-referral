@@ -81,6 +81,7 @@ export interface HumanDecisionRecord {
   actionLabel: string
   summary: string
   occurredAt: string
+  selectedOption?: string
 }
 
 export interface StagePatientRef {

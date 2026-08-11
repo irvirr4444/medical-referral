@@ -3,7 +3,7 @@ import type { FlowOpsPageId } from '../../data/flowOps'
 import type { HumanDecisionRecord } from './ops/types'
 import type { HumanGateDefinition } from './ops/humanGates'
 
-const STORAGE_KEY = 'wcw-demo-human-decisions-v1'
+const STORAGE_KEY = 'wcw-demo-human-decisions-v2'
 
 export function useHumanDecisions() {
   const [decisions, setDecisions] = useState<HumanDecisionRecord[]>(readStored)
@@ -22,12 +22,14 @@ export function useHumanDecisions() {
     patientName,
     stepId,
     gate,
+    selectedOption,
   }: {
     stageId: FlowOpsPageId
     patientId: string
     patientName: string
     stepId: string
     gate: HumanGateDefinition
+    selectedOption?: string
   }) => {
     setDecisions((current) => {
       if (
@@ -50,8 +52,11 @@ export function useHumanDecisions() {
           patientName,
           stepId,
           actionLabel: gate.confirmedLabel,
-          summary: gate.decisionSummary,
+          summary: selectedOption
+            ? `${gate.decisionSummary} Selected: ${selectedOption}.`
+            : gate.decisionSummary,
           occurredAt: new Date().toISOString(),
+          selectedOption,
         },
       ]
     })

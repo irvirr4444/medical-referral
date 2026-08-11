@@ -81,7 +81,7 @@ describe('stage operations fixtures', () => {
     const handoffPatient = detailForPatientStep(
       'handoff',
       'james-carter',
-      'resolve-agency',
+      'verify-handoff',
     )
     expect(handoffPatient.example?.artifactSections?.length).toBeGreaterThan(0)
   })
@@ -118,22 +118,21 @@ describe('stage operations fixtures', () => {
 
   it('uses detailed hero artifacts for each post-intake stage', () => {
     const heroes: Array<[FlowOpsPageId, string, string]> = [
-      ['handoff', 'maria-alvarez', 'load-approved-plan'],
-      ['assignment', 'marcus-feldman', 'classify-assignment'],
-      ['provider', 'helen-park', 'rank-providers'],
-      ['scheduling', 'maria-alvarez', 'generate-windows'],
-      ['end-of-day', 'frank-owens', 'read-eod-sources'],
-      ['weekly', 'arthur-kim', 'read-visit-status'],
+      ['handoff', 'maria-alvarez', 'create-monday-record'],
+      ['assignment', 'marcus-feldman', 'determine-owner'],
+      ['provider', 'helen-park', 'select-provider'],
+      ['scheduling', 'maria-alvarez', 'capture-provider-response'],
+      ['end-of-day', 'frank-owens', 'find-unscheduled'],
+      ['weekly', 'arthur-kim', 'record-visit-outcome'],
     ]
 
     for (const [stageId, patientId, stepId] of heroes) {
       expect(defaultPatientIdForStage(stageId)).toBe(patientId)
       const detail = detailForPatientStep(stageId, patientId, stepId)
       expect(detail.example?.artifactSections?.map((section) => section.id)).toEqual([
-        'patient-context',
-        'step-receipt',
+        'technical-details',
       ])
-      expect(detail.example?.artifactSections?.[1]?.fields).toHaveLength(3)
+      expect(detail.example?.actionFields?.length).toBeGreaterThan(0)
     }
   })
 })

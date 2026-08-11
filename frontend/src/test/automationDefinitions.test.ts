@@ -24,7 +24,7 @@ describe('automation stage definitions', () => {
       expect(stage.purpose.length).toBeGreaterThan(30)
       expect(stage.trigger.length).toBeGreaterThan(20)
       expect(stage.successDefinition.length).toBeGreaterThan(20)
-      expect(stage.microsteps.length).toBeGreaterThanOrEqual(7)
+      expect(stage.microsteps.length).toBeGreaterThanOrEqual(2)
 
       const ids = stage.microsteps.map((step) => step.id)
       expect(new Set(ids).size).toBe(ids.length)
@@ -40,7 +40,7 @@ describe('automation stage definitions', () => {
   it('retrieves a stage through the shared lookup', () => {
     expect(automationStage('intake').microsteps[0].id).toBe('receive-referral')
     expect(automationStage('weekly').microsteps.at(-1)?.id).toBe(
-      'notify-and-reconcile',
+      'verify-weekly-result',
     )
   })
 

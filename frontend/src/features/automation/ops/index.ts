@@ -23,6 +23,7 @@ import {
 } from './fixtures/patientJourneys'
 import { PATIENT_STEP_BREAKDOWNS } from './fixtures/patientSteps'
 import {
+  heroActionFields,
   heroArtifactSections,
   heroPatientIdForStage,
 } from './fixtures/heroPatientArtifacts'
@@ -34,6 +35,7 @@ import {
   type MicrostepRunStatus,
 } from '../types'
 import { humanGateForStep } from './humanGates'
+import { actionProgressForStage } from './actionSteps'
 
 const FIXTURES: Record<FlowOpsPageId, StageOpsFixture> = {
   intake: INTAKE_OPS_FIXTURE,
@@ -112,7 +114,12 @@ export function stepsForPatient(
   patientId: string,
 ): Array<PatientStepProgress & { stepName: string; description: string }> {
   const stage = automationStage(stageId)
-  const rows = PATIENT_STEP_BREAKDOWNS[stageId][patientId] ?? []
+  const fixtureRows = PATIENT_STEP_BREAKDOWNS[stageId][patientId] ?? []
+  const rows = actionProgressForStage(
+    stageId,
+    fixtureRows,
+    stage.microsteps.map((step) => step.id),
+  )
   return rows.map((row) => {
     const step = stage.microsteps.find((item) => item.id === row.stepId)
     return {
@@ -185,6 +192,7 @@ function synthesizeStepExample({
 }): MicrostepExample {
   const facts = progress.detail
   const heroSections = heroArtifactSections(stageId, patientId, progress.stepId)
+  const actionFields = heroActionFields(stageId, patientId, progress.stepId)
   const humanGate = humanGateForStep(stageId, progress.stepId)
   const runStatus = toRunStatus(progress.status)
   const knownAtThisPoint = facts?.knownAtThisPoint ?? [
@@ -255,6 +263,7 @@ function synthesizeStepExample({
     executionId: `${patientId}-${progress.stepId}`,
     artifactId: `${patientId}-${progress.stepId}-artifact`,
     knownAtThisPoint,
+    actionFields,
     artifactSections:
       heroSections ??
       [

@@ -45,6 +45,7 @@ export interface MicrostepExample {
   artifactTitle?: string
   knownAtThisPoint?: AutomationValue[]
   artifactSections?: ArtifactSection[]
+  actionFields?: ArtifactField[]
 }
 
 export interface MicrostepExecutionSnapshot {

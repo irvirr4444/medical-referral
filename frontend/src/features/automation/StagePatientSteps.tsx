@@ -38,6 +38,7 @@ export function StagePatientSteps({
     patientName: string
     stepId: string
     gate: HumanGateDefinition
+    selectedOption?: string
   }) => void
 }) {
   const [query, setQuery] = useState('')
@@ -122,7 +123,7 @@ export function StagePatientSteps({
         stepDetail.progress.status === 'current'),
   )
 
-  const confirmSelectedStep = () => {
+  const confirmSelectedStep = (selectedOption?: string) => {
     if (!activePatient || !selectedStepId || !gate) return
     onRecordDecision({
       stageId,
@@ -130,6 +131,7 @@ export function StagePatientSteps({
       patientName: activePatient.patientName,
       stepId: selectedStepId,
       gate,
+      selectedOption,
     })
   }
 
@@ -144,10 +146,8 @@ export function StagePatientSteps({
     <div className="stage-ops-steps" aria-label="Patient steps">
       <aside className="stage-ops-steps__rail">
         <div className="stage-ops-steps__rail-copy">
-          <h2>{microsteps.length} steps</h2>
-          <p className="muted">
-            Select a patient and step to inspect what happened.
-          </p>
+          <h2>{microsteps.length} actions</h2>
+          <p className="muted">Select an action to see its result.</p>
         </div>
         <MicrostepList
           steps={microsteps}
@@ -190,6 +190,7 @@ export function StagePatientSteps({
                     : gate?.actionLabel
                 }
                 confirmedLabel={gate?.confirmedLabel}
+                options={gate?.options}
                 decision={selectedDecision}
               />
             ) : null}

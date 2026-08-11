@@ -29,49 +29,25 @@ const SCHEDULING_WALKTHROUGH: LifecycleWalkthrough = {
     patientName: 'Maria Alvarez',
   },
   steps: {
-    'load-scheduling-context': {
-      input: 'Maria Alvarez; provider confirmed; Riverside address',
-      output: 'Patient, provider, location, and contact details ready',
-      duration: 'Planned',
-      status: 'planned',
-    },
-    'read-availability': {
+    'send-referral-provider': {
       input: 'Approved referral and confirmed provider',
       output: 'Referral sent to provider with delivery recorded',
       duration: 'Planned',
       status: 'planned',
     },
-    'generate-windows': {
+    'capture-provider-response': {
       input: 'Referral delivery and one-hour response window',
-      output: 'Provider confirmed availability after 18 minutes',
+      output: 'Provider accepted; three open windows within 48 hours',
       duration: 'Planned',
       status: 'planned',
     },
-    'present-windows': {
-      input: 'Confirmed provider and Riverside service area',
-      output: 'Three open provider windows within 48 hours',
-      duration: 'Planned',
-      status: 'planned',
-    },
-    'monitor-response': {
+    'confirm-record-appointment': {
       input: 'Open windows, route, and travel buffers',
-      output: 'Thu 10:20 AM; Thu 2:45 PM; Fri 9:15 AM',
+      output: 'Thu 10:20 AM selected and prepared for Monday and DRK',
       duration: 'Planned',
       status: 'planned',
     },
-    'classify-response': {
-      input: 'Three route-compatible appointment options',
-      output: 'WCW employee confirmed Thu 10:20 AM',
-      duration: 'Planned',
-      status: 'planned',
-    },
-    'write-appointment': {
-      input: 'Human-confirmed date, time, patient, and provider',
-      output: 'Target Monday and DRK appointment updates',
-      duration: 'Planned',
-      status: 'planned',
-    },
-    'reconcile-appointment': {
+    'verify-scheduling': {
       input: 'Expected appointment and destination responses',
       output: 'Appointment verified or mismatch sent for review',
       duration: 'Planned',
@@ -91,49 +67,25 @@ const END_OF_DAY_WALKTHROUGH: LifecycleWalkthrough = {
     patientName: 'Evelyn Brooks',
   },
   steps: {
-    'start-eod-cycle': {
-      input: '5:00 PM cutoff; Monday and DRK readers healthy',
-      output: 'August 10 end-of-day cycle started',
-      duration: '0.1 seconds',
-      status: 'completed',
-    },
-    'load-due-referrals': {
+    'find-unscheduled': {
       input: 'Active referrals due by August 10',
-      output: 'Evelyn Brooks included for scheduling review',
-      duration: '0.2 seconds',
-      status: 'completed',
-    },
-    'read-eod-sources': {
-      input: 'Evelyn\'s Monday item and DRK patient ID',
       output: 'Ana assigned; appointment date missing',
       duration: '4.8 seconds',
       status: 'attention',
     },
-    'normalize-scheduling': {
+    'notify-owner': {
       input: 'Evelyn, Ana, and the missing appointment details',
       output: 'Follow-up sent to Ana and the intake lead',
       duration: 'Under 1 second',
       status: 'attention',
     },
-    'dedupe-eod-alerts': {
-      input: 'Open follow-up and current scheduling status',
-      output: 'No resolution received before escalation cutoff',
-      duration: 'Under 1 second',
-      status: 'completed',
-    },
-    'create-eod-exceptions': {
+    'escalate-unresolved': {
       input: 'Unresolved blocker and Ana follow-up history',
       output: 'Case escalated to Nicole with supporting details',
       duration: 'Under 1 second',
       status: 'attention',
     },
-    'notify-eod': {
-      input: 'Follow-up result and refreshed Monday and DRK fields',
-      output: 'Patient remains unscheduled',
-      duration: 'Under 1 second',
-      status: 'waiting',
-    },
-    'resolve-eod': {
+    'verify-resolution': {
       input: 'Unresolved scheduling status',
       output: 'Weekly-cycle entry held until an appointment is confirmed',
       duration: 'Next monitoring cycle',
@@ -153,49 +105,25 @@ const WEEKLY_WALKTHROUGH: LifecycleWalkthrough = {
     patientName: 'Gloria Bennett',
   },
   steps: {
-    'start-weekly-cycle': {
-      input: 'Healthy readers and last successful weekly cursor',
-      output: 'Weekly schedule loaded; Gloria due for review',
-      duration: '0.2 seconds',
-      status: 'completed',
-    },
-    'read-visit-status': {
+    'record-visit-outcome': {
       input: 'Gloria\'s Monday item and DRK patient ID',
-      output: 'DRK progress note records the visit as Not Seen',
+      output: 'DRK progress note recorded as Not Seen',
       duration: '4.6 seconds',
       status: 'attention',
     },
-    'normalize-visit-status': {
-      input: 'DRK visit outcome: Not Seen',
-      output: 'Visit marked Not Seen for weekly tracking',
-      duration: 'Under 1 second',
-      status: 'completed',
-    },
-    'detect-visit-change': {
-      input: 'Visit result and current patient status',
-      output: 'No healing, expiration, or hold condition recorded',
-      duration: 'Under 1 second',
-      status: 'completed',
-    },
-    'update-not-seen-counter': {
+    'apply-weekly-rules': {
       input: 'Previous count 2; new explicit Not Seen event',
-      output: 'Consecutive Not Seen count updated to 3',
+      output: 'Not Seen count 3; human discharge review required',
       duration: 'Under 1 second',
       status: 'attention',
     },
-    'classify-weekly-review': {
-      input: 'Not Seen count reached the threshold of 3',
-      output: 'Human discharge review required',
-      duration: 'Under 1 second',
-      status: 'attention',
-    },
-    'create-weekly-exception': {
+    'assign-follow-up': {
       input: 'Three Not Seen visits and the review reason',
       output: 'Discharge-review task prepared for management',
       duration: 'Under 1 second',
       status: 'attention',
     },
-    'notify-and-reconcile': {
+    'verify-weekly-result': {
       input: 'Prepared review task and approved recipients',
       output: 'WCW systems updated; review sent; no automatic discharge',
       duration: 'Under 1 second',

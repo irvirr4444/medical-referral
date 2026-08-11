@@ -56,7 +56,7 @@ function listStatusLabel(status: PatientStepStatus) {
     case 'done':
       return 'Done'
     case 'current':
-      return 'Here'
+      return 'In progress'
     case 'waiting':
       return 'Waiting'
     case 'blocked':
