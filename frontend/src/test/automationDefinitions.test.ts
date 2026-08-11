@@ -24,7 +24,7 @@ describe('automation stage definitions', () => {
       expect(stage.purpose.length).toBeGreaterThan(30)
       expect(stage.trigger.length).toBeGreaterThan(20)
       expect(stage.successDefinition.length).toBeGreaterThan(20)
-      expect(stage.microsteps.length).toBeGreaterThanOrEqual(7)
+      expect(stage.microsteps.length).toBeGreaterThanOrEqual(6)
 
       const ids = stage.microsteps.map((step) => step.id)
       expect(new Set(ids).size).toBe(ids.length)

@@ -1,0 +1,962 @@
+{
+  "schema_version": 1,
+  "referral_id": "ref_a3cf0a6152d49e60d608e129",
+  "source": {
+    "email_id": null,
+    "attachment_id": null,
+    "file_name": "fax20260710-1422744-nkqbp2.pdf",
+    "pdf_sha256": "a3cf0a6152d49e60d608e1291aaa96af246b925065a8092a3bb9c6e265599f8a",
+    "page_count": 10,
+    "sent_by": "Referral Coordinator <referrals@dhs.lacounty.gov>",
+    "extraction": {
+      "primary_model": "claude-opus-5",
+      "models_attempted": [
+        "claude-opus-5"
+      ],
+      "pass_models": [
+        "claude-opus-5",
+        "claude-opus-5"
+      ],
+      "fallback_used": false
+    }
+  },
+  "document_type": "Faxed DME/wound-care supply referral packet: fax cover sheet (Subject: Durable Medical Equipment), DME Wound Care Supplies prescription (Script: DMEREQREP), Adult Primary Care Outpt Provider Note (* Final Report *), and registration/face sheet",
+  "patient": {
+    "name": {
+      "first": "Anita",
+      "middle": "Berenice",
+      "last": "Rodriguez Hernandez",
+      "suffix": null,
+      "full": "RODRIGUEZ HERNANDEZ, ANITA BERENICE"
+    },
+    "date_of_birth": "1981-05-17",
+    "age": 45,
+    "sex_or_gender": "Female (Sex: Female; Sex on ID: Female; Sex Assigned at Birth: Female; Identifies As: She/Her)",
+    "ssn": null,
+    "mrn": "100133226",
+    "source_patient_id": "1048062040",
+    "source_patient_id_label": "FIN",
+    "phones": [
+      {
+        "number": "(323) 271-8445",
+        "type": "Home"
+      },
+      {
+        "number": "(323) 271-8445",
+        "type": "Cell"
+      },
+      {
+        "number": "(323) 271-8445",
+        "type": "Work"
+      }
+    ],
+    "email": null,
+    "address": {
+      "line_1": "608 W 94TH ST",
+      "line_2": null,
+      "city": "LOS ANGELES",
+      "state": "CA",
+      "postal_code": "90044-5608",
+      "country": null
+    },
+    "emergency_contact": {
+      "name": {
+        "first": "SOCORRO",
+        "middle": null,
+        "last": "HERNANDEZ",
+        "suffix": null,
+        "full": "HERNANDEZ, SOCORRO"
+      },
+      "relationship": "Mother - EC",
+      "phone": "(323) 403-1785"
+    }
+  },
+  "referral_source": {
+    "organization": {
+      "name": "Hubert H. Humphrey Comprehensive Health Center - Hubert H. Humphrey CHC Primary Care (HHH PC)",
+      "contact_name": "Slaughter-Starks MCW, Michelle (Reg Clerk / printed the documents)",
+      "phone": "(323) 897-6000",
+      "fax": "323-233-0958",
+      "email": null,
+      "address": "5850 South Main Street, 2nd Fl, Los Angeles, CA 90003"
+    },
+    "provider_name": "Pedram Shawn Abdian, MD (NPI# 1891021531; NPI/License# A109793) - electronically signed the DME Wound Care Supplies order",
+    "referral_or_order_date": "2026-07-08"
+  },
+  "home_health_or_hospice": {
+    "organization": {
+      "name": null,
+      "contact_name": null,
+      "phone": null,
+      "fax": null,
+      "email": null,
+      "address": null
+    },
+    "hospice": null,
+    "palliative_care": null
+  },
+  "admission": {
+    "admission_date": "June 15",
+    "facility": {
+      "name": "PIH Whittier",
+      "contact_name": null,
+      "phone": null,
+      "fax": null,
+      "email": null,
+      "address": null
+    },
+    "place_of_service": null,
+    "medicare_admission": null
+  },
+  "clinical": {
+    "summary": "45-year-old female status post recurrent ventral hernia repair; per the 07/06/2026 primary care note she was hospitalized at PIH Whittier from June 15 to June 29 and was discharged with an abdominal dressing and a JP drain in place. At the visit she requested wound care supplies and home health assistance for dressing changes (saline syringes, long abdominal pads, gauzes, alcohol wipes, normal saline, JP drain paper tape 2 inches large 2 tails, 4x4 gauzes); plan was to continue dressing changes as prescribed on discharge and a specialty request to Social Work was placed for dressing change supplies. A DME Wound Care Supplies prescription was written 07/08/2026 for an abdominal surgical, non-debrided wound with minimal drainage (wound location abdomen, wound stage/depth NA, wound count see special instructions), dispensing one month of supplies: long abdominal pads 60 monthly, 4x4 gauzes 200 monthly, paper tape 4 monthly, requested start 07/08/26 8:44:00 PDT. She was also evaluated for a cough since surgery productive of clear sputum with no fever/chills/dyspnea (chest x-ray ordered) and for burning in the stomach/GERD (trial of Pepcid; H. pylori stool antigen ordered).",
+    "wound_order_included": true,
+    "diagnoses": [
+      {
+        "code": "Z87.19",
+        "description": "Personal history of other diseases of the digestive system",
+        "added_date": null,
+        "is_primary": true,
+        "status": "ICD10 Diagnosis on DME Wound Care Supplies order"
+      },
+      {
+        "code": null,
+        "description": "History of abdominal hernia",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Order Diagnosis Detail (prescription) and registration encounter Diagnosis"
+      },
+      {
+        "code": null,
+        "description": "Recurrent ventral hernia repair",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Assessment/Plan #1, 07/06/2026 visit"
+      },
+      {
+        "code": null,
+        "description": "Cough",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Assessment/Plan #2, 07/06/2026 visit"
+      },
+      {
+        "code": null,
+        "description": "GERD",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Assessment/Plan #3, 07/06/2026 visit; also listed as chronic problem"
+      },
+      {
+        "code": null,
+        "description": "Anovulatory amenorrhea",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "Arthritis",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "Blister of breast",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "Callus",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "Cervical lymphadenopathy",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "Debility NOS",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "Dermatitis",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "Dizziness",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "Elevated thyroid stimulating hormone level",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "Fatigue",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "Fibroid uterus",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History); printed twice on the problem list"
+      },
+      {
+        "code": null,
+        "description": "Follicular cyst of subcutaneous tissue left buttock",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "Folliculitis",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "Glaucoma suspect",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "Hernia",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "High myopia",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "Hyperlipidemia",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "Irregular bleeding",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "Issue of repeat prescription",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "Knee pain",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "Laboratory test result abnormal",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "Lower abdominal pain",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "Lymphedema",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "Mass of forearm",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "MORBID OBESITY",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "MRSA infection",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "Neck mass",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "OAB",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "Other allergic rhinitis",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "PCOS",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "Posterior vitreous detachment",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "Prediabetes",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "Pruritus of vagina",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "Seborrheic keratosis left eyebrow March 2023",
+        "added_date": "March 2023",
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "Telogen effluvium",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "Verruca vulgaris of skin of cheek right March 2023",
+        "added_date": "March 2023",
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "Vertigo NOS",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      },
+      {
+        "code": null,
+        "description": "Vitamin D deficiency",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Chronic problem (Past Medical History)"
+      }
+    ],
+    "medications": [
+      {
+        "name": "Artificial Tears preserved ophthalmic solution",
+        "strength": null,
+        "dose_form": "ophthalmic solution",
+        "directions": "1 drops, Eye-Both, QID, PRN",
+        "status": "Home medication",
+        "prescribed_date": null,
+        "prescriber": null,
+        "days_supply": null,
+        "quantity": "1 drops",
+        "refills": 11
+      },
+      {
+        "name": "bismuth subsalicylate",
+        "strength": "262 mg",
+        "dose_form": "oral tablet",
+        "directions": "4 tabs, Chew, QID, PRN",
+        "status": "Home medication",
+        "prescribed_date": null,
+        "prescriber": null,
+        "days_supply": null,
+        "quantity": "4 tabs",
+        "refills": null
+      },
+      {
+        "name": "Claritin",
+        "strength": "10 mg",
+        "dose_form": "oral tablet",
+        "directions": "10 mg = 1 tabs, Oral, QDAY, PRN",
+        "status": "Home medication",
+        "prescribed_date": null,
+        "prescriber": null,
+        "days_supply": null,
+        "quantity": "1 tabs",
+        "refills": 3
+      },
+      {
+        "name": "clotrimazole",
+        "strength": "1%",
+        "dose_form": "topical cream",
+        "directions": "1 app, Topical, BID",
+        "status": "Home medication",
+        "prescribed_date": null,
+        "prescriber": null,
+        "days_supply": null,
+        "quantity": "1 app",
+        "refills": null
+      },
+      {
+        "name": "Colace",
+        "strength": "100 mg",
+        "dose_form": "oral capsule",
+        "directions": "100 mg = 1 caps, Oral, BID, PRN",
+        "status": "Home medication",
+        "prescribed_date": null,
+        "prescriber": null,
+        "days_supply": null,
+        "quantity": "1 caps",
+        "refills": null
+      },
+      {
+        "name": "ergocalciferol",
+        "strength": "50,000 intl units (1.25 mg)",
+        "dose_form": "oral capsule",
+        "directions": "50000 IntlUnits = 1 caps, Oral, QWEEK-SUN",
+        "status": "Home medication",
+        "prescribed_date": null,
+        "prescriber": null,
+        "days_supply": null,
+        "quantity": "1 caps",
+        "refills": null
+      },
+      {
+        "name": "famotidine",
+        "strength": "20 mg",
+        "dose_form": "oral tablet",
+        "directions": "20 mg = 1 tabs, Oral, BID",
+        "status": "Home medication",
+        "prescribed_date": null,
+        "prescriber": null,
+        "days_supply": null,
+        "quantity": "1 tabs",
+        "refills": 3
+      },
+      {
+        "name": "Multiple Vitamins",
+        "strength": null,
+        "dose_form": "oral capsule",
+        "directions": "1 caps, Oral, QDAY",
+        "status": "Home medication",
+        "prescribed_date": null,
+        "prescriber": null,
+        "days_supply": null,
+        "quantity": "1 caps",
+        "refills": null
+      },
+      {
+        "name": "naproxen",
+        "strength": "500 mg",
+        "dose_form": "oral tablet",
+        "directions": "500 mg = 1 tabs, Oral, BID, PRN",
+        "status": "Home medication",
+        "prescribed_date": null,
+        "prescriber": null,
+        "days_supply": null,
+        "quantity": "1 tabs",
+        "refills": null
+      },
+      {
+        "name": "ondansetron",
+        "strength": "4 mg",
+        "dose_form": "oral tablet",
+        "directions": "4 mg = 1 tabs, Oral, Q8H, PRN",
+        "status": "Home medication",
+        "prescribed_date": null,
+        "prescriber": null,
+        "days_supply": null,
+        "quantity": "1 tabs",
+        "refills": null
+      },
+      {
+        "name": "Pepcid",
+        "strength": "20 mg",
+        "dose_form": "oral tablet",
+        "directions": "20 mg = 1 tabs, Oral, BID, PRN",
+        "status": "Home medication; also planned as 'trial of pepcid' for GERD at the 07/06/2026 visit",
+        "prescribed_date": null,
+        "prescriber": null,
+        "days_supply": null,
+        "quantity": "1 tabs",
+        "refills": 3
+      },
+      {
+        "name": "Tylenol Extra Strength",
+        "strength": "500 mg",
+        "dose_form": "oral tablet",
+        "directions": "500 mg = 1 tabs, Oral, Q8H, PRN",
+        "status": "Home medication",
+        "prescribed_date": null,
+        "prescriber": null,
+        "days_supply": null,
+        "quantity": "1 tabs",
+        "refills": null
+      },
+      {
+        "name": "Vitamin D2",
+        "strength": "50,000 intl units (1.25 mg)",
+        "dose_form": "oral capsule",
+        "directions": "50000 IntlUnits = 1 caps, Oral, QWEEK",
+        "status": "Home medication",
+        "prescribed_date": null,
+        "prescriber": null,
+        "days_supply": null,
+        "quantity": "1 caps",
+        "refills": null
+      },
+      {
+        "name": "Vitamin D3",
+        "strength": "2000 intl units",
+        "dose_form": "oral tablet",
+        "directions": "50 mcg = 1 tabs, Oral, QDAY with meals",
+        "status": "Home medication",
+        "prescribed_date": null,
+        "prescriber": null,
+        "days_supply": null,
+        "quantity": "1 tabs",
+        "refills": 3
+      }
+    ],
+    "allergies": [
+      {
+        "name": "penicillin",
+        "reaction": null,
+        "treatment": null,
+        "status": null
+      },
+      {
+        "name": "morphine",
+        "reaction": null,
+        "treatment": null,
+        "status": null
+      },
+      {
+        "name": "Peanuts",
+        "reaction": null,
+        "treatment": null,
+        "status": null
+      },
+      {
+        "name": "Reglan",
+        "reaction": null,
+        "treatment": null,
+        "status": null
+      }
+    ],
+    "diagnoses_section_present": true,
+    "medications_section_present": true,
+    "allergies_section_present": true,
+    "no_known_allergies_explicit": false,
+    "notes": [
+      "Prescription header states: 'Please note--Allergy list may be incomplete.'",
+      "Height: 165 cm; Patient Weight: 167.0 kg (prescription header).",
+      "Vitals 07/06/2026: T 36.8 \u00b0C (Oral), HR 96 (Peripheral), RR 19, BP 101/61, WT 167.000 kg / 167.0 kg; Pain Present: Yes (07/06/2026 14:35).",
+      "Exam 07/06/2026: Constitutional WNL; Head/Ears/Eyes/Nose/Throat WNL; Cardiovascular RRR, S1, S2, no murmur; Respiratory no wheezes, rales, ronchi; Gastrointestinal soft, not tender, no HSM, BS+ except + clean dressing in place with j p drain in place clean; Extremities no edema, cyanosis; Neurologic no focal deficit.",
+      "Chief Complaint: pt requesting wound care suppplies; pt c/o also of cough; pt c/o of burning in stomach.",
+      "HPI: 45-year-old Hispanic woman status post hospital discharge from PIH Whittier, hospitalized June 15 to June 29 (year not printed) for a ventral hernia repair; feels tired/sleepy; requesting home health needs for dressing changes: saline syringes, long abdominal pads, gauzes, alcohol wipes, normal saline, JP drain paper tape 2 inches large 2 tails, 4 x 4 gauzes; cough since surgery with clear sputum, no fever, no chills.",
+      "Assessment/Plan: 1. Recurrent ventral hernia repair - continue dressing changes as prescribed on discharge; 2. Cough - XR Chest 2 Views ordered; 3. GERD - trial of pepcid, H Pylori Antigen Stool ordered; strict ER precautions given if fever develops or cough doesn't go away.",
+      "Intake Information (07/06/2026 14:35): Last Menstrual Period 05/15/2023; Female Specific Additional Info Amb: Other: last pap 2014 / no mammo hx; Last Mammogram Amb 05/03/2021; Last Pap Smear 03/04/2024; Reproductive Life - Pregnancy Plan: No desire to become pregnant; Reproductive Life - Unprotected Sex: No.",
+      "Preferred Language: English. Religion (guarantor record): Catholic.",
+      "PCP listed on registration face sheet: Samaan, Peter Farouk.",
+      "Visit note metadata: Adult Primary Care Outpt Provider Note, Result date July 06, 2026 15:32 PDT, Result status Auth (Verified), Result title Amb In Person Visit Note; performed and verified by Rodriguez, Silve B on July 06, 2026 15:33 PDT; Encounter info 1047964352, HHH PC, Outpatient, 07/06/2026 - 07/06/2026; printed by Slaughter-Starks MCW, Michelle on 07/08/2026 13:55 PDT.",
+      "Visit note signature line: Electronically Signed on 07/06/26 15:33 PDT - Rodriguez, Silve B, PA; and Felix-Marquez, Luz Del Carmen, MD.",
+      "Registration/Encounter: Reg Dt/Tm 07/07/2026 16:27; Patient Type: Outpatient Message; Location: HHH PC; Reg Clerk: Slaughter-Starks MCW; registration last updated 07/07/2026 16:33; face sheet printed 07/08/2026 13:56 to printer hhhspc2009ptr1.",
+      "Guarantor: RODRIGUEZ HERNANDEZ, ANITA BE, Patient's Reltn SELF, billing address 608 W 94TH ST, LOS ANGELES, CA 900445608, billing phone (323) 271-8445; employer name and phone blank.",
+      "Next of Kin section on the face sheet is blank."
+    ]
+  },
+  "insurances": [
+    {
+      "payer_name": "MEDI-CAL MANAGED CARE MOLIN",
+      "policy_number": "99703761D",
+      "group_number": null,
+      "group_name": null,
+      "policy_holder_name": "ANITA B RODRIGUEZ",
+      "insurance_type": "Primary",
+      "effective_date": null,
+      "expiration_date": null,
+      "is_patient_policy_holder": true,
+      "subscriber_first_name": "ANITA",
+      "subscriber_last_name": "RODRIGUEZ",
+      "subscriber_date_of_birth": "1981-05-17",
+      "subscriber_relationship": "SELF"
+    },
+    {
+      "payer_name": null,
+      "policy_number": null,
+      "group_number": null,
+      "group_name": null,
+      "policy_holder_name": "ANITA B RODRIGUEZ",
+      "insurance_type": "Secondary",
+      "effective_date": null,
+      "expiration_date": null,
+      "is_patient_policy_holder": null,
+      "subscriber_first_name": null,
+      "subscriber_last_name": null,
+      "subscriber_date_of_birth": null,
+      "subscriber_relationship": null
+    }
+  ],
+  "requested_services": [
+    {
+      "service": "DME Wound Care Supplies (Rx: DME Wound Care Supplies)",
+      "frequency": "Supply Dispensing Schedule: For one month; supply quantities stated as monthly",
+      "instructions": "Order Details - Wound Type: abdominal wound; Wound Count: see special instructions; Wound Location and Size Wound 1: abdomen; Wound Stage or Depth Wound 1: NA; Wound Drainage: minimal; Surgical/Non-surgical?: Surgical; Debrided/Non-debrided?: Non-debrided; Dressing Supply: See Special Instructions; Special Instructions: Long abdominal pads - 60 monthly, 4x4 gauzes - 200 monthly, Paper tape - 4 monthly; Dressing Supply Quantity per item: see special instructions; Diagnosis: History of abdominal hernia; ICD10: Z87.19 Personal history of other diseases of the digestive system; Requested Start Date/Time: 07/08/26 8:44:00 PDT; Date Prescribed 07/08/2026; Date Printed 07/08/2026; Ordered on 07/08/2026; Order ID: -2147483648; NPI#: 1891021531; NPI/License#: A109793; Electronically Signed By: Pedram Shawn Abdian, MD; Script: DMEREQREP"
+    },
+    {
+      "service": "Social Work specialty request for dressing change supplies / home health needs",
+      "frequency": null,
+      "instructions": "Specialty request to Social Work, 07/06/26 15:15:00 PDT: 'patient was recently dicharge post ventral hernia repair with j tube in drain place she needs dressing change supplies, Assessment'. HPI notes the patient 'is requesting home health needs for dressing changes.'"
+    },
+    {
+      "service": "XR Chest 2 Views",
+      "frequency": "Routine; Order for future visit",
+      "instructions": "Ordered 07/06/26 15:13:00 PDT for Cough. Reason: 45 yo s/p ventral hernia repair co cough, no fever, no dyspnea. Transport Mode: Ambulatory. Chest, Standard, pp_set_radiology_subspecialty."
+    },
+    {
+      "service": "H Pylori Antigen Stool",
+      "frequency": "Routine collect; Order for future visit",
+      "instructions": "Ordered 07/06/26 for GERD. Stool, Nurse collect, Print Label By Order Location, HHH PC."
+    },
+    {
+      "service": "Clinic Follow Up (In-Person)",
+      "frequency": "3 months or sooner if needed PRN",
+      "instructions": "Follow-Up 10/04/26 15:05:00 PDT, HHH PC, HHH PC, In-Person."
+    }
+  ],
+  "field_quality": {
+    "patient.name": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        2,
+        3,
+        5,
+        9
+      ],
+      "evidence_quote": "Patient Name: RODRIGUEZ HERNANDEZ, ANITA BERENICE"
+    },
+    "patient.date_of_birth": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        2,
+        3,
+        9
+      ],
+      "evidence_quote": "Birthdate: 05/17/1981  Age: 45 Years"
+    },
+    "patient.age": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        3,
+        9
+      ],
+      "evidence_quote": "Age: 45 Years"
+    },
+    "patient.sex_or_gender": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        2,
+        3,
+        9
+      ],
+      "evidence_quote": "Sex: Female / Sex on ID: Female / Sex Assigned at Birth: Female / Identifies As: She/Her"
+    },
+    "patient.ssn": {
+      "status": "unclear",
+      "confidence": "high",
+      "evidence_pages": [
+        9
+      ],
+      "evidence_quote": "SSN: XXX-XX-0000"
+    },
+    "patient.mrn": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        3,
+        9
+      ],
+      "evidence_quote": "MRN: 100133226"
+    },
+    "patient.source_patient_id": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        3,
+        9
+      ],
+      "evidence_quote": "FIN: 1048062040"
+    },
+    "patient.phones": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        3,
+        9
+      ],
+      "evidence_quote": "Home Phone: (323) 271-8445  Cell Phone: (323) 271-8445  Work Phone: (323) 271-8445"
+    },
+    "patient.address": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        3,
+        9
+      ],
+      "evidence_quote": "Patient Address: 608 W 94TH ST, LOS ANGELES, CA 900445608"
+    },
+    "patient.email": {
+      "status": "missing",
+      "confidence": "high",
+      "evidence_pages": [],
+      "evidence_quote": null
+    },
+    "patient.emergency_contact": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        9
+      ],
+      "evidence_quote": "Emergency Contact  Contact Name: HERNANDEZ, SOCORRO  Patient's Reltn: Mother - EC  Home Phone: (323) 403-1785"
+    },
+    "referral_source": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1,
+        3,
+        9
+      ],
+      "evidence_quote": "Hubert H. Humphrey CHC Primary Care  5850 South Main Street  Los Angeles, CA, 90003  Fax#: 323-233-0958"
+    },
+    "referral_source.provider_name": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        3
+      ],
+      "evidence_quote": "Electronically Signed By: Pedram Shawn Abdian, MD"
+    },
+    "referral_source.referral_or_order_date": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        3
+      ],
+      "evidence_quote": "Ordered on: 07/08/2026 / Date Prescribed: 07/08/2026"
+    },
+    "home_health_or_hospice": {
+      "status": "missing",
+      "confidence": "high",
+      "evidence_pages": [],
+      "evidence_quote": null
+    },
+    "admission": {
+      "status": "present",
+      "confidence": "medium",
+      "evidence_pages": [
+        5
+      ],
+      "evidence_quote": "status post hospital discharge from PIH Whittier she states she was hospitalized from June 15 to June 29 due to a ventral hernia repair"
+    },
+    "admission.facility": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        5
+      ],
+      "evidence_quote": "hospital discharge from PIH Whittier"
+    },
+    "clinical": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        3,
+        5,
+        6
+      ],
+      "evidence_quote": "Rx: DME Wound Care Supplies ... 1. Recurrent ventral hernia repair - continue dressing changes as prescribed on discharge"
+    },
+    "clinical.summary": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        3,
+        5,
+        6
+      ],
+      "evidence_quote": "she is requesting home health needs for dressing changes: I saline syringes long abdominal pads, gauzes, alcohol wipes, normal saline JP drain for paper tape 2 inches large 2 tails 4 x 4 gauzes"
+    },
+    "clinical.diagnoses": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        3,
+        5,
+        6,
+        9
+      ],
+      "evidence_quote": "ICD10 Diagnosis: Personal history of other diseases of the digestive system Z87.19"
+    },
+    "clinical.medications": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        6
+      ],
+      "evidence_quote": "Home Medications / Home: Artificial Tears preserved ophthalmic solution ... Vitamin D3 2000 intl units oral tablet"
+    },
+    "clinical.allergies": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        3,
+        6
+      ],
+      "evidence_quote": "Allergies: penicillin, morphine, Peanuts, Reglan"
+    },
+    "clinical.wound_order_included": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        3
+      ],
+      "evidence_quote": "Wound Type: abdominal wound ... Dressing Supply: See Special Instructions"
+    },
+    "insurances": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        3,
+        9
+      ],
+      "evidence_quote": "Insurance Name: MEDI-CAL MANAGED CARE MOLIN  Policy Number: 99703761D"
+    },
+    "insurances.0.payer_name": {
+      "status": "present",
+      "confidence": "medium",
+      "evidence_pages": [
+        3,
+        9
+      ],
+      "evidence_quote": "MEDI-CAL MANAGED CARE MOL (p3) / MEDI-CAL MANAGED CARE MOLIN (p9)"
+    },
+    "insurances.1.payer_name": {
+      "status": "missing",
+      "confidence": "high",
+      "evidence_pages": [],
+      "evidence_quote": null
+    },
+    "requested_services": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        3,
+        6
+      ],
+      "evidence_quote": "Rx: DME Wound Care Supplies (DME Wound Care Supplies)"
+    },
+    "document_type": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1,
+        3,
+        5,
+        9
+      ],
+      "evidence_quote": "Fax Cover Sheet / Subject: Durable Medical Equipment; Prescription Detail; Adult Primary Care Outpt Provider Note; Patient Information"
+    }
+  },
+  "warnings": [
+    "No home health or hospice agency is named anywhere in the packet; the visit note states the patient 'is requesting home health needs for dressing changes' and a Social Work specialty request was placed, but no receiving agency organization is identified. The referring organization (Hubert H. Humphrey CHC Primary Care) must not be treated as the home-health/hospice agency.",
+    "Patient ZIP is printed without a hyphen as '900445608' (prescription page 3 and guarantor billing address page 9) and truncated as '9004456' in the face-sheet home address; recorded as 90044-5608.",
+    "Primary payer name appears truncated in the source: 'MEDI-CAL MANAGED CARE MOL' (page 3) and 'MEDI-CAL MANAGED CARE MOLIN' (page 9, likely 'MOLINA'). Additional payer data: Financial Class 'DHS Medi-Cal Managed Care - FA'; Claim Address PO BOX 22702; Insurance Phone 8005268196; Group Number blank; Authorization Number/Contact/Phone blank.",
+    "The 'Secondary Insurance' block on page 9 is blank except 'Insured Card Name: ANITA B RODRIGUEZ' and a system default 'Age: 0 Days'; page 3 shows 'Secondary Health Plan:' with no value. Secondary coverage cannot be confirmed.",
+    "Hospitalization dates 'June 15 to June 29' at PIH Whittier are stated without a year; the note was authored July 06, 2026, but the year of the stay was not printed. admission_date preserved as source text 'June 15'.",
+    "Order ID on the prescription prints as '-2147483648', an apparent system placeholder rather than a usable order number; it was not treated as an MRN or patient identifier.",
+    "Page 2 shows 'Patient ID: 100133226' (matching the MRN on pages 3 and 9) with blank Address and Phone fields; addresses/phones were taken from pages 3 and 9.",
+    "Page 3 shows 'Work Phone:' blank while page 9 lists a Work Phone identical to the home and cell numbers ((323) 271-8445).",
+    "Prescription page states 'Please note--Allergy list may be incomplete.' - the allergy list may not be exhaustive.",
+    "Past Medical History chronic problem list prints 'Fibroid uterus' twice; captured once as a single diagnosis with a note.",
+    "Intake information is internally inconsistent: 'last pap 2014/ no mammo hx' versus 'Last Mammogram Amb: 05/03/2021' and 'Last Pap Smear: 03/04/2024'.",
+    "Drain terminology is inconsistent: HPI/exam reference a 'JP drain'/'j p drain' while the Social Work specialty request states 'j tube in drain place'.",
+    "SSN is masked on the registration face sheet (XXX-XX-0000) for both patient and guarantor and was not captured.",
+    "Multiple contact numbers appear for the referring facility: fax cover sheet phone (323)897-6260, sending fax (323)897-6632, transmitting fax header 3239271855, clinic main (323) 897-6000, clinic fax 323-233-0958. Fax sent to 18189790593 on 2026/07/10 16:10 PDT with subject 'Durable Medical Equipment'; DHS ACN - HHH BHI appears on the cover sheet.",
+    "Multiple clinicians appear in the packet and were not conflated: Pedram Shawn Abdian, MD (signed the DME order); Rodriguez, Silve B, PA (performed/verified/signed the visit note); Felix-Marquez, Luz Del Carmen, MD (co-signature line); Samaan, Peter Farouk (PCP on registration).",
+    "Pages 4, 8, and 10 contain no content other than the fax header line.",
+    "Both famotidine 20 mg BID and Pepcid (famotidine brand) 20 mg BID PRN appear on the home medication list; captured as listed without reconciliation.",
+    "Ignored unsupported extractor field: requested_services.0.instructions_note"
+  ]
+}

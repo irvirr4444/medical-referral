@@ -1,0 +1,960 @@
+{
+  "schema_version": 1,
+  "referral_id": "ref_fa771b927d1a4fee9bcfbb31",
+  "source": {
+    "email_id": null,
+    "attachment_id": null,
+    "file_name": "fax20260711-48483-ougwp2.pdf",
+    "pdf_sha256": "fa771b927d1a4fee9bcfbb31591e1c21db393b351ca43f61adde5f1c6e30272e",
+    "page_count": 23,
+    "sent_by": "Discharge Planning <discharge.planning@providence.org>",
+    "extraction": {
+      "primary_model": "claude-opus-5",
+      "models_attempted": [
+        "claude-opus-5"
+      ],
+      "pass_models": [
+        "claude-opus-5",
+        "claude-opus-5"
+      ],
+      "fallback_used": false
+    }
+  },
+  "document_type": "Home health referral packet: Outpatient Referral Form (Referral to Home Health - OUTPATIENT [2231699788]) accompanied by hospital face sheet, hospital medicine discharge summary, wound/ostomy nurse consult, physical therapy initial evaluation/discharge note, and general surgery consultation",
+  "patient": {
+    "name": {
+      "first": "Eric",
+      "middle": null,
+      "last": "Gonzalez",
+      "suffix": null,
+      "full": "Gonzalez, Eric"
+    },
+    "date_of_birth": "1973-08-31",
+    "age": 52,
+    "sex_or_gender": "Male (Legal Sex: Male; Gender Identity: Male)",
+    "ssn": null,
+    "mrn": "20005877162",
+    "source_patient_id": "20005877162",
+    "source_patient_id_label": "Patient ID (Outpatient Referral Form) - same value printed as MRN on face sheet and notes",
+    "phones": [
+      {
+        "number": "424-450-5249",
+        "type": "Home / Patient's Primary Phone"
+      }
+    ],
+    "email": null,
+    "address": {
+      "line_1": "153 E 110th St",
+      "line_2": "Golden State Recuperative Care",
+      "city": "Los Angeles",
+      "state": null,
+      "postal_code": "90061",
+      "country": null
+    },
+    "emergency_contact": {
+      "name": {
+        "first": "Leonor",
+        "middle": null,
+        "last": "Michel",
+        "suffix": null,
+        "full": "Michel, Leonor"
+      },
+      "relationship": "Friend",
+      "phone": "424-339-4452"
+    }
+  },
+  "referral_source": {
+    "organization": {
+      "name": "PROVIDENCE LCOM SAN PEDRO TELEMETRY (Providence Little Company Of Mary Medical Center San Pedro)",
+      "contact_name": "Rudo Benjamin, MD (Enc. Provider / Auth. Provider)",
+      "phone": "310-514-5357",
+      "fax": "310-514-5413",
+      "email": null,
+      "address": "1300 W 7TH ST, SAN PEDRO CA 90732-3505"
+    },
+    "provider_name": "Rudo Benjamin, MD",
+    "referral_or_order_date": "2026-07-10"
+  },
+  "home_health_or_hospice": {
+    "organization": {
+      "name": null,
+      "contact_name": null,
+      "phone": null,
+      "fax": null,
+      "email": null,
+      "address": null
+    },
+    "hospice": null,
+    "palliative_care": null
+  },
+  "admission": {
+    "admission_date": "2026-07-07",
+    "facility": {
+      "name": "Providence Little Company Of Mary Medical Center San Pedro",
+      "contact_name": "Admitting Provider: Ali Fadhil, MD; Attending Provider: Rudo Benjamin, MD",
+      "phone": "310-832-3311",
+      "fax": null,
+      "email": null,
+      "address": "1300 W 7TH ST, SAN PEDRO CA 90732-3505"
+    },
+    "place_of_service": "Inpatient hospital - Patient Class: Inpatient; Unit: CLS TELEMETRY; Room/Bed: 372/372-01; Hospital Service: General Medicine; Admit Type: Emergency; Admit Source: Non-healthcare facility; discharged 7/11/2026 to a recuperative care facility",
+    "medicare_admission": null
+  },
+  "clinical": {
+    "summary": "52-year-old male with right above-knee amputation and HIV on BIKTARVY was admitted 7/7/2026 to Providence Little Company of Mary Medical Center San Pedro with one week of progressive right groin pain, redness, swelling and purulent drainage at the prosthesis contact site. CT abdomen/pelvis with IV contrast (7/7/2026) showed soft tissue edema/skin thickening compatible with cellulitis with suspected ulceration, no abscess or soft tissue gas. He was treated with IV cefTRIAXone and vancomycin, transitioned to oral linezolid (ZYVOX) 600 mg every 12 hours at discharge, and received daily wound care (normal saline cleansing, collagenase/SANTYL, saline-moistened gauze, Mepilex) for a right groin unstageable pressure injury (12 x 1 x 2 cm, 25% yellow slough, moderate serosanguinous drainage). General surgery (Dr. Ginsburg) recommended no surgical debridement and prosthesis use was held. Physical therapy provided wheelchair training. He was discharged 7/11/2026 in stable, improved condition to a recuperative care facility (handwritten face-sheet annotation: Golden State Recuperative Care, 153 E 110th St, Los Angeles 90061). An Outpatient Referral to Home Health was electronically signed 7/10/2026 by Rudo Benjamin, MD requesting skilled nursing (home safety evaluation and needs assessment, assess/instruct wound care/incision care, assess/instruct disease) and physical therapy (mobility, home safety/fall prevention, durable medical equipment needs and training/caregiver training). Face-to-face encounter 7/10/2026; patient certified homebound because of unhealed wounds, need for assistance of another individual, and high fall risk due to gait instability and muscle weakness. Primary diagnosis for home health documented as wound cellulitis. No receiving home health agency is named (Referred To: Not Available; status Pending Review).",
+    "wound_order_included": true,
+    "diagnoses": [
+      {
+        "code": "L03.314",
+        "description": "Cellulitis of right groin (ICD-9-CM 682.2)",
+        "added_date": null,
+        "is_primary": true,
+        "status": "Primary diagnosis on home health referral order; also hospital admission diagnosis/clinical impression"
+      },
+      {
+        "code": "L89.210",
+        "description": "Pressure sore of hip, right, unstageable (HCC) (ICD-9-CM 707.04, 707.25)",
+        "added_date": null,
+        "is_primary": false,
+        "status": "Associated diagnosis on home health referral order"
+      },
+      {
+        "code": "Z89.611",
+        "description": "S/P AKA (above knee amputation) unilateral, right (HCC) (ICD-9-CM V49.76)",
+        "added_date": null,
+        "is_primary": false,
+        "status": "Associated diagnosis on home health referral order"
+      },
+      {
+        "code": null,
+        "description": "Wound cellulitis",
+        "added_date": null,
+        "is_primary": true,
+        "status": "Primary diagnosis for home health (referral questionnaire)"
+      },
+      {
+        "code": null,
+        "description": "Cellulitis of right groin associated with infected wound and pressure injury, without abscess or necrotizing infection",
+        "added_date": null,
+        "is_primary": true,
+        "status": "Principal discharge diagnosis; present on admission"
+      },
+      {
+        "code": null,
+        "description": "Unstageable pressure injury of right groin",
+        "added_date": null,
+        "is_primary": false,
+        "status": "Hospital problem list; present on admission"
+      },
+      {
+        "code": null,
+        "description": "History of right above-knee amputation with prosthesis-related wound complication",
+        "added_date": null,
+        "is_primary": false,
+        "status": "Hospital problem list; present on admission"
+      },
+      {
+        "code": null,
+        "description": "Human immunodeficiency virus (HIV) infection on antiretroviral therapy (HCC)",
+        "added_date": null,
+        "is_primary": false,
+        "status": "Hospital problem list (present on admission) and patient active problem list"
+      },
+      {
+        "code": null,
+        "description": "Normocytic anemia",
+        "added_date": null,
+        "is_primary": false,
+        "status": "Hospital problem list; present on admission"
+      },
+      {
+        "code": null,
+        "description": "Hypocalcemia",
+        "added_date": null,
+        "is_primary": false,
+        "status": "Hospital problem list; present on admission"
+      },
+      {
+        "code": null,
+        "description": "Left anterior knee pustular skin lesions",
+        "added_date": null,
+        "is_primary": false,
+        "status": "Hospital problem list; present on admission"
+      },
+      {
+        "code": null,
+        "description": "Unspecified mononeuropathy of right lower limb",
+        "added_date": "2026-07-07",
+        "is_primary": false,
+        "status": "Hospital problem list (present on admission), past medical history, and patient active problem list"
+      },
+      {
+        "code": null,
+        "description": "Homelessness with social determinants impacting care",
+        "added_date": null,
+        "is_primary": false,
+        "status": "Hospital problem list; present on admission"
+      },
+      {
+        "code": null,
+        "description": "Broken internal right knee prosthesis, subsequent encounter",
+        "added_date": "2026-07-07",
+        "is_primary": false,
+        "status": "Past medical history (surgery consult)"
+      },
+      {
+        "code": null,
+        "description": "Dorsalgia, unspecified",
+        "added_date": "2026-07-07",
+        "is_primary": false,
+        "status": "Past medical history (surgery consult)"
+      },
+      {
+        "code": null,
+        "description": "Hx of AKA (above knee amputation), right (HCC)",
+        "added_date": null,
+        "is_primary": false,
+        "status": "Past medical history (surgery consult) and patient active problem list; no date legibly aligned in the PMH table"
+      },
+      {
+        "code": null,
+        "description": "Imprisonment and other incarceration",
+        "added_date": "2026-07-07",
+        "is_primary": false,
+        "status": "Past medical history (surgery consult)"
+      },
+      {
+        "code": null,
+        "description": "Insomnia",
+        "added_date": "2026-07-07",
+        "is_primary": false,
+        "status": "Past medical history (surgery consult)"
+      },
+      {
+        "code": null,
+        "description": "Other stimulant dependence, uncomplicated (HCC)",
+        "added_date": "2026-07-07",
+        "is_primary": false,
+        "status": "Past medical history (surgery consult)"
+      },
+      {
+        "code": null,
+        "description": "Tobacco use",
+        "added_date": "2026-07-07",
+        "is_primary": false,
+        "status": "Past medical history (surgery consult); wound nurse note also documents tobacco dependence"
+      },
+      {
+        "code": null,
+        "description": "Vitamin D deficiency",
+        "added_date": "2026-07-07",
+        "is_primary": false,
+        "status": "Past medical history (surgery consult)"
+      },
+      {
+        "code": null,
+        "description": "Homeless",
+        "added_date": null,
+        "is_primary": false,
+        "status": "Patient active problem list"
+      },
+      {
+        "code": null,
+        "description": "Pneumonia",
+        "added_date": null,
+        "is_primary": false,
+        "status": "Patient active problem list"
+      },
+      {
+        "code": null,
+        "description": "Infected wound of right groin with cellulitis and visible subcutaneous tissue",
+        "added_date": null,
+        "is_primary": false,
+        "status": "Patient active problem list"
+      },
+      {
+        "code": null,
+        "description": "Dependence on wheelchair",
+        "added_date": null,
+        "is_primary": false,
+        "status": "Patient active problem list"
+      },
+      {
+        "code": null,
+        "description": "Harmful pattern of use of methamphetamine (HCC)",
+        "added_date": null,
+        "is_primary": false,
+        "status": "Patient active problem list"
+      },
+      {
+        "code": null,
+        "description": "Housing instability, housed unspecified",
+        "added_date": null,
+        "is_primary": false,
+        "status": "Patient active problem list"
+      },
+      {
+        "code": null,
+        "description": "Hyperlipidemia",
+        "added_date": null,
+        "is_primary": false,
+        "status": "Patient active problem list"
+      }
+    ],
+    "medications": [
+      {
+        "name": "collagenase (SANTYL) ointment",
+        "strength": null,
+        "dose_form": "Ointment",
+        "directions": "Apply topically daily",
+        "status": "New medication at discharge (discharge summary dated 7/11/2026, Rudo Benjamin, MD)",
+        "prescribed_date": null,
+        "prescriber": null,
+        "days_supply": null,
+        "quantity": null,
+        "refills": null
+      },
+      {
+        "name": "HYDROcodone-acetaminophen (NORCO)",
+        "strength": "5-325 mg",
+        "dose_form": "Tablet",
+        "directions": "Take 1 tablet every 6 hours as needed",
+        "status": "New medication at discharge (discharge summary dated 7/11/2026, Rudo Benjamin, MD)",
+        "prescribed_date": null,
+        "prescriber": null,
+        "days_supply": null,
+        "quantity": null,
+        "refills": null
+      },
+      {
+        "name": "linezolid (ZYVOX)",
+        "strength": "600 mg",
+        "dose_form": "Tablet",
+        "directions": "Take 1 tablet every 12 hours",
+        "status": "New medication at discharge (discharge summary dated 7/11/2026, Rudo Benjamin, MD)",
+        "prescribed_date": null,
+        "prescriber": null,
+        "days_supply": null,
+        "quantity": null,
+        "refills": null
+      },
+      {
+        "name": "mupirocin (BACTROBAN) 2% ointment",
+        "strength": "2%",
+        "dose_form": "Ointment",
+        "directions": "Apply topically 3 times daily",
+        "status": "New medication at discharge (discharge summary dated 7/11/2026, Rudo Benjamin, MD)",
+        "prescribed_date": null,
+        "prescriber": null,
+        "days_supply": null,
+        "quantity": null,
+        "refills": null
+      },
+      {
+        "name": "acetaminophen (TYLENOL)",
+        "strength": "500 mg",
+        "dose_form": "Tablet",
+        "directions": "Discharge: 1-2 tablets every 6 hours as needed. Prior-to-admission sig: Take 1-2 tablets by mouth every 6 hours as needed for pain.",
+        "status": "Continued medication at discharge; also listed as prescription prior to admission",
+        "prescribed_date": null,
+        "prescriber": null,
+        "days_supply": null,
+        "quantity": "60 tablet (dispense, prior to admission)",
+        "refills": 0
+      },
+      {
+        "name": "amitriptyline (ELAVIL)",
+        "strength": "10 mg",
+        "dose_form": "Tablet",
+        "directions": "Discharge: nightly. Prior-to-admission sig: Take 1 tablet by mouth at bedtime.",
+        "status": "Continued medication at discharge; also listed as prescription prior to admission",
+        "prescribed_date": null,
+        "prescriber": null,
+        "days_supply": null,
+        "quantity": "30 tablet (dispense, prior to admission)",
+        "refills": 0
+      },
+      {
+        "name": "bictegravir-emtricitabine-tenofovir alafenamide (BIKTARVY)",
+        "strength": "50-200-25 mg",
+        "dose_form": "Tablet",
+        "directions": "Discharge: daily. Prior-to-admission sig: Take 1 tablet by mouth Daily. Indications: HIV Disease",
+        "status": "Continued medication at discharge; also listed as prescription prior to admission",
+        "prescribed_date": null,
+        "prescriber": null,
+        "days_supply": null,
+        "quantity": "30 tablet (dispense, prior to admission)",
+        "refills": 0
+      },
+      {
+        "name": "OLANZapine (ZYPREXA)",
+        "strength": "5 mg",
+        "dose_form": "Tablet",
+        "directions": "Discharge: every evening. Prior-to-admission sig: Take 1 tablet by mouth every evening.",
+        "status": "Continued medication at discharge; also listed as prescription prior to admission",
+        "prescribed_date": null,
+        "prescriber": null,
+        "days_supply": null,
+        "quantity": "30 tablet (dispense, prior to admission)",
+        "refills": 0
+      },
+      {
+        "name": "UNCODED DME",
+        "strength": null,
+        "dose_form": null,
+        "directions": "Prior to admission: Patient referral for right above the knee prosthesis for prior amputation. Discharge list entry: right above-knee prosthesis referral",
+        "status": "Continued at discharge; also listed as prescription/DME prior to admission",
+        "prescribed_date": null,
+        "prescriber": null,
+        "days_supply": null,
+        "quantity": "1 each (dispense, prior to admission)",
+        "refills": 0
+      },
+      {
+        "name": "Heparin (DVT prophylaxis)",
+        "strength": null,
+        "dose_form": null,
+        "directions": "Inpatient only",
+        "status": "Stopped medication at discharge",
+        "prescribed_date": null,
+        "prescriber": null,
+        "days_supply": null,
+        "quantity": null,
+        "refills": null
+      },
+      {
+        "name": "acetaminophen (TYLENOL) tablet 650 mg",
+        "strength": "650 mg",
+        "dose_form": "Tablet",
+        "directions": "650 mg Oral Q4H PRN",
+        "status": "Current facility-administered (inpatient) medication",
+        "prescribed_date": null,
+        "prescriber": "Ali Fadhil, MD",
+        "days_supply": null,
+        "quantity": null,
+        "refills": null
+      },
+      {
+        "name": "acetaminophen (TYLENOL) 160 mg/5 mL liquid 650 mg",
+        "strength": "650 mg",
+        "dose_form": "Oral liquid",
+        "directions": "650 mg Oral Q4H PRN",
+        "status": "Current facility-administered (inpatient) medication",
+        "prescribed_date": null,
+        "prescriber": "Ali Fadhil, MD",
+        "days_supply": null,
+        "quantity": null,
+        "refills": null
+      },
+      {
+        "name": "acetaminophen (TYLENOL) suppository 650 mg",
+        "strength": "650 mg",
+        "dose_form": "Suppository",
+        "directions": "650 mg Rectal Q4H PRN",
+        "status": "Current facility-administered (inpatient) medication",
+        "prescribed_date": null,
+        "prescriber": "Ali Fadhil, MD",
+        "days_supply": null,
+        "quantity": null,
+        "refills": null
+      },
+      {
+        "name": "aluminum & magnesium hydroxide-simethicone (MAALOX PLUS REGULAR STRENGTH) suspension",
+        "strength": "200-200-20 mg/5 mL",
+        "dose_form": "Suspension 30 mL",
+        "directions": "30 mL Oral Q4H PRN",
+        "status": "Current facility-administered (inpatient) medication",
+        "prescribed_date": null,
+        "prescriber": "Ali Fadhil, MD",
+        "days_supply": null,
+        "quantity": null,
+        "refills": null
+      },
+      {
+        "name": "amitriptyline (ELAVIL) tablet",
+        "strength": "10 mg",
+        "dose_form": "Tablet",
+        "directions": "10 mg Oral Nightly (last administered 10 mg at 07/07/26 2227)",
+        "status": "Current facility-administered (inpatient) medication",
+        "prescribed_date": null,
+        "prescriber": "Ali Fadhil, MD",
+        "days_supply": null,
+        "quantity": null,
+        "refills": null
+      },
+      {
+        "name": "bictegravir-emtricitabine-tenofovir alafenamide (BIKTARVY)",
+        "strength": "50-200-25 mg per tablet",
+        "dose_form": "Tablet",
+        "directions": "1 tablet Oral Daily",
+        "status": "Current facility-administered (inpatient) medication",
+        "prescribed_date": null,
+        "prescriber": "Ali Fadhil, MD",
+        "days_supply": null,
+        "quantity": null,
+        "refills": null
+      },
+      {
+        "name": "bisacodyl (DULCOLAX) suppository",
+        "strength": "10 mg",
+        "dose_form": "Suppository",
+        "directions": "10 mg Rectal Daily PRN",
+        "status": "Current facility-administered (inpatient) medication",
+        "prescribed_date": null,
+        "prescriber": "Ali Fadhil, MD",
+        "days_supply": null,
+        "quantity": null,
+        "refills": null
+      },
+      {
+        "name": "calcium carbonate (TUMS) chewable tablet",
+        "strength": "1,000 mg",
+        "dose_form": "Chewable tablet",
+        "directions": "1,000 mg Oral Q4H PRN",
+        "status": "Current facility-administered (inpatient) medication",
+        "prescribed_date": null,
+        "prescriber": "Ali Fadhil, MD",
+        "days_supply": null,
+        "quantity": null,
+        "refills": null
+      },
+      {
+        "name": "cefTRIAXone (ROCEPHIN) in sterile water 20 mL syringe (100 mg/mL)",
+        "strength": "2 g",
+        "dose_form": "Intravenous syringe",
+        "directions": "2 g Intravenous Daily",
+        "status": "Current facility-administered (inpatient) medication",
+        "prescribed_date": null,
+        "prescriber": "Ali Fadhil, MD",
+        "days_supply": null,
+        "quantity": null,
+        "refills": null
+      },
+      {
+        "name": "HYDROcodone-acetaminophen (NORCO)",
+        "strength": "5-325 mg per tablet",
+        "dose_form": "Tablet",
+        "directions": "1-2 tablet Oral Q4H PRN",
+        "status": "Current facility-administered (inpatient) medication",
+        "prescribed_date": null,
+        "prescriber": "Ali Fadhil, MD",
+        "days_supply": null,
+        "quantity": null,
+        "refills": null
+      },
+      {
+        "name": "OLANZapine (zyPREXA) tablet",
+        "strength": "5 mg",
+        "dose_form": "Tablet",
+        "directions": "5 mg Oral QPM (last administered 5 mg at 07/07/26 2227)",
+        "status": "Current facility-administered (inpatient) medication",
+        "prescribed_date": null,
+        "prescriber": "Ali Fadhil, MD",
+        "days_supply": null,
+        "quantity": null,
+        "refills": null
+      },
+      {
+        "name": "ondansetron (ZOFRAN ODT) disintegrating tablet",
+        "strength": "4 mg",
+        "dose_form": "Disintegrating tablet",
+        "directions": "4 mg Oral Q6H PRN",
+        "status": "Current facility-administered (inpatient) medication",
+        "prescribed_date": null,
+        "prescriber": "Ali Fadhil, MD",
+        "days_supply": null,
+        "quantity": null,
+        "refills": null
+      },
+      {
+        "name": "ondansetron (ZOFRAN) injection",
+        "strength": "4 mg",
+        "dose_form": "Injection",
+        "directions": "4 mg Intravenous Q6H PRN",
+        "status": "Current facility-administered (inpatient) medication",
+        "prescribed_date": null,
+        "prescriber": "Ali Fadhil, MD",
+        "days_supply": null,
+        "quantity": null,
+        "refills": null
+      },
+      {
+        "name": "polyethylene glycol (MIRALAX) powder",
+        "strength": "17 g",
+        "dose_form": "Powder",
+        "directions": "17 g Oral Daily PRN",
+        "status": "Current facility-administered (inpatient) medication",
+        "prescribed_date": null,
+        "prescriber": "Ali Fadhil, MD",
+        "days_supply": null,
+        "quantity": null,
+        "refills": null
+      },
+      {
+        "name": "sodium chloride 0.9% (NS) infusion",
+        "strength": "0.9%",
+        "dose_form": "Intravenous infusion",
+        "directions": "Intravenous Continuous (last rate 100 mL/hr at 07/07/26 2231; new bag at 07/07/26 2231)",
+        "status": "Current facility-administered (inpatient) medication",
+        "prescribed_date": null,
+        "prescriber": "Ali Fadhil, MD",
+        "days_supply": null,
+        "quantity": null,
+        "refills": null
+      },
+      {
+        "name": "vancomycin 1 g in sodium chloride 0.9% 250 mL IVPB",
+        "strength": "1 g",
+        "dose_form": "Intravenous piggyback",
+        "directions": "1 g Intravenous Q12H (last rate 250 mL/hr at 07/08/26 0252; last admin 1 g at 07/08/26 0252)",
+        "status": "Current facility-administered (inpatient) medication",
+        "prescribed_date": null,
+        "prescriber": "Ali Fadhil, MD",
+        "days_supply": null,
+        "quantity": null,
+        "refills": null
+      },
+      {
+        "name": "vancomycin per pharmacy",
+        "strength": null,
+        "dose_form": "Other",
+        "directions": "Pharmacy Consult",
+        "status": "Current facility-administered (inpatient) medication",
+        "prescribed_date": null,
+        "prescriber": "Ali Fadhil, MD",
+        "days_supply": null,
+        "quantity": null,
+        "refills": null
+      },
+      {
+        "name": "zolpidem (AMBIEN) tablet",
+        "strength": "5 mg",
+        "dose_form": "Tablet",
+        "directions": "5 mg Oral Nightly PRN (last administered 5 mg at 07/07/26 2227)",
+        "status": "Current facility-administered (inpatient) medication",
+        "prescribed_date": null,
+        "prescriber": "Ali Fadhil, MD",
+        "days_supply": null,
+        "quantity": null,
+        "refills": null
+      }
+    ],
+    "allergies": [
+      {
+        "name": "Sulfamethoxazole-Trimethoprim",
+        "reaction": "Unknown",
+        "treatment": null,
+        "status": null
+      }
+    ],
+    "diagnoses_section_present": true,
+    "medications_section_present": true,
+    "allergies_section_present": true,
+    "no_known_allergies_explicit": false,
+    "notes": [
+      "Referral order: Referral to Home Health - OUTPATIENT [2231699788] / procedure [REF34]; Referral ID 92032489; Referred By BENJAMIN, RUDO; Referred To: Not Available; Visits: 1; Status: Pending Review; Start Date 7/10/26; End Date 7/10/27; Priority: Routine; Reason: Specialty Services Required; Order status Active; ordering mode Standard; electronically signed by Rudo Benjamin, MD on 07/10/26 1504; Authorized by Rudo Benjamin, MD; Frequency: 07/10/26 -; authorizing and ordering provider audit trails both 7/10/2026 3:04 PM (Rudo Benjamin, MD).",
+      "Referring provider practice address: Rudo Benjamin, MD, 4101 TORRANCE BLVD, CHE BLDG, 2ND FLOOR, TORRANCE CA 90503; phone 310-303-6859; fax 310-303-6834.",
+      "Homebound / face-to-face documentation: Face-to-face encounter date 7/10/2026; primary diagnosis for home health: wound cellulitis; patient is homebound because of unhealed wounds (see primary diagnosis for home health); clinical findings supporting homebound status: needs assistance of another individual; patient IS homebound because of high fall risk due to gait instability and muscle weakness caused by: (Use Comment); comment: 'ccc'; Provider to follow patient: PCP; 'Provider to follow: NO, PHYSICIAN'; Interpreter needed: No; preferred language English.",
+      "Process Instructions (physician certification): 'I certify this patient is confined to his/her home and needs intermittent skilled nursing care, physical therapy and/or speech therapy, or continues to need occupational therapy... I further certify this patient had a face-to-face encounter... related to the primary reason the patient requires home health services.'",
+      "Wound/Ostomy nurse consult 07/08/2026 1515 (Jason G Miranda, MSN-Ed, RN, CWON, FACCWS; inpatient consult order [2229527981] placed by Ali Fadhil, MD at 07/07/26 2258): right groin unstageable pressure injury from prosthesis, wound size 12 x 1 x 2 cm, 25% loosely adherent yellow slough, moderate serosanguinous drainage, periwound slightly erythematous, wound present on admission; right gluteal linear friction blister, now scabbed; left hip blanchable linear erythema from friction; left anterior knee with 2 tiny intact pustules surrounded by erythema; patient can turn and reposition independently.",
+      "Wound care recommendations: for right groin pressure injury cleanse with NS, pat dry, apply Santyl ointment then pack with saline-moistened gauze, cover with Mepilex Border Flex daily; hold off wearing the right AKA prosthesis until wound is resurfaced; for left anterior knee pustules apply Bactroban ointment tid; recommendations discussed with RN Cynthia; RN to provide wound care; re-consult as needed; defer to Dr. Ginsburg.",
+      "General surgery consultation 7/8/2026 0736 (Gregory T. Ginsburg, MD, FACS; Providence Little Company of Mary): assessment 'Right thigh wound created by prosthesis'; wound does not appear to require surgical debridement; apply topical Santyl daily after cleansing for the small amount of necrotic tissue; wound healing may be delayed due to HIV; prosthesis should be evaluated for modification or replacement and should not be worn until the wound is healed and the prosthesis repaired. Exam: right AKA stump well-healed; linear wound on proximal anterior right thigh extending into subcutaneous level with minimal necrosis at base; no deep purulence/fluctuance/tunneling on probing. Referring Physician on consult: 'No Physician on file'.",
+      "Hospital course: empiric IV cefTRIAXone and vancomycin with IV fluids and analgesia, transitioned to oral linezolid (ZYVOX) 600 mg every 12 hours at discharge; daily wound care with normal saline cleansing, collagenase (SANTYL), saline-moistened gauze and Mepilex dressing; left knee pustular lesions treated with topical mupirocin; hypocalcemia identified and supplemented; HIV stable on BIKTARVY continued without interruption; physical therapy involved for wheelchair training; prosthesis use held to allow wound healing; social work coordinated discharge due to homelessness, patient accepted to a recuperative care facility with transportation and DME (wheelchair) arranged; time spent 35 minutes for discharge summary and orders.",
+      "Discharge details: Discharge condition stable, improved; discharge disposition recuperative care facility; discharge diet general; date/time of discharge 7/11/2026 11:52 AM PDT; discharge summary signed by Rudo Benjamin, MD (Internal Medicine).",
+      "Vital signs at discharge: Temp 36.8 \u00b0C, HR 76, BP 95/60, RR 16, SpO2 96%. Vitals in surgery consult: Temp 36.7 \u00b0C (98 \u00b0F), BP 100/59, HR 74, RR 18, SpO2 98%; Min/Max temp past 24 hours avg 36.8 \u00b0C, min 36.7 \u00b0C, max 36.9 \u00b0C; I/O last 3 shifts Out 400 (urine 400); weight 84.7 kg (186 lb 11.7 oz); BMI 28.39 kg/m2.",
+      "Labs/diagnostics: hemoglobin 11.7 g/dL, MCV 89.1 fL (stable normocytic anemia); calcium 8.4 mg/dL; CT abdomen/pelvis with IV contrast 7/7/2026 10:06 PM (IOHEXOL/OMNIPAQUE 350, 100 mL) - soft tissue edema and skin thickening in the anteromedial right thigh extending along the groin crease into the more anterior flank compatible with cellulitis, some ulceration suspected, no soft tissue gas, no evidence of abscess; necrotizing infection cannot be excluded on imaging; otherwise unremarkable exam (dictated/signed by Patrick Hurley, MD 07/08/2026; SITE ID 355; CTDI 10.00 mGy, CTDLP 611.00 mGy-cm). Blood cultures - preliminary results pending at discharge; follow up with primary care physician.",
+      "Physical therapy initial evaluation/discharge 7/9/2026 1300 (Sachie K Maeda-Chen, PT; cosigned Marinelle Camilon, DO 07/09/26 1411): recommended discharge disposition placement for care (patient is homeless); post-discharge recommendation: no further PT; equipment recommendation: wheelchair; independent bed mobility (supine to/from sit), modified independent bed-chair transfers with chair, L LE/R LE ROM WFL, strength at least 3/5 bilaterally, normal static and dynamic sitting balance, no indicators of pain; no known precautions/limitations; right lower extremity weight-bearing (AKA); planned interventions none; recommended frequency one time visit; PT total time 20 minutes.",
+      "Discharge physical exam: alert, cooperative, no distress; right above-knee amputation; right groin wound with dressing clean, dry, intact, mild erythema without fluctuance; skin pink with non-stageable pressure injury backside; alert and oriented x3.",
+      "Primary care physician / follow-up: Mark D. Dressner, MD, TCC, 455 E. Columbia St., #201, Long Beach, CA 90806, phone 562-933-0400 - schedule appointment as soon as possible. Discharge summary routed by fax 07/11/26 1157 from Rudo Benjamin, MD to Mark D Dressner.",
+      "Social history / social drivers of health: single; smoking every day, 0.30 packs/day, cigarettes; never vaped; alcohol 6 standard drinks (6 cans of beer) per week; drug use not currently; homeless, lives alone, released from jail June 26, 2026, residing in the community, went to Harbor Interfaith to be connected with resources; high risk for tobacco use, violence/safety, financial resource strain (3/4/2025) and housing; food insecurity present; unmet transportation needs (medical and non-medical); no family history on file.",
+      "Encounter identifiers: Hospital Account 772000817031; Contact Serial # / Encounter Number 51072811111; Chart ID (20005877162-CLS ENCOUNTE-11); Guarantor Gonzalez, Eric (Guarantor ID 2424792), relation to patient Self, guarantor type Personal/Family, guarantor address 661 N Harbor Blvd Apt 74, San Pedro CA 90731, home phone 424-450-5249, employer status NOT EMPLO*; Advanced Directives: No-Information Given; Private Encounter: No; face sheet 'Referring Physician' field blank.",
+      "Insurance contact details: Payor plan address PO BOX 811580, LOS ANGELES CA 90081-0010; payor plan phone 888-452-2273 (face sheet lists (888)452-2273); payor plan fax not listed; HIC# blank; billing flag blank; coverage listed as 'Active Insurance as of 7/7/2026' with effective dates 5/1/2026 - None Entered; face sheet 'Insurance Type' field reads 'Indemnity [1]'.",
+      "MIPS Discharge Checklist v1.1 documented: no HFrEF, no ischemic stroke/TIA history, patient <65 (no ACP), no PPI applicable, vancomycin/MRSA item assessed (VH271 - vancomycin discontinued, linezolid ordered), no C. diff risk noted, medication reconciliation completed (G8427), follow-up care counseling documented (GA 561).",
+      "Discharge summary discloses that portions of the clinical documentation were generated or assisted by artificial intelligence-based tools and were reviewed, edited and verified by Rudo Benjamin, MD."
+    ]
+  },
+  "insurances": [
+    {
+      "payer_name": "LA CARE HLTH PLAN MEDICAID HMO",
+      "policy_number": "91440693A",
+      "group_number": "MWLLNMEG21",
+      "group_name": "LA CARE MDCD HMO HEALTHCARE LA IPA (plan name)",
+      "policy_holder_name": "GONZALEZ, ERIC",
+      "insurance_type": "Primary",
+      "effective_date": "2026-05-01",
+      "expiration_date": null,
+      "is_patient_policy_holder": true,
+      "subscriber_first_name": "Eric",
+      "subscriber_last_name": "Gonzalez",
+      "subscriber_date_of_birth": "1973-08-31",
+      "subscriber_relationship": "Self"
+    }
+  ],
+  "requested_services": [
+    {
+      "service": "Referral to Home Health - Outpatient",
+      "frequency": "1 visit authorized on referral; referral period 7/10/2026 - 7/10/2027; order frequency listed as '07/10/26 -'",
+      "instructions": "Reason: Specialty Services Required; Priority: Routine; Status: Pending Review; Referred To: Not Available; Referral ID 92032489; ordered, authorized and electronically signed by Rudo Benjamin, MD on 07/10/26 1504; physician certifies the patient is confined to home and needs intermittent skilled nursing care, physical therapy and/or speech therapy"
+    },
+    {
+      "service": "Skilled Nursing",
+      "frequency": null,
+      "instructions": "Home safety eval and needs assessment; Assess/instruct wound care/incision care; Assess/instruct disease"
+    },
+    {
+      "service": "Physical Therapy",
+      "frequency": null,
+      "instructions": "Mobility & home safety/fall prevention/durable medical equipment needs & training/caregiver training"
+    },
+    {
+      "service": "Wound care (right groin unstageable pressure injury; left anterior knee pustules)",
+      "frequency": "Right groin dressing change daily; Bactroban to left knee three times daily",
+      "instructions": "Per wound/ostomy nurse and surgery recommendations and discharge medication orders: cleanse with normal saline, pat dry, apply Santyl (collagenase) ointment, pack with saline-moistened gauze, cover with Mepilex Border Flex daily; hold off wearing the right AKA prosthesis until the wound is resurfaced/healed; apply Bactroban (mupirocin) 2% ointment tid to left anterior knee pustules; continue outpatient wound care"
+    },
+    {
+      "service": "Durable medical equipment / prosthesis follow-up",
+      "frequency": null,
+      "instructions": "Wheelchair recommended by physical therapy and provided with training completed; UNCODED DME - patient referral for right above-the-knee prosthesis for prior amputation; outpatient prosthesis reassessment/modification or replacement recommended before prosthesis is worn again"
+    }
+  ],
+  "field_quality": {
+    "patient.name": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1,
+        2,
+        5
+      ],
+      "evidence_quote": "Patient: GONZALEZ, ERIC"
+    },
+    "patient.date_of_birth": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1,
+        2,
+        5
+      ],
+      "evidence_quote": "DOB: 8/31/1973 (52 yrs)"
+    },
+    "patient.age": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        2,
+        5
+      ],
+      "evidence_quote": "Age: 52 year old"
+    },
+    "patient.sex_or_gender": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1,
+        2
+      ],
+      "evidence_quote": "Legal Sex: Male ... Gender Identity: Male"
+    },
+    "patient.phones": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1,
+        2
+      ],
+      "evidence_quote": "Patients Primary Phone: 424-450-5249 / Phone: 424-450-5249 (home)"
+    },
+    "patient.address": {
+      "status": "unclear",
+      "confidence": "medium",
+      "evidence_pages": [
+        1,
+        2,
+        4
+      ],
+      "evidence_quote": "661 N Harbor Blvd Apt 74 SAN PEDRO, CA-90731 [struck through]; handwritten: 'Golden State Recuperative Care 153 E 110th St Los Angeles, 90061'"
+    },
+    "patient.mrn": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1,
+        5,
+        10,
+        15
+      ],
+      "evidence_quote": "MRN: 20005877162"
+    },
+    "patient.source_patient_id": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        2
+      ],
+      "evidence_quote": "Patient ID: 20005877162"
+    },
+    "patient.ssn": {
+      "status": "missing",
+      "confidence": "high",
+      "evidence_pages": [],
+      "evidence_quote": null
+    },
+    "patient.email": {
+      "status": "missing",
+      "confidence": "high",
+      "evidence_pages": [],
+      "evidence_quote": null
+    },
+    "patient.emergency_contact": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "1. Michel,Leonor  Relationship to Patient: Friend  Home Phone 424-339-4452"
+    },
+    "referral_source": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        2
+      ],
+      "evidence_quote": "Location: PROVIDENCE LCOM SAN PEDRO TELEMETRY ... Enc. Provider: Rudo Benjamin, MD"
+    },
+    "referral_source.referral_or_order_date": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        2,
+        4
+      ],
+      "evidence_quote": "Electronically signed by: Rudo Benjamin, MD on 07/10/26 1504"
+    },
+    "home_health_or_hospice": {
+      "status": "missing",
+      "confidence": "high",
+      "evidence_pages": [
+        2
+      ],
+      "evidence_quote": "Referred To: Not Available ... Status: Pending Review"
+    },
+    "admission": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1,
+        5
+      ],
+      "evidence_quote": "Admit Date: 7/7/2026 1204 ... Date of Admission: 7/7/2026"
+    },
+    "clinical": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        3,
+        5,
+        6,
+        7,
+        10
+      ],
+      "evidence_quote": "Primary diagnosis for home health: Wound cellulitis"
+    },
+    "clinical.summary": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        3,
+        5,
+        6,
+        7
+      ],
+      "evidence_quote": "Order: Referral To Home Health - Outpatient  Reason: Specialty Services Required"
+    },
+    "clinical.diagnoses": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        3,
+        5,
+        15,
+        22
+      ],
+      "evidence_quote": "Cellulitis of right groin - Primary  L03.314"
+    },
+    "clinical.medications": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        7,
+        8,
+        16,
+        17,
+        18
+      ],
+      "evidence_quote": "Discharge Medications New Medications: collagenase (SANTYL) ointment - Apply topically daily"
+    },
+    "clinical.allergies": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        16
+      ],
+      "evidence_quote": "Allergen: Sulfamethoxazole-Trimethoprim   Reactions: Unknown"
+    },
+    "clinical.wound_order_included": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        7,
+        10,
+        23
+      ],
+      "evidence_quote": "collagenase (SANTYL) ointment - Apply topically daily; Cleanse w/ NS, pat dry, apply Santyl ointment then pak w/ saline moistened gauze cover w/ Mepilex Border Flex daily"
+    },
+    "insurances": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1,
+        3,
+        4
+      ],
+      "evidence_quote": "PRIMARY INSURANCE Insurance Company: LA CARE HLTH PLAN MEDICAID HMO ... Subscriber ID: 91440693A"
+    },
+    "requested_services": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        2,
+        3
+      ],
+      "evidence_quote": "Primary services needed: Skilled Nursing / Physical Therapy"
+    },
+    "document_type": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        2
+      ],
+      "evidence_quote": "Outpatient Referral Form"
+    }
+  },
+  "warnings": [
+    "Patient address conflict: on the face sheet (page 1) the printed address '661 N Harbor Blvd Apt 74, SAN PEDRO, CA 90731' is struck through and replaced by a handwritten entry reading 'Golden State Recuperative Care, 153 E 110th St, Los Angeles, 90061'. The handwritten entry omits the state and is only moderately legible; the original San Pedro address still appears as the patient address on page 2 and as the guarantor address on pages 1 and 4. The handwritten (recuperative care) address was recorded as the current address.",
+    "No receiving home health or hospice agency is named anywhere in the packet: the referral order states 'Referred To: Not Available' and the referral status is 'Pending Review'. Golden State Recuperative Care (handwritten) is the discharge/residence facility, not a home health or hospice provider, so home_health_or_hospice was left empty.",
+    "Admission time discrepancy on page 1: 'Admit Date: 7/7/2026 1204' versus 'Inp Admit Date/Time: 7/7/26 8:20 PM'.",
+    "Coverage rank was taken from the 'PRIMARY INSURANCE' (page 1) and 'Primary Coverage' (page 3) section headings, not from display order. The face sheet field 'Insurance Type: Indemnity [1]' is a plan/financial-class label, not a coverage rank.",
+    "The secondary insurance block on page 1 is printed but entirely blank; no secondary coverage is documented and the document does not state that none exists.",
+    "Past medical history table (page 15) lists nine diagnoses against eight '07/07/2026' dates; row/date alignment is ambiguous, so 'Hx of AKA (above knee amputation), right (HCC)' was left without an added date.",
+    "Referral order diagnosis 'Pressure sore of hip, right, unstageable (HCC) [L89.210]' conflicts in site with the clinical documentation, which describes an unstageable pressure injury of the right groin (with a separate right gluteal friction blister and left hip friction erythema noted by the wound nurse).",
+    "Service contradiction: the physical therapy evaluation of 7/9/2026 states 'Post discharge recommendation: no further PT', while the 7/10/2026 home health referral requests physical therapy (mobility, home safety/fall prevention, DME needs and training).",
+    "Setting contradiction: discharge disposition is a recuperative care facility (patient documented as homeless), while the order certifies the patient is confined to his home and requests home health services.",
+    "Homebound questionnaire answers include the free-text comment 'ccc' and the entry 'Provider to follow: NO, PHYSICIAN' alongside 'Provider to follow patient: PCP'; these are ambiguous as printed.",
+    "Fax pagination in the header runs from '2/24' to '24/24' while this PDF contains 23 pages; the first page of the original 24-page fax transmission (likely a cover sheet) is not included in this document.",
+    "Page 11 (page 2/2 of the wound/ostomy consult) is essentially blank apart from headers and a stray character.",
+    "The discharge summary discloses that portions of the clinical documentation were generated or assisted by AI-based tools (reviewed and verified by the attending, Rudo Benjamin, MD).",
+    "The Patient ID printed on the Outpatient Referral Form (20005877162) is the same value as the hospital MRN; other identifiers (Hospital Account 772000817031, Guarantor ID 2424792, Contact Serial #/Encounter Number 51072811111, Referral order [2231699788], Referral ID 92032489) were preserved separately and were not treated as an MRN.",
+    "Discharge medication prescriber and prescribed dates are not explicitly stated; the discharge medication list appears in the discharge summary dated 7/11/2026 signed by Rudo Benjamin, MD (Discharging Physician), so those fields were left null rather than inferred."
+  ]
+}

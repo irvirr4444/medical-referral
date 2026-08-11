@@ -1,14 +1,11 @@
 import type { FlowOpsPageId } from '../../../../data/flowOps'
-import { BUTLER_INTAKE_SNAPSHOTS } from '../../fixtures/butlerIntakeSnapshots'
+import { INTAKE_DEMO_BY_ID, INTAKE_DEMO_PATIENTS } from '../../fixtures/intakeDemoPatients'
 import type { PatientStepProgress, PatientStepStatus } from '../types'
 
 export const STAGE_STEP_IDS: Record<FlowOpsPageId, string[]> = {
   intake: [
     'receive-referral',
-    'validate-pdf',
-    'extract-details',
-    'verify-required-fields',
-    'check-threshold',
+    'extract-and-verify',
     'check-monday',
     'check-drk',
     'confirm-referral-contacted',
@@ -191,10 +188,66 @@ function allDone(stageId: FlowOpsPageId, rows: DoneStep[]): PatientStepProgress[
   })
 }
 
-const butlerIntake = (): PatientStepProgress[] => {
+function intakeStoryKind(patientId: string): 'complete' | 'waiting' | 'threshold' {
+  const demo = INTAKE_DEMO_BY_ID[patientId]
+  const fq = demo.canonical.field_quality
+  const phone = fq['patient.phones']?.status
+  const address = fq['patient.address']?.status
+  const thresholdOk =
+    (fq['patient.name']?.status === 'present' ||
+      fq['patient.name']?.status === 'explicitly_none') &&
+    (fq['patient.date_of_birth']?.status === 'present' ||
+      fq['patient.date_of_birth']?.status === 'explicitly_none') &&
+    (phone === 'present' || phone === 'explicitly_none') &&
+    (address === 'present' || address === 'explicitly_none')
+  if (!thresholdOk) return 'threshold'
+  const agency = fq['home_health_or_hospice']?.status
+  if (agency === 'present' || agency === 'explicitly_none') return 'complete'
+  return 'waiting'
+}
+
+const intakeFromDemo = (patientId: string): PatientStepProgress[] => {
+  const demo = INTAKE_DEMO_BY_ID[patientId]
+  const story = intakeStoryKind(patientId)
   const order = STAGE_STEP_IDS.intake
+
+  if (story === 'complete') {
+    return order.map((stepId) => {
+      const snap = demo.snapshots[stepId]
+      const confirmDone =
+        stepId === 'confirm-referral-contacted' ||
+        stepId === 'confirm-information-complete'
+      return {
+        stepId,
+        status: 'done' as const,
+        summary: confirmDone
+          ? stepId === 'confirm-referral-contacted'
+            ? 'Partner contact confirmed'
+            : 'Approved and authorized for handoff'
+          : snap.output,
+        occurredAt: snap.executedAt,
+      }
+    })
+  }
+
+  if (story === 'threshold') {
+    return progression(
+      'intake',
+      order.slice(0, 1).map((stepId) => ({
+        summary: demo.snapshots[stepId].output,
+        at: demo.snapshots[stepId].executedAt,
+      })),
+      {
+        summary: demo.snapshots['extract-and-verify'].output,
+        status: 'blocked',
+        at: demo.receivedAt,
+      },
+    )
+  }
+
+  // waiting on confirmation after clear duplicate checks
   return order.map((stepId) => {
-    const snap = BUTLER_INTAKE_SNAPSHOTS[stepId]
+    const snap = demo.snapshots[stepId]
     const pending =
       stepId === 'confirm-referral-contacted' ||
       stepId === 'confirm-information-complete'
@@ -212,102 +265,12 @@ export const PATIENT_STEP_BREAKDOWNS: Record<
   FlowOpsPageId,
   Record<string, PatientStepProgress[]>
 > = {
-  intake: {
-    'butler-alva': butlerIntake(),
-    'rosa-delgado': progression(
-      'intake',
-      [
-        { summary: 'Referral email identified', at: 'August 10, 2026 at 8:42 AM' },
-        { summary: 'Valid PDF accepted', at: 'August 10, 2026 at 8:42 AM' },
-        { summary: 'Fingerprint recorded', at: 'August 10, 2026 at 8:43 AM' },
-        { summary: 'Canonical referral extracted', at: 'August 10, 2026 at 8:45 AM' },
-        { summary: '7 of 7 fields complete', at: 'August 10, 2026 at 8:45 AM' },
-        { summary: 'Threshold met', at: 'August 10, 2026 at 8:45 AM' },
-        { summary: 'No Monday candidate', at: 'August 10, 2026 at 8:45 AM' },
-        { summary: 'No DRK match', at: 'August 10, 2026 at 8:46 AM' },
-        { summary: 'Distinct patient', at: 'August 10, 2026 at 8:46 AM' },
-        { summary: 'Review email drafted', at: 'August 10, 2026 at 8:46 AM' },
-        { summary: 'Review request delivered', at: 'August 10, 2026 at 8:46 AM' },
-      ],
-      { summary: 'Awaiting reviewer reply', status: 'waiting', at: 'August 10, 2026 at 8:46 AM' },
-    ),
-    'samuel-ortiz': progression(
-      'intake',
-      [
-        { summary: 'Referral email identified', at: 'August 10, 2026 at 10:05 AM' },
-        { summary: 'Valid PDF accepted', at: 'August 10, 2026 at 10:05 AM' },
-        { summary: 'Fingerprint recorded', at: 'August 10, 2026 at 10:06 AM' },
-        { summary: 'Canonical referral extracted', at: 'August 10, 2026 at 10:08 AM' },
-      ],
-      {
-        summary: 'Insurance missing · 6 of 7 complete',
-        status: 'blocked',
-        at: 'August 10, 2026 at 10:08 AM',
-      },
-    ),
-    'evelyn-brooks': progression(
-      'intake',
-      [
-        { summary: 'Referral email identified', at: 'August 10, 2026 at 11:20 AM' },
-        { summary: 'Valid PDF accepted', at: 'August 10, 2026 at 11:20 AM' },
-        { summary: 'Fingerprint recorded', at: 'August 10, 2026 at 11:21 AM' },
-        { summary: 'Canonical referral extracted', at: 'August 10, 2026 at 11:24 AM' },
-        { summary: '7 of 7 fields complete', at: 'August 10, 2026 at 11:24 AM' },
-        { summary: 'Threshold met', at: 'August 10, 2026 at 11:24 AM' },
-        { summary: 'Probable Monday match found', at: 'August 10, 2026 at 11:25 AM' },
-        { summary: 'DRK check deferred', at: 'August 10, 2026 at 11:25 AM' },
-      ],
-      {
-        summary: 'Duplicate risk · human review required',
-        status: 'blocked',
-        at: 'August 10, 2026 at 11:25 AM',
-      },
-    ),
-    'thomas-reed': allDone('intake', [
-      { summary: 'Approved and destination authorized', at: 'August 10, 2026 at 2:40 PM' },
+  intake: Object.fromEntries(
+    INTAKE_DEMO_PATIENTS.map((patient) => [
+      patient.patientId,
+      intakeFromDemo(patient.patientId),
     ]),
-    'patricia-johnson': allDone('intake', [
-      { summary: 'Approved and authorized for handoff', at: 'August 9, 2026 at 11:02 AM' },
-    ]),
-    'robert-williams': progression(
-      'intake',
-      [
-        { summary: 'Referral email identified', at: 'August 9, 2026 at 3:22 PM' },
-        { summary: 'Valid PDF accepted', at: 'August 9, 2026 at 3:22 PM' },
-        { summary: 'Fingerprint recorded', at: 'August 9, 2026 at 3:23 PM' },
-        { summary: 'Canonical referral extracted', at: 'August 9, 2026 at 3:26 PM' },
-      ],
-      {
-        summary: 'Phone and address incomplete',
-        status: 'blocked',
-        at: 'August 9, 2026 at 3:26 PM',
-      },
-    ),
-    'irene-cho': allDone('intake', [
-      { summary: 'Approved and authorized for handoff', at: 'August 8, 2026 at 4:05 PM' },
-    ]),
-    'frank-owens': progression(
-      'intake',
-      [
-        { summary: 'Referral email identified', at: 'August 8, 2026 at 2:11 PM' },
-        { summary: 'Valid PDF accepted', at: 'August 8, 2026 at 2:11 PM' },
-        { summary: 'Fingerprint recorded', at: 'August 8, 2026 at 2:12 PM' },
-        { summary: 'Canonical referral extracted', at: 'August 8, 2026 at 2:15 PM' },
-        { summary: 'Fields evaluated', at: 'August 8, 2026 at 2:15 PM' },
-        { summary: 'Threshold checked', at: 'August 8, 2026 at 2:15 PM' },
-        { summary: 'Duplicate search clear', at: 'August 8, 2026 at 2:16 PM' },
-        { summary: 'No DRK match', at: 'August 8, 2026 at 2:16 PM' },
-        { summary: 'Distinct patient', at: 'August 8, 2026 at 2:16 PM' },
-        { summary: 'Review drafted', at: 'August 8, 2026 at 2:17 PM' },
-        { summary: 'Review sent', at: 'August 8, 2026 at 2:17 PM' },
-      ],
-      {
-        summary: 'Rejected · not a wound-care candidate',
-        status: 'blocked',
-        at: 'August 8, 2026 at 5:40 PM',
-      },
-    ),
-  },
+  ),
   handoff: {
     'maria-alvarez': progression(
       'handoff',

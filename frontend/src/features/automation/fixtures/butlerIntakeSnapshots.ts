@@ -14,31 +14,25 @@ import butlerCanonical from './butlerCanonicalReferral.json'
 
 export const BUTLER_CANONICAL = butlerCanonical as unknown as CanonicalReferral
 
-const REFERRAL_ID = BUTLER_CANONICAL.referral_id
-const RUN_PREFIX = 'butler-alva'
-
-function snap(
-  stepId: string,
-  partial: Omit<
-    MicrostepExecutionSnapshot,
-    'executionId' | 'stepId' | 'artifactId' | 'referralId'
-  > & { artifactSuffix?: string },
-): MicrostepExecutionSnapshot {
-  const artifactSuffix = partial.artifactSuffix ?? stepId
-  return {
-    executionId: `${RUN_PREFIX}-${stepId}-exec`,
-    stepId,
-    referralId: REFERRAL_ID,
-    artifactId: `${RUN_PREFIX}-${artifactSuffix}-artifact`,
-    ...partial,
-  }
-}
-
 function identityKnown(record: CanonicalReferral) {
   return [
     { label: 'Patient', value: patientDisplayName(record.patient) },
     { label: 'Referral ID', value: record.referral_id },
   ]
+}
+
+/** Outlook-style From line for feed proof. */
+function senderDisplay(record: CanonicalReferral) {
+  if (record.source.sent_by?.trim()) return record.source.sent_by.trim()
+  const contact = record.referral_source?.organization?.contact_name?.trim()
+  const org = record.referral_source?.organization?.name?.trim()
+  const email = record.referral_source?.organization?.email?.trim()
+  if (contact && email) return `${contact} <${email}>`
+  if (contact && org) return `${contact} · ${org}`
+  if (org && email) return `${org} <${email}>`
+  if (email) return email
+  if (org) return org
+  return '—'
 }
 
 function identityAndContact(record: CanonicalReferral) {
@@ -150,34 +144,72 @@ function buildExtractionSections(record: CanonicalReferral): ArtifactSection[] {
   ]
 }
 
-export function buildButlerIntakeSnapshots(
-  record: CanonicalReferral = BUTLER_CANONICAL,
+export function buildIntakeSnapshots(
+  record: CanonicalReferral,
+  options: { runPrefix: string; executedAt: string },
 ): Record<string, MicrostepExecutionSnapshot> {
+  const { runPrefix, executedAt } = options
+  const snap = (
+    stepId: string,
+    partial: Omit<
+      MicrostepExecutionSnapshot,
+      'executionId' | 'stepId' | 'artifactId' | 'referralId'
+    > & { artifactSuffix?: string },
+  ): MicrostepExecutionSnapshot => {
+    const artifactSuffix = partial.artifactSuffix ?? stepId
+    return {
+      executionId: `${runPrefix}-${stepId}-exec`,
+      stepId,
+      referralId: record.referral_id,
+      artifactId: `${runPrefix}-${artifactSuffix}-artifact`,
+      ...partial,
+    }
+  }
+
   const pdfName = record.source.file_name
   const sha = record.source.pdf_sha256
   const emailId = record.source.email_id ?? 'unknown'
   const patientName = patientDisplayName(record.patient)
   const dob = record.patient.date_of_birth ?? '—'
-  const completeCount = REQUIRED_FIELD_PATHS.filter(
-    ({ path }) => {
-      const status = record.field_quality[path]?.status
-      return status === 'present' || status === 'explicitly_none'
-    },
-  ).length
+  const completeCount = REQUIRED_FIELD_PATHS.filter(({ path }) => {
+    const status = record.field_quality[path]?.status
+    return status === 'present' || status === 'explicitly_none'
+  }).length
+  const missingPaths = REQUIRED_FIELD_PATHS.filter(({ path }) => {
+    return record.field_quality[path]?.status === 'missing'
+  }).map(({ label }) => label)
+  const unclearPaths = REQUIRED_FIELD_PATHS.filter(({ path }) => {
+    return record.field_quality[path]?.status === 'unclear'
+  }).map(({ label }) => label)
+  const gapLabel = [...missingPaths, ...unclearPaths].join(', ') || 'None'
+  const verifyStatus =
+    missingPaths.length > 0 || unclearPaths.length > 0
+      ? ('attention' as const)
+      : ('completed' as const)
+  const minFields = [
+    'patient.name',
+    'patient.date_of_birth',
+    'patient.phones',
+    'patient.address',
+  ] as const
+  const thresholdMet = minFields.every((path) => {
+    const status = record.field_quality[path]?.status
+    return status === 'present' || status === 'explicitly_none'
+  })
 
   return {
     'receive-referral': snap('receive-referral', {
       status: 'completed',
       duration: 'Under 1 second',
-      executedAt: 'August 10, 2026 at 9:14 AM',
+      executedAt,
       artifactTitle: 'Discovered referral email',
       validation:
         'The message has a stable Microsoft message ID and received timestamp.',
       input: 'Unread Outlook message in info@westcostwound.com',
-      output: `Referral email identified · attachment ${pdfName}`,
+      output: 'Referral email identified',
       knownAtThisPoint: [
         { label: 'Inbox', value: 'info@westcostwound.com' },
-        { label: 'Subject', value: 'Chart export — wound care referral' },
+        { label: 'Attachment', value: pdfName },
       ],
       artifactSections: [
         {
@@ -186,106 +218,79 @@ export function buildButlerIntakeSnapshots(
           defaultExpanded: true,
           fields: [
             { label: 'Message ID', value: emailId },
-            { label: 'Sender', value: record.source.sent_by ?? '—' },
-            { label: 'Received', value: 'August 10, 2026 at 9:14 AM' },
+            { label: 'Sender', value: senderDisplay(record) },
+            { label: 'Received', value: executedAt },
             { label: 'Attachment', value: pdfName },
             { label: 'Attachment ID', value: record.source.attachment_id ?? '—' },
           ],
         },
       ],
     }),
-    'validate-pdf': snap('validate-pdf', {
-      status: 'completed',
-      duration: 'Under 1 second',
-      executedAt: 'August 10, 2026 at 9:14 AM',
-      artifactTitle: 'PDF validation result',
+    'extract-and-verify': snap('extract-and-verify', {
+      status: thresholdMet ? verifyStatus : 'attention',
+      duration: '2m 41s',
+      executedAt,
+      artifactTitle: 'Referral details extracted and verified',
       validation:
-        'Filename ends in .pdf and content starts with the PDF file signature.',
-      input: `${pdfName} · application/pdf`,
-      output: 'Valid PDF accepted for intake processing',
-      knownAtThisPoint: identityKnown(record),
+        'Name, DOB, phone, and address must clear the threshold before duplicate checks continue.',
+      input: `Valid PDF · ${pdfName}`,
+      output: !thresholdMet
+        ? 'Details extracted · identity/contact incomplete'
+        : missingPaths.length > 0 || unclearPaths.length > 0
+          ? `Details extracted · ${completeCount} of 7 fields complete · ${gapLabel} incomplete`
+          : 'Details extracted · 7 of 7 fields complete',
+      knownAtThisPoint: identityAndContact(record),
+      feedDecision: {
+        thresholdMet,
+        completeCount,
+        totalRequired: 7,
+        missingLabels: missingPaths,
+        unclearLabels: unclearPaths,
+        identityLine: [
+          patientName,
+          dob,
+          record.patient.phones[0]?.number ?? '—',
+        ].join(' · '),
+      },
       artifactSections: [
         {
-          id: 'validation',
-          title: 'Attachment validation',
+          id: 'gate',
+          title: 'Minimum identity and contact gate',
           defaultExpanded: true,
           fields: [
-            { label: 'Filename', value: pdfName },
-            { label: 'MIME type', value: 'application/pdf' },
-            { label: 'Signature', value: '%PDF-1.4 accepted' },
-            { label: 'Page count', value: String(record.source.page_count ?? '—') },
-            { label: 'Result', value: 'Accepted for intake processing' },
+            { label: 'Name', value: patientName },
+            { label: 'Date of birth', value: dob },
+            {
+              label: 'Phone',
+              value: record.patient.phones[0]?.number ?? '—',
+            },
+            {
+              label: 'Address',
+              value: patientAddressLine(record.patient),
+            },
+            {
+              label: 'Decision',
+              value: thresholdMet
+                ? 'Threshold met — Monday and DRK checks allowed'
+                : 'Threshold not met — destination writes blocked',
+            },
           ],
         },
-      ],
-    }),
-    'extract-details': snap('extract-details', {
-      status: 'completed',
-      duration: '2m 41s',
-      executedAt: 'August 10, 2026 at 9:17 AM',
-      artifactTitle: 'Patient and referral details extracted',
-      validation:
-        'The response must satisfy the referral schema before it is accepted.',
-      input: `Valid PDF · ${pdfName}`,
-      output: `Patient and referral details extracted for ${patientName}`,
-      knownAtThisPoint: identityAndContact(record),
-      artifactSections: [
-        ...buildExtractionSections(record),
+        ...buildRequiredFieldSections(record),
+        ...buildExtractionSections(record).map((section) =>
+          section.id === 'demographics' || section.id === 'referral-source'
+            ? { ...section, defaultExpanded: false }
+            : section,
+        ),
         {
           id: 'processing-guard',
           title: 'Processing guardrail',
           defaultExpanded: false,
           fields: [
             { label: 'SHA-256 fingerprint', value: sha },
-            { label: 'Duplicate completion check', value: 'Not previously completed' },
-          ],
-        },
-      ],
-    }),
-    'verify-required-fields': snap('verify-required-fields', {
-      status: 'attention',
-      duration: 'Under 1 second',
-      executedAt: 'August 10, 2026 at 9:17 AM',
-      artifactTitle: 'Seven-field completeness review',
-      validation:
-        'Name, DOB, phone, address, agency, wound information, and insurance are evaluated separately.',
-      input: 'Canonical referral JSON',
-      output: `${completeCount} of 7 required fields complete · home-health agency missing`,
-      knownAtThisPoint: identityAndContact(record),
-      artifactSections: buildRequiredFieldSections(record),
-    }),
-    'check-threshold': snap('check-threshold', {
-      status: 'attention',
-      duration: 'Under 1 second',
-      executedAt: 'August 10, 2026 at 9:17 AM',
-      artifactTitle: 'Seven-field handoff gate',
-      validation:
-        'All seven required fields must be complete or explicitly none before handoff.',
-      input: `${completeCount} of 7 fields complete · agency missing`,
-      output: 'Handoff blocked · missing home-health or hospice agency',
-      knownAtThisPoint: identityAndContact(record),
-      artifactSections: [
-        {
-          id: 'gate',
-          title: 'Handoff eligibility',
-          defaultExpanded: true,
-          fields: [
             {
-              label: 'Fields complete',
-              value: `${completeCount} of 7`,
-            },
-            {
-              label: 'Missing fields',
-              value: 'Home health or hospice agency',
-              fieldPath: 'home_health_or_hospice',
-            },
-            {
-              label: 'Decision',
-              value: 'Needs information — blocked for handoff',
-            },
-            {
-              label: 'Next action',
-              value: 'Call referral partner or escalate to marketer',
+              label: 'Duplicate completion check',
+              value: 'Not previously completed',
             },
           ],
         },
@@ -294,7 +299,7 @@ export function buildButlerIntakeSnapshots(
     'check-monday': snap('check-monday', {
       status: 'completed',
       duration: '1.2s',
-      executedAt: 'August 10, 2026 at 9:17 AM',
+      executedAt,
       artifactTitle: 'Monday.com duplicate search',
       validation:
         'Name-only matches never authorize patient creation or blocking.',
@@ -320,7 +325,7 @@ export function buildButlerIntakeSnapshots(
     'check-drk': snap('check-drk', {
       status: 'completed',
       duration: '1.8s',
-      executedAt: 'August 10, 2026 at 9:17 AM',
+      executedAt,
       artifactTitle: 'DRK chart search',
       validation:
         'Any candidate requires DOB confirmation before it can be treated as the same patient.',
@@ -330,7 +335,7 @@ export function buildButlerIntakeSnapshots(
       artifactSections: [
         {
           id: 'drk-search',
-          title: 'Search query and results',
+          title: 'DRK search query and results',
           defaultExpanded: true,
           fields: [
             {
@@ -342,8 +347,14 @@ export function buildButlerIntakeSnapshots(
               value: record.patient.source_patient_id ?? '—',
               fieldPath: 'patient.source_patient_id',
             },
-            { label: 'MRN used', value: 'None — MRN not inferred from source ID' },
-            { label: 'Exact chart match', value: 'No exact DRK chart match found' },
+            {
+              label: 'MRN used',
+              value: 'None — MRN not inferred from source ID',
+            },
+            {
+              label: 'Exact chart match',
+              value: 'No exact DRK chart match found',
+            },
           ],
         },
       ],
@@ -351,7 +362,7 @@ export function buildButlerIntakeSnapshots(
     'confirm-referral-contacted': snap('confirm-referral-contacted', {
       status: 'waiting',
       duration: 'Under 1 second',
-      executedAt: 'August 10, 2026 at 9:18 AM',
+      executedAt,
       artifactTitle: 'Referral partner contact confirmation',
       validation:
         'Intake cannot complete until referral partner contact is explicitly confirmed.',
@@ -364,12 +375,17 @@ export function buildButlerIntakeSnapshots(
           title: 'Contact confirmation checklist',
           defaultExpanded: true,
           fields: [
-            { label: 'Referral partner contacted', value: 'Pending confirmation' },
+            {
+              label: 'Referral partner contacted',
+              value: 'Pending confirmation',
+            },
             { label: 'Outreach owner', value: 'DRK intake screen watcher' },
             { label: 'Expected note', value: 'Call or callback outcome logged' },
-            { label: 'Escalation path', value: 'Marketer follow-up if unreachable' },
-            { label: 'Review queue', value: 'Braxton Rickert · info-box queue' },
-            { label: 'Message ID', value: 'AAMkAGButlerReview001' },
+            {
+              label: 'Escalation path',
+              value: 'Marketer follow-up if unreachable',
+            },
+            { label: 'Attachment', value: pdfName },
             { label: 'Thread', value: emailId },
           ],
         },
@@ -378,11 +394,12 @@ export function buildButlerIntakeSnapshots(
     'confirm-information-complete': snap('confirm-information-complete', {
       status: 'waiting',
       duration: 'Awaiting human confirmation',
-      executedAt: 'August 10, 2026 at 9:18 AM',
+      executedAt,
       artifactTitle: 'Referral Intake completion confirmation',
       validation:
         'A DRK team member must confirm accuracy before intake is complete.',
-      input: 'Extracted referral details + Monday/DRK checks + contact confirmation',
+      input:
+        'Extracted referral details + Monday/DRK checks + contact confirmation',
       output: 'Waiting for DRK confirmation that information is correct',
       knownAtThisPoint: identityAndContact(record),
       artifactSections: [
@@ -391,12 +408,21 @@ export function buildButlerIntakeSnapshots(
           title: 'Intake completion gate',
           defaultExpanded: true,
           fields: [
-            { label: 'Information verified as correct', value: 'Pending confirmation' },
-            { label: 'Seven required fields', value: `${completeCount} of 7 complete` },
+            {
+              label: 'Information verified as correct',
+              value: 'Pending confirmation',
+            },
+            {
+              label: 'Seven required fields',
+              value: `${completeCount} of 7 complete`,
+            },
             { label: 'Monday check', value: 'No existing patient found' },
             { label: 'DRK check', value: 'No existing chart found' },
-            { label: 'Missing field', value: 'Home health or hospice agency' },
-            { label: 'Decision', value: 'Intake remains open until confirmation is recorded' },
+            { label: 'Gaps', value: gapLabel },
+            {
+              label: 'Decision',
+              value: 'Intake remains open until confirmation is recorded',
+            },
           ],
         },
       ],
@@ -404,14 +430,20 @@ export function buildButlerIntakeSnapshots(
   }
 }
 
+export function buildButlerIntakeSnapshots(
+  record: CanonicalReferral = BUTLER_CANONICAL,
+): Record<string, MicrostepExecutionSnapshot> {
+  return buildIntakeSnapshots(record, {
+    runPrefix: 'butler-alva',
+    executedAt: 'August 10, 2026 at 9:14 AM',
+  })
+}
+
 export const BUTLER_INTAKE_SNAPSHOTS = buildButlerIntakeSnapshots()
 
 export const BUTLER_INTAKE_STEP_IDS = [
   'receive-referral',
-  'validate-pdf',
-  'extract-details',
-  'verify-required-fields',
-  'check-threshold',
+  'extract-and-verify',
   'check-monday',
   'check-drk',
   'confirm-referral-contacted',

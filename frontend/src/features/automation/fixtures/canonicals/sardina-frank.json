@@ -1,0 +1,605 @@
+{
+  "schema_version": 1,
+  "referral_id": "ref_d8e96c19c7211b4add4203fb",
+  "source": {
+    "email_id": null,
+    "attachment_id": null,
+    "file_name": "fax20260713-2485963-94q8kc.pdf",
+    "pdf_sha256": "d8e96c19c7211b4add4203fb43c1444cfa3315a024cf8b701fa34d151c6c093f",
+    "page_count": 8,
+    "sent_by": "Natalie Lewis <natalie.lewis@barstowhospital.org>",
+    "extraction": {
+      "primary_model": "claude-opus-5",
+      "models_attempted": [
+        "claude-opus-5"
+      ],
+      "pass_models": [
+        "claude-opus-5",
+        "claude-opus-5"
+      ],
+      "fallback_used": false
+    }
+  },
+  "document_type": "Hospital fax referral packet (8 pages): fax cover sheet, patient face sheet, Registration Admission form, HOME HLTH / case management order, inpatient order list, and wound-care consultation note",
+  "patient": {
+    "name": {
+      "first": "FRANK",
+      "middle": null,
+      "last": "SARDINA",
+      "suffix": null,
+      "full": "SARDINA, FRANK"
+    },
+    "date_of_birth": "1999-01-24",
+    "age": 27,
+    "sex_or_gender": "Male",
+    "ssn": "3857 (last 4 only)",
+    "mrn": "435589",
+    "source_patient_id": "1512850",
+    "source_patient_id_label": "Patient Account No. / Encounter",
+    "phones": [
+      {
+        "number": "(999) 999-9999",
+        "type": "Home/registration listing (appears to be a placeholder value)"
+      }
+    ],
+    "email": null,
+    "address": {
+      "line_1": "HOMELESS",
+      "line_2": null,
+      "city": "BARSTOW",
+      "state": "CA",
+      "postal_code": "92311",
+      "country": null
+    },
+    "emergency_contact": {
+      "name": {
+        "first": null,
+        "middle": null,
+        "last": null,
+        "suffix": null,
+        "full": "STATES NONE"
+      },
+      "relationship": null,
+      "phone": null
+    }
+  },
+  "referral_source": {
+    "organization": {
+      "name": "Barstow Community Hospital",
+      "contact_name": "Natalie Lewis (Discharge Planning)",
+      "phone": "(760) 957-3223",
+      "fax": "(760) 957-3377",
+      "email": null,
+      "address": "820 East Mountain View Street, Barstow, CA 92311"
+    },
+    "provider_name": "HORTON ISAIAH M MD (Order Physician on HOME HLTH/case management order; Attending & Admitting Physician #80394)",
+    "referral_or_order_date": "2026-07-13"
+  },
+  "home_health_or_hospice": {
+    "organization": {
+      "name": null,
+      "contact_name": null,
+      "phone": null,
+      "fax": null,
+      "email": null,
+      "address": null
+    },
+    "hospice": null,
+    "palliative_care": null
+  },
+  "admission": {
+    "admission_date": "2026-07-10",
+    "facility": {
+      "name": "Barstow Community Hospital",
+      "contact_name": null,
+      "phone": "(760) 256-1761",
+      "fax": null,
+      "email": null,
+      "address": "820 East Mountain View Street, Barstow, California 92311"
+    },
+    "place_of_service": "Inpatient hospital (Patient Type: Inpatient; Service MIP; Unit 100, Room 03, Bed A; admission date/time 07/10/26 00:48; preceding outpatient registration 7/9/2026 19:06)",
+    "medicare_admission": null
+  },
+  "clinical": {
+    "summary": "27-year-old male, currently an inpatient at Barstow Community Hospital (admitted 7/10/2026 00:48 by ambulance, preceded by outpatient registration 7/9/2026 19:06) with admitting diagnosis/chief complaint of UTI / urinary tract infection, site not specified. A HOME HLTH type order (Order #0005900, ROUTINE, Procedure: CASE MANAGEMENT ORDER) was entered 7/13/26 14:16 by order physician HORTON ISAIAH M MD, with a handwritten notation of 'wound care'. Per the 7/10/2026 wound consultation, the patient is paraplegic (chronic paraplegia, mid waist) after being struck by a car as a pedestrian about a year ago; about a week ago he was at another hospital where wounds of his ischium were debrided, after which he left and was admitted to this facility. Exam shows wounds on both ischial tuberosities that are clean with good granulation tissue but extend all the way down to bone. Consultant recommendations: bilateral lesions due to paraplegia/pressure, no further surgical intervention required, wound care orders placed, and case management to discuss placement and post-hospitalization care. Inpatient nursing wound care order (Order #1700, daily): remove all dressings, wash wounds with normal saline, pack with moist gauze, cover with pink foam dressing, change daily. IV ceftriaxone 1000 mg every 24 hours is ordered for urinary tract infectious disease from 7/10/2026 through 7/20/2026. No discharge date is documented.",
+    "wound_order_included": true,
+    "diagnoses": [
+      {
+        "code": null,
+        "description": "UTI / URINARY TRACT INFECTION, SITE NOT SPECIFIED",
+        "added_date": null,
+        "is_primary": true,
+        "status": "Admitting diagnosis / chief complaint"
+      },
+      {
+        "code": "68566005",
+        "description": "Urinary tract infectious disease (problem linked to ceftriaxone pharmacy order #854868)",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Active problem"
+      },
+      {
+        "code": null,
+        "description": "Ischial wounds - wounds on both ischial tuberosities extending all the way down to bone; bilateral pressure lesions due to paraplegia (reason for consult)",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Active"
+      },
+      {
+        "code": null,
+        "description": "Chronic paraplegia, mid waist",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Past medical history"
+      },
+      {
+        "code": null,
+        "description": "Pressure ulcer injury repair",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Past medical history"
+      },
+      {
+        "code": null,
+        "description": "Foley cath",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Past medical history"
+      }
+    ],
+    "medications": [
+      {
+        "name": "cefTRIAXone Inj (ROCEPHIN)",
+        "strength": "1000 MG",
+        "dose_form": "Injection solution (SOLR) given IV piggyback in sodium chloride 0.9% (NS) 50 ML SOLN",
+        "directions": "1000 MG IVPB every 24 hours (interval), 100 ML/HR (drip rate 100 ML per hour); Start 7/10/26 03:51, End 7/20/26 03:50; REFRIGERATE; Problem: 68566005 Urinary tract infectious disease (Pharmacy Order #854868)",
+        "status": "Active",
+        "prescribed_date": "2026-07-10",
+        "prescriber": "BEDOLLA DENISE M NY (Cosign Physician: QUREASHI MOHAMMAD A MD)",
+        "days_supply": 10,
+        "quantity": null,
+        "refills": null
+      },
+      {
+        "name": "sodium chloride 0.9% (NS)",
+        "strength": "1000 ML",
+        "dose_form": "IV solution",
+        "directions": "IV Continuous 100 ML/HR",
+        "status": "Active",
+        "prescribed_date": null,
+        "prescriber": null,
+        "days_supply": null,
+        "quantity": null,
+        "refills": null
+      },
+      {
+        "name": "morphine PF Inj",
+        "strength": "2 MG/ML",
+        "dose_form": "Injection",
+        "directions": "2 MG IVPUSH Q2H PRN for PAIN - MODERATE (4-6)",
+        "status": "Active",
+        "prescribed_date": null,
+        "prescriber": null,
+        "days_supply": null,
+        "quantity": null,
+        "refills": null
+      },
+      {
+        "name": "acetaminophen (TYLENOL)",
+        "strength": "650 MG",
+        "dose_form": "Oral (PO)",
+        "directions": "650 MG PO Q4H PRN for PAIN - MILD (1-3), FEVER; max 4000 milligrams acetaminophen per 24 hours",
+        "status": "Active",
+        "prescribed_date": null,
+        "prescriber": null,
+        "days_supply": null,
+        "quantity": null,
+        "refills": null
+      },
+      {
+        "name": "calcium carbonate (TUMS)",
+        "strength": "1000 MG",
+        "dose_form": "Oral (PO)",
+        "directions": "1000 MG PO Q4H PRN for HEARTBURN-INDIGESTION",
+        "status": "Active",
+        "prescribed_date": null,
+        "prescriber": null,
+        "days_supply": null,
+        "quantity": null,
+        "refills": null
+      },
+      {
+        "name": "DOCUSATE SODIUM",
+        "strength": "100 MG/10ML",
+        "dose_form": "Oral liquid (PO)",
+        "directions": "100 MG PO Q12H; may give via nasogastric tube if present",
+        "status": "Active",
+        "prescribed_date": null,
+        "prescriber": null,
+        "days_supply": null,
+        "quantity": null,
+        "refills": null
+      },
+      {
+        "name": "heparin Inj",
+        "strength": "5000 UNIT/ML",
+        "dose_form": "Injection",
+        "directions": "5000 UNT SUBCUT Q12H",
+        "status": "Active",
+        "prescribed_date": null,
+        "prescriber": null,
+        "days_supply": null,
+        "quantity": null,
+        "refills": null
+      },
+      {
+        "name": "morphine PF Inj",
+        "strength": "2 MG/ML",
+        "dose_form": "Injection",
+        "directions": "4 MG IVPUSH Q2H PRN for PAIN - SEVERE (7-10)",
+        "status": "Active",
+        "prescribed_date": null,
+        "prescriber": null,
+        "days_supply": null,
+        "quantity": null,
+        "refills": null
+      },
+      {
+        "name": "ondansetron Inj (ZOFRAN)",
+        "strength": "4 MG/2 ML",
+        "dose_form": "Injection",
+        "directions": "4 MG IVPUSH Q8H PRN for NAUSEA-VOMITING",
+        "status": "Active",
+        "prescribed_date": null,
+        "prescriber": null,
+        "days_supply": null,
+        "quantity": null,
+        "refills": null
+      },
+      {
+        "name": "zolpidem (AMBIEN)",
+        "strength": "5 MG",
+        "dose_form": "Oral (PO)",
+        "directions": "5 MG PO at BEDTIME PRN for SLEEP-INSOMNIA",
+        "status": "Active",
+        "prescribed_date": null,
+        "prescriber": null,
+        "days_supply": null,
+        "quantity": null,
+        "refills": null
+      }
+    ],
+    "allergies": [],
+    "diagnoses_section_present": true,
+    "medications_section_present": true,
+    "allergies_section_present": true,
+    "no_known_allergies_explicit": true,
+    "notes": [
+      "Allergies section of the consult note (page 6) states 'No Known Allergies'; the 'Food Allergies:' and 'Dislikes:' fields on the case management order (page 4) are blank.",
+      "HOME HLTH / case management order (page 4): Number 1512850, Order # 0005900, Order Dt/Tm 7/13/26 14:16, Order Status ROUTINE, Start Dt/Tm 7/13/26 14:15, Keyed By MAVENTUR, Order Phys HORTON ISAIAH M, Admit Phys HORTON ISAIAH M, TYPE (handwritten box): HOME HLTH, Procedure: CASE MANAGEMENT ORDER, handwritten annotation 'wound care', Dx: UTI/ URINARY TRACT INFECTION, SITE NOT SPECIFIED; Rm/Bed 100 03 -A; Admit 7/10/26; Ht 180.34 cm; Wt 68.040 kg; Chart# 435589.",
+      "Nursing Order #1700 (7/10/26 11:11): Desc WOUND CARE, Priority Routine, Frequency DAILY, Occurrences 0, Start 7/10/26 11:10. Comments as printed: 'remove all dressings. Walsh wounds with normal saline. Packed with moist gauze. Cover with pink foam dressing. Change daily.' Order Origin eOrder; Ordering Physician PAPOIAN VARDAN (electronically signed 7/10/26 11:11; entered by Vardan Papoian - MD MD); Acknowledged by Dawn Weislek RN 7/10/26 11:41.",
+      "Other inpatient orders (page 5): Ancillary Order #4200 CT ABDOMEN PELVIS WITHOUT, Routine, ONCE, start 7/10/26 10:59, comment 'abd pain', ordering physician QUREASHI MOHAMMAD A MD; Ancillary Order #4100 TRIGGER - VTE RISK MODERATE, Routine, ONCE, start 7/10/26 4:12, Ancillary Instructions 'Submitted by assessment', Order Origin Written, ordering physician HORTON ISAIAH M MD, entered by Alvaran Mary - RN MedSurg RN; Pharmacy Order #854868 ceftriaxone/NS as listed in medications. Order list header: '7/10/26 thru 7/13/26, Order Type: All, Sequenced by: Entered Date'.",
+      "Providers documented: Registration (page 3) - Attending Physician HORTON ISAIAH M (80394), Admitting Physician HORTON ISAIAH M (80394), Referring Physician GEVORGIAN HRANT (41893), Primary Care Physician field blank/0; Face sheet (page 2) - Attending Physician QUREASHI, MOHAMMAD A and PCP 'UNKNOWN, PRIMARY Y'; consult note header (pages 6-8) - Attending HORTON ISAIAH M MD, Primary '-'.",
+      "Consultation note: Date of Service Jul-10-2026 1112, electronically signed by PAPOIAN VARDAN MD on Jul-10-2026 1114. Reason for Consult: ischial wounds. Chief Complaint: establish care.",
+      "HPI: 27-year-old male admitted to the hospital by ambulance; patient states he was a pedestrian struck by a car about a year ago at which point he was left paraplegic; states he had been doing okay but has been having some social issues that he's trying to resolve; about a week ago he was in a hospital at which point he had wounds of his ischium that were debrided; it's unclear what happened but he left the hospital and was admitted to this facility.",
+      "Physical exam: Gen - no acute distress, patient looks comfortable; Mental - AO x 3; HEENT normocephalic, atraumatic; Neck - no masses, no thyromegaly; Resp - no respiratory distress, breathing comfortably; CV - RRR, no murmur, no gallop; Abd - non tender, no guarding, no rebound; Skin - wounds on both ischial tuberosities, clean with good granulation tissue, wounds do extend all the way down to the bone. Procedure(s) Performed: None. Review of Systems: unable to obtain reliable symptoms.",
+      "Recommendations (page 8): 27-year-old male with bilateral lesions due to paraplegia on pressure; patient recently had debridement per his report; wounds look clean and do not require any further surgical intervention; wound care orders placed; case management will discuss with the patient about placement and post hospitalization care.",
+      "Vital signs: Jul-10-2026 0700 - T 97.9, RR 18, BP 134/76, O2Sat 97; Jul-10-2026 0400 - T 97.6, RR 18, BP 129/78, O2Sat 97. Height 180.34 cm; weight 68.040 kg.",
+      "Labs Jul-10-2026 0450: Hematology WBC 5.3, RBC 3.78 (L), HGB 11.3 (L), HCT 32.6 (L), MCV 86.3, MCH 29.8, MCHC 34.5, RDW 14.9, PLT 383, MPV 6.6 (L), NE% 90.5 (H), LY% 7.9 (L), MO% 1.3 (L), EO% 0.1 (L), BA% 0.2, NE# 4.8, LY# 0.4 (L), MO# 0.1 (L), EO# 0.0, BA# 0.0; Coagulation PT 10.8, INR 0.99 (L); Chemistry glucose 163 (H), BUN 8, CREAT 0.4 (L), BUN/CREA 20.0, CHOL 196, TRIG 62, HDL 37 (L), NON-HDL 159, LDL 147 (H), VLDL 12, CHOL/HDL 5.3, LDL/HDL 4.0, calcium 9.7, sodium 133 (L), potassium 4.0, chloride 100 (L), CO2 23, MAG 1.7 (L), TSH 0.20 (L), anion gap 14, lactate 0.8, procalcitonin <0.05 (L), GFR >60.",
+      "Labs Jul-09-2026 2150: Urinalysis - color dark yellow, clarity hazy, SP GRAV 1.025, PH 6.5, protein trace, glucose negative, ketones 3+, bili 1+, blood 3+, urobili 0.2, nitrite negative, leukocyte trace, UA scope Y, squamous epithelial 4-6, WBC 5-9, RBC 41-60, bacteria 1+. Chemistry FENTANYL negative. Special Chemistry - AMPHET U, BENZO U, COCAINE, OPIATES, CANNABIS, PCP, BARBIT U, BUPRENOR, METHAMPH, METHADON, TCA URIN all negative; OXYCODON positive.",
+      "Labs Jul-09-2026 1948: WBC 6.9, RBC 3.59 (L), HGB 10.3 (L), HCT 30.5 (L), MCV 85.1, MCH 28.8, MCHC 33.8, RDW 15.0, PLT 420 (H), MPV 6.4 (L), NE% 73.9 (H), LY% 14.7 (L), MO% 9.8, EO% 1.1, BA% 0.5, NE# 5.1 (H), LY# 1.0 (L), MO# 0.7, EO# 0.1, BA# 0.0; Chemistry glucose 89, BUN 6 (L), CREAT 0.4 (L), BUN/CREA 15.0, SGOT 19, SGPT 32, ALK PHOS 112 (H), TOT BILI 0.7, protein 7.5, albumin 4.3, globulin 3.2, A/G 1.3, calcium 9.5, sodium 130 (L), potassium 3.5 (L), chloride 93 (L), CO2 24, alcohol <10, anion gap 17, lactate 1.0, troponin <0.02 (L), GFR >60.",
+      "Social history: tobacco use - former smoker, smokes cigars, 2-3 sticks of cigarettes, last time patient smoked was 3-4 months ago; alcohol use - liquor, current, occasionally more in the wintertime; drug use - no known use; marital status single; sexual behavior - identifies as male gender (finding); education HS Diploma; occupation 2018 to 2026 Cashier [Cashiers], Industry: Convenience food stores.",
+      "Registration/demographics detail: Race W WHITE; Ethnicity N NOT HISPANIC OR LAT; ADM SOURCE 1; REL U; SEX M; ADM SEX M; MAR ST S; FC W; SERVICE MIP; Room/Bed 03/A; Primary Language E; Admitted by DMI; Advance Directive U; MRSA and VRE fields blank; Discharge Status 0; Accident hour 00 with no accident date/state/description; form ID BC1000/022726 printed 07/13/26 14:31; barcode line '** 01151512850 BC1000 ADMISSIONS 07/10/26 000435589 SARDINA FRANK'.",
+      "Guarantor: SARDINA FRANK, HOMELESS, BARSTOW, CA 92311, phone (999)999-9999, Rel: SELF; Guarantor Employer: UNEMPLOYED, BARSTOW, CA 92311. Patient employer listed as UNEMPLOYED.",
+      "Primary insurance mailing address/phone (not stored in insurance fields): MEDI CAL, PO BOX 15500, SACRAMENTO, CA 958521500, Phone # (800)541-5555. Financial Class on face sheet: MEDI-CAL. Auth #, Group #, and Group Name fields are blank."
+    ]
+  },
+  "insurances": [
+    {
+      "payer_name": "MEDI-CAL",
+      "policy_number": "92562565H46188",
+      "group_number": null,
+      "group_name": null,
+      "policy_holder_name": "SARDINA FRANK",
+      "insurance_type": "Primary",
+      "effective_date": null,
+      "expiration_date": null,
+      "is_patient_policy_holder": true,
+      "subscriber_first_name": "FRANK",
+      "subscriber_last_name": "SARDINA",
+      "subscriber_date_of_birth": "1999-01-24",
+      "subscriber_relationship": "SELF"
+    }
+  ],
+  "requested_services": [
+    {
+      "service": "Home health referral (order TYPE: HOME HLTH) / Case Management Order",
+      "frequency": null,
+      "instructions": "Order # 0005900, Order Status ROUTINE, Order Dt/Tm 7/13/26 14:16 (Start 7/13/26 14:15), Procedure: CASE MANAGEMENT ORDER, handwritten notation 'wound care'; Order Phys HORTON ISAIAH M; Dx: UTI/ URINARY TRACT INFECTION, SITE NOT SPECIFIED"
+    },
+    {
+      "service": "Wound care (nursing order)",
+      "frequency": "DAILY",
+      "instructions": "Nursing Order #1700, Priority Routine, Start 7/10/26 11:10: 'remove all dressings. Walsh [likely 'Wash'] wounds with normal saline. Packed with moist gauze. Cover with pink foam dressing. Change daily.' Ordering physician PAPOIAN VARDAN"
+    },
+    {
+      "service": "Case management / discharge planning - placement and post-hospitalization care",
+      "frequency": null,
+      "instructions": "Consult recommendation: 'case management we will discuss with the patient about placement and post hospitalization care.' Discharge planning contact: Natalie Lewis, phone (760) 957-3223, fax (760) 957-3377"
+    }
+  ],
+  "field_quality": {
+    "patient.name": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        2,
+        3,
+        4,
+        6
+      ],
+      "evidence_quote": "Patient Name: SARDINA, FRANK"
+    },
+    "patient.date_of_birth": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        2,
+        3,
+        4,
+        6
+      ],
+      "evidence_quote": "DOB (age): 01/24/1999 (27)"
+    },
+    "patient.age": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        2,
+        3,
+        4
+      ],
+      "evidence_quote": "AGE 27"
+    },
+    "patient.sex_or_gender": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        2,
+        3,
+        6
+      ],
+      "evidence_quote": "Sex: Male / SEX M / DOB Jan-24-1999 (M)"
+    },
+    "patient.ssn": {
+      "status": "present",
+      "confidence": "medium",
+      "evidence_pages": [
+        2
+      ],
+      "evidence_quote": "SSN (last 4): 3857"
+    },
+    "patient.mrn": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        2,
+        3,
+        6
+      ],
+      "evidence_quote": "MEDICAL RECORD NO. 000435589 / MRN 435589"
+    },
+    "patient.source_patient_id": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        2,
+        3,
+        4,
+        5
+      ],
+      "evidence_quote": "PATIENT ACCOUNT NO. 1512850 / Encounter: 1512850"
+    },
+    "patient.phones": {
+      "status": "unclear",
+      "confidence": "medium",
+      "evidence_pages": [
+        2,
+        3
+      ],
+      "evidence_quote": "PHONE: (999)999-9999"
+    },
+    "patient.address": {
+      "status": "present",
+      "confidence": "medium",
+      "evidence_pages": [
+        2,
+        3
+      ],
+      "evidence_quote": "Patient Address: HOMELESS  BARSTOW, CA 92311"
+    },
+    "patient.email": {
+      "status": "missing",
+      "confidence": "high",
+      "evidence_pages": [],
+      "evidence_quote": null
+    },
+    "patient.emergency_contact": {
+      "status": "explicitly_none",
+      "confidence": "medium",
+      "evidence_pages": [
+        2,
+        3
+      ],
+      "evidence_quote": "Next of Kin: STATES, NONE / EMERGENCY CONTACT 1: STATES NONE / EMERGENCY CONTACT 2: STATES NONE"
+    },
+    "referral_source": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1,
+        3,
+        4
+      ],
+      "evidence_quote": "Barstow Community Hospital  820 East Mountain View Street - Barstow, California 92311 - (760) 256-1761"
+    },
+    "referral_source.provider_name": {
+      "status": "present",
+      "confidence": "medium",
+      "evidence_pages": [
+        3,
+        4
+      ],
+      "evidence_quote": "Order Phys :HORTON ISAIAH M"
+    },
+    "referral_source.referral_or_order_date": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1,
+        4
+      ],
+      "evidence_quote": "Order Dt/Tm : 7/13/26  14:16"
+    },
+    "home_health_or_hospice": {
+      "status": "unclear",
+      "confidence": "medium",
+      "evidence_pages": [
+        1,
+        4
+      ],
+      "evidence_quote": "To: Christian  Company Name: Wesr_coast_  Fax Number: 18189790593 ... TYPE HOME HLTH"
+    },
+    "home_health_or_hospice.organization": {
+      "status": "unclear",
+      "confidence": "low",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Company Name: Wesr_coast_"
+    },
+    "admission": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        2,
+        3,
+        4,
+        6
+      ],
+      "evidence_quote": "ADMISSION DATE & TIME 07/10/26 00:48"
+    },
+    "admission.medicare_admission": {
+      "status": "missing",
+      "confidence": "medium",
+      "evidence_pages": [],
+      "evidence_quote": null
+    },
+    "clinical": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "evidence_quote": "Reason for Consult: ischial wounds"
+    },
+    "clinical.summary": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        4,
+        5,
+        6,
+        8
+      ],
+      "evidence_quote": "- Wound care orders placed  - case management we will discuss with the patient about placement and post hospitalization care."
+    },
+    "clinical.diagnoses": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "evidence_quote": "CHIEF COMPLAINT / ADMITTING DIAGNOSIS: UTI/ URINARY TRACT INFECTION, SITE NOT SPECIFIED"
+    },
+    "clinical.medications": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        5,
+        6
+      ],
+      "evidence_quote": "Active Medications: cefTRIAXone Inj (ROCEPHIN) 1000 MG IVPB Q24I 100 ML/HR"
+    },
+    "clinical.allergies": {
+      "status": "explicitly_none",
+      "confidence": "high",
+      "evidence_pages": [
+        6
+      ],
+      "evidence_quote": "Allergies: No Known Allergies"
+    },
+    "clinical.wound_order_included": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        4,
+        5
+      ],
+      "evidence_quote": "Desc: WOUND CARE  Priority: Routine  Frequency: DAILY"
+    },
+    "insurances": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        2,
+        3
+      ],
+      "evidence_quote": "PRIMARY INSURANCE  MEDI CAL  PO BOX 15500  SACRAMENTO CA 958521500 ... Policy #: 92562565H46188"
+    },
+    "insurances.secondary": {
+      "status": "missing",
+      "confidence": "medium",
+      "evidence_pages": [],
+      "evidence_quote": null
+    },
+    "insurances.tertiary": {
+      "status": "missing",
+      "confidence": "medium",
+      "evidence_pages": [],
+      "evidence_quote": null
+    },
+    "requested_services": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        4,
+        5,
+        8
+      ],
+      "evidence_quote": "TYPE HOME HLTH ... Procedure : CASE MANAGEMENT ORDER ... wound care"
+    }
+  },
+  "warnings": [
+    "Attending physician contradiction: the face sheet (page 2) lists Attending Physician as QUREASHI, MOHAMMAD A, while the Registration Admission form (page 3), the HOME HLTH order (page 4) and the consult note headers (pages 6-8) list HORTON ISAIAH M MD as attending/admitting physician. PAPOIAN VARDAN MD authored the wound consult and the daily wound care order; GEVORGIAN HRANT (#41893) is listed as Referring Physician on registration.",
+    "Page 5 is truncated at the top: the first order block shows only trailing lines (Ordering Physician QUREASHI MOHAMMAD A MD, electronically signed 7/10/26 18:38, entered by Mikitka Conner - Clinical Dietician Morrison RD, acknowledged by Dawn Weislek RN 7/10/26 15:38) with no visible order description, so at least one order in the packet is incomplete. The acknowledgment time (15:38) also precedes the electronic signature time (18:38).",
+    "Patient phone is recorded as (999)999-9999 on both the face sheet and registration form, which appears to be a placeholder rather than a usable number; the patient's address is documented only as 'HOMELESS, Barstow, CA 92311' with no street address.",
+    "Fax cover sheet (page 1) is addressed to 'Christian' at Company Name 'Wesr_coast_' (fax 1-818-979-0593) - a truncated and likely misspelled agency name (possibly 'West Coast'). It is unclear whether this is the intended receiving home health agency; no current home health or hospice provider is documented anywhere in the packet for the patient, so home_health_or_hospice was left unpopulated rather than conflated with the fax recipient or the referring hospital.",
+    "Page 2 (face sheet) is a very faint fax image with OCR uncertainty; key values (policy number 92562565H46188, admission date/time, address, DOB) were cross-confirmed on page 3.",
+    "Page 1 cover sheet text is cut off mid-sentence: 'For Discharge Planning related matters please fax t... (760) 957-3377' - the truncated line is partially illegible; the discharge planning fax (760) 957-3377 and telephone (760) 957-3223 are legible lower on the same page.",
+    "The wound care order comment prints as 'Walsh wounds with normal saline' (page 5), most likely a typographical/OCR artifact for 'Wash wounds with normal saline'; the source wording is preserved in requested_services and notes.",
+    "The guarantor block on page 2 contains the fragment '18 SELF'; the guarantor is the patient himself (Rel: SELF), employer listed as UNEMPLOYED.",
+    "No discharge date is documented (Anticipated D/C and Actual D/C fields blank on page 2; 'Discharged -' on the consult note; Discharge Status 0), so this is a pre-discharge home health / wound care referral.",
+    "MRN appears as both 435589 and zero-padded 000435589; the encounter / patient account number 1512850 is captured as a source patient ID and was NOT treated as an MRN.",
+    "Financial class is shown as 'MEDI-CAL' on the face sheet (page 2) but the registration form's 'FC' code field (page 3) reads 'W' - unexplained inconsistency; only one insurance (Medi-Cal, primary) is documented, with secondary and tertiary insurance blocks blank.",
+    "Primary care physician information is inconsistent/unusable: face sheet lists PCP 'UNKNOWN, PRIMARY Y', registration PCP field shows '0' (blank), and the consult note header shows 'Primary -'."
+  ]
+}

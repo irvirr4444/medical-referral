@@ -19,82 +19,30 @@ export const INTAKE_STAGE: AutomationStageDefinition = {
       description:
         'Poll the monitored Outlook inbox and identify messages that may contain referrals.',
       system: 'Microsoft Graph / Outlook',
-      next: 'Inspect attachments',
+      next: 'Extract and verify referral details',
       input: 'Unread message: New wound care referral',
       output: 'Message and attachment metadata normalized for intake',
       validation:
         'The message has a stable Microsoft message ID and received timestamp.',
     }),
     step({
-      id: 'validate-pdf',
-      name: 'Validate PDF attachment',
+      id: 'extract-and-verify',
+      name: 'Extract and verify referral details',
       description:
-        'Accept only attachments whose name and binary signature identify a real PDF.',
-      system: 'Outlook adapter',
-      next: 'Extract patient and referral details',
-      input: 'synthetic-complete-referral.pdf, application/pdf',
-      output: 'One accepted PDF attachment',
-      validation:
-        'Filename ends in .pdf and content starts with the PDF file signature.',
-      exception: {
-        input: 'synthetic-incomplete-referral.pdf, application/pdf',
-        output: 'One accepted PDF attachment',
-        validation:
-          'The file is valid even though its clinical content is incomplete.',
-      },
-    }),
-    step({
-      id: 'extract-details',
-      name: 'Extract patient and referral details',
-      description:
-        'Send the PDF through the canonical Anthropic Files API extractor.',
-      system: 'Canonical PDF extractor',
-      next: 'Verify evidence and required fields',
-      input: 'Synthetic referral PDF',
+        'Extract the PDF into canonical referral JSON, score the seven required fields, and check the four-field minimum threshold.',
+      system: 'Canonical PDF extractor + intake rules',
+      next: 'Check Monday for existing patient',
+      input: 'Referral PDF attachment',
       output:
-        'Canonical referral JSON with patient, clinical, insurance, and source fields',
+        'Canonical referral with field completeness and threshold decision',
       validation:
-        'The response must satisfy the referral schema before it is accepted.',
+        'Name, DOB, phone, and address must clear the threshold before duplicate checks continue.',
       duration: '2m 41s',
       exception: {
-        input: 'Synthetic referral with no insurance section',
-        output: 'Canonical referral JSON with insurance marked missing',
+        input: 'PDF missing phone or address',
+        output: 'Extraction complete · identity/contact incomplete',
         validation:
-          'Missing content remains null; the extractor does not invent a carrier.',
-      },
-    }),
-    step({
-      id: 'verify-required-fields',
-      name: 'Verify 7 required fields',
-      description:
-        'Classify every required value as complete, explicitly absent, missing, or unclear.',
-      system: 'Intake rules',
-      next: 'Apply the minimum intake threshold',
-      input: 'Canonical referral JSON and source evidence',
-      output: '7 of 7 fields complete',
-      validation:
-        'Name, DOB, phone, address, agency, wound information, and insurance are evaluated separately.',
-      exception: {
-        input: 'Canonical JSON with insurance null',
-        output: '6 of 7 complete; insurance missing',
-        validation:
-          'Missing insurance is surfaced as a gap rather than treated as complete.',
-      },
-    }),
-    step({
-      id: 'check-threshold',
-      name: 'Check minimum threshold',
-      description:
-        'Check whether name, DOB, phone, and address are present before downstream preparation.',
-      system: 'Intake planner',
-      next: 'Check Monday and DRK for existing records',
-      input: 'Four minimum identity/contact fields',
-      output: 'Threshold met; duplicate checks allowed',
-      validation: 'A missing minimum field blocks destination writes.',
-      exception: {
-        input: 'Name and DOB present; phone and address missing',
-        output: 'Threshold not met; downstream writes blocked',
-        validation: 'The plan records the exact missing threshold fields.',
+          'Missing minimum fields block Monday/DRK checks and destination writes.',
       },
     }),
     step({
@@ -121,7 +69,7 @@ export const INTAKE_STAGE: AutomationStageDefinition = {
       description:
         'Check available DRK patient information before preparing a new chart action.',
       system: 'DRK reader',
-      next: 'Confirm referral partner was contacted',
+      next: 'Confirm partner contacted',
       input: 'Patient name and DOB',
       output: 'No exact DRK chart match found',
       validation:
@@ -130,11 +78,11 @@ export const INTAKE_STAGE: AutomationStageDefinition = {
     }),
     step({
       id: 'confirm-referral-contacted',
-      name: 'Confirm referral partner was contacted',
+      name: 'Confirm partner contacted',
       description:
         'Confirm that the referral partner was contacted and outreach notes are captured.',
       system: 'DRK intake team',
-      next: 'Confirm information is correct',
+      next: 'Confirm and complete intake',
       input: 'Contact status, outreach note, and supporting intake context',
       output: 'Referral partner contact confirmed',
       validation:
@@ -147,7 +95,7 @@ export const INTAKE_STAGE: AutomationStageDefinition = {
     }),
     step({
       id: 'confirm-information-complete',
-      name: 'Confirm information is correct and complete intake',
+      name: 'Confirm and complete intake',
       description:
         'A DRK team member confirms extracted data accuracy and marks intake complete.',
       system: 'DRK intake team',

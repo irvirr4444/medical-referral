@@ -87,3 +87,20 @@ export interface ActivityFeedMessage {
   status: OpsEventStatus
 }
 
+export interface StepFeedRow {
+  patientId: string
+  patientName: string
+  stepId: string
+  status: PatientStepStatus
+  summary: string
+  occurredAt: string
+}
+
+export interface StepFeedDay {
+  key: string
+  label: string
+  month: string
+  day: string
+  rows: StepFeedRow[]
+}
+
