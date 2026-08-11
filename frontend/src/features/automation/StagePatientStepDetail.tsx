@@ -8,8 +8,14 @@ type PatientStepDetail = ReturnType<typeof detailForPatientStep>
 
 export function StagePatientStepDetail({
   detail,
+  canConfirm = false,
+  isConfirmed = false,
+  onConfirm,
 }: {
   detail: PatientStepDetail
+  canConfirm?: boolean
+  isConfirmed?: boolean
+  onConfirm?: () => void
 }) {
   const { microstep, progress, example } = detail
   if (!microstep || !progress) {
@@ -18,6 +24,16 @@ export function StagePatientStepDetail({
 
   const when = progress.occurredAt ? parseOpsDate(progress.occurredAt) : null
   const rich = Boolean(example?.artifactSections?.length)
+  const showConfirmationPanel = canConfirm || isConfirmed
+  const confirmationCopy = isConfirmed
+    ? 'Confirmed and recorded in this patient trail.'
+    : progress.status === 'blocked'
+      ? 'Blocked pending confirmation before this stage can proceed.'
+      : progress.status === 'current'
+        ? 'Ready for confirmation now.'
+        : 'Awaiting confirmation.'
+  const confirmationCta =
+    progress.status === 'blocked' ? 'Resolve and confirm' : 'Confirm step'
 
   return (
     <article
@@ -43,9 +59,29 @@ export function StagePatientStepDetail({
       </header>
 
       <section className="stage-ops-step-detail__outcome" aria-label="Outcome">
-        <p className="caption">For this patient</p>
+        <p className="caption">Outcome summary</p>
         <strong>{progress.summary}</strong>
       </section>
+
+      {showConfirmationPanel ? (
+        <section
+          className="stage-ops-step-detail__confirmation"
+          aria-label="Confirmation"
+        >
+          <div className="stage-ops-step-detail__confirmation-copy">
+            <p className="caption">Confirmation</p>
+            <strong>{confirmationCopy}</strong>
+          </div>
+          <button
+            type="button"
+            className={`stage-ops-step-detail__confirm${isConfirmed ? ' is-confirmed' : ''}${canConfirm && !isConfirmed ? ' is-actionable' : ''}`}
+            onClick={onConfirm}
+            disabled={isConfirmed || !canConfirm}
+          >
+            {isConfirmed ? 'Confirmed' : confirmationCta}
+          </button>
+        </section>
+      ) : null}
 
       {progress.status === 'upcoming' ? (
         <p className="muted stage-ops-step-detail__pending">
@@ -56,48 +92,10 @@ export function StagePatientStepDetail({
 
       {rich && example ? (
         <>
-          {example.knownAtThisPoint?.length ? (
-            <section
-              className="microstep-detail__known"
-              aria-label="Known at this point"
-            >
-              <h3>Known at this point</h3>
-              <dl>
-                {example.knownAtThisPoint.map((item) => (
-                  <div key={`${item.label}-${item.value}`}>
-                    <dt>{item.label}</dt>
-                    <dd>{item.value}</dd>
-                  </div>
-                ))}
-              </dl>
-            </section>
-          ) : null}
-
           <section
             className="microstep-detail__artifact"
             aria-label="Produced output"
           >
-            <h3>Output produced in this step</h3>
-            <dl className="microstep-detail__artifact-meta">
-              {example.artifactTitle ? (
-                <div>
-                  <dt>Artifact</dt>
-                  <dd>{example.artifactTitle}</dd>
-                </div>
-              ) : null}
-              {example.duration ? (
-                <div>
-                  <dt>Duration</dt>
-                  <dd>{example.duration}</dd>
-                </div>
-              ) : null}
-              {example.validation ? (
-                <div>
-                  <dt>Validation</dt>
-                  <dd>{example.validation}</dd>
-                </div>
-              ) : null}
-            </dl>
             <ArtifactSections
               sections={example.artifactSections ?? []}
               artifactId={example.artifactId ?? microstep.id}
@@ -127,9 +125,9 @@ function statusLabel(status: string) {
     case 'current':
       return 'Here'
     case 'waiting':
-      return 'Waiting'
+      return 'Awaiting confirmation'
     case 'blocked':
-      return 'Blocked'
+      return 'Blocked pending confirmation'
     default:
       return 'Next'
   }

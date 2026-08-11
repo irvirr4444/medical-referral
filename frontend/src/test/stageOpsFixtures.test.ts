@@ -69,12 +69,12 @@ describe('stage operations fixtures', () => {
     const detail = detailForPatientStep(
       'intake',
       'butler-alva',
-      'interpret-reply',
+      'confirm-referral-contacted',
     )
     expect(detail.progress?.status).toBe('waiting')
     expect(detail.example?.artifactSections?.length).toBeGreaterThan(0)
 
-    const rosa = detailForPatientStep('intake', 'rosa-delgado', 'interpret-reply')
+    const rosa = detailForPatientStep('intake', 'rosa-delgado', 'confirm-referral-contacted')
     expect(rosa.example?.patientName).toMatch(/Rosa/i)
     expect(rosa.example?.artifactSections?.[0]?.fields.length).toBeGreaterThan(0)
 

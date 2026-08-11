@@ -76,10 +76,10 @@ describe('automation inspection console', () => {
       screen.getByRole('navigation', { name: /Automation steps/i }),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: /Interpret the reviewer reply/i }),
+      screen.getByRole('button', { name: /Confirm referral partner was contacted/i }),
     ).toHaveAttribute('aria-current', 'step')
     expect(
-      screen.getByRole('button', { name: /Discover the referral email/i }),
+      screen.getByRole('button', { name: /Receive referral in inbox/i }),
     ).toHaveAttribute('data-status', 'done')
     expect(screen.getAllByText('Butler, Alva').length).toBeGreaterThan(0)
     expect(
@@ -100,14 +100,14 @@ describe('automation inspection console', () => {
     ).toBeInTheDocument()
     expect(within(stepsPanel).getByText('Butler, Alva')).toBeInTheDocument()
     expect(
-      within(stepsPanel).getByLabelText(/Interpret the reviewer reply for this patient/i),
+      within(stepsPanel).getByLabelText(/Confirm referral partner was contacted for this patient/i),
     ).toBeInTheDocument()
     expect(
-      within(stepsPanel).getByText(/No reviewer reply yet · approval remains pending/i),
+      within(stepsPanel).getByText(/Referral partner contact confirmation pending/i),
     ).toBeInTheDocument()
 
     await user.click(
-      within(stepsPanel).getByRole('button', { name: /Discover the referral email/i }),
+      within(stepsPanel).getByRole('button', { name: /Receive referral in inbox/i }),
     )
     expect(
       within(stepsPanel).getByText(/Referral email identified/i),
@@ -139,7 +139,7 @@ describe('automation inspection console', () => {
     expect(within(returnedSteps).getByText('Butler, Alva')).toBeInTheDocument()
     expect(
       within(returnedSteps).getByRole('button', {
-        name: /Interpret the reviewer reply/i,
+        name: /Confirm referral partner was contacted/i,
       }),
     ).toHaveAttribute('aria-current', 'step')
 

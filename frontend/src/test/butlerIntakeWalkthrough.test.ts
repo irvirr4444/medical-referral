@@ -12,8 +12,8 @@ import {
 import { automationStage } from '../features/automation/stages'
 
 describe('Butler intake walkthrough fixtures', () => {
-  it('defines all 13 intake snapshots with unique artifact IDs', () => {
-    expect(BUTLER_INTAKE_STEP_IDS).toHaveLength(13)
+  it('defines all 9 intake snapshots with unique artifact IDs', () => {
+    expect(BUTLER_INTAKE_STEP_IDS).toHaveLength(9)
     expect(Object.keys(BUTLER_INTAKE_SNAPSHOTS).sort()).toEqual(
       [...BUTLER_INTAKE_STEP_IDS].sort(),
     )
@@ -21,7 +21,7 @@ describe('Butler intake walkthrough fixtures', () => {
     const artifactIds = Object.values(BUTLER_INTAKE_SNAPSHOTS).map(
       (snapshot) => snapshot.artifactId,
     )
-    expect(new Set(artifactIds).size).toBe(13)
+    expect(new Set(artifactIds).size).toBe(9)
   })
 
   it('defines one explicit input and output for every intake step', () => {
@@ -34,9 +34,9 @@ describe('Butler intake walkthrough fixtures', () => {
   })
 
   it('keeps step-scoped input and output free of premature patient contact data', () => {
-    const discover = BUTLER_INTAKE_SNAPSHOTS['discover-email']
+    const discover = BUTLER_INTAKE_SNAPSHOTS['receive-referral']
     const validate = BUTLER_INTAKE_SNAPSHOTS['validate-pdf']
-    const extract = BUTLER_INTAKE_SNAPSHOTS['extract-referral']
+    const extract = BUTLER_INTAKE_SNAPSHOTS['extract-details']
     const verify = BUTLER_INTAKE_SNAPSHOTS['verify-required-fields']
 
     expect(discover.input).not.toMatch(/1940-10-04/)
@@ -44,7 +44,7 @@ describe('Butler intake walkthrough fixtures', () => {
     expect(validate.input).toMatch(/\.pdf/i)
     expect(validate.output).toMatch(/Valid PDF/i)
     expect(extract.input).toMatch(/Valid PDF/i)
-    expect(extract.output).toMatch(/Canonical referral JSON/i)
+    expect(extract.output).toMatch(/patient and referral details extracted/i)
     expect(verify.input).toMatch(/Canonical referral JSON/i)
     expect(verify.output).toMatch(/6 of 7/)
     expect(verify.output).toMatch(/agency missing/i)
@@ -53,7 +53,7 @@ describe('Butler intake walkthrough fixtures', () => {
   it('routes intake through a single history entry using snapshot input and output', () => {
     const stage = automationStage('intake')
     const extractStep = stage.microsteps.find(
-      (step) => step.id === 'extract-referral',
+      (step) => step.id === 'extract-details',
     )!
     const example = exampleForRun(BUTLER_RUN_FIXTURE, extractStep, stage.id)
     const history = lifecycleHistoryForStep(
@@ -65,31 +65,31 @@ describe('Butler intake walkthrough fixtures', () => {
 
     expect(history).toHaveLength(1)
     expect(history[0].input).toBe(
-      BUTLER_INTAKE_SNAPSHOTS['extract-referral'].input,
+      BUTLER_INTAKE_SNAPSHOTS['extract-details'].input,
     )
     expect(history[0].output).toBe(
-      BUTLER_INTAKE_SNAPSHOTS['extract-referral'].output,
+      BUTLER_INTAKE_SNAPSHOTS['extract-details'].output,
     )
     expect(history[0].occurredAt).toBe('August 10, 2026 at 9:17 AM')
   })
 
   it('uses Butler snapshots when the Butler run is selected on intake', () => {
     const stage = automationStage('intake')
-    const extractStep = stage.microsteps.find((step) => step.id === 'extract-referral')!
+    const extractStep = stage.microsteps.find((step) => step.id === 'extract-details')!
     const example = exampleForRun(BUTLER_RUN_FIXTURE, extractStep, stage.id)
 
     expect(example.patientName).toBe('BUTLER, ALVA')
-    expect(example.artifactTitle).toBe('Canonical referral extraction')
+    expect(example.artifactTitle).toBe('Patient and referral details extracted')
     expect(example.inputs).toEqual([
       {
         label: 'Input received',
-        value: BUTLER_INTAKE_SNAPSHOTS['extract-referral'].input,
+        value: BUTLER_INTAKE_SNAPSHOTS['extract-details'].input,
       },
     ])
     expect(example.outputs).toEqual([
       {
         label: 'Output produced',
-        value: BUTLER_INTAKE_SNAPSHOTS['extract-referral'].output,
+        value: BUTLER_INTAKE_SNAPSHOTS['extract-details'].output,
       },
     ])
   })

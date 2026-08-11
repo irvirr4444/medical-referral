@@ -4,19 +4,15 @@ import type { PatientStepProgress, PatientStepStatus } from '../types'
 
 export const STAGE_STEP_IDS: Record<FlowOpsPageId, string[]> = {
   intake: [
-    'discover-email',
+    'receive-referral',
     'validate-pdf',
-    'fingerprint-attachment',
-    'extract-referral',
+    'extract-details',
     'verify-required-fields',
-    'apply-threshold',
-    'search-monday',
-    'search-drk',
-    'classify-duplicate',
-    'build-review-email',
-    'send-review-email',
-    'interpret-reply',
-    'gate-destinations',
+    'check-threshold',
+    'check-monday',
+    'check-drk',
+    'confirm-referral-contacted',
+    'confirm-information-complete',
   ],
   handoff: [
     'load-approved-plan',
@@ -148,9 +144,9 @@ function autoDetail(
     status === 'done'
       ? 'Completed for this patient'
       : status === 'blocked'
-        ? 'Blocked · needs human attention'
+        ? 'Blocked pending confirmation'
         : status === 'waiting'
-          ? 'Waiting on a human reply or confirmation'
+          ? 'Awaiting human confirmation'
           : 'In progress for this patient'
 
   return {
@@ -159,9 +155,9 @@ function autoDetail(
       status === 'done'
         ? 'Under 2 seconds'
         : status === 'waiting'
-          ? 'Waiting on human'
+          ? 'Awaiting confirmation'
           : status === 'blocked'
-            ? 'Blocked'
+            ? 'Blocked pending confirmation'
             : 'In progress',
     validation: statusLine,
     fields: [
@@ -200,7 +196,8 @@ const butlerIntake = (): PatientStepProgress[] => {
   return order.map((stepId) => {
     const snap = BUTLER_INTAKE_SNAPSHOTS[stepId]
     const pending =
-      stepId === 'interpret-reply' || stepId === 'gate-destinations'
+      stepId === 'confirm-referral-contacted' ||
+      stepId === 'confirm-information-complete'
     return {
       stepId,
       status: pending ? ('waiting' as const) : ('done' as const),

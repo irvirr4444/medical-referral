@@ -182,11 +182,27 @@ function synthesizeStepExample({
   ]
 
   const fields = facts?.fields ?? [
-    { label: 'Outcome', value: progress.summary },
+    { label: 'Outcome summary', value: progress.summary },
     { label: 'System', value: microstep.system },
     {
+      label: 'Confirmation state',
+      value:
+        progress.status === 'upcoming'
+          ? 'Not in scope yet'
+          : progress.status === 'waiting'
+            ? 'Awaiting confirmation'
+            : progress.status === 'blocked'
+              ? 'Blocked pending confirmation'
+              : 'Confirmed or not required'
+    },
+    {
       label: 'Next expected',
-      value: progress.status === 'upcoming' ? 'Not reached yet' : microstep.next,
+      value:
+        progress.status === 'upcoming'
+          ? 'Not reached yet'
+          : progress.status === 'waiting' || progress.status === 'blocked'
+            ? `After confirmation: ${microstep.next}`
+            : microstep.next,
     },
     {
       label: 'Implementation',
@@ -206,9 +222,9 @@ function synthesizeStepExample({
       (progress.status === 'upcoming'
         ? 'Not started'
         : progress.status === 'waiting'
-          ? 'Waiting on human'
+          ? 'Awaiting confirmation'
           : progress.status === 'blocked'
-            ? 'Blocked'
+            ? 'Blocked pending confirmation'
             : 'Under 2 seconds'),
     validation:
       facts?.validation ??
@@ -262,9 +278,9 @@ function progressStatusLabel(status: PatientStepProgress['status']) {
     case 'current':
       return 'In progress'
     case 'waiting':
-      return 'Waiting'
+      return 'Awaiting confirmation'
     case 'blocked':
-      return 'Blocked'
+      return 'Blocked pending confirmation'
     default:
       return 'Upcoming'
   }

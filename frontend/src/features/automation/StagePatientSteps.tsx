@@ -27,10 +27,14 @@ export function StagePatientSteps({
   const [query, setQuery] = useState('')
   const [listOpen, setListOpen] = useState(false)
   const [selectedStepId, setSelectedStepId] = useState(microsteps[0]?.id ?? '')
+  const [confirmedByPatient, setConfirmedByPatient] = useState<
+    Record<string, Record<string, true>>
+  >({})
 
   useEffect(() => {
     setListOpen(false)
     setQuery('')
+    setConfirmedByPatient({})
   }, [stageId])
 
   const patients = patientsForStage(stageId)
@@ -48,9 +52,28 @@ export function StagePatientSteps({
     patients[0]?.patientId
   const activePatient =
     patients.find((patient) => patient.patientId === activeId) ?? patients[0]
-  const steps = activePatient
+  const rawSteps = activePatient
     ? stepsForPatient(stageId, activePatient.patientId)
     : []
+  const patientConfirmed = activePatient
+    ? confirmedByPatient[activePatient.patientId] ?? {}
+    : {}
+  const steps = useMemo(
+    () =>
+      rawSteps.map((step) =>
+        patientConfirmed[step.stepId]
+          ? {
+              ...step,
+              status: 'done' as const,
+              summary:
+                step.status === 'done'
+                  ? step.summary
+                  : `${step.summary} · confirmation recorded`,
+            }
+          : step,
+      ),
+    [rawSteps, patientConfirmed],
+  )
 
   const stepStatuses = useMemo(() => {
     const map: Record<string, (typeof steps)[number]['status']> = {}
@@ -77,6 +100,41 @@ export function StagePatientSteps({
           selectedStepId,
         )
       : null
+  const detailWithConfirm =
+    stepDetail && patientConfirmed[selectedStepId]
+      ? {
+          ...stepDetail,
+          progress: stepDetail.progress
+            ? {
+                ...stepDetail.progress,
+                status: 'done' as const,
+                summary:
+                  stepDetail.progress.status === 'done'
+                    ? stepDetail.progress.summary
+                    : `${stepDetail.progress.summary} · confirmation recorded`,
+              }
+            : stepDetail.progress,
+        }
+      : stepDetail
+
+  const canConfirmSelected = Boolean(
+    stepDetail?.progress &&
+      (stepDetail.progress.status === 'waiting' ||
+        stepDetail.progress.status === 'blocked' ||
+        stepDetail.progress.status === 'current'),
+  )
+  const isSelectedConfirmed = Boolean(patientConfirmed[selectedStepId])
+
+  const confirmSelectedStep = () => {
+    if (!activePatient || !selectedStepId) return
+    setConfirmedByPatient((current) => ({
+      ...current,
+      [activePatient.patientId]: {
+        ...(current[activePatient.patientId] ?? {}),
+        [selectedStepId]: true,
+      },
+    }))
+  }
 
   const closePatientList = () => {
     setListOpen(false)
@@ -123,7 +181,14 @@ export function StagePatientSteps({
                 </span>
               </button>
             </div>
-            {stepDetail ? <StagePatientStepDetail detail={stepDetail} /> : null}
+            {detailWithConfirm ? (
+              <StagePatientStepDetail
+                detail={detailWithConfirm}
+                canConfirm={canConfirmSelected}
+                isConfirmed={isSelectedConfirmed}
+                onConfirm={confirmSelectedStep}
+              />
+            ) : null}
           </>
         ) : (
           <p className="muted">No patients in this stage.</p>

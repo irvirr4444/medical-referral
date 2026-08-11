@@ -48,7 +48,6 @@ function ArtifactSectionBlock({
             <div key={`${section.id}-${field.label}`} className="artifact-section__field">
               <dt>{field.label}</dt>
               <dd>{field.value}</dd>
-              {field.meta ? <p className="artifact-section__meta">{field.meta}</p> : null}
             </div>
           ))}
         </dl>

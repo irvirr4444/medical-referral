@@ -166,7 +166,7 @@ export function buildButlerIntakeSnapshots(
   ).length
 
   return {
-    'discover-email': snap('discover-email', {
+    'receive-referral': snap('receive-referral', {
       status: 'completed',
       duration: 'Under 1 second',
       executedAt: 'August 10, 2026 at 9:14 AM',
@@ -219,41 +219,28 @@ export function buildButlerIntakeSnapshots(
         },
       ],
     }),
-    'fingerprint-attachment': snap('fingerprint-attachment', {
-      status: 'completed',
-      duration: 'Under 1 second',
-      executedAt: 'August 10, 2026 at 9:14 AM',
-      artifactTitle: 'Document fingerprint',
-      validation:
-        'A completed fingerprint is skipped; failed work may be retried safely.',
-      input: 'Validated PDF bytes',
-      output: `SHA-256 fingerprint recorded · not previously completed`,
-      knownAtThisPoint: identityKnown(record),
-      artifactSections: [
-        {
-          id: 'fingerprint',
-          title: 'Fingerprint record',
-          defaultExpanded: true,
-          fields: [
-            { label: 'SHA-256', value: sha },
-            { label: 'Referral ID', value: record.referral_id },
-            { label: 'Prior completion', value: 'Not previously completed' },
-            { label: 'Retry policy', value: 'Safe to process' },
-          ],
-        },
-      ],
-    }),
-    'extract-referral': snap('extract-referral', {
+    'extract-details': snap('extract-details', {
       status: 'completed',
       duration: '2m 41s',
       executedAt: 'August 10, 2026 at 9:17 AM',
-      artifactTitle: 'Canonical referral extraction',
+      artifactTitle: 'Patient and referral details extracted',
       validation:
         'The response must satisfy the referral schema before it is accepted.',
       input: `Valid PDF · ${pdfName}`,
-      output: `Canonical referral JSON for ${patientName}`,
+      output: `Patient and referral details extracted for ${patientName}`,
       knownAtThisPoint: identityAndContact(record),
-      artifactSections: buildExtractionSections(record),
+      artifactSections: [
+        ...buildExtractionSections(record),
+        {
+          id: 'processing-guard',
+          title: 'Processing guardrail',
+          defaultExpanded: false,
+          fields: [
+            { label: 'SHA-256 fingerprint', value: sha },
+            { label: 'Duplicate completion check', value: 'Not previously completed' },
+          ],
+        },
+      ],
     }),
     'verify-required-fields': snap('verify-required-fields', {
       status: 'attention',
@@ -267,7 +254,7 @@ export function buildButlerIntakeSnapshots(
       knownAtThisPoint: identityAndContact(record),
       artifactSections: buildRequiredFieldSections(record),
     }),
-    'apply-threshold': snap('apply-threshold', {
+    'check-threshold': snap('check-threshold', {
       status: 'attention',
       duration: 'Under 1 second',
       executedAt: 'August 10, 2026 at 9:17 AM',
@@ -304,7 +291,7 @@ export function buildButlerIntakeSnapshots(
         },
       ],
     }),
-    'search-monday': snap('search-monday', {
+    'check-monday': snap('check-monday', {
       status: 'completed',
       duration: '1.2s',
       executedAt: 'August 10, 2026 at 9:17 AM',
@@ -330,7 +317,7 @@ export function buildButlerIntakeSnapshots(
         },
       ],
     }),
-    'search-drk': snap('search-drk', {
+    'check-drk': snap('check-drk', {
       status: 'completed',
       duration: '1.8s',
       executedAt: 'August 10, 2026 at 9:17 AM',
@@ -361,141 +348,55 @@ export function buildButlerIntakeSnapshots(
         },
       ],
     }),
-    'classify-duplicate': snap('classify-duplicate', {
-      status: 'completed',
-      duration: 'Under 1 second',
-      executedAt: 'August 10, 2026 at 9:17 AM',
-      artifactTitle: 'Duplicate classification',
-      validation: 'Probable and exact matches are blocked for human review.',
-      input: 'Monday: 0 candidates · DRK: 0 exact matches',
-      output: 'Distinct patient · creation eligible after approval',
-      knownAtThisPoint: identityAndContact(record),
-      artifactSections: [
-        {
-          id: 'duplicate',
-          title: 'Combined duplicate result',
-          defaultExpanded: true,
-          fields: [
-            { label: 'Monday candidates', value: '0' },
-            { label: 'DRK candidates', value: '0 exact matches' },
-            { label: 'Classification', value: 'Distinct patient' },
-            {
-              label: 'Creation eligibility',
-              value: 'Eligible after human approval (subject to field completeness)',
-            },
-          ],
-        },
-      ],
-    }),
-    'build-review-email': snap('build-review-email', {
-      status: 'attention',
+    'confirm-referral-contacted': snap('confirm-referral-contacted', {
+      status: 'waiting',
       duration: 'Under 1 second',
       executedAt: 'August 10, 2026 at 9:18 AM',
-      artifactTitle: 'Human review email draft',
+      artifactTitle: 'Referral partner contact confirmation',
       validation:
-        'The message states what is missing and never claims a write already occurred.',
-      input: `Completeness ${completeCount}/7 · duplicate clear · agency missing`,
-      output: 'Review email draft with blockers and approval instructions',
+        'Intake cannot complete until referral partner contact is explicitly confirmed.',
+      input: 'Outreach note and intake review context',
+      output: 'Referral partner contact confirmation pending',
       knownAtThisPoint: identityAndContact(record),
       artifactSections: [
         {
-          id: 'review-draft',
-          title: 'Review summary',
+          id: 'contact-confirmation',
+          title: 'Contact confirmation checklist',
           defaultExpanded: true,
           fields: [
-            { label: 'Patient', value: patientName },
-            { label: 'Referral ID', value: record.referral_id },
-            {
-              label: 'Completeness',
-              value: `${completeCount} of 7 required fields complete`,
-            },
-            {
-              label: 'Missing',
-              value: 'Home health or hospice agency',
-              fieldPath: 'home_health_or_hospice',
-            },
-            { label: 'Duplicate status', value: 'Distinct patient' },
-            {
-              label: 'Draft excerpt',
-              value:
-                'Missing home-health/hospice agency. Duplicate search clear. Approval required before destination writes.',
-            },
-          ],
-        },
-      ],
-    }),
-    'send-review-email': snap('send-review-email', {
-      status: 'completed',
-      duration: 'Under 1 second',
-      executedAt: 'August 10, 2026 at 9:18 AM',
-      artifactTitle: 'Review request delivery',
-      validation:
-        'The outbound message is linked to one referral and one review request.',
-      input: 'Review email draft addressed to WCW reviewer',
-      output: 'Review request delivered · message ID stored',
-      knownAtThisPoint: identityAndContact(record),
-      artifactSections: [
-        {
-          id: 'delivery',
-          title: 'Delivery receipt',
-          defaultExpanded: true,
-          fields: [
-            { label: 'Destination', value: 'Braxton Rickert · info-box review queue' },
+            { label: 'Referral partner contacted', value: 'Pending confirmation' },
+            { label: 'Outreach owner', value: 'DRK intake screen watcher' },
+            { label: 'Expected note', value: 'Call or callback outcome logged' },
+            { label: 'Escalation path', value: 'Marketer follow-up if unreachable' },
+            { label: 'Review queue', value: 'Braxton Rickert · info-box queue' },
             { label: 'Message ID', value: 'AAMkAGButlerReview001' },
             { label: 'Thread', value: emailId },
-            { label: 'Sent at', value: 'August 10, 2026 at 9:18 AM' },
-            { label: 'Linked referral', value: record.referral_id },
           ],
         },
       ],
     }),
-    'interpret-reply': snap('interpret-reply', {
+    'confirm-information-complete': snap('confirm-information-complete', {
       status: 'waiting',
-      duration: 'Pending',
+      duration: 'Awaiting human confirmation',
       executedAt: 'August 10, 2026 at 9:18 AM',
-      artifactTitle: 'Reviewer reply classification',
+      artifactTitle: 'Referral Intake completion confirmation',
       validation:
-        'Ambiguous replies remain pending and cannot trigger external writes.',
-      input: 'Outbound review request awaiting reply',
-      output: 'No reviewer reply yet · approval remains pending',
+        'A DRK team member must confirm accuracy before intake is complete.',
+      input: 'Extracted referral details + Monday/DRK checks + contact confirmation',
+      output: 'Waiting for DRK confirmation that information is correct',
       knownAtThisPoint: identityAndContact(record),
       artifactSections: [
         {
-          id: 'reply',
-          title: 'Reply interpretation',
+          id: 'completion-confirmation',
+          title: 'Intake completion gate',
           defaultExpanded: true,
           fields: [
-            { label: 'Status', value: 'Awaiting human reply' },
-            { label: 'Expected intent', value: 'approve · reject · correct · unclear' },
-            {
-              label: 'Blockers visible to reviewer',
-              value: 'Missing home-health/hospice agency',
-              fieldPath: 'home_health_or_hospice',
-            },
-          ],
-        },
-      ],
-    }),
-    'gate-destinations': snap('gate-destinations', {
-      status: 'waiting',
-      duration: 'Not authorized',
-      executedAt: 'August 10, 2026 at 9:18 AM',
-      artifactTitle: 'Destination authorization gate',
-      validation: 'The gate is atomic and idempotent.',
-      input: 'Field gate blocked · duplicate clear · approval pending',
-      output: 'Monday and DRK destination actions denied',
-      knownAtThisPoint: identityAndContact(record),
-      artifactSections: [
-        {
-          id: 'gate-receipt',
-          title: 'Authorization receipt',
-          defaultExpanded: true,
-          fields: [
-            { label: 'Seven-field gate', value: 'Blocked — 1 field missing' },
-            { label: 'Duplicate gate', value: 'Clear' },
-            { label: 'Human approval', value: 'Pending' },
-            { label: 'Canonical version', value: 'v1 · schema_version 1' },
-            { label: 'Decision', value: 'Destination actions denied' },
+            { label: 'Information verified as correct', value: 'Pending confirmation' },
+            { label: 'Seven required fields', value: `${completeCount} of 7 complete` },
+            { label: 'Monday check', value: 'No existing patient found' },
+            { label: 'DRK check', value: 'No existing chart found' },
+            { label: 'Missing field', value: 'Home health or hospice agency' },
+            { label: 'Decision', value: 'Intake remains open until confirmation is recorded' },
           ],
         },
       ],
@@ -506,17 +407,13 @@ export function buildButlerIntakeSnapshots(
 export const BUTLER_INTAKE_SNAPSHOTS = buildButlerIntakeSnapshots()
 
 export const BUTLER_INTAKE_STEP_IDS = [
-  'discover-email',
+  'receive-referral',
   'validate-pdf',
-  'fingerprint-attachment',
-  'extract-referral',
+  'extract-details',
   'verify-required-fields',
-  'apply-threshold',
-  'search-monday',
-  'search-drk',
-  'classify-duplicate',
-  'build-review-email',
-  'send-review-email',
-  'interpret-reply',
-  'gate-destinations',
+  'check-threshold',
+  'check-monday',
+  'check-drk',
+  'confirm-referral-contacted',
+  'confirm-information-complete',
 ] as const

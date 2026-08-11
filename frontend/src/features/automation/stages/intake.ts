@@ -10,12 +10,12 @@ export const INTAKE_STAGE: AutomationStageDefinition = {
   trigger:
     'A new Outlook message reaches the monitored inbox with at least one PDF attachment.',
   successDefinition:
-    'The referral is fingerprinted, extracted, checked for missing fields and duplicates, and held behind human approval.',
+    'The referral is extracted, checked for missing fields and existing records, then completed after human confirmation.',
   implementationStatus: 'working',
   microsteps: [
     step({
-      id: 'discover-email',
-      name: 'Discover the referral email',
+      id: 'receive-referral',
+      name: 'Receive referral in inbox',
       description:
         'Poll the monitored Outlook inbox and identify messages that may contain referrals.',
       system: 'Microsoft Graph / Outlook',
@@ -27,11 +27,11 @@ export const INTAKE_STAGE: AutomationStageDefinition = {
     }),
     step({
       id: 'validate-pdf',
-      name: 'Validate PDF attachments',
+      name: 'Validate PDF attachment',
       description:
         'Accept only attachments whose name and binary signature identify a real PDF.',
       system: 'Outlook adapter',
-      next: 'Fingerprint the attachment',
+      next: 'Extract patient and referral details',
       input: 'synthetic-complete-referral.pdf, application/pdf',
       output: 'One accepted PDF attachment',
       validation:
@@ -44,20 +44,8 @@ export const INTAKE_STAGE: AutomationStageDefinition = {
       },
     }),
     step({
-      id: 'fingerprint-attachment',
-      name: 'Prevent duplicate processing',
-      description:
-        'Hash the attachment and check whether the same document already completed intake.',
-      system: 'Pipeline state database',
-      next: 'Read the PDF',
-      input: 'Validated PDF bytes',
-      output: 'SHA-256 fingerprint with status: not previously completed',
-      validation:
-        'A completed fingerprint is skipped; failed work may be retried safely.',
-    }),
-    step({
-      id: 'extract-referral',
-      name: 'Extract referral information',
+      id: 'extract-details',
+      name: 'Extract patient and referral details',
       description:
         'Send the PDF through the canonical Anthropic Files API extractor.',
       system: 'Canonical PDF extractor',
@@ -77,7 +65,7 @@ export const INTAKE_STAGE: AutomationStageDefinition = {
     }),
     step({
       id: 'verify-required-fields',
-      name: 'Evaluate the seven required fields',
+      name: 'Verify 7 required fields',
       description:
         'Classify every required value as complete, explicitly absent, missing, or unclear.',
       system: 'Intake rules',
@@ -94,12 +82,12 @@ export const INTAKE_STAGE: AutomationStageDefinition = {
       },
     }),
     step({
-      id: 'apply-threshold',
-      name: 'Apply the minimum threshold',
+      id: 'check-threshold',
+      name: 'Check minimum threshold',
       description:
         'Check whether name, DOB, phone, and address are present before downstream preparation.',
       system: 'Intake planner',
-      next: 'Search for existing patients or prepare follow-up',
+      next: 'Check Monday and DRK for existing records',
       input: 'Four minimum identity/contact fields',
       output: 'Threshold met; duplicate checks allowed',
       validation: 'A missing minimum field blocks destination writes.',
@@ -110,8 +98,8 @@ export const INTAKE_STAGE: AutomationStageDefinition = {
       },
     }),
     step({
-      id: 'search-monday',
-      name: 'Search Monday.com for duplicates',
+      id: 'check-monday',
+      name: 'Check Monday for existing patient',
       description:
         'Search existing Master Sheet items using normalized patient identity.',
       system: 'Monday.com reader',
@@ -128,12 +116,12 @@ export const INTAKE_STAGE: AutomationStageDefinition = {
       },
     }),
     step({
-      id: 'search-drk',
-      name: 'Search DRK for an existing chart',
+      id: 'check-drk',
+      name: 'Check DRK for existing chart',
       description:
         'Check available DRK patient information before preparing a new chart action.',
       system: 'DRK reader',
-      next: 'Classify the combined duplicate result',
+      next: 'Confirm referral partner was contacted',
       input: 'Patient name and DOB',
       output: 'No exact DRK chart match found',
       validation:
@@ -141,83 +129,36 @@ export const INTAKE_STAGE: AutomationStageDefinition = {
       implementationStatus: 'partial',
     }),
     step({
-      id: 'classify-duplicate',
-      name: 'Classify duplicate risk',
+      id: 'confirm-referral-contacted',
+      name: 'Confirm referral partner was contacted',
       description:
-        'Combine Monday and DRK candidates into a clear, probable, or exact result.',
-      system: 'Duplicate policy',
-      next: 'Build the review summary',
-      input: 'Monday: no candidates; DRK: no exact match',
-      output: 'Distinct patient; creation remains eligible after approval',
-      validation: 'Probable and exact matches are blocked for human review.',
-      exception: {
-        input: 'Identity incomplete; both searches indeterminate',
-        output: 'Duplicate status unresolved',
-        validation:
-          'No destination action can pass while duplicate status is unresolved.',
-      },
-    }),
-    step({
-      id: 'build-review-email',
-      name: 'Build the human-review email',
-      description:
-        'Create a concise summary separating extracted data, Monday fields, DRK fields, and warnings.',
-      system: 'Review summary builder',
-      next: 'Send the review request',
-      input: 'Canonical referral, evidence, gaps, and duplicate result',
-      output: 'Review email with approval instructions and referral identifier',
+        'Confirm that the referral partner was contacted and outreach notes are captured.',
+      system: 'DRK intake team',
+      next: 'Confirm information is correct',
+      input: 'Contact status, outreach note, and supporting intake context',
+      output: 'Referral partner contact confirmed',
       validation:
-        'The message states what is missing and never claims a write already occurred.',
+        'Contact confirmation must be explicitly recorded before intake can be completed.',
       exception: {
-        input:
-          'Referral with missing insurance and unresolved duplicate status',
-        output: 'Review email highlights both blockers',
+        input: 'No documented partner contact yet',
+        output: 'Contact confirmation pending',
         validation: 'The reviewer sees every blocker before responding.',
       },
     }),
     step({
-      id: 'send-review-email',
-      name: 'Send the review request',
-      description: 'Send the generated summary to the configured WCW reviewer.',
-      system: 'Microsoft Graph / Outlook',
-      next: 'Wait for a reply',
-      input: 'Review email addressed to the configured reviewer',
-      output: 'Microsoft message ID stored with the referral run',
-      validation:
-        'The outbound message is linked to one referral and one review request.',
-    }),
-    step({
-      id: 'interpret-reply',
-      name: 'Interpret the reviewer reply',
+      id: 'confirm-information-complete',
+      name: 'Confirm information is correct and complete intake',
       description:
-        'Classify a natural-language response as approve, reject, correct, or unclear.',
-      system: 'Approval intent classifier',
-      next: 'Apply the approval gate',
-      input: 'Reply: Everything looks good, you can proceed.',
-      output: 'Intent: approve; referral identifier matched',
-      validation:
-        'Ambiguous replies remain pending and cannot trigger external writes.',
-      exception: {
-        input: 'Reply: I will check this later.',
-        output: 'Intent: unclear; approval remains pending',
-        validation:
-          'No write permission is granted by a non-committal response.',
-        status: 'waiting',
-      },
-    }),
-    step({
-      id: 'gate-destinations',
-      name: 'Gate Monday and DRK actions',
-      description:
-        'Require threshold, duplicate, and human-approval checks before any destination action.',
-      system: 'Guarded execution policy',
+        'A DRK team member confirms extracted data accuracy and marks intake complete.',
+      system: 'DRK intake team',
       next: 'Begin the Handoff stage',
-      input: 'Threshold met; duplicate clear; approval recorded',
-      output: 'Destination preparation authorized exactly once',
-      validation: 'The gate is atomic and idempotent.',
+      input: 'Extracted referral details, field checks, Monday/DRK checks, and contact confirmation',
+      output: 'Referral Intake completed and ready for handoff',
+      validation:
+        'Intake is complete only when outreach is confirmed and the information is approved as accurate.',
       exception: {
-        input: 'Threshold blocked and approval absent',
-        output: 'Destination actions denied',
+        input: 'Contact or accuracy confirmation missing',
+        output: 'Intake completion blocked',
         validation:
           'The run remains available for correction and later review.',
       },
