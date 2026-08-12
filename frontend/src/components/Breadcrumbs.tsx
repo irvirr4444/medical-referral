@@ -11,11 +11,11 @@ export function Breadcrumbs() {
   const { state, dispatch } = useDemo()
   const page =
     state.activePage === 'operations' ? 'overview' : state.activePage
-  const onOverview = page === 'overview'
-  const stage = isFlowOpsPage(page) ? automationStage(page) : null
-  const stageIndex = stage
-    ? AUTOMATION_STAGES.findIndex((item) => item.id === stage.id) + 1
-    : 0
+  if (!isFlowOpsPage(page)) return null
+
+  const stage = automationStage(page)
+  const stageIndex =
+    AUTOMATION_STAGES.findIndex((item) => item.id === stage.id) + 1
 
   const goOverview = () => {
     dispatch({ type: 'SET_ACTIVE_PAGE', page: 'overview' })
@@ -26,35 +26,25 @@ export function Breadcrumbs() {
     <nav className="breadcrumbs" aria-label="Breadcrumb">
       <ol className="breadcrumbs__list">
         <li>
-          {onOverview ? (
-            <span className="breadcrumbs__crumb is-current" aria-current="page">
-              Overview
-            </span>
-          ) : (
-            <button
-              type="button"
-              className="breadcrumbs__crumb is-link"
-              onClick={goOverview}
-            >
-              Overview
-            </button>
-          )}
+          <button
+            type="button"
+            className="breadcrumbs__crumb is-link"
+            onClick={goOverview}
+          >
+            Overview
+          </button>
         </li>
-        {stage ? (
-          <>
-            <li className="breadcrumbs__sep" aria-hidden="true">
-              <ChevronRight size={14} strokeWidth={2} />
-            </li>
-            <li>
-              <span className="breadcrumbs__crumb is-current" aria-current="page">
-                <span className="breadcrumbs__index">
-                  {String(stageIndex).padStart(2, '0')}
-                </span>
-                {stage.shortTitle}
-              </span>
-            </li>
-          </>
-        ) : null}
+        <li className="breadcrumbs__sep" aria-hidden="true">
+          <ChevronRight size={14} strokeWidth={2} />
+        </li>
+        <li>
+          <span className="breadcrumbs__crumb is-current" aria-current="page">
+            <span className="breadcrumbs__index">
+              {String(stageIndex).padStart(2, '0')}
+            </span>
+            {stage.shortTitle}
+          </span>
+        </li>
       </ol>
     </nav>
   )

@@ -1,13 +1,14 @@
 .stage-page {
   display: grid;
-  grid-template-columns: minmax(200px, 0.26fr) minmax(0, 1fr);
+  grid-template-columns: minmax(220px, 0.3fr) minmax(0, 1fr);
+  grid-template-rows: auto minmax(480px, 1fr);
   gap: 0.65rem;
-  align-items: start;
+  align-items: stretch;
 }
 
 .stage-page__rail {
-  position: sticky;
-  top: 3.6rem;
+  grid-column: 1;
+  grid-row: 1;
   display: grid;
   gap: 0.75rem;
   padding: 1rem 0.9rem;
@@ -71,18 +72,75 @@
   font-weight: 650;
 }
 
-.stage-page__main {
-  display: grid;
-  gap: 0.65rem;
+.stage-page__impact {
+  grid-column: 2;
+  grid-row: 1;
   min-width: 0;
+}
+
+/* Flatten inspector so steps sit under description, feed under objectives */
+.stage-page > .stage-ops {
+  display: contents;
+}
+
+.stage-page .stage-ops-steps {
+  display: contents;
+}
+
+.stage-page .stage-ops-steps__rail {
+  grid-column: 1;
+  grid-row: 2;
+  align-self: start;
+  height: fit-content;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 0.85rem 0.65rem 0.85rem 0.75rem;
+  overflow: visible;
+}
+
+.stage-page .stage-ops-steps__rail-copy {
+  padding: 0 0.35rem 0.75rem 0.15rem;
+}
+
+.stage-page .stage-ops-steps__rail .microstep-list {
+  max-height: none;
+  overflow: visible;
+  padding-right: 0.25rem;
+}
+
+.stage-page .stage-ops-steps__detail {
+  grid-column: 2;
+  grid-row: 2;
+  min-width: 0;
+  min-height: 480px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 0.9rem;
 }
 
 @media (max-width: 980px) {
   .stage-page {
     grid-template-columns: 1fr;
+    grid-template-rows: auto;
   }
 
-  .stage-page__rail {
-    position: static;
+  .stage-page__rail,
+  .stage-page__impact,
+  .stage-page .stage-ops-steps__rail,
+  .stage-page .stage-ops-steps__detail {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .stage-page > .stage-ops,
+  .stage-page .stage-ops-steps {
+    display: grid;
+  }
+
+  .stage-page .stage-ops-steps {
+    grid-template-columns: 1fr;
   }
 }

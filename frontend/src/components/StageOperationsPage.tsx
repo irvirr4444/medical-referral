@@ -1,8 +1,10 @@
 import { Target } from 'lucide-react'
 import { FLOW_OPS, type FlowOpsPageId } from '../data/flowOps'
-import { IMPACT_STAGES } from '../data/impactPeriods'
 import { StageInspector } from '../features/automation/StageInspector'
-import { automationStage } from '../features/automation/stages'
+import {
+  AUTOMATION_STAGES,
+  automationStage,
+} from '../features/automation/stages'
 import { OverviewImpactBoard } from './OverviewImpactBoard'
 import './WorkflowModal.css'
 import './StageOperationsPage.css'
@@ -11,7 +13,8 @@ import './StageOperationsPage.css'
 export function StageOperationsPage({ pageId }: { pageId: FlowOpsPageId }) {
   const config = FLOW_OPS[pageId]
   const stage = automationStage(pageId)
-  const stageIndex = IMPACT_STAGES.indexOf(pageId) + 1
+  const stageIndex =
+    AUTOMATION_STAGES.findIndex((item) => item.id === pageId) + 1
 
   return (
     <div className="stage-page">
@@ -39,15 +42,16 @@ export function StageOperationsPage({ pageId }: { pageId: FlowOpsPageId }) {
         </dl>
       </aside>
 
-      <div className="stage-page__main">
+      <div className="stage-page__impact">
         <OverviewImpactBoard
           key={pageId}
           scope={pageId}
           density="compact"
           title="Stage objectives"
         />
-        <StageInspector key={`${pageId}-inspector`} stage={stage} />
       </div>
+
+      <StageInspector key={`${pageId}-inspector`} stage={stage} />
     </div>
   )
 }

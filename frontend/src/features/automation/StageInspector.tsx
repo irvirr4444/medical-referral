@@ -9,7 +9,10 @@ export function StageInspector({
   stage: AutomationStageDefinition
 }) {
   return (
-    <div className="stage-ops panel" aria-label={`${stage.shortTitle} operations`}>
+    <div
+      className="stage-ops"
+      aria-label={`${stage.shortTitle} operations`}
+    >
       <StagePatientSteps stageId={stage.id} microsteps={stage.microsteps} />
     </div>
   )
