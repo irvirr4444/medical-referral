@@ -1,84 +1,72 @@
 .automation-overview {
   display: grid;
-  gap: 1rem;
+  gap: 0.85rem;
 }
 
 .automation-overview__hero {
-  min-height: 240px;
-  padding: clamp(1.5rem, 4vw, 3.5rem);
+  min-height: 0;
+  padding: clamp(1.1rem, 2.5vw, 1.85rem);
   display: grid;
   grid-template-columns: 1fr;
   align-items: end;
-  gap: 2rem;
+  gap: 1rem;
   overflow: hidden;
   position: relative;
-  background:
-    linear-gradient(120deg, rgba(14, 124, 134, 0.08), transparent 52%),
-    var(--surface);
-}
-
-.automation-overview__hero::after {
-  content: '';
-  position: absolute;
-  width: 260px;
-  height: 260px;
-  right: -120px;
-  top: -130px;
-  border: 42px solid rgba(14, 124, 134, 0.08);
-  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
 }
 
 .automation-overview__hero h1 {
   max-width: 780px;
-  margin: 0.35rem 0 0.8rem;
-  font-size: clamp(2rem, 4vw, 3.65rem);
-  line-height: 1.02;
+  margin: 0.25rem 0 0;
+  font-size: clamp(1.7rem, 3.4vw, 2.75rem);
+  line-height: 1.05;
 }
 
 .automation-overview__goal {
   max-width: none;
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 1rem 1.15rem;
-  border: 1px solid rgba(14, 124, 134, 0.24);
-  border-left: 4px solid var(--teal);
-  border-radius: 0 12px 12px 0;
-  background: rgba(255, 255, 255, 0.72);
-  box-shadow: 0 8px 24px rgba(18, 35, 63, 0.05);
+  gap: 0.85rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--panel-dark-border);
+  border-radius: var(--radius);
+  background: var(--panel-dark-bg);
+  color: var(--panel-dark-fg);
 }
 
 .automation-overview__goal-label {
   display: flex;
   align-items: center;
   flex-shrink: 0;
-  gap: 0.4rem;
-  color: var(--teal);
+  gap: 0.35rem;
+  color: var(--panel-dark-fg);
   font-family: var(--font-mono);
-  font-size: 0.78rem;
-  font-weight: 800;
+  font-size: 0.7rem;
+  font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
 .automation-overview__goal p {
   margin: 0;
-  padding-left: 1rem;
-  border-left: 1px solid rgba(14, 124, 134, 0.2);
-  color: var(--navy-soft);
-  font-size: clamp(0.82rem, 1.45vw, 1.05rem);
-  line-height: 1.6;
+  padding-left: 0.85rem;
+  border-left: 1px solid var(--panel-dark-border);
+  color: var(--panel-dark-muted);
+  font-size: clamp(0.8rem, 1.3vw, 0.95rem);
+  line-height: 1.5;
   white-space: nowrap;
 }
 
 .automation-stage-map {
-  padding: 1.4rem;
+  padding: 1rem;
 }
 
 .automation-stage-map__grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.8rem;
+  gap: 0.55rem;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -86,26 +74,24 @@
 
 .automation-stage-card {
   width: 100%;
-  min-height: 205px;
-  padding: 1.15rem;
+  min-height: 160px;
+  padding: 0.9rem;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   text-align: left;
-  color: var(--navy);
-  background: #fff;
+  color: var(--ink);
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius);
   transition:
-    transform 160ms ease,
-    border-color 160ms ease,
-    box-shadow 160ms ease;
+    border-color 140ms ease,
+    background 140ms ease;
 }
 
 .automation-stage-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(14, 124, 134, 0.6);
-  box-shadow: 0 12px 25px rgba(18, 35, 63, 0.08);
+  border-color: var(--forest-mid);
+  background: var(--sage-pale);
 }
 
 .automation-stage-card__top {
@@ -113,30 +99,33 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1.2rem;
+  gap: 0.65rem;
+  margin-bottom: 0.85rem;
 }
 
 .automation-stage-card__number {
-  width: 2rem;
-  height: 2rem;
+  width: 1.85rem;
+  height: 1.85rem;
   display: grid;
   place-items: center;
-  border-radius: 9px;
-  background: var(--navy);
-  color: #fff;
+  border-radius: var(--radius-sm);
+  background: var(--forest);
+  color: var(--cream);
   font-family: var(--font-mono);
+  font-size: 0.72rem;
   font-weight: 700;
+  letter-spacing: 0.04em;
 }
 
 .automation-stage-card > strong {
-  font-size: 1.16rem;
-  margin-bottom: 0.4rem;
+  font-size: 1.05rem;
+  margin-bottom: 0.3rem;
 }
 
 .automation-stage-card
   > span:not(.automation-stage-card__top):not(.automation-stage-card__footer) {
   color: var(--gray);
+  font-size: 0.9rem;
 }
 
 .automation-stage-card__footer {
@@ -145,9 +134,13 @@
   justify-content: space-between;
   align-items: center;
   margin-top: auto;
-  padding-top: 1rem;
-  color: var(--teal);
+  padding-top: 0.75rem;
+  color: var(--forest-mid);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
   font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 @media (max-width: 720px) {

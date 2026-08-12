@@ -58,7 +58,7 @@ export function AutomationOverview() {
               >
                 <span className="automation-stage-card__top">
                   <span className="automation-stage-card__number">
-                    {AUTOMATION_STAGES.indexOf(stage) + 1}
+                    {String(AUTOMATION_STAGES.indexOf(stage) + 1).padStart(2, '0')}
                   </span>
                 </span>
                 <strong>{stage.shortTitle}</strong>

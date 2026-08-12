@@ -68,13 +68,13 @@
   min-height: 2.9rem;
   display: grid;
   place-content: center;
-  border: 3px solid #fff;
-  border-radius: 11px;
+  border: 3px solid var(--surface);
+  border-radius: var(--radius);
   background: var(--navy);
-  color: #fff;
+  color: var(--surface);
   line-height: 1;
   text-align: center;
-  box-shadow: 0 4px 10px rgba(18, 35, 63, 0.12);
+  box-shadow: none;
 }
 
 .microstep-history__date span {
@@ -92,7 +92,7 @@
 .microstep-history__date-continuation {
   width: 0.65rem;
   height: 0.65rem;
-  border: 2px solid #fff;
+  border: 2px solid var(--surface);
   border-radius: 50%;
   background: var(--teal);
   box-shadow: 0 0 0 1px var(--border);
@@ -101,9 +101,9 @@
 .microstep-history__entry > article {
   padding: 0.9rem;
   border: 1px solid var(--border);
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 6px 16px rgba(18, 35, 63, 0.05);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: none;
 }
 
 .microstep-history__entry-header,
@@ -125,7 +125,7 @@
 .microstep-history__latest {
   padding: 0.18rem 0.4rem;
   border-radius: 999px;
-  background: rgba(14, 124, 134, 0.11);
+  background: var(--sage-soft);
   color: var(--teal);
   font-size: 0.68rem;
   font-weight: 700;
@@ -153,8 +153,8 @@
 .microstep-history__change section {
   min-width: 0;
   padding: 0.65rem;
-  border-radius: 9px;
-  background: #f7f9f8;
+  border-radius: var(--radius-sm);
+  background: var(--sage-pale);
 }
 
 .microstep-history__change span {

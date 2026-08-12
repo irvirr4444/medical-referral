@@ -5,8 +5,8 @@
 
 .artifact-section {
   border: 1px solid var(--border);
-  border-radius: 11px;
-  background: #fff;
+  border-radius: var(--radius);
+  background: var(--surface);
   overflow: hidden;
 }
 
@@ -18,7 +18,7 @@
   gap: 0.75rem;
   align-items: center;
   border: 0;
-  background: linear-gradient(180deg, #fff, #f8faf9);
+  background: linear-gradient(180deg, var(--surface), var(--sage-pale));
   color: var(--navy);
   font: inherit;
   font-weight: 700;
@@ -50,8 +50,10 @@
 
 .artifact-section__field dt {
   color: var(--gray);
-  font-size: 0.76rem;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
   font-weight: 700;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -72,8 +74,8 @@
   gap: 0.2rem;
   margin: 0 0 1rem;
   padding: 0.85rem 1rem;
-  border: 1px solid rgba(14, 124, 134, 0.25);
-  border-radius: 11px;
+  border: 1px solid rgba(74, 92, 56, 0.25);
+  border-radius: var(--radius);
   background: var(--teal-soft);
 }
 
@@ -104,8 +106,8 @@
   gap: 0.15rem;
   padding: 0.65rem 0.75rem;
   border: 1px solid var(--border);
-  border-radius: 9px;
-  background: #fff;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
 }
 
 .microstep-detail__known dt {
@@ -127,8 +129,8 @@
 .microstep-detail__artifact-meta div {
   padding: 0.65rem 0.75rem;
   border: 1px solid var(--border);
-  border-radius: 9px;
-  background: #fff;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
 }
 
 .microstep-detail__artifact-meta dt {
@@ -153,13 +155,13 @@
 }
 
 .artifact-sections.is-feed .artifact-section {
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
 }
 
 .artifact-sections.is-feed .artifact-section__toggle {
   padding: 0.55rem 0.7rem;
   font-size: 0.86rem;
-  background: #f7f8fa;
+  background: var(--sage-pale);
 }
 
 .artifact-sections.is-feed .artifact-section__count {

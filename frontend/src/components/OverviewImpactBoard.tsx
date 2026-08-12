@@ -15,14 +15,17 @@ import {
   BOSS_DEMO_TODAY,
   emptyBossPeriodView,
   formatMetricDelta,
+  inclusiveDayCount,
   type BossMetricCard,
   type BossMetricsScope,
   type BossPeriodId,
   type BossPeriodView,
 } from '../data/bossMetrics'
 import { buildBossMetricPatients } from '../data/bossMetricPatients'
+import { buildImpactTrendSeries } from '../data/impactPeriods'
 import { useEscapeDismiss } from '../hooks/useEscapeDismiss'
 import { DatePeriodPicker } from './DatePeriodPicker'
+import { DotMatrixChart } from './DotMatrixChart'
 import './OverviewImpactBoard.css'
 
 export function OverviewImpactBoard({
@@ -214,6 +217,23 @@ export function OverviewImpactBoard({
     setPickerOpen(false)
   }
 
+  const trendSeries = useMemo(() => {
+    const primaryTotal = active.metrics.reduce(
+      (sum, metric) => sum + metric.value,
+      0,
+    )
+    const customDays =
+      selectedId === 'custom'
+        ? (inclusiveDayCount(customStart, customEnd) ?? undefined)
+        : undefined
+    return buildImpactTrendSeries(
+      scope,
+      selectedId === 'custom' ? 'custom' : selectedId,
+      primaryTotal,
+      customDays,
+    )
+  }, [active.metrics, customEnd, customStart, scope, selectedId])
+
   return (
     <section className="impact-board panel" aria-labelledby={headingId}>
       <div className="impact-board__toolbar">
@@ -259,54 +279,66 @@ export function OverviewImpactBoard({
           <h3>{active.label}</h3>
           <p className="caption">{active.caption}</p>
         </header>
-        <ul className="impact-board__stats">
-          {active.metrics.map((metric) => {
-            const trend =
-              metric.delta > 0 ? 'up' : metric.delta < 0 ? 'down' : 'flat'
-            const TrendIcon =
-              trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus
-            return (
-              <li key={metric.id}>
-                <button
-                  type="button"
-                  className="impact-board__stat-card"
-                  onClick={() => {
-                    setSelectedMetric(metric)
-                    setPatientQuery('')
-                  }}
-                  aria-label={`View patients for ${metric.label}`}
-                >
-                  <span className="impact-board__stat-top">
-                    <strong>{metric.value}</strong>
-                    <span
-                      className={`impact-board__delta is-${trend}`}
-                      title={active.comparisonHoverLabel}
-                      aria-label={`${formatMetricDelta(metric.delta)}, ${metric.deltaPercent}% ${active.comparisonHoverLabel}`}
-                    >
-                      <TrendIcon size={14} aria-hidden="true" />
-                      {formatMetricDelta(metric.delta)} ({metric.deltaPercent}%)
-                    </span>
-                  </span>
-                  <span className="impact-board__stat-label">
-                    {metric.label}
-                    <span
-                      className="impact-board__metric-info"
-                      aria-label={metric.meaning}
-                    >
-                      <Info size={14} aria-hidden="true" />
-                      <span className="impact-board__tooltip" role="tooltip">
-                        {metric.meaning}
+        <div className="impact-board__body">
+          <ul className="impact-board__stats">
+            {active.metrics.map((metric) => {
+              const trend =
+                metric.delta > 0 ? 'up' : metric.delta < 0 ? 'down' : 'flat'
+              const TrendIcon =
+                trend === 'up'
+                  ? TrendingUp
+                  : trend === 'down'
+                    ? TrendingDown
+                    : Minus
+              return (
+                <li key={metric.id}>
+                  <button
+                    type="button"
+                    className="impact-board__stat-card"
+                    onClick={() => {
+                      setSelectedMetric(metric)
+                      setPatientQuery('')
+                    }}
+                    aria-label={`View patients for ${metric.label}`}
+                  >
+                    <span className="impact-board__stat-top">
+                      <strong className="stat-number">{metric.value}</strong>
+                      <span
+                        className={`impact-board__delta is-${trend}`}
+                        title={active.comparisonHoverLabel}
+                        aria-label={`${formatMetricDelta(metric.delta)}, ${metric.deltaPercent}% ${active.comparisonHoverLabel}`}
+                      >
+                        <TrendIcon size={14} aria-hidden="true" />
+                        {formatMetricDelta(metric.delta)} ({metric.deltaPercent}
+                        %)
                       </span>
                     </span>
-                  </span>
-                  <span className="impact-board__comparison">
-                    {active.comparisonLabel}
-                  </span>
-                </button>
-              </li>
-            )
-          })}
-        </ul>
+                    <span className="impact-board__stat-label mono-label">
+                      {metric.label}
+                      <span
+                        className="impact-board__metric-info"
+                        aria-label={metric.meaning}
+                      >
+                        <Info size={13} aria-hidden="true" />
+                        <span className="impact-board__tooltip" role="tooltip">
+                          {metric.meaning}
+                        </span>
+                      </span>
+                    </span>
+                    <span className="impact-board__comparison">
+                      {active.comparisonLabel}
+                    </span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+          <DotMatrixChart
+            series={trendSeries}
+            title="Activity density"
+            maxRows={10}
+          />
+        </div>
       </article>
 
       {selectedMetric ? (
