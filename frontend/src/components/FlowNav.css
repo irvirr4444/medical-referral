@@ -2,11 +2,12 @@
   width: 100%;
   min-width: 0;
   position: sticky;
-  top: 0;
+  top: 0.35rem;
   z-index: 20;
-  background: var(--cream);
-  border-bottom: 1px solid var(--border);
   margin: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--cream);
 }
 
 .flow-nav__inner {
@@ -17,7 +18,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.65rem 1rem;
-  padding: 0.55rem 0.35rem 0.55rem 0.85rem;
+  padding: 0.55rem 0.75rem 0.55rem 0.85rem;
 }
 
 .flow-nav__brand {
@@ -40,61 +41,25 @@
   line-height: 1;
 }
 
-.flow-nav__brand-sub {
-  font-family: var(--font-mono);
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--gray);
-}
-
-.flow-nav__tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-  max-width: 100%;
-  overflow-x: auto;
-  padding: 0.15rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--sage-pale);
-}
-
-.flow-nav__link {
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--ink-soft);
-  font-family: var(--font-mono);
-  font-weight: 600;
-  font-size: 0.64rem;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  padding: 0.42rem 0.65rem;
+.flow-nav__account {
+  display: grid;
+  place-items: center;
+  width: 2.15rem;
+  height: 2.15rem;
+  padding: 0;
+  border: 0;
   border-radius: var(--radius-sm);
-  white-space: nowrap;
+  background: transparent;
+  color: var(--ink);
   cursor: pointer;
 }
 
-.flow-nav__link:hover {
-  background: var(--surface);
-  color: var(--ink);
-  border-color: var(--border);
+.flow-nav__account:hover {
+  background: var(--sage-pale);
+  color: var(--forest);
 }
 
-.flow-nav__link.is-active {
-  color: var(--cream);
-  background: var(--forest);
-  border-color: var(--forest);
-}
-
-@media (max-width: 900px) {
-  .flow-nav__inner {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .flow-nav__tabs {
-    flex-wrap: nowrap;
-  }
+.flow-nav__account:focus-visible {
+  outline: 2px solid rgba(74, 92, 56, 0.55);
+  outline-offset: 2px;
 }

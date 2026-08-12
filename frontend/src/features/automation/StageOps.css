@@ -32,7 +32,7 @@
   min-height: 520px;
 }
 
-.stage-ops > .stage-ops-steps {
+.stage-ops>.stage-ops-steps {
   min-height: 520px;
 }
 
@@ -279,7 +279,7 @@
   background: var(--sage-pale);
 }
 
-.stage-ops-how__rail > div {
+.stage-ops-how__rail>div {
   padding: 0 1.2rem 1rem 0;
 }
 
@@ -847,20 +847,20 @@
   list-style: none;
 }
 
-.stage-ops-step-feed__rows > li {
+.stage-ops-step-feed__rows>li {
   animation: stage-ops-feed-enter 0.28s ease both;
 }
 
-.stage-ops-step-feed__rows > li:nth-child(1) {
+.stage-ops-step-feed__rows>li:nth-child(1) {
   animation-delay: 0ms;
 }
 
-.stage-ops-step-feed__rows > li:nth-child(2) {
+.stage-ops-step-feed__rows>li:nth-child(2) {
   animation-delay: 45ms;
 }
 
-.stage-ops-step-feed__rows > li:nth-child(3),
-.stage-ops-step-feed__rows > li:nth-child(n + 4) {
+.stage-ops-step-feed__rows>li:nth-child(3),
+.stage-ops-step-feed__rows>li:nth-child(n + 4) {
   animation-delay: 90ms;
 }
 
@@ -877,7 +877,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .stage-ops-step-feed__rows > li {
+  .stage-ops-step-feed__rows>li {
     animation: none;
   }
 }
@@ -1142,8 +1142,7 @@
   min-width: 0;
 }
 
-.stage-ops-step-feed__assignment-suggestion
-  .stage-ops-step-feed__partner-label {
+.stage-ops-step-feed__assignment-suggestion .stage-ops-step-feed__partner-label {
   grid-column: 1;
 }
 
@@ -1234,7 +1233,7 @@
   border-bottom: 1px solid rgba(43, 58, 30, 0.1);
 }
 
-.stage-ops-step-feed__email-headers > div {
+.stage-ops-step-feed__email-headers>div {
   display: grid;
   grid-template-columns: 4rem minmax(0, 1fr);
   gap: 0.65rem;
@@ -1317,7 +1316,7 @@
   background: rgba(74, 92, 56, 0.06);
 }
 
-.stage-ops-step-feed__drk-summary > div {
+.stage-ops-step-feed__drk-summary>div {
   display: grid;
   gap: 0.08rem;
   min-width: 0;
@@ -1419,7 +1418,7 @@
   margin: 0;
 }
 
-.stage-ops-step-feed__drk-sections dl > div {
+.stage-ops-step-feed__drk-sections dl>div {
   display: grid;
   gap: 0.08rem;
   min-width: 0;
@@ -1842,7 +1841,7 @@
   padding: 0.15rem 0.15rem 0.25rem;
 }
 
-.stage-ops-step-detail > section > h3 {
+.stage-ops-step-detail>section>h3 {
   margin: 0 0 0.5rem;
   color: var(--gray);
   font-size: 0.75rem;
@@ -2035,7 +2034,7 @@
   gap: 0.75rem;
 }
 
-.stage-ops-step-detail__facts > div {
+.stage-ops-step-detail__facts>div {
   padding: 0.85rem 0.95rem;
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -2264,11 +2263,9 @@
   z-index: 1;
   margin: 0;
   padding: 0;
-  background: linear-gradient(
-    180deg,
-    rgba(240, 239, 228, 0.98) 70%,
-    rgba(240, 239, 228, 0.72)
-  );
+  background: linear-gradient(180deg,
+      rgba(240, 239, 228, 0.98) 70%,
+      rgba(240, 239, 228, 0.72));
 }
 
 .stage-ops-feed__day-toggle {
@@ -2511,6 +2508,7 @@
 }
 
 @media (max-width: 980px) {
+
   .stage-ops-now,
   .stage-ops-how,
   .stage-ops-steps {

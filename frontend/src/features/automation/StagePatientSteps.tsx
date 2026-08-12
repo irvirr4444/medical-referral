@@ -22,11 +22,11 @@ const STATUS_FILTERS: Array<{
   id: PatientStepStatus
   meaning: string
 }> = [
-  { id: 'waiting', meaning: 'Needs confirmation' },
-  { id: 'blocked', meaning: 'Stuck' },
-  { id: 'current', meaning: 'In progress' },
-  { id: 'done', meaning: 'Finished' },
-]
+    { id: 'waiting', meaning: 'Needs confirmation' },
+    { id: 'blocked', meaning: 'Stuck' },
+    { id: 'current', meaning: 'In progress' },
+    { id: 'done', meaning: 'Finished' },
+  ]
 
 const DEFAULT_STATUSES: PatientStepStatus[] = STATUS_FILTERS.map(
   (item) => item.id,
@@ -343,37 +343,37 @@ export function StagePatientSteps({
                     const notification =
                       selectedStepId === 'assign-owner'
                         ? caseManagerNotification(
-                            row.patientId,
-                            row.patientName,
-                            selectedCaseManager,
-                          )
+                          row.patientId,
+                          row.patientName,
+                          selectedCaseManager,
+                        )
                         : undefined
                     const referralNotification =
                       stageId === 'handoff' &&
-                      selectedStepId === 'notify-referral-source'
+                        selectedStepId === 'notify-referral-source'
                         ? referralSourceNotification(
-                            row.patientId,
-                            row.patientName,
-                            canonical,
-                          )
+                          row.patientId,
+                          row.patientName,
+                          canonical,
+                        )
                         : undefined
                     const mondayRecord =
                       stageId === 'handoff' &&
-                      selectedStepId === 'create-monday-record'
+                        selectedStepId === 'create-monday-record'
                         ? mondayRecordForPatient(
-                            row.patientId,
-                            row.patientName,
-                            canonical,
-                          )
+                          row.patientId,
+                          row.patientName,
+                          canonical,
+                        )
                         : undefined
                     const drkDraft =
                       stageId === 'handoff' &&
-                      selectedStepId === 'create-update-drk'
+                        selectedStepId === 'create-update-drk'
                         ? drkDraftForPatient(
-                            row.patientId,
-                            row.patientName,
-                            canonical,
-                          )
+                          row.patientId,
+                          row.patientName,
+                          canonical,
+                        )
                         : undefined
                     return (
                       <li
@@ -387,16 +387,16 @@ export function StagePatientSteps({
                                 ? 'DRK chart created'
                                 : 'DRK chart draft needs review'
                               : mondayRecord
-                              ? 'Monday.com record created'
-                              : referralNotification
-                              ? `Referral source notified · ${referralNotification.ccName} CCd`
-                              : selectedStepId === 'assign-owner'
-                              ? `${selectedCaseManager.name} notified`
-                              : selectedStepId === 'determine-owner'
-                                ? assignmentConfirmed
-                                  ? `${selectedCaseManager.name} confirmed as Case Manager`
-                                  : 'Case Manager needs to be confirmed'
-                                : row.summary
+                                ? 'Monday.com record created'
+                                : referralNotification
+                                  ? `Referral source notified · ${referralNotification.ccName} CCd`
+                                  : selectedStepId === 'assign-owner'
+                                    ? `${selectedCaseManager.name} notified`
+                                    : selectedStepId === 'determine-owner'
+                                      ? assignmentConfirmed
+                                        ? `${selectedCaseManager.name} confirmed as Case Manager`
+                                        : 'Case Manager needs to be confirmed'
+                                      : row.summary
                           }
                           patientName={row.patientName}
                           status={
@@ -416,10 +416,10 @@ export function StagePatientSteps({
                           onConfirmPartner={
                             selectedStepId === 'confirm-referral-contacted'
                               ? () =>
-                                  setPartnerConfirmed((current) => ({
-                                    ...current,
-                                    [row.patientId]: true,
-                                  }))
+                                setPartnerConfirmed((current) => ({
+                                  ...current,
+                                  [row.patientId]: true,
+                                }))
                               : undefined
                           }
                           assignmentSuggestion={assignmentSuggestion}
@@ -429,25 +429,25 @@ export function StagePatientSteps({
                           onCaseManagerChange={
                             assignmentSuggestion
                               ? (email) =>
-                                  setSelectedCaseManagers((current) => ({
-                                    ...current,
-                                    [row.patientId]: email,
-                                  }))
+                                setSelectedCaseManagers((current) => ({
+                                  ...current,
+                                  [row.patientId]: email,
+                                }))
                               : undefined
                           }
                           onConfirmAssignment={
                             assignmentSuggestion
                               ? () => {
-                                  setConfirmedAssignments((current) => ({
-                                    ...current,
-                                    [row.patientId]: true,
-                                  }))
-                                  setLatestAssignmentNotification({
-                                    patientId: row.patientId,
-                                    occurredAt: currentOpsTimestamp(),
-                                  })
-                                  setAssignmentNotificationUnread(true)
-                                }
+                                setConfirmedAssignments((current) => ({
+                                  ...current,
+                                  [row.patientId]: true,
+                                }))
+                                setLatestAssignmentNotification({
+                                  patientId: row.patientId,
+                                  occurredAt: currentOpsTimestamp(),
+                                })
+                                setAssignmentNotificationUnread(true)
+                              }
                               : undefined
                           }
                           caseManagerNotification={notification}
@@ -458,7 +458,7 @@ export function StagePatientSteps({
                             showUnreadAssignmentMessage &&
                             selectedStepId === 'assign-owner' &&
                             row.patientId ===
-                              latestAssignmentNotification?.patientId
+                            latestAssignmentNotification?.patientId
                           }
                         />
                       </li>

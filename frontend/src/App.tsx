@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Breadcrumbs } from './components/Breadcrumbs'
 import { FlowNav } from './components/FlowNav'
 import { StageOperationsPage } from './components/StageOperationsPage'
 import { OverviewPage } from './components/WorkflowModal'
@@ -18,6 +19,7 @@ function Dashboard() {
   return (
     <div className="app-shell">
       <FlowNav />
+      <Breadcrumbs />
       {body}
     </div>
   )

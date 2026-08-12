@@ -11,10 +11,7 @@ describe('automation inspection console', () => {
     expect(
       screen.getByRole('navigation', { name: /Primary/i }),
     ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /^Overview$/i })).toHaveAttribute(
-      'aria-current',
-      'page',
-    )
+    expect(screen.getByRole('button', { name: /Account/i })).toBeInTheDocument()
     expect(
       screen.getByRole('heading', {
         name: /Today's Overview/i,
@@ -71,9 +68,8 @@ describe('automation inspection console', () => {
       screen.getByRole('button', { name: /Inspect Referral intake/i }),
     )
 
-    expect(
-      screen.getByRole('button', { name: /1\. Referral intake/i }),
-    ).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByLabelText(/Stage summary/i)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Referral intake/i })).toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: /^Steps$/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: /^Worklist$/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: /^History$/i })).not.toBeInTheDocument()
@@ -186,7 +182,7 @@ describe('automation inspection console', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: /2\. Assignment/i }))
+    await user.click(screen.getByRole('button', { name: /Inspect Assignment/i }))
     const stepsPanel = screen.getByLabelText(/Patient steps/i)
     await user.click(
       within(stepsPanel).getByRole('button', { name: /Assign Case Manager/i }),
@@ -251,7 +247,7 @@ describe('automation inspection console', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: /3\. Handoff/i }))
+    await user.click(screen.getByRole('button', { name: /Inspect Handoff/i }))
     const stepsPanel = screen.getByLabelText(/Patient steps/i)
 
     expect(
@@ -294,7 +290,7 @@ describe('automation inspection console', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: /5\. Scheduling/i }))
+    await user.click(screen.getByRole('button', { name: /Inspect Scheduling/i }))
     expect(screen.getByLabelText(/Patient steps/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/Step updates/i)).toBeInTheDocument()
     expect(

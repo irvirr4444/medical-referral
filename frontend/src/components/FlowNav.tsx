@@ -1,16 +1,23 @@
-import { WORKFLOW_MODAL_TABS } from '../data/constants'
+import { User } from 'lucide-react'
 import { useDemo } from '../state/useDemo'
 import './FlowNav.css'
 
-export const APP_NAV_ITEMS = [...WORKFLOW_MODAL_TABS] as const
-
-export type AppPageId = (typeof APP_NAV_ITEMS)[number]['id']
+export type AppPageId =
+  | 'overview'
+  | 'intake'
+  | 'assignment'
+  | 'handoff'
+  | 'provider'
+  | 'scheduling'
+  | 'end-of-day'
+  | 'weekly'
+  | 'operations'
 
 export function FlowNav() {
-  const { state, dispatch } = useDemo()
+  const { dispatch } = useDemo()
 
   return (
-    <nav className="flow-nav" aria-label="Primary">
+    <nav className="flow-nav panel" aria-label="Primary">
       <div className="flow-nav__inner">
         <button
           type="button"
@@ -21,28 +28,15 @@ export function FlowNav() {
           }}
         >
           <span className="flow-nav__brand-mark">MedRef</span>
-
         </button>
 
-        <div className="flow-nav__tabs" role="presentation">
-          {APP_NAV_ITEMS.map((item) => {
-            const active = state.activePage === item.id
-            return (
-              <button
-                key={item.id}
-                type="button"
-                className={`flow-nav__link ${active ? 'is-active' : ''}`}
-                aria-current={active ? 'page' : undefined}
-                onClick={() => {
-                  dispatch({ type: 'SET_ACTIVE_PAGE', page: item.id })
-                  window.scrollTo({ top: 0, behavior: 'smooth' })
-                }}
-              >
-                {item.label}
-              </button>
-            )
-          })}
-        </div>
+        <button
+          type="button"
+          className="flow-nav__account"
+          aria-label="Account"
+        >
+          <User size={18} aria-hidden="true" strokeWidth={2} />
+        </button>
       </div>
     </nav>
   )
