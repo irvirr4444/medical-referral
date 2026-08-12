@@ -6,29 +6,43 @@ export function MicrostepList({
   steps,
   selectedStepId,
   onSelect,
+  attentionStepIds = [],
 }: {
   steps: AutomationMicrostep[]
   selectedStepId: string
   onSelect: (stepId: string) => void
+  attentionStepIds?: string[]
 }) {
   return (
     <nav className="microstep-list" aria-label="Automation steps">
       <ol>
         {steps.map((step, index) => {
           const selected = step.id === selectedStepId
+          const needsAttention = attentionStepIds.includes(step.id)
           return (
             <li key={step.id}>
               <button
                 type="button"
                 className={`microstep-list__button${selected ? ' is-selected' : ''}`}
                 aria-current={selected ? 'step' : undefined}
+                aria-label={
+                  needsAttention ? `${step.name}, new update` : undefined
+                }
                 onClick={() => onSelect(step.id)}
               >
                 <span className="microstep-list__number" aria-hidden="true">
                   {index + 1}
                 </span>
                 <span className="microstep-list__copy">
-                  <strong>{step.name}</strong>
+                  <span className="microstep-list__title-row">
+                    <strong>{step.name}</strong>
+                    {needsAttention ? (
+                      <span
+                        className="microstep-list__attention-dot"
+                        aria-hidden="true"
+                      />
+                    ) : null}
+                  </span>
                 </span>
                 <ChevronRight size={18} aria-hidden="true" />
               </button>

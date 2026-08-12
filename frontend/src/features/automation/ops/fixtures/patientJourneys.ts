@@ -4,8 +4,8 @@ import { PATIENT_STEP_BREAKDOWNS } from './patientSteps'
 
 const STAGE_ORDER: FlowOpsPageId[] = [
   'intake',
-  'handoff',
   'assignment',
+  'handoff',
   'provider',
   'scheduling',
   'end-of-day',
@@ -45,14 +45,9 @@ export const PATIENT_OPS_JOURNEYS: PatientOpsJourney[] = [
           { occurredAt: 'August 10, 2026 at 9:18 AM', summary: 'Review sent · Monday/DRK blocked' },
         ],
       },
-      {
-        stageId: 'handoff',
-        status: 'blocked',
-        headline: 'Blocked until intake approval and agency',
-        outcomes: [],
-      },
-      upcoming('assignment', 'Waiting on handoff'),
-      upcoming('provider', 'Waiting on assignment'),
+      upcoming('assignment', 'Waiting on intake approval'),
+      upcoming('handoff', 'Waiting on assignment'),
+      upcoming('provider', 'Waiting on handoff'),
       upcoming('scheduling', 'Waiting on provider'),
       upcoming('end-of-day', 'Waiting on scheduling'),
       upcoming('weekly', 'Waiting on active care'),
@@ -73,20 +68,20 @@ export const PATIENT_OPS_JOURNEYS: PatientOpsJourney[] = [
         ],
       },
       {
-        stageId: 'handoff',
-        status: 'done',
-        headline: 'Monday created · DRK pending assisted entry',
-        outcomes: [
-          { occurredAt: 'August 10, 2026 at 10:07 AM', summary: 'Master Sheet item created' },
-          { occurredAt: 'August 10, 2026 at 10:09 AM', summary: 'DRK draft ready' },
-        ],
-      },
-      {
         stageId: 'assignment',
         status: 'done',
         headline: 'Territory matched · Ana suggested',
         outcomes: [
           { occurredAt: 'August 10, 2026 at 10:16 AM', summary: 'Riverside territory · Ana' },
+        ],
+      },
+      {
+        stageId: 'handoff',
+        status: 'done',
+        headline: 'Source and Ana notified · records prepared',
+        outcomes: [
+          { occurredAt: 'August 10, 2026 at 10:17 AM', summary: 'Referral source acknowledged · Ana CCd' },
+          { occurredAt: 'August 10, 2026 at 10:19 AM', summary: 'Monday created · DRK draft ready' },
         ],
       },
       {
@@ -123,16 +118,16 @@ export const PATIENT_OPS_JOURNEYS: PatientOpsJourney[] = [
         outcomes: [{ occurredAt: 'August 9, 2026 at 11:02 AM', summary: 'Approved and authorized for handoff' }],
       },
       {
-        stageId: 'handoff',
-        status: 'done',
-        headline: 'Monday and DRK linked',
-        outcomes: [{ occurredAt: 'August 9, 2026 at 11:20 AM', summary: 'Handoff verified' }],
-      },
-      {
         stageId: 'assignment',
         status: 'done',
         headline: 'Cole assigned',
         outcomes: [{ occurredAt: 'August 9, 2026 at 12:21 PM', summary: 'Owner written' }],
+      },
+      {
+        stageId: 'handoff',
+        status: 'done',
+        headline: 'Source and Cole notified · Monday and DRK linked',
+        outcomes: [{ occurredAt: 'August 9, 2026 at 12:30 PM', summary: 'Handoff verified' }],
       },
       {
         stageId: 'provider',
@@ -173,16 +168,16 @@ export const PATIENT_OPS_JOURNEYS: PatientOpsJourney[] = [
         outcomes: [{ occurredAt: 'August 10, 2026 at 2:40 PM', summary: 'Destination preparation authorized' }],
       },
       {
-        stageId: 'handoff',
-        status: 'done',
-        headline: 'Handoff verified',
-        outcomes: [{ occurredAt: 'August 10, 2026 at 2:54 PM', summary: 'Monday and DRK linked' }],
-      },
-      {
         stageId: 'assignment',
         status: 'done',
         headline: 'Ana assigned',
         outcomes: [{ occurredAt: 'August 10, 2026 at 3:16 PM', summary: 'Assignment written' }],
+      },
+      {
+        stageId: 'handoff',
+        status: 'done',
+        headline: 'Source and Ana notified · handoff verified',
+        outcomes: [{ occurredAt: 'August 10, 2026 at 3:25 PM', summary: 'Monday and DRK linked' }],
       },
       {
         stageId: 'provider',

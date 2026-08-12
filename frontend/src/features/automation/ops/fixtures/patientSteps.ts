@@ -11,23 +11,13 @@ export const STAGE_STEP_IDS: Record<FlowOpsPageId, string[]> = {
     'confirm-referral-contacted',
   ],
   handoff: [
-    'load-approved-plan',
-    'map-monday-fields',
-    'resolve-agency',
-    'write-monday',
-    'prepare-drk',
-    'apply-drk',
-    'link-destinations',
-    'reconcile-handoff',
+    'notify-referral-source',
+    'create-monday-record',
+    'create-update-drk',
   ],
   assignment: [
-    'load-assignment-context',
-    'normalize-location',
-    'load-territories',
-    'match-owner',
-    'classify-assignment',
-    'confirm-assignment',
-    'write-assignment',
+    'determine-owner',
+    'assign-owner',
   ],
   provider: [
     'load-provider-context',
@@ -264,131 +254,78 @@ export const PATIENT_STEP_BREAKDOWNS: Record<
       intakeFromDemo(patient.patientId),
     ]),
   ),
-  handoff: {
-    'maria-alvarez': progression(
-      'handoff',
-      [
-        { summary: 'Approved plan locked', at: 'August 10, 2026 at 10:05 AM' },
-        { summary: 'Monday fields mapped', at: 'August 10, 2026 at 10:06 AM' },
-        { summary: 'Agency matched', at: 'August 10, 2026 at 10:06 AM' },
-        { summary: 'Master Sheet item created', at: 'August 10, 2026 at 10:07 AM' },
-      ],
-      {
-        summary: 'DRK chart draft ready for assisted entry',
-        status: 'current',
-        at: 'August 10, 2026 at 10:09 AM',
-      },
-    ),
-    'james-carter': progression(
-      'handoff',
-      [
-        { summary: 'Approved plan locked', at: 'August 10, 2026 at 9:40 AM' },
-        { summary: 'Monday fields mapped', at: 'August 10, 2026 at 9:41 AM' },
-      ],
-      {
-        summary: 'Two Accounts matches · relation withheld',
-        status: 'blocked',
-        at: 'August 10, 2026 at 9:42 AM',
-      },
-    ),
-    'linda-nguyen': progression(
-      'handoff',
-      [
-        { summary: 'Approved plan locked', at: 'August 10, 2026 at 11:15 AM' },
-        { summary: 'Monday fields mapped', at: 'August 10, 2026 at 11:16 AM' },
-        { summary: 'Agency matched', at: 'August 10, 2026 at 11:16 AM' },
-        { summary: 'Master Sheet item created', at: 'August 10, 2026 at 11:17 AM' },
-      ],
-      {
-        summary: 'DRK Create Patient prepared',
-        status: 'current',
-        at: 'August 10, 2026 at 11:20 AM',
-      },
-    ),
-    'patricia-johnson': allDone('handoff', [
-      { summary: 'Handoff verified', at: 'August 9, 2026 at 11:20 AM' },
+  handoff: Object.fromEntries(
+    INTAKE_DEMO_PATIENTS.slice(1).map((patient) => [
+      patient.patientId,
+      progression(
+        'handoff',
+        [
+          {
+            summary: 'Referral source notified and case manager CCd',
+            at: patient.receivedAt,
+          },
+          {
+            summary: 'Monday.com record created from canonical referral',
+            at: patient.receivedAt,
+          },
+        ],
+        {
+          summary: 'DRK draft generated · catalog matches require review',
+          status: 'blocked',
+          at: patient.receivedAt,
+        },
+      ),
     ]),
-    'thomas-reed': allDone('handoff', [
-      { summary: 'Handoff verified', at: 'August 10, 2026 at 2:54 PM' },
-    ]),
-    'irene-cho': progression(
-      'handoff',
-      [
-        { summary: 'Approved plan locked', at: 'August 8, 2026 at 4:20 PM' },
-        { summary: 'Monday fields mapped', at: 'August 8, 2026 at 4:21 PM' },
-        { summary: 'Master Sheet created', at: 'August 8, 2026 at 4:22 PM' },
-      ],
-      {
-        summary: 'Zero agency matches · unresolved',
-        status: 'blocked',
-        at: 'August 8, 2026 at 4:23 PM',
-      },
-    ),
-    'helen-park': allDone('handoff', [
-      { summary: 'Handoff verified', at: 'August 9, 2026 at 3:14 PM' },
-    ]),
-  },
+  ),
   assignment: {
     'marcus-feldman': progression(
       'assignment',
       [
-        { summary: 'Assignment context loaded', at: 'August 10, 2026 at 9:30 AM' },
-        { summary: 'Location normalized', at: 'August 10, 2026 at 9:30 AM' },
-        { summary: 'Territories loaded', at: 'August 10, 2026 at 9:31 AM' },
-        { summary: 'Gardena · Cole suggested', at: 'August 10, 2026 at 9:31 AM' },
+        { summary: 'AI suggests Cole Winfield · Gardena territory', at: 'August 10, 2026 at 9:31 AM' },
       ],
       {
-        summary: 'Awaiting marketer confirmation',
-        status: 'waiting',
+        summary: 'Case manager notification sent',
+        status: 'done',
         at: 'August 10, 2026 at 9:32 AM',
       },
     ),
     'david-ruiz': progression(
       'assignment',
       [
-        { summary: 'Context loaded', at: 'August 10, 2026 at 11:00 AM' },
-        { summary: 'Location normalized', at: 'August 10, 2026 at 11:00 AM' },
-        { summary: 'Territories loaded', at: 'August 10, 2026 at 11:01 AM' },
-        { summary: 'Coastal LA · Carla suggested', at: 'August 10, 2026 at 11:01 AM' },
+        { summary: 'AI found two possible owners · Coastal LA border', at: 'August 10, 2026 at 11:01 AM' },
       ],
       {
-        summary: 'Border territory · dual owner candidates',
-        status: 'blocked',
+        summary: 'Case manager notification sent',
+        status: 'done',
         at: 'August 10, 2026 at 11:02 AM',
       },
     ),
     'patricia-johnson': allDone('assignment', [
-      { summary: 'Owner written to Monday and DRK', at: 'August 9, 2026 at 12:21 PM' },
+      { summary: 'Cole Winfield confirmed as case manager', at: 'August 9, 2026 at 12:21 PM' },
     ]),
     'thomas-reed': allDone('assignment', [
-      { summary: 'Assignment written', at: 'August 10, 2026 at 3:16 PM' },
+      { summary: 'Ana Torres confirmed as case manager', at: 'August 10, 2026 at 3:16 PM' },
     ]),
     'helen-park': allDone('assignment', [
-      { summary: 'Assignment written', at: 'August 9, 2026 at 3:46 PM' },
+      { summary: 'Cole Winfield confirmed as case manager', at: 'August 9, 2026 at 3:46 PM' },
     ]),
     'betty-hayes': progression(
       'assignment',
       [
-        { summary: 'Context loaded', at: 'August 8, 2026 at 1:10 PM' },
-        { summary: 'Location normalized', at: 'August 8, 2026 at 1:10 PM' },
-        { summary: 'Territories loaded', at: 'August 8, 2026 at 1:11 PM' },
-        { summary: 'Unknown ZIP · no territory', at: 'August 8, 2026 at 1:11 PM' },
+        { summary: 'AI suggests manual-review owner · address incomplete', at: 'August 8, 2026 at 1:11 PM' },
       ],
       {
-        summary: 'Manual owner selection required',
-        status: 'blocked',
+        summary: 'Case manager notification sent',
+        status: 'done',
         at: 'August 8, 2026 at 1:12 PM',
       },
     ),
     'maria-alvarez': progression(
       'assignment',
       [
-        { summary: 'Ready after Monday create', at: 'August 10, 2026 at 10:15 AM' },
-        { summary: 'Location normalized', at: 'August 10, 2026 at 10:15 AM' },
-        { summary: 'Territories loaded', at: 'August 10, 2026 at 10:16 AM' },
-        { summary: 'Riverside · Ana suggested', at: 'August 10, 2026 at 10:16 AM' },
+        { summary: 'AI suggests Donessa Ruiz · Riverside territory', at: 'August 10, 2026 at 10:16 AM' },
       ],
-      { summary: 'Awaiting confirmation', status: 'waiting', at: 'August 10, 2026 at 10:16 AM' },
+      { summary: 'Case manager notification sent', status: 'done', at: 'August 10, 2026 at 10:16 AM' },
     ),
   },
   provider: {

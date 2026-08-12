@@ -4,6 +4,15 @@ import { useEscapeDismiss } from '../../hooks/useEscapeDismiss'
 import { MicrostepList } from './MicrostepList'
 import { StageFeedMessage } from './StageFeedMessage'
 import { detailForPatientStep, feedForStep } from './ops'
+import {
+  CASE_MANAGER_OPTIONS,
+  caseManagerNotification,
+  caseManagerSuggestion,
+  drkDraftForPatient,
+  mondayRecordForPatient,
+  referralSourceNotification,
+} from './fixtures/caseManagerAssignments'
+import { intakeDemoPatient } from './fixtures/intakeDemoPatients'
 import type { FlowOpsPageId } from '../../data/flowOps'
 import type { PatientStepStatus } from './ops/types'
 import type { AutomationMicrostep } from './types'
@@ -26,6 +35,16 @@ const DEFAULT_STATUSES: PatientStepStatus[] = STATUS_FILTERS.map(
 type StatusFilterValue = 'all' | PatientStepStatus
 type StepDetail = ReturnType<typeof detailForPatientStep>
 
+function currentOpsTimestamp() {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date())
+}
+
 export function StagePatientSteps({
   stageId,
   microsteps,
@@ -40,6 +59,18 @@ export function StagePatientSteps({
   const [partnerConfirmed, setPartnerConfirmed] = useState<Record<string, boolean>>(
     {},
   )
+  const [selectedCaseManagers, setSelectedCaseManagers] = useState<
+    Record<string, string>
+  >({})
+  const [confirmedAssignments, setConfirmedAssignments] = useState<
+    Record<string, boolean>
+  >({})
+  const [latestAssignmentNotification, setLatestAssignmentNotification] =
+    useState<{ patientId: string; occurredAt: string } | null>(null)
+  const [assignmentNotificationUnread, setAssignmentNotificationUnread] =
+    useState(false)
+  const [showUnreadAssignmentMessage, setShowUnreadAssignmentMessage] =
+    useState(false)
   const statusMenuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -48,6 +79,11 @@ export function StagePatientSteps({
     setStatusFilter('all')
     setStatusMenuOpen(false)
     setPartnerConfirmed({})
+    setSelectedCaseManagers({})
+    setConfirmedAssignments({})
+    setLatestAssignmentNotification(null)
+    setAssignmentNotificationUnread(false)
+    setShowUnreadAssignmentMessage(false)
   }, [stageId, microsteps[0]?.id])
 
   useEffect(() => {
@@ -94,8 +130,58 @@ export function StagePatientSteps({
     )
   }, [days, selectedStepId])
 
+  const displayDays = useMemo(() => {
+    if (
+      selectedStepId !== 'assign-owner' ||
+      !latestAssignmentNotification
+    ) {
+      return days
+    }
+
+    const latestRow = days
+      .flatMap((day) => day.rows)
+      .find(
+        (row) => row.patientId === latestAssignmentNotification.patientId,
+      )
+    if (!latestRow) return days
+
+    const remainingDays = days
+      .map((day) => ({
+        ...day,
+        rows: day.rows.filter(
+          (row) => row.patientId !== latestAssignmentNotification.patientId,
+        ),
+      }))
+      .filter((day) => day.rows.length > 0)
+
+    return [
+      {
+        key: 'latest-assignment-notification',
+        label: 'Today',
+        month: '—',
+        day: '—',
+        rows: [
+          {
+            ...latestRow,
+            occurredAt: latestAssignmentNotification.occurredAt,
+          },
+        ],
+      },
+      ...remainingDays,
+    ]
+  }, [days, latestAssignmentNotification, selectedStepId])
+
   const selectStep = (stepId: string) => {
+    if (selectedStepId === 'assign-owner' && stepId !== 'assign-owner') {
+      setShowUnreadAssignmentMessage(false)
+    }
+    if (stepId === 'assign-owner') {
+      setShowUnreadAssignmentMessage(assignmentNotificationUnread)
+    }
     setSelectedStepId(stepId)
+    if (stepId === 'assign-owner') {
+      setAssignmentNotificationUnread(false)
+    }
   }
 
   const pickStatus = (value: StatusFilterValue) => {
@@ -119,6 +205,9 @@ export function StagePatientSteps({
           steps={microsteps}
           selectedStepId={selectedStepId}
           onSelect={selectStep}
+          attentionStepIds={
+            assignmentNotificationUnread ? ['assign-owner'] : []
+          }
         />
       </aside>
 
@@ -210,13 +299,13 @@ export function StagePatientSteps({
           </div>
         </div>
 
-        {days.length ? (
+        {displayDays.length ? (
           <ol
             className="stage-ops-step-feed"
             aria-label="Step updates"
             key={selectedStepId}
           >
-            {days.map((day) => (
+            {displayDays.map((day) => (
               <li key={day.key} className="stage-ops-step-feed__day">
                 <h4 className="stage-ops-step-feed__day-header">
                   <time
@@ -233,15 +322,90 @@ export function StagePatientSteps({
                 <ul className="stage-ops-step-feed__rows">
                   {day.rows.map((row) => {
                     const detail = detailForRow(row.patientId)
+                    const canonical = intakeDemoPatient(row.patientId)?.canonical
+                    const suggestedCaseManager = caseManagerSuggestion(
+                      row.patientId,
+                    )
+                    const assignmentSuggestion =
+                      selectedStepId === 'determine-owner'
+                        ? suggestedCaseManager
+                        : undefined
+                    const assignmentConfirmed =
+                      Boolean(confirmedAssignments[row.patientId])
+                    const selectedCaseManagerEmail =
+                      selectedCaseManagers[row.patientId] ??
+                      suggestedCaseManager.email
+                    const selectedCaseManager =
+                      CASE_MANAGER_OPTIONS.find(
+                        (manager) =>
+                          manager.email === selectedCaseManagerEmail,
+                      ) ?? suggestedCaseManager
+                    const notification =
+                      selectedStepId === 'assign-owner'
+                        ? caseManagerNotification(
+                            row.patientId,
+                            row.patientName,
+                            selectedCaseManager,
+                          )
+                        : undefined
+                    const referralNotification =
+                      stageId === 'handoff' &&
+                      selectedStepId === 'notify-referral-source'
+                        ? referralSourceNotification(
+                            row.patientId,
+                            row.patientName,
+                            canonical,
+                          )
+                        : undefined
+                    const mondayRecord =
+                      stageId === 'handoff' &&
+                      selectedStepId === 'create-monday-record'
+                        ? mondayRecordForPatient(
+                            row.patientId,
+                            row.patientName,
+                            canonical,
+                          )
+                        : undefined
+                    const drkDraft =
+                      stageId === 'handoff' &&
+                      selectedStepId === 'create-update-drk'
+                        ? drkDraftForPatient(
+                            row.patientId,
+                            row.patientName,
+                            canonical,
+                          )
+                        : undefined
                     return (
                       <li
                         key={`${row.patientId}-${row.stepId}`}
                         className="stage-ops-step-feed__item is-open"
                       >
                         <StageFeedMessage
-                          summary={row.summary}
+                          summary={
+                            drkDraft
+                              ? drkDraft.readyForFill
+                                ? 'DRK chart created'
+                                : 'DRK chart draft needs review'
+                              : mondayRecord
+                              ? 'Monday.com record created'
+                              : referralNotification
+                              ? `Referral source notified · ${referralNotification.ccName} CCd`
+                              : selectedStepId === 'assign-owner'
+                              ? `${selectedCaseManager.name} notified`
+                              : selectedStepId === 'determine-owner'
+                                ? assignmentConfirmed
+                                  ? `${selectedCaseManager.name} confirmed as Case Manager`
+                                  : 'Case Manager needs to be confirmed'
+                                : row.summary
+                          }
                           patientName={row.patientName}
-                          status={row.status}
+                          status={
+                            selectedStepId === 'determine-owner'
+                              ? assignmentConfirmed
+                                ? 'done'
+                                : 'waiting'
+                              : row.status
+                          }
                           occurredAt={row.occurredAt}
                           detail={detail}
                           showPdf={selectedStepId === 'receive-referral'}
@@ -257,6 +421,44 @@ export function StagePatientSteps({
                                     [row.patientId]: true,
                                   }))
                               : undefined
+                          }
+                          assignmentSuggestion={assignmentSuggestion}
+                          caseManagerOptions={CASE_MANAGER_OPTIONS}
+                          selectedCaseManagerEmail={selectedCaseManagerEmail}
+                          isAssignmentConfirmed={assignmentConfirmed}
+                          onCaseManagerChange={
+                            assignmentSuggestion
+                              ? (email) =>
+                                  setSelectedCaseManagers((current) => ({
+                                    ...current,
+                                    [row.patientId]: email,
+                                  }))
+                              : undefined
+                          }
+                          onConfirmAssignment={
+                            assignmentSuggestion
+                              ? () => {
+                                  setConfirmedAssignments((current) => ({
+                                    ...current,
+                                    [row.patientId]: true,
+                                  }))
+                                  setLatestAssignmentNotification({
+                                    patientId: row.patientId,
+                                    occurredAt: currentOpsTimestamp(),
+                                  })
+                                  setAssignmentNotificationUnread(true)
+                                }
+                              : undefined
+                          }
+                          caseManagerNotification={notification}
+                          referralNotification={referralNotification}
+                          mondayRecord={mondayRecord}
+                          drkDraft={drkDraft}
+                          isUnread={
+                            showUnreadAssignmentMessage &&
+                            selectedStepId === 'assign-owner' &&
+                            row.patientId ===
+                              latestAssignmentNotification?.patientId
                           }
                         />
                       </li>

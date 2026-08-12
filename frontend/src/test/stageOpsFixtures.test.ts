@@ -127,8 +127,8 @@ describe('stage operations fixtures', () => {
 
     const handoffPatient = detailForPatientStep(
       'handoff',
-      'james-carter',
-      'resolve-agency',
+      'sardina-frank',
+      'create-update-drk',
     )
     expect(handoffPatient.example?.artifactSections?.length).toBeGreaterThan(0)
   })

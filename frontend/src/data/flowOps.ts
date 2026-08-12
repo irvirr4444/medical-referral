@@ -43,8 +43,8 @@ export const FLOW_OPS: Record<FlowOpsPageId, FlowOpsConfig> = {
   },
   handoff: {
     id: 'handoff',
-    title: '2. Handoff',
-    blurb: 'Prepare acknowledgements and Monday.com / DRK destination writes after intake clears.',
+    title: '3. Handoff',
+    blurb: 'Notify the referral source and assigned case manager, then create Monday.com / DRK records.',
     comparisonId: 'handoff',
     showNetwork: false,
     showImpact: false,
@@ -58,8 +58,8 @@ export const FLOW_OPS: Record<FlowOpsPageId, FlowOpsConfig> = {
   },
   assignment: {
     id: 'assignment',
-    title: '3. Assignment',
-    blurb: 'Match patient location to territory rules and confirm the case manager.',
+    title: '2. Assignment',
+    blurb: 'Match patient location to territory rules and confirm the case manager before handoff.',
     comparisonId: 'assignment',
     showNetwork: false,
     showImpact: false,

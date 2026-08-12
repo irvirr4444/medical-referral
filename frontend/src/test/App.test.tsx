@@ -173,6 +173,114 @@ describe('automation inspection console', () => {
     ).toBeInTheDocument()
   })
 
+  it('lets an operator change and confirm the suggested case manager', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: /2\. Assignment/i }))
+    const stepsPanel = screen.getByLabelText(/Patient steps/i)
+    await user.click(
+      within(stepsPanel).getByRole('button', { name: /Assign Case Manager/i }),
+    )
+
+    expect(
+      within(stepsPanel).getAllByText(/AI recommendation/i).length,
+    ).toBeGreaterThan(0)
+
+    const managerSelect = within(stepsPanel)
+      .getAllByLabelText(/Assigned case manager/i)
+      .find((select) => !select.hasAttribute('disabled'))!
+    await user.selectOptions(managerSelect, 'ndelpelicano@westcoastwound.com')
+    expect(managerSelect).toHaveValue('ndelpelicano@westcoastwound.com')
+
+    await user.click(
+      within(stepsPanel).getAllByRole('button', {
+        name: /^Confirm$/i,
+      })[0],
+    )
+    expect(
+      within(stepsPanel).getByText(/^Assigned$/i),
+    ).toBeInTheDocument()
+
+    expect(
+      within(stepsPanel).getByRole('button', {
+        name: /Notify Case Manager, new update/i,
+      }),
+    ).toBeInTheDocument()
+    await user.click(
+      within(stepsPanel).getByRole('button', { name: /Notify Case Manager/i }),
+    )
+    expect(
+      within(stepsPanel).queryByRole('button', {
+        name: /Notify Case Manager, new update/i,
+      }),
+    ).not.toBeInTheDocument()
+    expect(within(stepsPanel).getByText(/^Unread$/i)).toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByText(/^Nadine Pelicano notified$/i),
+    ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).getAllByText(/ndelpelicano@westcoastwound\.com/i)
+        .length,
+    ).toBeGreaterThan(0)
+    expect(
+      within(stepsPanel).getAllByLabelText(
+        /Patient data shared with case manager/i,
+      ).length,
+    ).toBeGreaterThan(0)
+
+    await user.click(
+      within(stepsPanel).getByRole('button', { name: /Assign Case Manager/i }),
+    )
+    await user.click(
+      within(stepsPanel).getByRole('button', { name: /Notify Case Manager/i }),
+    )
+    expect(within(stepsPanel).queryByText(/^Unread$/i)).not.toBeInTheDocument()
+  })
+
+  it('shows referral-source notifications as email messages', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: /3\. Handoff/i }))
+    const stepsPanel = screen.getByLabelText(/Patient steps/i)
+
+    expect(
+      within(stepsPanel).getByRole('button', {
+        name: /Notify referral source/i,
+      }),
+    ).toHaveAttribute('aria-current', 'step')
+    expect(
+      within(stepsPanel).getAllByLabelText(
+        /Referral source notification email/i,
+      ).length,
+    ).toBeGreaterThan(0)
+    expect(within(stepsPanel).getAllByText(/^To$/i).length).toBeGreaterThan(0)
+    expect(within(stepsPanel).getAllByText(/^CC$/i).length).toBeGreaterThan(0)
+    expect(
+      within(stepsPanel).getAllByText(/^Subject$/i).length,
+    ).toBeGreaterThan(0)
+
+    await user.click(
+      within(stepsPanel).getByRole('button', {
+        name: /Create Monday\.com Record/i,
+      }),
+    )
+    expect(
+      within(stepsPanel).getAllByText(/^Monday\.com record created$/i).length,
+    ).toBeGreaterThan(0)
+    expect(
+      within(stepsPanel).getAllByLabelText(/Monday\.com record details/i).length,
+    ).toBe(6)
+
+    await user.click(
+      within(stepsPanel).getByRole('button', { name: /Create DRK Chart/i }),
+    )
+    expect(
+      within(stepsPanel).getAllByLabelText(/DRK chart draft details/i).length,
+    ).toBe(6)
+  })
+
   it('keeps the step-first feed on later stages', async () => {
     const user = userEvent.setup()
     render(<App />)

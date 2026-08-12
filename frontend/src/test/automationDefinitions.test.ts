@@ -12,8 +12,8 @@ describe('automation stage definitions', () => {
   it('defines every workflow stage with inspectable microsteps', () => {
     expect(AUTOMATION_STAGES.map((stage) => stage.id)).toEqual([
       'intake',
-      'handoff',
       'assignment',
+      'handoff',
       'provider',
       'scheduling',
       'end-of-day',
@@ -24,7 +24,7 @@ describe('automation stage definitions', () => {
       expect(stage.purpose.length).toBeGreaterThan(30)
       expect(stage.trigger.length).toBeGreaterThan(20)
       expect(stage.successDefinition.length).toBeGreaterThan(20)
-      expect(stage.microsteps.length).toBeGreaterThanOrEqual(6)
+      expect(stage.microsteps.length).toBeGreaterThanOrEqual(2)
 
       const ids = stage.microsteps.map((step) => step.id)
       expect(new Set(ids).size).toBe(ids.length)
