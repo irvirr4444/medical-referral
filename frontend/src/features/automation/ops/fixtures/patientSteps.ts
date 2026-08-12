@@ -1,37 +1,23 @@
 import type { FlowOpsPageId } from '../../../../data/flowOps'
-import { BUTLER_INTAKE_SNAPSHOTS } from '../../fixtures/butlerIntakeSnapshots'
+import { INTAKE_DEMO_BY_ID, INTAKE_DEMO_PATIENTS } from '../../fixtures/intakeDemoPatients'
 import type { PatientStepProgress, PatientStepStatus } from '../types'
 
 export const STAGE_STEP_IDS: Record<FlowOpsPageId, string[]> = {
   intake: [
     'receive-referral',
-    'validate-pdf',
-    'extract-details',
-    'verify-required-fields',
-    'check-threshold',
+    'extract-and-verify',
     'check-monday',
     'check-drk',
     'confirm-referral-contacted',
-    'confirm-information-complete',
   ],
   handoff: [
-    'load-approved-plan',
-    'map-monday-fields',
-    'resolve-agency',
-    'write-monday',
-    'prepare-drk',
-    'apply-drk',
-    'link-destinations',
-    'reconcile-handoff',
+    'notify-referral-source',
+    'create-monday-record',
+    'create-update-drk',
   ],
   assignment: [
-    'load-assignment-context',
-    'normalize-location',
-    'load-territories',
-    'match-owner',
-    'classify-assignment',
-    'confirm-assignment',
-    'write-assignment',
+    'determine-owner',
+    'assign-owner',
   ],
   provider: [
     'load-provider-context',
@@ -64,6 +50,7 @@ export const STAGE_STEP_IDS: Record<FlowOpsPageId, string[]> = {
   ],
   weekly: [
     'start-weekly-cycle',
+    'load-active-links',
     'read-visit-status',
     'normalize-visit-status',
     'detect-visit-change',
@@ -82,7 +69,7 @@ type DoneStep = {
 type TailStep = {
   summary: string
   at?: string
-  status?: Extract<PatientStepStatus, 'current' | 'waiting' | 'blocked'>
+  status?: Extract<PatientStepStatus, 'done' | 'current' | 'waiting' | 'blocked'>
   detail?: PatientStepProgress['detail']
 }
 
@@ -143,9 +130,9 @@ function autoDetail(
     status === 'done'
       ? 'Completed for this patient'
       : status === 'blocked'
-        ? 'Blocked by an unresolved workflow condition'
+        ? 'Blocked pending confirmation'
         : status === 'waiting'
-          ? 'Waiting on the next workflow input'
+          ? 'Awaiting human confirmation'
           : 'In progress for this patient'
 
   return {
@@ -154,9 +141,9 @@ function autoDetail(
       status === 'done'
         ? 'Under 2 seconds'
         : status === 'waiting'
-          ? 'Waiting'
+          ? 'Awaiting confirmation'
           : status === 'blocked'
-            ? 'Blocked'
+            ? 'Blocked pending confirmation'
             : 'In progress',
     validation: statusLine,
     fields: [
@@ -170,7 +157,7 @@ function autoDetail(
             ? 'Safe to inspect · no write-back required'
             : status === 'blocked'
               ? 'Resolve the blocker before destination writes'
-              : 'Automation is holding for the next required input',
+              : 'Automation is holding for the next human confirmation',
       },
     ],
   }
@@ -190,13 +177,63 @@ function allDone(stageId: FlowOpsPageId, rows: DoneStep[]): PatientStepProgress[
   })
 }
 
-const butlerIntake = (): PatientStepProgress[] => {
+function intakeStoryKind(patientId: string): 'complete' | 'waiting' | 'threshold' {
+  const demo = INTAKE_DEMO_BY_ID[patientId]
+  const fq = demo.canonical.field_quality
+  const phone = fq['patient.phones']?.status
+  const address = fq['patient.address']?.status
+  const thresholdOk =
+    (fq['patient.name']?.status === 'present' ||
+      fq['patient.name']?.status === 'explicitly_none') &&
+    (fq['patient.date_of_birth']?.status === 'present' ||
+      fq['patient.date_of_birth']?.status === 'explicitly_none') &&
+    (phone === 'present' || phone === 'explicitly_none') &&
+    (address === 'present' || address === 'explicitly_none')
+  if (!thresholdOk) return 'threshold'
+  const agency = fq['home_health_or_hospice']?.status
+  if (agency === 'present' || agency === 'explicitly_none') return 'complete'
+  return 'waiting'
+}
+
+const intakeFromDemo = (patientId: string): PatientStepProgress[] => {
+  const demo = INTAKE_DEMO_BY_ID[patientId]
+  const story = intakeStoryKind(patientId)
   const order = STAGE_STEP_IDS.intake
+
+  if (story === 'complete') {
+    return order.map((stepId) => {
+      const snap = demo.snapshots[stepId]
+      return {
+        stepId,
+        status: 'done' as const,
+        summary:
+          stepId === 'confirm-referral-contacted'
+            ? 'Partner contact confirmed'
+            : snap.output,
+        occurredAt: snap.executedAt,
+      }
+    })
+  }
+
+  if (story === 'threshold') {
+    return progression(
+      'intake',
+      order.slice(0, 1).map((stepId) => ({
+        summary: demo.snapshots[stepId].output,
+        at: demo.snapshots[stepId].executedAt,
+      })),
+      {
+        summary: demo.snapshots['extract-and-verify'].output,
+        status: 'blocked',
+        at: demo.receivedAt,
+      },
+    )
+  }
+
+  // waiting on confirmation after clear duplicate checks
   return order.map((stepId) => {
-    const snap = BUTLER_INTAKE_SNAPSHOTS[stepId]
-    const pending =
-      stepId === 'confirm-referral-contacted' ||
-      stepId === 'confirm-information-complete'
+    const snap = demo.snapshots[stepId]
+    const pending = stepId === 'confirm-referral-contacted'
     return {
       stepId,
       status: pending ? ('waiting' as const) : ('done' as const),
@@ -211,246 +248,103 @@ export const PATIENT_STEP_BREAKDOWNS: Record<
   FlowOpsPageId,
   Record<string, PatientStepProgress[]>
 > = {
-  intake: {
-    'butler-alva': butlerIntake(),
-    'rosa-delgado': progression(
-      'intake',
-      [
-        { summary: 'Referral email identified', at: 'August 10, 2026 at 8:42 AM' },
-        { summary: 'Valid PDF accepted', at: 'August 10, 2026 at 8:42 AM' },
-        { summary: 'Fingerprint recorded', at: 'August 10, 2026 at 8:43 AM' },
-        { summary: 'Canonical referral extracted', at: 'August 10, 2026 at 8:45 AM' },
-        { summary: '7 of 7 fields complete', at: 'August 10, 2026 at 8:45 AM' },
-        { summary: 'Threshold met', at: 'August 10, 2026 at 8:45 AM' },
-        { summary: 'No Monday candidate', at: 'August 10, 2026 at 8:45 AM' },
-        { summary: 'No DRK match', at: 'August 10, 2026 at 8:46 AM' },
-        { summary: 'Distinct patient', at: 'August 10, 2026 at 8:46 AM' },
-        { summary: 'Review email drafted', at: 'August 10, 2026 at 8:46 AM' },
-        { summary: 'Review request delivered', at: 'August 10, 2026 at 8:46 AM' },
-      ],
-      { summary: 'Awaiting reviewer reply', status: 'waiting', at: 'August 10, 2026 at 8:46 AM' },
-    ),
-    'samuel-ortiz': progression(
-      'intake',
-      [
-        { summary: 'Referral email identified', at: 'August 10, 2026 at 10:05 AM' },
-        { summary: 'Valid PDF accepted', at: 'August 10, 2026 at 10:05 AM' },
-        { summary: 'Fingerprint recorded', at: 'August 10, 2026 at 10:06 AM' },
-        { summary: 'Canonical referral extracted', at: 'August 10, 2026 at 10:08 AM' },
-      ],
-      {
-        summary: 'Insurance missing · 6 of 7 complete',
-        status: 'blocked',
-        at: 'August 10, 2026 at 10:08 AM',
-      },
-    ),
-    'evelyn-brooks': progression(
-      'intake',
-      [
-        { summary: 'Referral email identified', at: 'August 10, 2026 at 11:20 AM' },
-        { summary: 'Valid PDF accepted', at: 'August 10, 2026 at 11:20 AM' },
-        { summary: 'Fingerprint recorded', at: 'August 10, 2026 at 11:21 AM' },
-        { summary: 'Canonical referral extracted', at: 'August 10, 2026 at 11:24 AM' },
-        { summary: '7 of 7 fields complete', at: 'August 10, 2026 at 11:24 AM' },
-        { summary: 'Threshold met', at: 'August 10, 2026 at 11:24 AM' },
-        { summary: 'Probable Monday match found', at: 'August 10, 2026 at 11:25 AM' },
-        { summary: 'DRK check deferred', at: 'August 10, 2026 at 11:25 AM' },
-      ],
-      {
-        summary: 'Duplicate risk · human review required',
-        status: 'blocked',
-        at: 'August 10, 2026 at 11:25 AM',
-      },
-    ),
-    'thomas-reed': allDone('intake', [
-      { summary: 'Approved and destination authorized', at: 'August 10, 2026 at 2:40 PM' },
+  intake: Object.fromEntries(
+    INTAKE_DEMO_PATIENTS.map((patient) => [
+      patient.patientId,
+      intakeFromDemo(patient.patientId),
     ]),
-    'patricia-johnson': allDone('intake', [
-      { summary: 'Approved and authorized for handoff', at: 'August 9, 2026 at 11:02 AM' },
+  ),
+  handoff: Object.fromEntries(
+    INTAKE_DEMO_PATIENTS.slice(1).map((patient) => [
+      patient.patientId,
+      progression(
+        'handoff',
+        [
+          {
+            summary: 'Referral source notified and case manager CCd',
+            at: patient.receivedAt,
+          },
+          {
+            summary: 'Monday.com record created from canonical referral',
+            at: patient.receivedAt,
+          },
+        ],
+        {
+          summary: 'DRK draft generated · catalog matches require review',
+          status: 'blocked',
+          at: patient.receivedAt,
+        },
+      ),
     ]),
-    'robert-williams': progression(
-      'intake',
-      [
-        { summary: 'Referral email identified', at: 'August 9, 2026 at 3:22 PM' },
-        { summary: 'Valid PDF accepted', at: 'August 9, 2026 at 3:22 PM' },
-        { summary: 'Fingerprint recorded', at: 'August 9, 2026 at 3:23 PM' },
-        { summary: 'Canonical referral extracted', at: 'August 9, 2026 at 3:26 PM' },
-      ],
-      {
-        summary: 'Phone and address incomplete',
-        status: 'blocked',
-        at: 'August 9, 2026 at 3:26 PM',
-      },
-    ),
-    'irene-cho': allDone('intake', [
-      { summary: 'Approved and authorized for handoff', at: 'August 8, 2026 at 4:05 PM' },
-    ]),
-    'frank-owens': progression(
-      'intake',
-      [
-        { summary: 'Referral email identified', at: 'August 8, 2026 at 2:11 PM' },
-        { summary: 'Valid PDF accepted', at: 'August 8, 2026 at 2:11 PM' },
-        { summary: 'Fingerprint recorded', at: 'August 8, 2026 at 2:12 PM' },
-        { summary: 'Canonical referral extracted', at: 'August 8, 2026 at 2:15 PM' },
-        { summary: 'Fields evaluated', at: 'August 8, 2026 at 2:15 PM' },
-        { summary: 'Threshold checked', at: 'August 8, 2026 at 2:15 PM' },
-        { summary: 'Duplicate search clear', at: 'August 8, 2026 at 2:16 PM' },
-        { summary: 'No DRK match', at: 'August 8, 2026 at 2:16 PM' },
-        { summary: 'Distinct patient', at: 'August 8, 2026 at 2:16 PM' },
-        { summary: 'Review drafted', at: 'August 8, 2026 at 2:17 PM' },
-        { summary: 'Review sent', at: 'August 8, 2026 at 2:17 PM' },
-      ],
-      {
-        summary: 'Rejected · not a wound-care candidate',
-        status: 'blocked',
-        at: 'August 8, 2026 at 5:40 PM',
-      },
-    ),
-  },
-  handoff: {
-    'maria-alvarez': progression(
-      'handoff',
-      [
-        { summary: 'Approved plan locked', at: 'August 10, 2026 at 10:05 AM' },
-        { summary: 'Monday fields mapped', at: 'August 10, 2026 at 10:06 AM' },
-        { summary: 'Agency matched', at: 'August 10, 2026 at 10:06 AM' },
-        { summary: 'Master Sheet item created', at: 'August 10, 2026 at 10:07 AM' },
-      ],
-      {
-        summary: 'DRK chart draft ready for assisted entry',
-        status: 'current',
-        at: 'August 10, 2026 at 10:09 AM',
-      },
-    ),
-    'james-carter': progression(
-      'handoff',
-      [
-        { summary: 'Approved plan locked', at: 'August 10, 2026 at 9:40 AM' },
-        { summary: 'Monday fields mapped', at: 'August 10, 2026 at 9:41 AM' },
-      ],
-      {
-        summary: 'Two Accounts matches · relation withheld',
-        status: 'blocked',
-        at: 'August 10, 2026 at 9:42 AM',
-      },
-    ),
-    'linda-nguyen': progression(
-      'handoff',
-      [
-        { summary: 'Approved plan locked', at: 'August 10, 2026 at 11:15 AM' },
-        { summary: 'Monday fields mapped', at: 'August 10, 2026 at 11:16 AM' },
-        { summary: 'Agency matched', at: 'August 10, 2026 at 11:16 AM' },
-        { summary: 'Master Sheet item created', at: 'August 10, 2026 at 11:17 AM' },
-      ],
-      {
-        summary: 'DRK Create Patient prepared',
-        status: 'current',
-        at: 'August 10, 2026 at 11:20 AM',
-      },
-    ),
-    'patricia-johnson': allDone('handoff', [
-      { summary: 'Handoff verified', at: 'August 9, 2026 at 11:20 AM' },
-    ]),
-    'thomas-reed': allDone('handoff', [
-      { summary: 'Handoff verified', at: 'August 10, 2026 at 2:54 PM' },
-    ]),
-    'irene-cho': progression(
-      'handoff',
-      [
-        { summary: 'Approved plan locked', at: 'August 8, 2026 at 4:20 PM' },
-        { summary: 'Monday fields mapped', at: 'August 8, 2026 at 4:21 PM' },
-        { summary: 'Master Sheet created', at: 'August 8, 2026 at 4:22 PM' },
-      ],
-      {
-        summary: 'Zero agency matches · unresolved',
-        status: 'blocked',
-        at: 'August 8, 2026 at 4:23 PM',
-      },
-    ),
-    'helen-park': allDone('handoff', [
-      { summary: 'Handoff verified', at: 'August 9, 2026 at 3:14 PM' },
-    ]),
-  },
+  ),
   assignment: {
     'marcus-feldman': progression(
       'assignment',
       [
-        { summary: 'Assignment context loaded', at: 'August 10, 2026 at 9:30 AM' },
-        { summary: 'Location normalized', at: 'August 10, 2026 at 9:30 AM' },
-        { summary: 'Territories loaded', at: 'August 10, 2026 at 9:31 AM' },
-        { summary: 'Gardena · Cole suggested', at: 'August 10, 2026 at 9:31 AM' },
+        { summary: 'AI suggests Cole Winfield · Gardena territory', at: 'August 10, 2026 at 9:31 AM' },
       ],
       {
-        summary: 'Case-manager branch selected; awaiting owner confirmation',
-        status: 'waiting',
+        summary: 'Case manager notification sent',
+        status: 'done',
         at: 'August 10, 2026 at 9:32 AM',
       },
     ),
     'david-ruiz': progression(
       'assignment',
       [
-        { summary: 'Context loaded', at: 'August 10, 2026 at 11:00 AM' },
-        { summary: 'Location normalized', at: 'August 10, 2026 at 11:00 AM' },
-        { summary: 'Territories loaded', at: 'August 10, 2026 at 11:01 AM' },
-        { summary: 'Coastal LA · Carla suggested', at: 'August 10, 2026 at 11:01 AM' },
+        { summary: 'AI found two possible owners · Coastal LA border', at: 'August 10, 2026 at 11:01 AM' },
       ],
       {
-        summary: 'Case-manager branch; border territory has two owner candidates',
-        status: 'blocked',
+        summary: 'Case manager notification sent',
+        status: 'done',
         at: 'August 10, 2026 at 11:02 AM',
       },
     ),
     'patricia-johnson': allDone('assignment', [
-      { summary: 'Owner written to Monday and DRK', at: 'August 9, 2026 at 12:21 PM' },
+      { summary: 'Cole Winfield confirmed as case manager', at: 'August 9, 2026 at 12:21 PM' },
     ]),
     'thomas-reed': allDone('assignment', [
-      { summary: 'Assignment written', at: 'August 10, 2026 at 3:16 PM' },
+      { summary: 'Ana Torres confirmed as case manager', at: 'August 10, 2026 at 3:16 PM' },
     ]),
     'helen-park': allDone('assignment', [
-      { summary: 'Assignment written', at: 'August 9, 2026 at 3:46 PM' },
+      { summary: 'Cole Winfield confirmed as case manager', at: 'August 9, 2026 at 3:46 PM' },
     ]),
     'betty-hayes': progression(
       'assignment',
       [
-        { summary: 'Incomplete referral and source loaded', at: 'August 8, 2026 at 1:10 PM' },
-        { summary: 'Service address cannot be verified', at: 'August 8, 2026 at 1:10 PM' },
-        { summary: 'Referral-source ownership rules loaded', at: 'August 8, 2026 at 1:11 PM' },
-        { summary: 'Source marketer Linda Nguyen matched', at: 'August 8, 2026 at 1:11 PM' },
+        { summary: 'AI suggests manual-review owner · address incomplete', at: 'August 8, 2026 at 1:11 PM' },
       ],
       {
-        summary: 'Missing-information branch; marketer follow-up required',
-        status: 'blocked',
+        summary: 'Case manager notification sent',
+        status: 'done',
         at: 'August 8, 2026 at 1:12 PM',
       },
     ),
     'maria-alvarez': progression(
       'assignment',
       [
-        { summary: 'Ready after Monday create', at: 'August 10, 2026 at 10:15 AM' },
-        { summary: 'Location normalized', at: 'August 10, 2026 at 10:15 AM' },
-        { summary: 'Territories loaded', at: 'August 10, 2026 at 10:16 AM' },
-        { summary: 'Riverside · Ana suggested', at: 'August 10, 2026 at 10:16 AM' },
+        { summary: 'AI suggests Donessa Ruiz · Riverside territory', at: 'August 10, 2026 at 10:16 AM' },
       ],
-      { summary: 'Awaiting confirmation', status: 'waiting', at: 'August 10, 2026 at 10:16 AM' },
+      { summary: 'Case manager notification sent', status: 'done', at: 'August 10, 2026 at 10:16 AM' },
     ),
   },
   provider: {
     'helen-park': progression(
       'provider',
       [
-        { summary: 'Patient and service area loaded', at: 'August 10, 2026 at 8:50 AM' },
-        { summary: 'Approved area providers found', at: 'August 10, 2026 at 8:50 AM' },
-        { summary: 'Provider eligibility checked', at: 'August 10, 2026 at 8:51 AM' },
+        { summary: 'Provider context loaded', at: 'August 10, 2026 at 8:50 AM' },
+        { summary: 'Roster loaded', at: 'August 10, 2026 at 8:50 AM' },
+        { summary: 'Providers filtered', at: 'August 10, 2026 at 8:51 AM' },
         { summary: '3 credentialed providers ranked', at: 'August 10, 2026 at 8:51 AM' },
       ],
-      { summary: 'Awaiting case manager confirmation', status: 'waiting', at: 'August 10, 2026 at 8:52 AM' },
+      { summary: 'Awaiting marketer pick', status: 'waiting', at: 'August 10, 2026 at 8:52 AM' },
     ),
     'irene-cho': progression(
       'provider',
       [
-        { summary: 'Patient and service area loaded', at: 'August 10, 2026 at 9:20 AM' },
-        { summary: 'Approved area providers found', at: 'August 10, 2026 at 9:20 AM' },
-        { summary: 'Eligibility checked for service radius', at: 'August 10, 2026 at 9:21 AM' },
+        { summary: 'Context loaded', at: 'August 10, 2026 at 9:20 AM' },
+        { summary: 'Roster loaded', at: 'August 10, 2026 at 9:20 AM' },
+        { summary: 'Filtered to radius', at: 'August 10, 2026 at 9:21 AM' },
         { summary: '2 providers ranked', at: 'August 10, 2026 at 9:21 AM' },
       ],
       {
@@ -462,13 +356,13 @@ export const PATIENT_STEP_BREAKDOWNS: Record<
     'betty-hayes': progression(
       'provider',
       [
-        { summary: 'Patient and service area loaded', at: 'August 9, 2026 at 2:00 PM' },
-        { summary: 'Approved area providers searched', at: 'August 9, 2026 at 2:00 PM' },
-        { summary: 'Provider eligibility checked', at: 'August 9, 2026 at 2:01 PM' },
+        { summary: 'Context loaded', at: 'August 9, 2026 at 2:00 PM' },
+        { summary: 'Roster loaded', at: 'August 9, 2026 at 2:00 PM' },
+        { summary: 'Filter applied', at: 'August 9, 2026 at 2:01 PM' },
         { summary: 'Empty shortlist', at: 'August 9, 2026 at 2:01 PM' },
       ],
       {
-        summary: 'No eligible provider - sent to Nicole for review',
+        summary: 'No eligible provider · human search',
         status: 'blocked',
         at: 'August 9, 2026 at 2:02 PM',
       },
@@ -482,12 +376,12 @@ export const PATIENT_STEP_BREAKDOWNS: Record<
     'maria-alvarez': progression(
       'provider',
       [
-        { summary: 'Patient and service area loaded', at: 'August 10, 2026 at 10:20 AM' },
-        { summary: 'Approved area providers found', at: 'August 10, 2026 at 10:20 AM' },
-        { summary: 'Provider eligibility checked', at: 'August 10, 2026 at 10:21 AM' },
+        { summary: 'Context loaded', at: 'August 10, 2026 at 10:20 AM' },
+        { summary: 'Roster loaded', at: 'August 10, 2026 at 10:20 AM' },
+        { summary: 'Filtered', at: 'August 10, 2026 at 10:21 AM' },
         { summary: '5 providers ranked for Riverside', at: 'August 10, 2026 at 10:21 AM' },
       ],
-      { summary: 'Shortlist ready - awaiting case manager', status: 'waiting' },
+      { summary: 'Shortlist ready · awaiting confirm', status: 'waiting' },
     ),
     'nancy-liu': allDone('provider', [
       { summary: 'Provider written', at: 'August 8, 2026 at 4:31 PM' },
@@ -498,9 +392,11 @@ export const PATIENT_STEP_BREAKDOWNS: Record<
       'scheduling',
       [
         { summary: 'Patient, provider, location ready', at: 'August 10, 2026 at 10:05 AM' },
-        { summary: 'Referral sent to selected provider', at: 'August 10, 2026 at 10:06 AM' },
+        { summary: 'Availability windows read', at: 'August 10, 2026 at 10:05 AM' },
+        { summary: 'Fri 11:00 AM · Sat 8:40 AM ranked', at: 'August 10, 2026 at 10:06 AM' },
+        { summary: 'Options sent to Ana', at: 'August 10, 2026 at 10:07 AM' },
       ],
-      { summary: 'Awaiting provider response', status: 'waiting', at: 'August 10, 2026 at 10:07 AM' },
+      { summary: 'No reply yet', status: 'waiting', at: 'August 10, 2026 at 10:07 AM' },
     ),
     'nancy-liu': allDone('scheduling', [
       { summary: 'Appointment written to Monday and DRK', at: 'August 10, 2026 at 9:11 AM' },
@@ -508,11 +404,14 @@ export const PATIENT_STEP_BREAKDOWNS: Record<
     'james-carter': progression(
       'scheduling',
       [
-        { summary: 'Patient and provider details loaded', at: 'August 10, 2026 at 9:00 AM' },
-        { summary: 'Referral sent to selected provider', at: 'August 10, 2026 at 9:02 AM' },
+        { summary: 'Context loaded', at: 'August 10, 2026 at 9:00 AM' },
+        { summary: 'Availability read', at: 'August 10, 2026 at 9:00 AM' },
+        { summary: 'Two windows generated', at: 'August 10, 2026 at 9:01 AM' },
+        { summary: 'Options sent to Carla', at: 'August 10, 2026 at 9:02 AM' },
+        { summary: 'No correlated response after one hour', at: 'August 10, 2026 at 10:05 AM' },
       ],
       {
-        summary: 'No provider response after one hour',
+        summary: 'Scheduling exception for Carla',
         status: 'blocked',
         at: 'August 10, 2026 at 10:05 AM',
       },
@@ -523,22 +422,24 @@ export const PATIENT_STEP_BREAKDOWNS: Record<
     'thomas-reed': progression(
       'scheduling',
       [
-        { summary: 'Patient and provider details loaded', at: 'August 10, 2026 at 3:45 PM' },
-        { summary: 'Referral sent to selected provider', at: 'August 10, 2026 at 3:46 PM' },
+        { summary: 'Context loaded', at: 'August 10, 2026 at 3:45 PM' },
+        { summary: 'Availability read', at: 'August 10, 2026 at 3:45 PM' },
+        { summary: 'Three windows proposed', at: 'August 10, 2026 at 3:46 PM' },
+        { summary: 'Options sent to Ana', at: 'August 10, 2026 at 3:47 PM' },
       ],
-      { summary: 'Awaiting provider response', status: 'waiting', at: 'August 10, 2026 at 3:47 PM' },
+      { summary: 'Awaiting Ana response', status: 'waiting', at: 'August 10, 2026 at 3:47 PM' },
     ),
     'linda-nguyen': progression(
       'scheduling',
       [
-        { summary: 'Patient and provider details loaded', at: 'August 9, 2026 at 4:00 PM' },
-        { summary: 'Referral sent to selected provider', at: 'August 9, 2026 at 4:00 PM' },
-        { summary: 'Provider confirmed availability', at: 'August 9, 2026 at 4:01 PM' },
-        { summary: 'Two availability windows read', at: 'August 9, 2026 at 4:01 PM' },
-        { summary: 'Two appointment options generated', at: 'August 9, 2026 at 4:01 PM' },
+        { summary: 'Context loaded', at: 'August 9, 2026 at 4:00 PM' },
+        { summary: 'Availability read', at: 'August 9, 2026 at 4:00 PM' },
+        { summary: 'Two windows generated', at: 'August 9, 2026 at 4:01 PM' },
+        { summary: 'Options presented', at: 'August 9, 2026 at 4:01 PM' },
+        { summary: 'Patient declined both windows', at: 'August 9, 2026 at 5:30 PM' },
       ],
       {
-        summary: 'Patient declined both appointment options',
+        summary: 'Scheduling exception open',
         status: 'blocked',
         at: 'August 9, 2026 at 5:30 PM',
       },
@@ -554,15 +455,15 @@ export const PATIENT_STEP_BREAKDOWNS: Record<
     'frank-owens': progression(
       'end-of-day',
       [
-        { summary: 'End-of-day check started', at: 'August 10, 2026 at 5:00 PM' },
-        { summary: 'Missing appointment identified', at: 'August 10, 2026 at 5:00 PM' },
-        { summary: 'CM identified; scheduled status blank', at: 'August 10, 2026 at 5:01 PM' },
-        { summary: 'Lead and CM follow-up sent', at: 'August 10, 2026 at 5:01 PM' },
-        { summary: 'Blocker remains unresolved', at: 'August 10, 2026 at 5:01 PM' },
-        { summary: 'Escalated to Nicole', at: 'August 10, 2026 at 5:02 PM' },
-        { summary: 'Patient remains unscheduled', at: 'August 10, 2026 at 5:03 PM' },
+        { summary: 'EOD cycle started', at: 'August 10, 2026 at 5:00 PM' },
+        { summary: 'Due referrals loaded', at: 'August 10, 2026 at 5:00 PM' },
+        { summary: 'Sources read', at: 'August 10, 2026 at 5:01 PM' },
+        { summary: 'Appointment date present · scheduled blank', at: 'August 10, 2026 at 5:01 PM' },
+        { summary: 'No prior exception today', at: 'August 10, 2026 at 5:01 PM' },
+        { summary: 'Inconsistency exception opened', at: 'August 10, 2026 at 5:02 PM' },
+        { summary: 'Included in management summary', at: 'August 10, 2026 at 5:03 PM' },
       ],
-      { summary: 'Weekly-cycle entry held', status: 'waiting', at: 'August 10, 2026 at 5:03 PM' },
+      { summary: 'Open until fields agree', status: 'waiting', at: 'August 10, 2026 at 5:03 PM' },
     ),
     'susan-park': allDone('end-of-day', [
       { summary: 'All scheduling fields agree', at: 'August 10, 2026 at 5:01 PM' },
@@ -570,27 +471,27 @@ export const PATIENT_STEP_BREAKDOWNS: Record<
     'george-chen': progression(
       'end-of-day',
       [
-        { summary: 'End-of-day check started', at: 'August 10, 2026 at 5:00 PM' },
-        { summary: 'Incomplete scheduling identified', at: 'August 10, 2026 at 5:00 PM' },
-        { summary: 'CM and complete-flag blocker identified', at: 'August 10, 2026 at 5:01 PM' },
-        { summary: 'Lead and CM follow-up sent', at: 'August 10, 2026 at 5:01 PM' },
-        { summary: 'Blocker remains unresolved', at: 'August 10, 2026 at 5:01 PM' },
-        { summary: 'Escalated to Nicole', at: 'August 10, 2026 at 5:02 PM' },
+        { summary: 'EOD cycle started', at: 'August 10, 2026 at 5:00 PM' },
+        { summary: 'Due referrals loaded', at: 'August 10, 2026 at 5:00 PM' },
+        { summary: 'Sources read', at: 'August 10, 2026 at 5:01 PM' },
+        { summary: 'Complete flag No · date set', at: 'August 10, 2026 at 5:01 PM' },
+        { summary: 'Deduped', at: 'August 10, 2026 at 5:01 PM' },
+        { summary: 'Exception opened', at: 'August 10, 2026 at 5:02 PM' },
       ],
-      { summary: 'Awaiting final status verification', status: 'waiting' },
+      { summary: 'Awaiting resolution', status: 'waiting' },
     ),
     'linda-nguyen': progression(
       'end-of-day',
       [
-        { summary: 'End-of-day check started', at: 'August 9, 2026 at 5:00 PM' },
-        { summary: 'Missing appointment identified', at: 'August 9, 2026 at 5:00 PM' },
-        { summary: 'CM and scheduling blocker identified', at: 'August 9, 2026 at 5:01 PM' },
-        { summary: 'Lead and CM follow-up sent', at: 'August 9, 2026 at 5:01 PM' },
-        { summary: 'Blocker remains unresolved', at: 'August 9, 2026 at 5:01 PM' },
-        { summary: 'Escalated to Nicole', at: 'August 9, 2026 at 5:02 PM' },
-        { summary: 'Patient remains unscheduled', at: 'August 9, 2026 at 5:03 PM' },
+        { summary: 'EOD cycle started', at: 'August 9, 2026 at 5:00 PM' },
+        { summary: 'Due referrals loaded', at: 'August 9, 2026 at 5:00 PM' },
+        { summary: 'Sources read', at: 'August 9, 2026 at 5:01 PM' },
+        { summary: 'Indeterminate scheduling fields', at: 'August 9, 2026 at 5:01 PM' },
+        { summary: 'Deduped', at: 'August 9, 2026 at 5:01 PM' },
+        { summary: 'Exception opened Aug 9', at: 'August 9, 2026 at 5:02 PM' },
+        { summary: 'Included once in summary', at: 'August 9, 2026 at 5:03 PM' },
       ],
-      { summary: 'Weekly-cycle entry held', status: 'waiting', at: 'August 9, 2026 at 5:03 PM' },
+      { summary: 'Still open', status: 'waiting', at: 'August 9, 2026 at 5:03 PM' },
     ),
     'maria-alvarez': allDone('end-of-day', [
       { summary: 'Scheduled · fields agree', at: 'August 9, 2026 at 5:01 PM' },
@@ -604,16 +505,16 @@ export const PATIENT_STEP_BREAKDOWNS: Record<
     'robert-williams': progression(
       'end-of-day',
       [
-        { summary: 'End-of-day check started', at: 'August 10, 2026 at 5:04 PM' },
-        { summary: 'Incomplete scheduling identified', at: 'August 10, 2026 at 5:04 PM' },
-        { summary: 'CM and complete-flag blocker identified', at: 'August 10, 2026 at 5:05 PM' },
-        { summary: 'Lead and CM follow-up sent', at: 'August 10, 2026 at 5:05 PM' },
-        { summary: 'Blocker remains unresolved', at: 'August 10, 2026 at 5:05 PM' },
-        { summary: 'Escalated to Nicole', at: 'August 10, 2026 at 5:06 PM' },
-        { summary: 'Patient remains unscheduled', at: 'August 10, 2026 at 5:07 PM' },
+        { summary: 'EOD cycle started', at: 'August 10, 2026 at 5:04 PM' },
+        { summary: 'Due referrals loaded', at: 'August 10, 2026 at 5:04 PM' },
+        { summary: 'Sources read', at: 'August 10, 2026 at 5:05 PM' },
+        { summary: 'Scheduled Yes · complete blank', at: 'August 10, 2026 at 5:05 PM' },
+        { summary: 'Deduped for today', at: 'August 10, 2026 at 5:05 PM' },
+        { summary: 'Inconsistency exception opened', at: 'August 10, 2026 at 5:06 PM' },
+        { summary: 'Included in evening management digest', at: 'August 10, 2026 at 5:07 PM' },
       ],
       {
-        summary: 'Weekly-cycle entry held until verified',
+        summary: 'Open until complete flag is set',
         status: 'waiting',
         at: 'August 10, 2026 at 5:07 PM',
       },
@@ -626,23 +527,25 @@ export const PATIENT_STEP_BREAKDOWNS: Record<
     'arthur-kim': progression(
       'weekly',
       [
-        { summary: 'Weekly patient schedule loaded', at: 'August 10, 2026 at 6:00 PM' },
-        { summary: 'DRK hospitalization note found', at: 'August 10, 2026 at 6:01 PM' },
-        { summary: 'Visit marked Not Seen', at: 'August 10, 2026 at 6:01 PM' },
-        { summary: 'Hospitalization hold identified', at: 'August 10, 2026 at 6:02 PM' },
+        { summary: 'Weekly cycle started', at: 'August 10, 2026 at 6:00 PM' },
+        { summary: 'Active link loaded', at: 'August 10, 2026 at 6:00 PM' },
+        { summary: 'Visit status read', at: 'August 10, 2026 at 6:01 PM' },
+        { summary: 'Normalized: patient_on_hold', at: 'August 10, 2026 at 6:01 PM' },
+        { summary: 'Hold change detected', at: 'August 10, 2026 at 6:02 PM' },
         { summary: 'Not Seen unchanged', at: 'August 10, 2026 at 6:02 PM' },
-        { summary: 'Hold tracking routed for review', at: 'August 10, 2026 at 6:02 PM' },
-        { summary: 'Hold-team action prepared', at: 'August 10, 2026 at 6:03 PM' },
+        { summary: 'Hold tracking required', at: 'August 10, 2026 at 6:02 PM' },
+        { summary: 'Hold-tracking exception opened', at: 'August 10, 2026 at 6:03 PM' },
       ],
       { summary: 'Awaiting human follow-up', status: 'waiting' },
     ),
     'margaret-ellis': progression(
       'weekly',
       [
-        { summary: 'Weekly patient schedule loaded', at: 'August 10, 2026 at 6:00 PM' },
-        { summary: 'DRK progress note checked', at: 'August 10, 2026 at 6:01 PM' },
-        { summary: 'Visit marked Not Seen', at: 'August 10, 2026 at 6:01 PM' },
-        { summary: 'No healing, expiration, or hold condition', at: 'August 10, 2026 at 6:01 PM' },
+        { summary: 'Weekly cycle started', at: 'August 10, 2026 at 6:00 PM' },
+        { summary: 'Active link loaded', at: 'August 10, 2026 at 6:00 PM' },
+        { summary: 'Visit status read', at: 'August 10, 2026 at 6:01 PM' },
+        { summary: 'Normalized: not_seen', at: 'August 10, 2026 at 6:01 PM' },
+        { summary: 'Change detected', at: 'August 10, 2026 at 6:01 PM' },
         { summary: 'Not Seen count incremented to 2', at: 'August 10, 2026 at 6:01 PM' },
       ],
       {
@@ -654,13 +557,14 @@ export const PATIENT_STEP_BREAKDOWNS: Record<
     'walter-grant': progression(
       'weekly',
       [
-        { summary: 'Weekly patient schedule loaded', at: 'August 10, 2026 at 6:00 PM' },
-        { summary: 'DRK progress note checked', at: 'August 10, 2026 at 6:01 PM' },
-        { summary: 'Visit marked Not Seen', at: 'August 10, 2026 at 6:01 PM' },
-        { summary: 'No healing, expiration, or hold condition', at: 'August 10, 2026 at 6:01 PM' },
+        { summary: 'Weekly cycle started', at: 'August 10, 2026 at 6:00 PM' },
+        { summary: 'Active link loaded', at: 'August 10, 2026 at 6:00 PM' },
+        { summary: 'Visit status read', at: 'August 10, 2026 at 6:01 PM' },
+        { summary: 'Normalized: not_seen', at: 'August 10, 2026 at 6:01 PM' },
+        { summary: 'Change detected', at: 'August 10, 2026 at 6:01 PM' },
         { summary: 'Not Seen count incremented to 3', at: 'August 10, 2026 at 6:01 PM' },
-        { summary: 'Discharge review required', at: 'August 10, 2026 at 6:02 PM' },
-        { summary: 'Management review action prepared', at: 'August 10, 2026 at 6:03 PM' },
+        { summary: 'Review required', at: 'August 10, 2026 at 6:02 PM' },
+        { summary: 'Not-seen exception opened', at: 'August 10, 2026 at 6:03 PM' },
       ],
       { summary: 'Awaiting review', status: 'waiting' },
     ),
@@ -673,10 +577,11 @@ export const PATIENT_STEP_BREAKDOWNS: Record<
     'patricia-johnson': progression(
       'weekly',
       [
-        { summary: 'Weekly patient schedule loaded', at: 'August 8, 2026 at 6:00 PM' },
-        { summary: 'DRK progress note checked', at: 'August 8, 2026 at 6:01 PM' },
-        { summary: 'Visit marked Not Seen', at: 'August 8, 2026 at 6:01 PM' },
-        { summary: 'No healing, expiration, or hold condition', at: 'August 8, 2026 at 6:01 PM' },
+        { summary: 'Weekly cycle started', at: 'August 8, 2026 at 6:00 PM' },
+        { summary: 'Active link loaded', at: 'August 8, 2026 at 6:00 PM' },
+        { summary: 'Visit status read', at: 'August 8, 2026 at 6:01 PM' },
+        { summary: 'Normalized: not_seen', at: 'August 8, 2026 at 6:01 PM' },
+        { summary: 'Change detected', at: 'August 8, 2026 at 6:01 PM' },
         { summary: 'Not Seen count = 1', at: 'August 8, 2026 at 6:01 PM' },
       ],
       { summary: 'Monitoring', status: 'current', at: 'August 8, 2026 at 6:01 PM' },
@@ -690,13 +595,14 @@ export const PATIENT_STEP_BREAKDOWNS: Record<
     'linda-nguyen': progression(
       'weekly',
       [
-        { summary: 'Weekly patient schedule loaded', at: 'August 9, 2026 at 6:06 PM' },
-        { summary: 'DRK facility-hold note found', at: 'August 9, 2026 at 6:07 PM' },
-        { summary: 'Visit marked Not Seen', at: 'August 9, 2026 at 6:07 PM' },
-        { summary: 'Facility hold identified', at: 'August 9, 2026 at 6:07 PM' },
+        { summary: 'Weekly cycle started', at: 'August 9, 2026 at 6:06 PM' },
+        { summary: 'Active link loaded', at: 'August 9, 2026 at 6:06 PM' },
+        { summary: 'Visit status read', at: 'August 9, 2026 at 6:07 PM' },
+        { summary: 'Normalized: patient_on_hold', at: 'August 9, 2026 at 6:07 PM' },
+        { summary: 'Facility hold detected', at: 'August 9, 2026 at 6:07 PM' },
         { summary: 'Not Seen unchanged', at: 'August 9, 2026 at 6:07 PM' },
-        { summary: 'Hold tracking routed for review', at: 'August 9, 2026 at 6:07 PM' },
-        { summary: 'Hold-team action remains open', at: 'August 9, 2026 at 6:08 PM' },
+        { summary: 'Hold tracking required', at: 'August 9, 2026 at 6:07 PM' },
+        { summary: 'Hold exception remains open', at: 'August 9, 2026 at 6:08 PM' },
       ],
       {
         summary: 'Facility hold · monitoring paused',

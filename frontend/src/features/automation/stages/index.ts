@@ -10,8 +10,8 @@ import { WEEKLY_STAGE } from './weekly'
 
 export const AUTOMATION_STAGES: AutomationStageDefinition[] = [
   INTAKE_STAGE,
-  HANDOFF_STAGE,
   ASSIGNMENT_STAGE,
+  HANDOFF_STAGE,
   PROVIDER_STAGE,
   SCHEDULING_STAGE,
   END_OF_DAY_STAGE,

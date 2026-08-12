@@ -1,0 +1,387 @@
+{
+  "schema_version": 1,
+  "referral_id": "ref_858e14b5e71484e065e3fcdb",
+  "source": {
+    "email_id": null,
+    "attachment_id": null,
+    "file_name": "EC - REFERRAL FORM.pdf",
+    "pdf_sha256": "858e14b5e71484e065e3fcdbae6814abdbd1e1dd261888db203e169ad3a5fbeb",
+    "page_count": 1,
+    "sent_by": "Intake Desk <intake@accentcare.com>",
+    "extraction": {
+      "primary_model": "claude-opus-5",
+      "models_attempted": [
+        "claude-opus-5"
+      ],
+      "pass_models": [
+        "claude-opus-5",
+        "claude-opus-5"
+      ],
+      "fallback_used": false
+    }
+  },
+  "document_type": "Patient Referral Form - West Coast Wound & Skin Care (mobile services); handwritten, single page",
+  "patient": {
+    "name": {
+      "first": "Eliut",
+      "middle": null,
+      "last": "Cruz Pagan",
+      "suffix": null,
+      "full": "Eliut Cruz Pagan"
+    },
+    "date_of_birth": "1964-02-09",
+    "age": null,
+    "sex_or_gender": "Male",
+    "ssn": null,
+    "mrn": null,
+    "source_patient_id": null,
+    "source_patient_id_label": null,
+    "phones": [
+      {
+        "number": "773-500-6400",
+        "type": null
+      }
+    ],
+    "email": null,
+    "address": {
+      "line_1": "5345 N Natchez Ave",
+      "line_2": null,
+      "city": "Chicago",
+      "state": "IL",
+      "postal_code": "60656",
+      "country": null
+    },
+    "emergency_contact": {
+      "name": {
+        "first": "Lino",
+        "middle": null,
+        "last": "Alvarez",
+        "suffix": null,
+        "full": "Lino Alvarez"
+      },
+      "relationship": "Friend",
+      "phone": "773-875-3242"
+    }
+  },
+  "referral_source": {
+    "organization": {
+      "name": "Accent Care Home Health",
+      "contact_name": null,
+      "phone": "312-604-3740",
+      "fax": "312-492-7404",
+      "email": null,
+      "address": null
+    },
+    "provider_name": "Laurie Peercy (listed in the form's \"PCP's Contact Information\" section, not identified as the ordering provider)",
+    "referral_or_order_date": "2026-07-08"
+  },
+  "home_health_or_hospice": {
+    "organization": {
+      "name": "Accent Care Home Health",
+      "contact_name": null,
+      "phone": "312-604-3740",
+      "fax": "312-492-7404",
+      "email": null,
+      "address": null
+    },
+    "hospice": null,
+    "palliative_care": null
+  },
+  "admission": {
+    "admission_date": null,
+    "facility": {
+      "name": null,
+      "contact_name": null,
+      "phone": null,
+      "fax": null,
+      "email": null,
+      "address": null
+    },
+    "place_of_service": "Home",
+    "medicare_admission": null
+  },
+  "clinical": {
+    "summary": "Referral to West Coast Wound & Skin Care mobile services for wound care. \"Type of Care Needed\" is marked Wound Care, and the description of the patient's condition / reason for referral is documented as \"Need wound care eval.\" The patient's location type is marked Home. No ICD code, onset date, medications, or allergies are documented on the form.",
+    "wound_order_included": false,
+    "diagnoses": [],
+    "medications": [],
+    "allergies": [],
+    "diagnoses_section_present": true,
+    "medications_section_present": false,
+    "allergies_section_present": false,
+    "no_known_allergies_explicit": false,
+    "notes": [
+      "Type of Care Needed checkbox marked: Wound Care. Lymphedema Care and Dermatology Care are not marked.",
+      "Description of the patient's condition (reason for referral), verbatim: \"Need wound care eval\".",
+      "ICD field left blank; ONSET field left blank.",
+      "PCP's Contact Information section: PCP Laurie Peercy; phone written as \"773-245.119\" with the final digit obscured/overlapped by the printed \"Fax:\" label; fax 708-741-1014.",
+      "Patient Location Type: Home is checked; Skilled Nursing Facility, Assisted Living Facility and Other are unchecked, and the facility name/phone/fax fields are blank.",
+      "Emergency contact gender field left blank.",
+      "Pharmacy Information section (pharmacy name and phone) left blank.",
+      "\"How did you find about us\" and \"Referrer's email address\" fields left blank.",
+      "Receiving practice per form letterhead: West Coast Wound & Skin Care, info@westcoastwound.com, phone (877) 939-6863, fax (818) 979-0593, www.westcoastwound.com.",
+      "Form's Important Note requests that a face sheet, past medical history, signed physician/PA/NP order, insurance card(s), and any other information be attached; no such attachments are present in this one-page PDF."
+    ]
+  },
+  "insurances": [
+    {
+      "payer_name": "Zing Health",
+      "policy_number": "6TX4F45XHD2",
+      "group_number": null,
+      "group_name": null,
+      "policy_holder_name": null,
+      "insurance_type": "Primary",
+      "effective_date": null,
+      "expiration_date": null,
+      "is_patient_policy_holder": null,
+      "subscriber_first_name": null,
+      "subscriber_last_name": null,
+      "subscriber_date_of_birth": null,
+      "subscriber_relationship": null
+    }
+  ],
+  "requested_services": [
+    {
+      "service": "Wound Care (mobile wound care)",
+      "frequency": null,
+      "instructions": "Need wound care eval"
+    }
+  ],
+  "field_quality": {
+    "document_type": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Patient Referral Form (This referral form is for our mobile services)"
+    },
+    "patient.name": {
+      "status": "present",
+      "confidence": "medium",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Patient Name: Cruz Pagan , Eliut (Last Name / First Name / Middle Initial)"
+    },
+    "patient.date_of_birth": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "DOB: 02|09|1964"
+    },
+    "patient.age": {
+      "status": "missing",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "No age field on the form"
+    },
+    "patient.sex_or_gender": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Gender: Male"
+    },
+    "patient.phones": {
+      "status": "present",
+      "confidence": "medium",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Phone: 773.500.6400"
+    },
+    "patient.address": {
+      "status": "present",
+      "confidence": "medium",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Address: 5345 N Natchez Ave  City: Chicago  State: IL  Zip: 60656"
+    },
+    "patient.email": {
+      "status": "missing",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Email: (blank)"
+    },
+    "patient.ssn": {
+      "status": "missing",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "SSN: (blank)"
+    },
+    "patient.mrn": {
+      "status": "missing",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "MRN: (blank)"
+    },
+    "patient.emergency_contact": {
+      "status": "present",
+      "confidence": "medium",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Emergency's Contact Information  Name: Lino Alvarez  Phone: 773.875.3242  Relationship: Friend"
+    },
+    "referral_source.organization": {
+      "status": "present",
+      "confidence": "medium",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "*Referred by: Accent Care Home Health (Name of referring agency/company)  Phone: 312-604-3740  Fax: 312-492-7404"
+    },
+    "referral_source.provider_name": {
+      "status": "present",
+      "confidence": "medium",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "*PCP's Contact Information  PCP: Laurie Peercy"
+    },
+    "referral_source.referral_or_order_date": {
+      "status": "present",
+      "confidence": "medium",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Date: 7|8|26"
+    },
+    "home_health_or_hospice": {
+      "status": "unclear",
+      "confidence": "low",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "*Referred by: Accent Care Home Health (Name of referring agency/company e.g. ABC Home Health, XYZ Clinic)"
+    },
+    "admission.admission_date": {
+      "status": "missing",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "No admission date field on the form"
+    },
+    "admission.place_of_service": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Patient Location Type: [X] Home"
+    },
+    "admission.facility": {
+      "status": "explicitly_none",
+      "confidence": "medium",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Patient Location Type: [X] Home ... Facility: (blank)  Phone: (blank)  Fax: (blank)"
+    },
+    "clinical": {
+      "status": "present",
+      "confidence": "medium",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "*Description of the patient's condition (reason for referral): Need wound care eval"
+    },
+    "clinical.summary": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Type of Care Needed: [X] Wound Care ... Need wound care eval"
+    },
+    "clinical.diagnoses": {
+      "status": "missing",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "ICD: (blank)   ONSET: (blank)"
+    },
+    "clinical.medications": {
+      "status": "missing",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "No medication section appears on the form"
+    },
+    "clinical.allergies": {
+      "status": "missing",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "No allergy section appears on the form"
+    },
+    "clinical.wound_order_included": {
+      "status": "missing",
+      "confidence": "medium",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Important Note: Please attach a face sheet, past medical history, signed physician/PA/NP order, insurance card/s, and any other information. (no signed order present in this 1-page PDF)"
+    },
+    "insurances": {
+      "status": "present",
+      "confidence": "medium",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Primary Insurance: Zing Health   Subscriber Number: 6TX4F45XHD2"
+    },
+    "insurances.0.policy_number": {
+      "status": "present",
+      "confidence": "low",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Subscriber Number: 6TX4F45XHD2 (handwritten)"
+    },
+    "insurances.secondary": {
+      "status": "missing",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Secondary Insurance: (blank)   Subscriber Number: (blank)"
+    },
+    "requested_services": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Type of Care Needed: [X] Wound Care  ( ) Lymphedema Care  ( ) Dermatology Care"
+    }
+  },
+  "warnings": [
+    "The entire form is completed in handwriting; names, numbers and the subscriber ID were transcribed from cursive/print handwriting and may contain character-level errors.",
+    "Referral form date is handwritten as \"7/8/26\" and interpreted as 2026-07-08 (US MM/DD/YY); the intended year could not be confirmed from the document.",
+    "Patient last name is written as \"Cruz Pagan\" in the Last Name field with first name \"Eliut\"; middle initial left blank.",
+    "Referring agency name is written as \"Accent Care Home Health\" and is preserved as written; it may correspond to the organization commonly styled \"AccentCare Home Health\", which was not printed on the form.",
+    "Organization roles: \"Accent Care Home Health\" appears only in the \"Referred by\" (referring agency) field. It is a home health agency, so it was also recorded as the patient's home health organization, but the form does not explicitly state the patient is currently admitted to that agency; treat home_health_or_hospice as unverified.",
+    "PCP Laurie Peercy is listed in a separate \"PCP's Contact Information\" section and is not explicitly identified as the referring/ordering provider; her phone is written as \"773-245.119\" with the final digit obscured by the printed \"Fax:\" label, so no complete PCP phone number is recorded (fax 708-741-1014 is legible).",
+    "Primary insurance subscriber number read as \"6TX4F45XHD2\"; ambiguous handwritten characters (6/G, X, H, D, 0/O, 2/Z) should be verified against the insurance card.",
+    "ICD code, onset date, referrer's email, \"How did you find about us\", SSN, MRN, patient email, secondary insurance, pharmacy information, and emergency contact gender are all blank on the form.",
+    "Attachments referenced by the form's Important Note (face sheet, past medical history, signed physician/PA/NP order, insurance card copies) are not included in this one-page PDF; no signed wound care order accompanies the referral."
+  ]
+}

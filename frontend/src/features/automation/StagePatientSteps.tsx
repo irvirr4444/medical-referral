@@ -1,337 +1,479 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Search, Users, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { ChevronDown, Search } from 'lucide-react'
 import { useEscapeDismiss } from '../../hooks/useEscapeDismiss'
 import { MicrostepList } from './MicrostepList'
-import { StagePatientStepDetail } from './StagePatientStepDetail'
+import { StageFeedMessage } from './StageFeedMessage'
+import { detailForPatientStep, feedForStep } from './ops'
 import {
-  defaultPatientIdForStage,
-  detailForPatientStep,
-  patientsForStage,
-  stepsForPatient,
-} from './ops'
-import {
-  applyHumanDecisions,
-  humanGateForStep,
-  type HumanGateDefinition,
-} from './ops/humanGates'
-import type { HumanDecisionRecord } from './ops/types'
+  CASE_MANAGER_OPTIONS,
+  caseManagerNotification,
+  caseManagerSuggestion,
+  drkDraftForPatient,
+  mondayRecordForPatient,
+  referralSourceNotification,
+} from './fixtures/caseManagerAssignments'
+import { intakeDemoPatient } from './fixtures/intakeDemoPatients'
 import type { FlowOpsPageId } from '../../data/flowOps'
+import type { PatientStepStatus } from './ops/types'
 import type { AutomationMicrostep } from './types'
 import './StageOps.css'
+
+const STATUS_FILTERS: Array<{
+  id: PatientStepStatus
+  meaning: string
+}> = [
+  { id: 'waiting', meaning: 'Needs confirmation' },
+  { id: 'blocked', meaning: 'Stuck' },
+  { id: 'current', meaning: 'In progress' },
+  { id: 'done', meaning: 'Finished' },
+]
+
+const DEFAULT_STATUSES: PatientStepStatus[] = STATUS_FILTERS.map(
+  (item) => item.id,
+)
+
+type StatusFilterValue = 'all' | PatientStepStatus
+type StepDetail = ReturnType<typeof detailForPatientStep>
+
+function currentOpsTimestamp() {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date())
+}
 
 export function StagePatientSteps({
   stageId,
   microsteps,
-  selectedPatientId,
-  onSelectPatient,
-  decisions,
-  onRecordDecision,
 }: {
   stageId: FlowOpsPageId
   microsteps: AutomationMicrostep[]
-  selectedPatientId: string
-  onSelectPatient: (patientId: string, patientName: string) => void
-  decisions: HumanDecisionRecord[]
-  onRecordDecision: (input: {
-    stageId: FlowOpsPageId
-    patientId: string
-    patientName: string
-    stepId: string
-    gate: HumanGateDefinition
-    selectedOption?: string
-  }) => void
 }) {
-  const [query, setQuery] = useState('')
-  const [listOpen, setListOpen] = useState(false)
   const [selectedStepId, setSelectedStepId] = useState(microsteps[0]?.id ?? '')
+  const [patientQuery, setPatientQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<StatusFilterValue>('all')
+  const [statusMenuOpen, setStatusMenuOpen] = useState(false)
+  const [partnerConfirmed, setPartnerConfirmed] = useState<Record<string, boolean>>(
+    {},
+  )
+  const [selectedCaseManagers, setSelectedCaseManagers] = useState<
+    Record<string, string>
+  >({})
+  const [confirmedAssignments, setConfirmedAssignments] = useState<
+    Record<string, boolean>
+  >({})
+  const [latestAssignmentNotification, setLatestAssignmentNotification] =
+    useState<{ patientId: string; occurredAt: string } | null>(null)
+  const [assignmentNotificationUnread, setAssignmentNotificationUnread] =
+    useState(false)
+  const [showUnreadAssignmentMessage, setShowUnreadAssignmentMessage] =
+    useState(false)
+  const statusMenuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    setListOpen(false)
-    setQuery('')
-  }, [stageId])
+    setSelectedStepId(microsteps[0]?.id ?? '')
+    setPatientQuery('')
+    setStatusFilter('all')
+    setStatusMenuOpen(false)
+    setPartnerConfirmed({})
+    setSelectedCaseManagers({})
+    setConfirmedAssignments({})
+    setLatestAssignmentNotification(null)
+    setAssignmentNotificationUnread(false)
+    setShowUnreadAssignmentMessage(false)
+  }, [stageId, microsteps[0]?.id])
 
-  const patients = patientsForStage(stageId)
-  const filtered = useMemo(() => {
-    const normalized = query.trim().toLowerCase()
-    if (!normalized) return patients
-    return patients.filter((patient) =>
-      patient.patientName.toLowerCase().includes(normalized),
-    )
-  }, [patients, query])
+  useEffect(() => {
+    if (!statusMenuOpen) return
+    const onPointerDown = (event: MouseEvent) => {
+      if (
+        statusMenuRef.current &&
+        !statusMenuRef.current.contains(event.target as Node)
+      ) {
+        setStatusMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    return () => document.removeEventListener('mousedown', onPointerDown)
+  }, [statusMenuOpen])
 
-  const activeId =
-    selectedPatientId ||
-    defaultPatientIdForStage(stageId) ||
-    patients[0]?.patientId
-  const activePatient =
-    patients.find((patient) => patient.patientId === activeId) ?? patients[0]
-  const rawSteps = useMemo(
+  useEscapeDismiss(statusMenuOpen, () => setStatusMenuOpen(false))
+
+  const selectedStep =
+    microsteps.find((step) => step.id === selectedStepId) ?? microsteps[0]
+
+  const statuses =
+    statusFilter === 'all' ? DEFAULT_STATUSES : [statusFilter]
+
+  const selectedStatusOption =
+    statusFilter === 'all'
+      ? null
+      : STATUS_FILTERS.find((item) => item.id === statusFilter) ?? null
+
+  const days = useMemo(
     () =>
-      activePatient ? stepsForPatient(stageId, activePatient.patientId) : [],
-    [activePatient, stageId],
-  )
-  const patientDecisions = useMemo(
-    () =>
-      activePatient
-        ? decisions.filter(
-            (decision) =>
-              decision.stageId === stageId &&
-              decision.patientId === activePatient.patientId,
-          )
+      selectedStepId
+        ? feedForStep(stageId, selectedStepId, { patientQuery, statuses })
         : [],
-    [activePatient, decisions, stageId],
-  )
-  const steps = useMemo(
-    () => applyHumanDecisions(rawSteps, patientDecisions),
-    [patientDecisions, rawSteps],
+    [stageId, selectedStepId, patientQuery, statuses],
   )
 
-  const stepStatuses = useMemo(() => {
-    const map: Record<string, (typeof steps)[number]['status']> = {}
-    for (const step of steps) map[step.stepId] = step.status
-    return map
-  }, [steps])
+  const waitingPartnerCount = useMemo(() => {
+    if (selectedStepId !== 'confirm-referral-contacted') return 0
+    return days.reduce(
+      (count, day) =>
+        count + day.rows.filter((row) => row.status === 'waiting').length,
+      0,
+    )
+  }, [days, selectedStepId])
 
-  const focusStepId = useMemo(
-    () => focusStepIdForProgress(steps) || microsteps[0]?.id || '',
-    [steps, microsteps],
-  )
+  const displayDays = useMemo(() => {
+    if (
+      selectedStepId !== 'assign-owner' ||
+      !latestAssignmentNotification
+    ) {
+      return days
+    }
 
-  useEffect(() => {
-    if (focusStepId) setSelectedStepId(focusStepId)
-  }, [activePatient?.patientId, focusStepId, stageId])
+    const latestRow = days
+      .flatMap((day) => day.rows)
+      .find(
+        (row) => row.patientId === latestAssignmentNotification.patientId,
+      )
+    if (!latestRow) return days
 
-  const selectedProgress = steps.find((step) => step.stepId === selectedStepId)
-  const selectedDecision = patientDecisions.find(
-    (decision) => decision.stepId === selectedStepId,
-  )
-  const stepDetail =
-    activePatient && selectedStepId
-      ? detailForPatientStep(
-          stageId,
-          activePatient.patientId,
-          selectedStepId,
-          selectedProgress,
-        )
-      : null
-  const gate = humanGateForStep(stageId, selectedStepId)
-  const canConfirmSelected = Boolean(
-    gate &&
-      stepDetail?.progress &&
-      (stepDetail.progress.status === 'waiting' ||
-        stepDetail.progress.status === 'blocked' ||
-        stepDetail.progress.status === 'current'),
-  )
+    const remainingDays = days
+      .map((day) => ({
+        ...day,
+        rows: day.rows.filter(
+          (row) => row.patientId !== latestAssignmentNotification.patientId,
+        ),
+      }))
+      .filter((day) => day.rows.length > 0)
 
-  const confirmSelectedStep = (selectedOption?: string) => {
-    if (!activePatient || !selectedStepId || !gate) return
-    onRecordDecision({
-      stageId,
-      patientId: activePatient.patientId,
-      patientName: activePatient.patientName,
-      stepId: selectedStepId,
-      gate,
-      selectedOption,
-    })
+    return [
+      {
+        key: 'latest-assignment-notification',
+        label: 'Today',
+        month: '—',
+        day: '—',
+        rows: [
+          {
+            ...latestRow,
+            occurredAt: latestAssignmentNotification.occurredAt,
+          },
+        ],
+      },
+      ...remainingDays,
+    ]
+  }, [days, latestAssignmentNotification, selectedStepId])
+
+  const selectStep = (stepId: string) => {
+    if (selectedStepId === 'assign-owner' && stepId !== 'assign-owner') {
+      setShowUnreadAssignmentMessage(false)
+    }
+    if (stepId === 'assign-owner') {
+      setShowUnreadAssignmentMessage(assignmentNotificationUnread)
+    }
+    setSelectedStepId(stepId)
+    if (stepId === 'assign-owner') {
+      setAssignmentNotificationUnread(false)
+    }
   }
 
-  const closePatientList = () => {
-    setListOpen(false)
-    setQuery('')
+  const pickStatus = (value: StatusFilterValue) => {
+    setStatusFilter(value)
+    setStatusMenuOpen(false)
   }
 
-  useEscapeDismiss(listOpen, closePatientList)
+  const detailForRow = (patientId: string): StepDetail | null => {
+    if (!selectedStepId) return null
+    return detailForPatientStep(stageId, patientId, selectedStepId)
+  }
 
   return (
     <div className="stage-ops-steps" aria-label="Patient steps">
       <aside className="stage-ops-steps__rail">
         <div className="stage-ops-steps__rail-copy">
-          <h2>{microsteps.length} actions</h2>
-          <p className="muted">Select an action to see its result.</p>
+          <h2>{microsteps.length} steps</h2>
+          <p className="muted">Select a step to see patient updates.</p>
         </div>
         <MicrostepList
           steps={microsteps}
           selectedStepId={selectedStepId}
-          onSelect={setSelectedStepId}
-          stepStatuses={stepStatuses}
+          onSelect={selectStep}
+          attentionStepIds={
+            assignmentNotificationUnread ? ['assign-owner'] : []
+          }
         />
       </aside>
 
       <div className="stage-ops-steps__detail">
-        {activePatient ? (
-          <>
-            <div className="stage-ops-steps__toolbar">
-              <h3>{activePatient.patientName}</h3>
-              <button
-                type="button"
-                className="stage-ops-steps__see-patients"
-                aria-label="Patient list"
-                onClick={() => {
-                  setQuery('')
-                  setListOpen(true)
-                }}
-              >
-                <Users size={16} aria-hidden="true" />
-                Patient list
-                <span className="stage-ops-steps__patient-count">
-                  {patients.length}
-                </span>
-              </button>
-            </div>
-            {stepDetail ? (
-              <StagePatientStepDetail
-                detail={stepDetail}
-                canConfirm={canConfirmSelected}
-                isConfirmed={Boolean(selectedDecision)}
-                onConfirm={confirmSelectedStep}
-                actionLabel={
-                  stepDetail.progress?.status === 'blocked'
-                    ? gate?.blockedActionLabel ?? gate?.actionLabel
-                    : gate?.actionLabel
-                }
-                confirmedLabel={gate?.confirmedLabel}
-                options={gate?.options}
-                decision={selectedDecision}
-              />
+        <div className="stage-ops-steps__toolbar">
+          <div className="stage-ops-steps__toolbar-copy">
+            <h3>{selectedStep?.name ?? 'Step'}</h3>
+            {waitingPartnerCount > 0 ? (
+              <p className="stage-ops-steps__queue-hint">
+                {waitingPartnerCount}{' '}
+                {waitingPartnerCount === 1 ? 'patient' : 'patients'} need partner
+                confirmation
+              </p>
             ) : null}
-          </>
-        ) : (
-          <p className="muted">No patients in this stage.</p>
-        )}
-      </div>
+          </div>
 
-      {listOpen ? (
-        <div
-          className="stage-ops-steps__backdrop"
-          role="presentation"
-          onClick={closePatientList}
-        >
-          <section
-            className="stage-ops-steps__modal panel"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="stage-patient-list-title"
-            data-modal-scroll
-            onClick={(event) => event.stopPropagation()}
+          <div
+            className="stage-ops-steps__filter-bar"
+            aria-label="Feed filters"
           >
-            <header className="stage-ops-steps__modal-header">
-              <div>
-                <h2 id="stage-patient-list-title">Patients in this stage</h2>
-                <p className="stage-ops-steps__modal-count">
-                  {filtered.length === patients.length
-                    ? `${patients.length} patients`
-                    : `${filtered.length} of ${patients.length} patients`}
-                </p>
-              </div>
+            <div
+              className="stage-ops-steps__status-menu"
+              ref={statusMenuRef}
+            >
               <button
                 type="button"
-                className="stage-ops-steps__modal-close"
-                aria-label="Close patient list"
-                onClick={closePatientList}
+                className={`stage-ops-steps__status-trigger${statusMenuOpen ? ' is-open' : ''}${selectedStatusOption ? ` is-${selectedStatusOption.id}` : ''}`}
+                aria-label="Filter by status"
+                aria-haspopup="listbox"
+                aria-expanded={statusMenuOpen}
+                onClick={() => setStatusMenuOpen((current) => !current)}
               >
-                <X size={16} aria-hidden="true" />
+                <span className="stage-ops-steps__status-trigger-label">
+                  {selectedStatusOption
+                    ? selectedStatusOption.meaning
+                    : 'All statuses'}
+                </span>
+                <ChevronDown
+                  size={14}
+                  className="stage-ops-steps__status-trigger-icon"
+                  aria-hidden="true"
+                />
               </button>
-            </header>
 
-            <label className="stage-ops-steps__modal-search">
-              <Search size={16} aria-hidden="true" />
-              <input
-                type="search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search patients"
-                aria-label="Search patients"
-                autoFocus
-              />
-            </label>
-
-            <ul
-              className="stage-ops-steps__modal-list"
-              aria-label="Patients in this stage"
-              data-modal-scroll
-            >
-              {filtered.map((patient) => {
-                const selected = patient.patientId === activePatient?.patientId
-                const progress = stepsForPatient(stageId, patient.patientId).find(
-                  (step) =>
-                    step.status === 'current' ||
-                    step.status === 'waiting' ||
-                    step.status === 'blocked',
-                )
-                return (
-                  <li key={patient.patientId}>
+              {statusMenuOpen ? (
+                <ul
+                  className="stage-ops-steps__status-options"
+                  role="listbox"
+                  aria-label="Status options"
+                >
+                  <li>
                     <button
                       type="button"
-                      className={`stage-ops-steps__modal-patient ${selected ? 'is-selected' : ''}`}
-                      aria-current={selected ? 'true' : undefined}
-                      onClick={() => {
-                        onSelectPatient(patient.patientId, patient.patientName)
-                        closePatientList()
-                      }}
+                      role="option"
+                      aria-selected={statusFilter === 'all'}
+                      className={`stage-ops-steps__status-option${statusFilter === 'all' ? ' is-selected' : ''}`}
+                      onClick={() => pickStatus('all')}
                     >
-                      <span
-                        className="stage-ops-steps__modal-avatar"
-                        aria-hidden="true"
-                      >
-                        {initials(patient.patientName)}
-                      </span>
-                      <span className="stage-ops-steps__modal-copy">
-                        <strong>{patient.patientName}</strong>
-                        <small>
-                          {progress
-                            ? `${patientStatusLabel(progress.status)} - ${progress.stepName}`
-                            : 'Complete'}
-                        </small>
-                      </span>
+                      All statuses
                     </button>
                   </li>
-                )
-              })}
-              {filtered.length === 0 ? (
-                <li className="stage-ops-steps__modal-empty">
-                  No patients match your search.
-                </li>
+                  {STATUS_FILTERS.map((status) => (
+                    <li key={status.id}>
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={statusFilter === status.id}
+                        className={`stage-ops-steps__status-option is-${status.id}${statusFilter === status.id ? ' is-selected' : ''}`}
+                        onClick={() => pickStatus(status.id)}
+                      >
+                        {status.meaning}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               ) : null}
-            </ul>
-          </section>
+            </div>
+
+            <label className="stage-ops-steps__patient-search">
+              <Search size={15} aria-hidden="true" />
+              <input
+                type="search"
+                value={patientQuery}
+                onChange={(event) => setPatientQuery(event.target.value)}
+                placeholder="Search patients"
+                aria-label="Search patients"
+              />
+            </label>
+          </div>
         </div>
-      ) : null}
+
+        {displayDays.length ? (
+          <ol
+            className="stage-ops-step-feed"
+            aria-label="Step updates"
+            key={selectedStepId}
+          >
+            {displayDays.map((day) => (
+              <li key={day.key} className="stage-ops-step-feed__day">
+                <h4 className="stage-ops-step-feed__day-header">
+                  <time
+                    dateTime={day.key === 'undated' ? undefined : day.key}
+                  >
+                    {day.label}
+                  </time>
+                  <span className="stage-ops-step-feed__day-count">
+                    {day.rows.length}{' '}
+                    {day.rows.length === 1 ? 'update' : 'updates'}
+                  </span>
+                </h4>
+
+                <ul className="stage-ops-step-feed__rows">
+                  {day.rows.map((row) => {
+                    const detail = detailForRow(row.patientId)
+                    const canonical = intakeDemoPatient(row.patientId)?.canonical
+                    const suggestedCaseManager = caseManagerSuggestion(
+                      row.patientId,
+                    )
+                    const assignmentSuggestion =
+                      selectedStepId === 'determine-owner'
+                        ? suggestedCaseManager
+                        : undefined
+                    const assignmentConfirmed =
+                      Boolean(confirmedAssignments[row.patientId])
+                    const selectedCaseManagerEmail =
+                      selectedCaseManagers[row.patientId] ??
+                      suggestedCaseManager.email
+                    const selectedCaseManager =
+                      CASE_MANAGER_OPTIONS.find(
+                        (manager) =>
+                          manager.email === selectedCaseManagerEmail,
+                      ) ?? suggestedCaseManager
+                    const notification =
+                      selectedStepId === 'assign-owner'
+                        ? caseManagerNotification(
+                            row.patientId,
+                            row.patientName,
+                            selectedCaseManager,
+                          )
+                        : undefined
+                    const referralNotification =
+                      stageId === 'handoff' &&
+                      selectedStepId === 'notify-referral-source'
+                        ? referralSourceNotification(
+                            row.patientId,
+                            row.patientName,
+                            canonical,
+                          )
+                        : undefined
+                    const mondayRecord =
+                      stageId === 'handoff' &&
+                      selectedStepId === 'create-monday-record'
+                        ? mondayRecordForPatient(
+                            row.patientId,
+                            row.patientName,
+                            canonical,
+                          )
+                        : undefined
+                    const drkDraft =
+                      stageId === 'handoff' &&
+                      selectedStepId === 'create-update-drk'
+                        ? drkDraftForPatient(
+                            row.patientId,
+                            row.patientName,
+                            canonical,
+                          )
+                        : undefined
+                    return (
+                      <li
+                        key={`${row.patientId}-${row.stepId}`}
+                        className="stage-ops-step-feed__item is-open"
+                      >
+                        <StageFeedMessage
+                          summary={
+                            drkDraft
+                              ? drkDraft.readyForFill
+                                ? 'DRK chart created'
+                                : 'DRK chart draft needs review'
+                              : mondayRecord
+                              ? 'Monday.com record created'
+                              : referralNotification
+                              ? `Referral source notified · ${referralNotification.ccName} CCd`
+                              : selectedStepId === 'assign-owner'
+                              ? `${selectedCaseManager.name} notified`
+                              : selectedStepId === 'determine-owner'
+                                ? assignmentConfirmed
+                                  ? `${selectedCaseManager.name} confirmed as Case Manager`
+                                  : 'Case Manager needs to be confirmed'
+                                : row.summary
+                          }
+                          patientName={row.patientName}
+                          status={
+                            selectedStepId === 'determine-owner'
+                              ? assignmentConfirmed
+                                ? 'done'
+                                : 'waiting'
+                              : row.status
+                          }
+                          occurredAt={row.occurredAt}
+                          detail={detail}
+                          showPdf={selectedStepId === 'receive-referral'}
+                          isPartnerConfirmed={
+                            row.status === 'done' ||
+                            Boolean(partnerConfirmed[row.patientId])
+                          }
+                          onConfirmPartner={
+                            selectedStepId === 'confirm-referral-contacted'
+                              ? () =>
+                                  setPartnerConfirmed((current) => ({
+                                    ...current,
+                                    [row.patientId]: true,
+                                  }))
+                              : undefined
+                          }
+                          assignmentSuggestion={assignmentSuggestion}
+                          caseManagerOptions={CASE_MANAGER_OPTIONS}
+                          selectedCaseManagerEmail={selectedCaseManagerEmail}
+                          isAssignmentConfirmed={assignmentConfirmed}
+                          onCaseManagerChange={
+                            assignmentSuggestion
+                              ? (email) =>
+                                  setSelectedCaseManagers((current) => ({
+                                    ...current,
+                                    [row.patientId]: email,
+                                  }))
+                              : undefined
+                          }
+                          onConfirmAssignment={
+                            assignmentSuggestion
+                              ? () => {
+                                  setConfirmedAssignments((current) => ({
+                                    ...current,
+                                    [row.patientId]: true,
+                                  }))
+                                  setLatestAssignmentNotification({
+                                    patientId: row.patientId,
+                                    occurredAt: currentOpsTimestamp(),
+                                  })
+                                  setAssignmentNotificationUnread(true)
+                                }
+                              : undefined
+                          }
+                          caseManagerNotification={notification}
+                          referralNotification={referralNotification}
+                          mondayRecord={mondayRecord}
+                          drkDraft={drkDraft}
+                          isUnread={
+                            showUnreadAssignmentMessage &&
+                            selectedStepId === 'assign-owner' &&
+                            row.patientId ===
+                              latestAssignmentNotification?.patientId
+                          }
+                        />
+                      </li>
+                    )
+                  })}
+                </ul>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="muted stage-ops-steps__empty">
+            No patients match this step with the current filters.
+          </p>
+        )}
+      </div>
     </div>
   )
-}
-
-function initials(name: string) {
-  return name
-    .split(/[\s,]+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('')
-}
-
-function focusStepIdForProgress(
-  steps: Array<{ stepId: string; status: string }>,
-) {
-  const active = steps.find(
-    (step) =>
-      step.status === 'current' ||
-      step.status === 'waiting' ||
-      step.status === 'blocked',
-  )
-  if (active) return active.stepId
-  const lastDone = [...steps].reverse().find((step) => step.status === 'done')
-  return lastDone?.stepId ?? steps[0]?.stepId ?? ''
-}
-
-function patientStatusLabel(status: string) {
-  switch (status) {
-    case 'current':
-      return 'In progress'
-    case 'waiting':
-      return 'Waiting'
-    case 'blocked':
-      return 'Blocked'
-    default:
-      return 'Next'
-  }
 }

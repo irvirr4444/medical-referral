@@ -31,6 +31,23 @@ export interface ArtifactSection {
   defaultExpanded?: boolean
 }
 
+/** Skim-layer facts for extract-and-verify feed messages. */
+export interface FeedDecision {
+  thresholdMet: boolean
+  completeCount: number
+  totalRequired: number
+  missingLabels: string[]
+  unclearLabels: string[]
+  identityLine: string
+}
+
+/** Skim-layer facts for referral partner contact confirmation. */
+export interface FeedContactConfirmation {
+  partnerName: string
+  partnerEmail?: string
+  contactedBack: boolean
+}
+
 export interface MicrostepExample {
   status: MicrostepRunStatus
   duration: string
@@ -45,7 +62,10 @@ export interface MicrostepExample {
   artifactTitle?: string
   knownAtThisPoint?: AutomationValue[]
   artifactSections?: ArtifactSection[]
-  actionFields?: ArtifactField[]
+  /** Local samples PDF filename served at /referrals/... */
+  samplePdf?: string
+  feedDecision?: FeedDecision
+  feedContactConfirmation?: FeedContactConfirmation
 }
 
 export interface MicrostepExecutionSnapshot {
@@ -64,6 +84,8 @@ export interface MicrostepExecutionSnapshot {
   output: string
   knownAtThisPoint: AutomationValue[]
   artifactSections: ArtifactSection[]
+  feedDecision?: FeedDecision
+  feedContactConfirmation?: FeedContactConfirmation
 }
 
 export interface AutomationMicrostep {
@@ -123,6 +145,8 @@ export function snapshotToExample(
     artifactTitle: snapshot.artifactTitle,
     knownAtThisPoint: snapshot.knownAtThisPoint,
     artifactSections: snapshot.artifactSections,
+    feedDecision: snapshot.feedDecision,
+    feedContactConfirmation: snapshot.feedContactConfirmation,
     inputs: [{ label: 'Input received', value: snapshot.input }],
     outputs: [{ label: 'Output produced', value: snapshot.output }],
   }

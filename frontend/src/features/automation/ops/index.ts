@@ -4,9 +4,12 @@ import type {
   ActivityFeedMessage,
   OpsEvent,
   PatientStepProgress,
+  PatientStepStatus,
   StageOpsFixture,
   StageOpsRecipe,
   StagePatientRef,
+  StepFeedDay,
+  StepFeedRow,
 } from './types'
 import { INTAKE_OPS_FIXTURE } from './fixtures/intake'
 import { HANDOFF_OPS_FIXTURE } from './fixtures/handoff'
@@ -23,12 +26,12 @@ import {
 } from './fixtures/patientJourneys'
 import { PATIENT_STEP_BREAKDOWNS } from './fixtures/patientSteps'
 import {
-  heroActionFields,
   heroArtifactSections,
   heroPatientIdForStage,
 } from './fixtures/heroPatientArtifacts'
 import { automationStage } from '../stages'
 import { BUTLER_INTAKE_SNAPSHOTS } from '../fixtures/butlerIntakeSnapshots'
+import { intakeDemoPatient } from '../fixtures/intakeDemoPatients'
 import {
   snapshotToExample,
   type MicrostepExample,
@@ -130,6 +133,85 @@ export function stepsForPatient(
   })
 }
 
+const DEFAULT_FEED_STATUSES: PatientStepStatus[] = [
+  'done',
+  'current',
+  'waiting',
+  'blocked',
+]
+
+export function feedForStep(
+  stageId: FlowOpsPageId,
+  stepId: string,
+  filters?: {
+    patientQuery?: string
+    statuses?: PatientStepStatus[]
+  },
+): StepFeedDay[] {
+  const allowedStatuses: PatientStepStatus[] = (
+    filters?.statuses?.length ? filters.statuses : DEFAULT_FEED_STATUSES
+  ).filter((status) => status !== 'upcoming')
+  const query = filters?.patientQuery?.trim().toLowerCase() ?? ''
+
+  const rows: StepFeedRow[] = []
+  for (const patient of patientsForStage(stageId)) {
+    if (query && !patient.patientName.toLowerCase().includes(query)) continue
+    const progress = stepsForPatient(stageId, patient.patientId).find(
+      (row) => row.stepId === stepId,
+    )
+    if (!progress || !allowedStatuses.includes(progress.status)) continue
+
+    rows.push({
+      patientId: patient.patientId,
+      patientName: patient.patientName,
+      stepId,
+      status: progress.status,
+      summary: progress.summary,
+      occurredAt: progress.occurredAt ?? '',
+    })
+  }
+
+  rows.sort((a, b) => {
+    const aMs = a.occurredAt ? parseOpsDate(a.occurredAt).timeMs : 0
+    const bMs = b.occurredAt ? parseOpsDate(b.occurredAt).timeMs : 0
+    return bMs - aMs
+  })
+
+  const byDay = new Map<string, StepFeedRow[]>()
+  for (const row of rows) {
+    const key = row.occurredAt ? dayKey(row.occurredAt) : 'undated'
+    const list = byDay.get(key) ?? []
+    list.push(row)
+    byDay.set(key, list)
+  }
+
+  return [...byDay.entries()]
+    .sort((a, b) => {
+      if (a[0] === 'undated') return 1
+      if (b[0] === 'undated') return -1
+      return a[0] < b[0] ? 1 : -1
+    })
+    .map(([key, dayRows]) => {
+      if (key === 'undated') {
+        return {
+          key,
+          label: 'Undated',
+          month: '—',
+          day: '—',
+          rows: dayRows,
+        }
+      }
+      const parsed = parseOpsDate(dayRows[0].occurredAt)
+      return {
+        key: parsed.key,
+        label: parsed.label,
+        month: parsed.month,
+        day: parsed.day,
+        rows: dayRows,
+      }
+    })
+}
+
 export function detailForPatientStep(
   stageId: FlowOpsPageId,
   patientId: string,
@@ -148,13 +230,23 @@ export function detailForPatientStep(
     patientsForStage(stageId).find((patient) => patient.patientId === patientId)
       ?.patientName ?? patientId
 
-  if (stageId === 'intake' && patientId === 'butler-alva') {
-    const snapshot = BUTLER_INTAKE_SNAPSHOTS[stepId]
+  if (stageId === 'intake') {
+    const demo = intakeDemoPatient(patientId)
+    const snapshot = demo?.snapshots[stepId] ?? (
+      patientId === 'butler-alva' ? BUTLER_INTAKE_SNAPSHOTS[stepId] : undefined
+    )
+    const example = snapshot
+      ? {
+          ...snapshotToExample(snapshot, patientName),
+          samplePdf:
+            stepId === 'receive-referral' ? demo?.samplePdf : undefined,
+        }
+      : undefined
     return {
       microstep: microstep ?? null,
       progress,
       snapshot,
-      example: snapshot ? snapshotToExample(snapshot, patientName) : undefined,
+      example,
     }
   }
 
@@ -192,7 +284,6 @@ function synthesizeStepExample({
 }): MicrostepExample {
   const facts = progress.detail
   const heroSections = heroArtifactSections(stageId, patientId, progress.stepId)
-  const actionFields = heroActionFields(stageId, patientId, progress.stepId)
   const humanGate = humanGateForStep(stageId, progress.stepId)
   const runStatus = toRunStatus(progress.status)
   const knownAtThisPoint = facts?.knownAtThisPoint ?? [
@@ -263,7 +354,6 @@ function synthesizeStepExample({
     executionId: `${patientId}-${progress.stepId}`,
     artifactId: `${patientId}-${progress.stepId}-artifact`,
     knownAtThisPoint,
-    actionFields,
     artifactSections:
       heroSections ??
       [
@@ -476,7 +566,10 @@ export type {
   OpsEvent,
   PatientOpsJourney,
   PatientStepProgress,
+  PatientStepStatus,
   StageOpsFixture,
   StageOpsRecipe,
   StagePatientRef,
+  StepFeedDay,
+  StepFeedRow,
 } from './types'

@@ -1,0 +1,459 @@
+{
+  "schema_version": 1,
+  "referral_id": "ref_01006e149b162021b291f121",
+  "source": {
+    "email_id": null,
+    "attachment_id": null,
+    "file_name": "fax20260713-16377-syrmla.pdf",
+    "pdf_sha256": "01006e149b162021b291f121aaea89e105017094783931b37f4fb98bf504a3fb",
+    "page_count": 3,
+    "sent_by": "David Martirosyan <dmartirosyan@dnahomehealth.com>",
+    "extraction": {
+      "primary_model": "claude-opus-5",
+      "models_attempted": [
+        "claude-opus-5"
+      ],
+      "pass_models": [
+        "claude-opus-5",
+        "claude-opus-5"
+      ],
+      "fallback_used": false
+    }
+  },
+  "document_type": "Fax cover sheet requesting wound care evaluation, with attached home health Patient Demographics form (pages 2-3)",
+  "patient": {
+    "name": {
+      "first": "William",
+      "middle": null,
+      "last": "Fay",
+      "suffix": null,
+      "full": "FAY, WILLIAM"
+    },
+    "date_of_birth": "1926-12-06",
+    "age": 99,
+    "sex_or_gender": "Male",
+    "ssn": null,
+    "mrn": "MR202",
+    "source_patient_id": "MR202",
+    "source_patient_id_label": "Medical Record Id",
+    "phones": [
+      {
+        "number": "(626) 379-1461",
+        "type": "home"
+      },
+      {
+        "number": "(626) 524-2856",
+        "type": "mobile"
+      }
+    ],
+    "email": null,
+    "address": {
+      "line_1": "1295 Solita Rd",
+      "line_2": null,
+      "city": "Pasadena",
+      "state": "CA",
+      "postal_code": "91103",
+      "country": null
+    },
+    "emergency_contact": null
+  },
+  "referral_source": {
+    "organization": {
+      "name": "DNA Home Health Services, Inc.",
+      "contact_name": "David Martirosyan DPCS",
+      "phone": "(818) 938-9143",
+      "fax": "(424) 383-8813",
+      "email": null,
+      "address": "18425 Burbank Blvd, Suite 417, Tarzana, CA 91356"
+    },
+    "provider_name": "ROJAS, ARBIS",
+    "referral_or_order_date": "2026-03-06"
+  },
+  "home_health_or_hospice": {
+    "organization": {
+      "name": "DNA Home Health Services, Inc.",
+      "contact_name": "David Martirosyan DPCS",
+      "phone": "(818) 938-9143",
+      "fax": "(818) 938-9179",
+      "email": null,
+      "address": "18425 Burbank Blvd Ste 417, Tarzana, CA 91356"
+    },
+    "hospice": null,
+    "palliative_care": null
+  },
+  "admission": {
+    "admission_date": "2026-03-08",
+    "facility": {
+      "name": "DNA Home Health Services, Inc.",
+      "contact_name": null,
+      "phone": "(818) 938-9143",
+      "fax": "(818) 938-9179",
+      "email": null,
+      "address": "18425 Burbank Blvd Ste 417, Tarzana, CA 91356"
+    },
+    "place_of_service": null,
+    "medicare_admission": null
+  },
+  "clinical": {
+    "summary": "Fax from DNA Home Health Services, Inc. (David Martirosyan, DPCS) addressed to 'west coast wound care' requesting the patient be seen for a wound care evaluation of a stage 2 coccyx wound, with the notation '3m' on the cover sheet. The attached home health Patient Demographics show Status 'Admit', SOC Date 03/08/2026, Referral Date 03/06/26 with Referral Source 'Physician - ROJAS, ARBIS', DNR: No, No Known Allergies, Medicare as primary insurance, and an admitting diagnosis list headed by I11.0 hypertensive heart disease with heart failure.",
+    "wound_order_included": true,
+    "diagnoses": [
+      {
+        "code": "I11.0",
+        "description": "Hypertensive heart disease with heart failure",
+        "added_date": "2026-03-08",
+        "is_primary": true,
+        "status": "Admitting diagnosis (Primary Diagnosis); Onset 03/08/2026"
+      },
+      {
+        "code": "I50.32",
+        "description": "Chronic diastolic (congestive) heart failure",
+        "added_date": "2026-03-08",
+        "is_primary": false,
+        "status": "Admitting diagnosis (Other Diagnosis); Onset 03/08/2026; listed twice on page 2"
+      },
+      {
+        "code": "F03.90",
+        "description": "Unspecified dementia without behavioral disturbance",
+        "added_date": "2026-03-08",
+        "is_primary": false,
+        "status": "Admitting diagnosis (Other Diagnosis); Onset 03/08/2026"
+      },
+      {
+        "code": "E78.5",
+        "description": "Hyperlipidemia, unspecified",
+        "added_date": "2026-03-08",
+        "is_primary": false,
+        "status": "Admitting diagnosis (Other Diagnosis); Onset 03/08/2026; repeated on page 3"
+      },
+      {
+        "code": "G62.9",
+        "description": "Polyneuropathy, unspecified",
+        "added_date": "2026-03-08",
+        "is_primary": false,
+        "status": "Admitting diagnosis (Other Diagnosis); Onset 03/08/2026; repeated on page 3"
+      },
+      {
+        "code": "M19.90",
+        "description": "Unspecified osteoarthritis, unspecified site",
+        "added_date": "2026-03-08",
+        "is_primary": false,
+        "status": "Admitting diagnosis (Other Diagnosis); Onset 03/08/2026; repeated on page 3"
+      },
+      {
+        "code": "F03.90",
+        "description": "Unspecified dementia, unspecified severity, without behavioral disturbance, psychotic disturbance, mood disturbance, and anxiety",
+        "added_date": "2026-03-08",
+        "is_primary": false,
+        "status": "Admitting diagnosis continuation list on page 3; Onset 03/08/2026"
+      },
+      {
+        "code": null,
+        "description": "Stage 2 coccyx wound",
+        "added_date": null,
+        "is_primary": null,
+        "status": "Stated on fax cover sheet as the reason for the requested wound care evaluation; not present in the coded admitting diagnosis list"
+      }
+    ],
+    "medications": [],
+    "allergies": [],
+    "diagnoses_section_present": true,
+    "medications_section_present": false,
+    "allergies_section_present": true,
+    "no_known_allergies_explicit": true,
+    "notes": [
+      "Fax cover sheet order text (page 1): 'Please see patient for wound care eval of stage 2 coccyx wound' followed by '3m'.",
+      "Fax cover sheet header: 'From DNA Home Health Services Inc 1.424.363.8813 Mon Jul 13 14:36:44 2026 PDT Page 1 of 3'; cover sheet 'Attention To: west coast wound care'; 'Regarding: Fay William'; 'Return Fax: (424)383-8813'.",
+      "Demographics letterhead (pages 2-3): DNA Home Health Services, Inc., 18425 BURBANK BLVD STE 417, TARZANA CA 91356, Phone: 8189389143, Fax: 8189389179.",
+      "Patient status: Admit; SOC Date 03/08/2026; Referral Date 03/06/26; Referral Source: Physician - ROJAS, ARBIS; DNR: No.",
+      "Primary Physician and Admitting Physician both listed as ROJAS, ARBIS, 950 S Arroyo Pkwy Fl 3, PASADENA, CA 91105; Phone (626) 584-1919; Fax (626) 228-0695; NPI 1235460510; License # A 114775; UPIN blank.",
+      "Secondary Physician, Tertiary Physician, and Other Physician fields are blank.",
+      "CLINICIANS: Admitting Care Staff - Kirakosyan, Lilit; Physical Therapy - Omni, Therapy (Assigned on 3/12/2026); Skilled Nursing - Martirosyan, David; Skilled Nursing - Kolerova, Natalia; Skilled Nursing - Kirakosyan, Lilit (Assigned on 3/8/2026).",
+      "PHARMACY INFORMATION: Primary - RX Boutique Pharmacy, Phone (818) 514-6010.",
+      "Demographics: Ethnicity Black or African-American; Marital Status Single; Primary Language English; Secondary Language English; Interpreter field blank.",
+      "Medicare #: 7GN2CP3UW06 listed in the demographics header, matching the primary insurance policy number.",
+      "Every coded admitting diagnosis is listed with Onset: 03/08/2026.",
+      "'INITIAL ORDERS (Include Reason for Admission/Evaluation)' and 'SPECIAL INSTRUCTIONS' sections on page 3 are blank; Staff Signature and Date lines on pages 2 and 3 are blank.",
+      "Blank/empty fields on the demographics form: Social Security #, FRA Score, Category, Acuity Level, Disaster Code, Patient with limited mobility, EPP Coordinator, Legal Representative (Name, Address, Relationship, Mobile Phone, Effective Date, Email Address), Inpatient D/C Date, D/C Date, D/C Reason."
+    ]
+  },
+  "insurances": [
+    {
+      "payer_name": "Medicare",
+      "policy_number": "7GN2CP3UW06",
+      "group_number": null,
+      "group_name": null,
+      "policy_holder_name": null,
+      "insurance_type": "Primary",
+      "effective_date": null,
+      "expiration_date": null,
+      "is_patient_policy_holder": null,
+      "subscriber_first_name": null,
+      "subscriber_last_name": null,
+      "subscriber_date_of_birth": null,
+      "subscriber_relationship": null
+    }
+  ],
+  "requested_services": [
+    {
+      "service": "Wound care evaluation (stage 2 coccyx wound)",
+      "frequency": null,
+      "instructions": "'Please see patient for wound care eval of stage 2 coccyx wound' followed by the notation '3m' (fax cover sheet, addressed to west coast wound care)."
+    }
+  ],
+  "field_quality": {
+    "patient.name": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1,
+        2
+      ],
+      "evidence_quote": "FAY, WILLIAM"
+    },
+    "patient.date_of_birth": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1,
+        2
+      ],
+      "evidence_quote": "DOB:12/06/1926 / Date of Birth: 12/06/1926"
+    },
+    "patient.age": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        2
+      ],
+      "evidence_quote": "Age: 99"
+    },
+    "patient.sex_or_gender": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        2
+      ],
+      "evidence_quote": "Gender: Male"
+    },
+    "patient.phones": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        2
+      ],
+      "evidence_quote": "Phone: home (626) 379-1461 / mobile (626) 524-2856"
+    },
+    "patient.address": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        2
+      ],
+      "evidence_quote": "Address: 1295 SOLITA RD  Pasadena, CA 91103"
+    },
+    "patient.mrn": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        2
+      ],
+      "evidence_quote": "Medical Record Id: MR202"
+    },
+    "patient.source_patient_id": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        2
+      ],
+      "evidence_quote": "Medical Record Id: MR202"
+    },
+    "patient.ssn": {
+      "status": "missing",
+      "confidence": "high",
+      "evidence_pages": [
+        2
+      ],
+      "evidence_quote": "Social Security #: (field printed but blank)"
+    },
+    "patient.email": {
+      "status": "missing",
+      "confidence": "high",
+      "evidence_pages": [],
+      "evidence_quote": null
+    },
+    "patient.emergency_contact": {
+      "status": "missing",
+      "confidence": "medium",
+      "evidence_pages": [
+        2
+      ],
+      "evidence_quote": "Contacts / Legal Representative  Name: ,  (blank)"
+    },
+    "referral_source.organization": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "From: David Martirosyan DPCS - DNA Home Health Services Inc.  Return Fax: (424)383-8813"
+    },
+    "referral_source.provider_name": {
+      "status": "present",
+      "confidence": "medium",
+      "evidence_pages": [
+        2
+      ],
+      "evidence_quote": "Referral Source: Physician - ROJAS, ARBIS"
+    },
+    "referral_source.referral_or_order_date": {
+      "status": "unclear",
+      "confidence": "medium",
+      "evidence_pages": [
+        1,
+        2
+      ],
+      "evidence_quote": "Referral Date: 03/06/26 (demographics) vs fax transmitted 'Mon Jul 13 14:36:44 2026 PDT'"
+    },
+    "home_health_or_hospice": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1,
+        2,
+        3
+      ],
+      "evidence_quote": "DNA Home Health Services, Inc. 18425 BURBANK BLVD STE 417, TARZANA CA 91356 Phone: 8189389143 Fax: 8189389179"
+    },
+    "home_health_or_hospice.organization": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1,
+        2,
+        3
+      ],
+      "evidence_quote": "DNA Home Health Services, Inc. ... Patient Demographics"
+    },
+    "home_health_or_hospice.hospice": {
+      "status": "missing",
+      "confidence": "medium",
+      "evidence_pages": [],
+      "evidence_quote": null
+    },
+    "home_health_or_hospice.palliative_care": {
+      "status": "missing",
+      "confidence": "medium",
+      "evidence_pages": [],
+      "evidence_quote": null
+    },
+    "admission.admission_date": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        2
+      ],
+      "evidence_quote": "SOC Date: 03/08/2026"
+    },
+    "admission.facility": {
+      "status": "present",
+      "confidence": "medium",
+      "evidence_pages": [
+        2
+      ],
+      "evidence_quote": "DNA Home Health Services, Inc. Patient Demographics \u2014 Status: Admit, SOC Date: 03/08/2026"
+    },
+    "admission.place_of_service": {
+      "status": "missing",
+      "confidence": "medium",
+      "evidence_pages": [],
+      "evidence_quote": null
+    },
+    "admission.medicare_admission": {
+      "status": "missing",
+      "confidence": "low",
+      "evidence_pages": [],
+      "evidence_quote": null
+    },
+    "clinical": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1,
+        2,
+        3
+      ],
+      "evidence_quote": "Please see patient for wound care eval of stage 2 coccyx wound"
+    },
+    "clinical.summary": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Please see patient for wound care eval of stage 2 coccyx wound 3m"
+    },
+    "clinical.wound_order_included": {
+      "status": "present",
+      "confidence": "medium",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Please see patient for wound care eval of stage 2 coccyx wound"
+    },
+    "clinical.diagnoses": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        2,
+        3
+      ],
+      "evidence_quote": "ADMITTING DIAGNOSIS  Primary Diagnosis: I11.0 Hypertensive heart disease with heart failure"
+    },
+    "clinical.medications": {
+      "status": "missing",
+      "confidence": "high",
+      "evidence_pages": [
+        2,
+        3
+      ],
+      "evidence_quote": "No medication section appears; only 'PHARMACY INFORMATION: Primary: RX Boutique Pharmacy' is listed."
+    },
+    "clinical.allergies": {
+      "status": "explicitly_none",
+      "confidence": "high",
+      "evidence_pages": [
+        2
+      ],
+      "evidence_quote": "Allergies: No Known Allergies"
+    },
+    "insurances": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        2
+      ],
+      "evidence_quote": "INSURANCE INFORMATION  Primary: Medicare 7GN2CP3UW06"
+    },
+    "requested_services": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Attention To: west coast wound care ... Please see patient for wound care eval of stage 2 coccyx wound"
+    }
+  },
+  "warnings": [
+    "The faxing/referring organization (DNA Home Health Services, Inc.) is also the patient's current home health agency; the demographics form separately lists 'Referral Source: Physician - ROJAS, ARBIS', which is the source of the home health admission rather than necessarily the orderer of this wound care evaluation.",
+    "Referral/order date is ambiguous: the demographics form lists 'Referral Date: 03/06/26' (home health referral) and 'SOC Date: 03/08/2026', while the wound-care fax itself was transmitted Mon Jul 13 14:36:44 2026 PDT per the fax header.",
+    "Fax numbers conflict: cover sheet 'Return Fax: (424)383-8813', fax transmission header '1.424.363.8813', and demographics letterhead 'Fax: 8189389179'. Return fax as printed on the cover sheet was used for the referral source organization.",
+    "Diagnosis I50.32 'Chronic diastolic (congestive) heart failure' is listed twice on page 2.",
+    "Code F03.90 appears with two different descriptions ('Unspecified dementia without behavioral disturbance' on page 2 and the expanded 'Unspecified dementia, unspecified severity, without behavioral disturbance, psychotic disturbance, mood disturbance, and anxiety' on page 3); page 3 also repeats E78.5, G62.9 and M19.90 already listed on page 2. Repeated rows were consolidated and flagged rather than duplicated.",
+    "The notation '3m' after the wound care request on the fax cover sheet is ambiguous (could indicate duration, frequency, or measurement) and was not interpreted.",
+    "The stage 2 coccyx wound is documented only on the fax cover sheet as the reason for the requested evaluation; it does not appear in the coded admitting diagnosis list and has no ICD-10 code in the document.",
+    "'INITIAL ORDERS (Include Reason for Admission/Evaluation)' and 'SPECIAL INSTRUCTIONS' sections on page 3 are blank; no signed/dated physician order accompanies the request (Staff Signature and Date lines are blank).",
+    "No medication list is included anywhere in the document (medication section absent, not stated as none).",
+    "Only one insurance (Medicare, explicitly labeled 'Primary') is documented; no secondary/tertiary coverage is shown."
+  ]
+}

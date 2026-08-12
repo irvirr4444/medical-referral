@@ -24,8 +24,8 @@ export interface JourneyPatientDef {
 
 export const JOURNEY_STAGE_ORDER: FlowOpsPageId[] = [
   'intake',
-  'handoff',
   'assignment',
+  'handoff',
   'provider',
   'scheduling',
   'end-of-day',

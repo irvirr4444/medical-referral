@@ -1,0 +1,441 @@
+{
+  "schema_version": 1,
+  "referral_id": "ref_1ef085bafb769eb004db3352",
+  "source": {
+    "email_id": null,
+    "attachment_id": null,
+    "file_name": "fax20260713-620-tw3x6v.pdf",
+    "pdf_sha256": "1ef085bafb769eb004db3352e97dd1910c7e6b70cda56ecb261585cd23c9e259",
+    "page_count": 1,
+    "sent_by": "Referral Fax Gateway <fax-inbound@ayhomehealth.com>",
+    "extraction": {
+      "primary_model": "claude-opus-5",
+      "models_attempted": [
+        "claude-opus-5"
+      ],
+      "pass_models": [
+        "claude-opus-5",
+        "claude-opus-5"
+      ],
+      "fallback_used": false
+    }
+  },
+  "document_type": "Faxed home health patient face sheet / patient information summary (WellSky patient profile) from Ay Home Health Care LLC",
+  "patient": {
+    "name": {
+      "first": "Khojagul",
+      "middle": null,
+      "last": "Zadran",
+      "suffix": null,
+      "full": "Zadran, Khojagul"
+    },
+    "date_of_birth": "1946-01-01",
+    "age": 80,
+    "sex_or_gender": "Male",
+    "ssn": null,
+    "mrn": null,
+    "source_patient_id": "10236",
+    "source_patient_id_label": "Patient ID in face sheet header (WellSky ID also listed: 8394-651-899)",
+    "phones": [
+      {
+        "number": "(720) 324-3242",
+        "type": null
+      },
+      {
+        "number": "(720) 870-6024",
+        "type": null
+      }
+    ],
+    "email": null,
+    "address": {
+      "line_1": "17950 E Dorado Dr",
+      "line_2": null,
+      "city": "Aurora",
+      "state": "CO",
+      "postal_code": "80015",
+      "country": null
+    },
+    "emergency_contact": {
+      "name": {
+        "first": "Helay",
+        "middle": null,
+        "last": "Zadran",
+        "suffix": null,
+        "full": "Helay Zadran"
+      },
+      "relationship": "Daughter",
+      "phone": "(720) 324-3242"
+    }
+  },
+  "referral_source": {
+    "organization": {
+      "name": null,
+      "contact_name": null,
+      "phone": "(303) 993-1330",
+      "fax": "(303) 647-3647",
+      "email": null,
+      "address": "12600 W Colfax Ave, Suite B-200, Lakewood CO 80215"
+    },
+    "provider_name": "Heather Krohn (listed as Primary Physician; NPI 1184259178)",
+    "referral_or_order_date": "2026-06-02"
+  },
+  "home_health_or_hospice": {
+    "organization": {
+      "name": "Ay Home Health Care LLC",
+      "contact_name": null,
+      "phone": "(303) 955-8096",
+      "fax": null,
+      "email": null,
+      "address": "3190 South Vaughn Way Ste 550, Aurora CO 80014"
+    },
+    "hospice": false,
+    "palliative_care": null
+  },
+  "admission": {
+    "admission_date": "2026-06-03",
+    "facility": {
+      "name": "Ay Home Health Care LLC",
+      "contact_name": null,
+      "phone": "(303) 955-8096",
+      "fax": null,
+      "email": null,
+      "address": "3190 South Vaughn Way Ste 550, Aurora CO 80014"
+    },
+    "place_of_service": null,
+    "medicare_admission": null
+  },
+  "clinical": {
+    "summary": "Faxed WellSky patient face sheet from Ay Home Health Care LLC for Khojagul Zadran, an 80-year-old male, documenting an active home health episode of 06/03/2026 - 08/01/2026 (Start of Care 06/03/2026; Referral Date 06/02/2026; Triage Code 2). Primary diagnosis is unstageable pressure ulcer of the sacral region and secondary diagnosis is unstageable pressure ulcer of the left hip. Care team listed: Primary Clinician Nunu Goshu RN, Primary Aide Cory Molnar PT, Case Manager Nunu Goshu RN. Primary Physician is Heather Krohn. Visit frequencies field is blank and the Comments section states NONE.",
+    "wound_order_included": null,
+    "diagnoses": [
+      {
+        "code": null,
+        "description": "Pressure ulcer of sacral region, unstageable",
+        "added_date": null,
+        "is_primary": true,
+        "status": null
+      },
+      {
+        "code": null,
+        "description": "Pressure ulcer of left hip, unstageable",
+        "added_date": null,
+        "is_primary": false,
+        "status": null
+      }
+    ],
+    "medications": [],
+    "allergies": [],
+    "diagnoses_section_present": true,
+    "medications_section_present": false,
+    "allergies_section_present": true,
+    "no_known_allergies_explicit": false,
+    "notes": [
+      "Current Episode: 06/03/2026 - 08/01/2026",
+      "Start of Care: 06/03/2026",
+      "Referral Date: 06/02/2026 (printed as '06/C2/2026' in the faxed scan)",
+      "Triage Code: 2",
+      "Primary Clinician: Nunu Goshu RN",
+      "Primary Aide: Cory Molnar PT",
+      "Case Manager: Nunu Goshu RN",
+      "Frequencies: field label present but value blank",
+      "Language: English",
+      "Medicare #: 4AM7D62MN20 (same value as primary insurance policy number)",
+      "Medicaid #: field present but blank",
+      "SSN: field present but blank",
+      "Email Address: field present but blank",
+      "Allergies section header present with no entries listed (no NKA/NKDA statement)",
+      "Insurance section shows Secondary Insurance and Tertiary Insurance headers with no values",
+      "Primary Physician Heather Krohn: address 12600 W Colfax Ave, Suite B-200, Lakewood CO 80215; phone (303) 993-1330; facsimile (303) 647-3647; NPI 1184259178; State ID: Not Entered; Contact: blank",
+      "Pharmacy: Phone: Not Entered",
+      "Comments: NONE",
+      "Emergency Contact address field blank",
+      "Header identifiers: patient ID 10236 and WellSky ID 8394-651-899",
+      "Fax transmission header: 07/13/2026 12:32PM FAX 3039539402, page 0001/0001"
+    ]
+  },
+  "insurances": [
+    {
+      "payer_name": "CGS Medicare",
+      "policy_number": "4AM7D62MN20",
+      "group_number": null,
+      "group_name": null,
+      "policy_holder_name": null,
+      "insurance_type": "Primary",
+      "effective_date": null,
+      "expiration_date": null,
+      "is_patient_policy_holder": null,
+      "subscriber_first_name": null,
+      "subscriber_last_name": null,
+      "subscriber_date_of_birth": null,
+      "subscriber_relationship": null
+    }
+  ],
+  "requested_services": [],
+  "field_quality": {
+    "patient.name": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Zadran, Khojagul (10236)"
+    },
+    "patient.date_of_birth": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Date of Birth (Age) 01/01/1946 (80)"
+    },
+    "patient.age": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "01/01/1946 (80)"
+    },
+    "patient.sex_or_gender": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Sex  Male"
+    },
+    "patient.ssn": {
+      "status": "missing",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "SSN (label present, value blank)"
+    },
+    "patient.mrn": {
+      "status": "missing",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "No MRN label appears; only patient ID (10236) and WellSky ID 8394-651-899"
+    },
+    "patient.source_patient_id": {
+      "status": "present",
+      "confidence": "medium",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Zadran, Khojagul (10236) / WellSky ID: 8394-651-899"
+    },
+    "patient.phones": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Phone (720) 324-3242 / (720) 870-6024"
+    },
+    "patient.address": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "17950 E Dorado Dr AURORA CO 80015"
+    },
+    "patient.email": {
+      "status": "missing",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Email Address (label present, value blank)"
+    },
+    "patient.emergency_contact": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Emergency Contact: Helay Zadran ... (720) 324-3242 ... Daughter"
+    },
+    "referral_source": {
+      "status": "present",
+      "confidence": "medium",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Primary Physician: Heather Krohn ... 12600 W Colfax Ave, Suite B-200 Lakewood CO 80215 ... NPI 1184259178"
+    },
+    "referral_source.organization.name": {
+      "status": "missing",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Only the physician's practice address/phone/fax are printed; no referring organization name"
+    },
+    "referral_source.provider_name": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Primary Physician: Heather Krohn"
+    },
+    "referral_source.referral_or_order_date": {
+      "status": "present",
+      "confidence": "medium",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Referral Date 06/C2/2026 (OCR-degraded; read as 06/02/2026)"
+    },
+    "home_health_or_hospice": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Ay Home Health Care LLC (303) 955-8096 3190 South Vaughn Way Ste 550 Aurora CO, 80014"
+    },
+    "home_health_or_hospice.hospice": {
+      "status": "present",
+      "confidence": "medium",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Ay Home Health Care LLC \u2014 home health face sheet with Start of Care/episode; no hospice indication"
+    },
+    "home_health_or_hospice.palliative_care": {
+      "status": "missing",
+      "confidence": "high",
+      "evidence_pages": [],
+      "evidence_quote": null
+    },
+    "admission": {
+      "status": "present",
+      "confidence": "medium",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Start of Care: 06/03/2026; Current Episode: 06/03/2026 - 08/01/2026"
+    },
+    "admission.admission_date": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Start of Care: 06/03/2026"
+    },
+    "admission.place_of_service": {
+      "status": "missing",
+      "confidence": "medium",
+      "evidence_pages": [],
+      "evidence_quote": null
+    },
+    "admission.medicare_admission": {
+      "status": "missing",
+      "confidence": "medium",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Primary Insurance CGS Medicare listed, but admission type/payer source not stated"
+    },
+    "clinical": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Primary Diagnosis: Pressure ulcer of sacral region, unstageable; Secondary Diagnosis: Pressure ulcer of left hip, unstageable"
+    },
+    "clinical.summary": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Current Episode: 06/03/2026 - 08/01/2026; Start of Care: 06/03/2026"
+    },
+    "clinical.diagnoses": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Pressure ulcer of sacral region, unstageable / Pressure ulcer of left hip, unstageable"
+    },
+    "clinical.medications": {
+      "status": "missing",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "No medications section appears; Pharmacy section shows only 'Phone: Not Entered'"
+    },
+    "clinical.allergies": {
+      "status": "missing",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Allergies (section header present, no entries, no NKA/NKDA statement)"
+    },
+    "clinical.wound_order_included": {
+      "status": "missing",
+      "confidence": "medium",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Pressure ulcer diagnoses listed, but no wound care order or treatment orders appear in the document"
+    },
+    "insurances": {
+      "status": "present",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Primary Insurance  CGS Medicare  Policy Number: 4AM7D62MN20"
+    },
+    "insurances.secondary": {
+      "status": "missing",
+      "confidence": "high",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Secondary Insurance / Tertiary Insurance headers present with no values"
+    },
+    "requested_services": {
+      "status": "missing",
+      "confidence": "medium",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Frequencies: (blank); no discipline orders or visit frequencies listed"
+    },
+    "document_type": {
+      "status": "present",
+      "confidence": "medium",
+      "evidence_pages": [
+        1
+      ],
+      "evidence_quote": "Patient Information / Insurance / Allergies / Current Episode face sheet layout with WellSky ID"
+    }
+  },
+  "warnings": [
+    "Referral Date is OCR/fax-degraded as '06/C2/2026'; interpreted as 2026-06-02 (consistent with Start of Care 06/03/2026) \u2014 verify with sender.",
+    "Fax transmission header reads '07/13/2026 12:32PM FAX 3039539402'; this sending fax number is not identified anywhere in the document body and differs from the agency phone (303) 955-8096.",
+    "Allergies section header is present but blank; the document does not state NKA/NKDA, so allergy status is unknown rather than explicitly none.",
+    "No medications list, no signed physician orders, no visit frequencies, and no requested services are included in this one-page document.",
+    "Heather Krohn is labeled 'Primary Physician' on the agency face sheet rather than explicitly as the referring/ordering provider; recorded as the referral-source provider because no other ordering provider is named. Her practice organization name is not printed (only address, phone, fax, NPI).",
+    "Ay Home Health Care LLC is the patient's current home health agency (letterhead of the face sheet), not a referring facility; it was also used as the admission facility because Start of Care/episode dates come from that agency's record.",
+    "'Primary Aide: Cory Molnar PT' lists a PT credential under the Aide column \u2014 possible data-entry inconsistency in the source.",
+    "Medicare # (4AM7D62MN20) is identical to the primary insurance policy number (an MBI) and was not treated as an MRN; Medicaid # and SSN fields are blank.",
+    "Two header identifiers exist (patient ID 10236 and WellSky ID 8394-651-899); the header patient ID was recorded as source_patient_id and neither was treated as an MRN.",
+    "Emergency contact phone (720) 324-3242 is the same number as one of the patient's listed phone numbers.",
+    "Document is a low-quality faxed scan; several field labels and blank-value cells are partially illegible, so unlabeled blank fields are reported as missing rather than explicitly none."
+  ]
+}

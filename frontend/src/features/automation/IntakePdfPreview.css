@@ -1,0 +1,236 @@
+.intake-pdf-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  max-width: min(100%, 18rem);
+  min-height: 2rem;
+  padding: 0.2rem 0.45rem 0.2rem 0.25rem;
+  border: 1px solid rgba(18, 35, 63, 0.12);
+  border-radius: 8px;
+  background: #f3f5f7;
+  color: var(--navy);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.intake-pdf-chip:hover,
+.intake-pdf-chip:focus-visible {
+  border-color: rgba(14, 124, 134, 0.4);
+  background: #fff;
+  outline: none;
+}
+
+.intake-pdf-chip__icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 1.55rem;
+  height: 1.55rem;
+  border-radius: 5px;
+  background: rgba(196, 54, 54, 0.1);
+  color: #b42318;
+}
+
+.intake-pdf-chip__name {
+  min-width: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.intake-pdf-chip__type {
+  flex: 0 0 auto;
+  margin-left: 0.1rem;
+  color: var(--gray);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+/* Simple Gmail-style PDF overlay */
+.gmail-pdf {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  grid-template-rows: 48px minmax(0, 1fr);
+  background: rgba(32, 33, 36, 0.92);
+  overscroll-behavior: none;
+}
+
+.gmail-pdf__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0 0.5rem 0 0.25rem;
+  background: rgba(32, 33, 36, 0.96);
+  color: #e8eaed;
+}
+
+.gmail-pdf__top-left,
+.gmail-pdf__top-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.gmail-pdf__file {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+  padding-left: 0.2rem;
+  color: #e8eaed;
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+.gmail-pdf__file span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gmail-pdf__file svg {
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.gmail-pdf__icon {
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #e8eaed;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.gmail-pdf__icon:hover,
+.gmail-pdf__icon:focus-visible {
+  background: rgba(232, 234, 237, 0.12);
+  outline: none;
+}
+
+.gmail-pdf__stage {
+  position: relative;
+  min-height: 0;
+  overflow: auto;
+  padding: 1.25rem 1rem 5.5rem;
+}
+
+.gmail-pdf__pages {
+  display: grid;
+  justify-items: center;
+  gap: 1rem;
+  width: max-content;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.gmail-pdf__pages .react-pdf__Document {
+  display: grid;
+  justify-items: center;
+  gap: 1rem;
+}
+
+.gmail-pdf__page-wrap {
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.gmail-pdf__page canvas {
+  display: block;
+  max-width: 100%;
+  height: auto !important;
+}
+
+.gmail-pdf__status {
+  margin: 4.5rem auto;
+  max-width: 26rem;
+  padding: 0.9rem 1.1rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #202124;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+.gmail-pdf__status a {
+  color: #8ab4f8;
+}
+
+.gmail-pdf__dock {
+  position: absolute;
+  left: 50%;
+  bottom: 1.15rem;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transform: translateX(-50%);
+  padding: 0.35rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(32, 33, 36, 0.92);
+  color: #e8eaed;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.gmail-pdf__page-label,
+.gmail-pdf__zoom {
+  padding: 0 0.35rem;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.gmail-pdf__dock-sep {
+  width: 1px;
+  height: 1.1rem;
+  margin: 0 0.15rem;
+  background: rgba(232, 234, 237, 0.28);
+}
+
+.gmail-pdf__dock-btn {
+  display: grid;
+  place-items: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #e8eaed;
+  cursor: pointer;
+}
+
+.gmail-pdf__dock-btn:hover,
+.gmail-pdf__dock-btn:focus-visible {
+  background: rgba(232, 234, 237, 0.12);
+  outline: none;
+}
+
+@media (max-width: 720px) {
+  .gmail-pdf {
+    grid-template-rows: 44px minmax(0, 1fr);
+  }
+
+  .gmail-pdf__stage {
+    padding: 0.85rem 0.5rem 5rem;
+  }
+
+  .gmail-pdf__file {
+    font-size: 0.84rem;
+  }
+}

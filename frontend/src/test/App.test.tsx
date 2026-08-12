@@ -1,13 +1,9 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import App from '../App'
 
 describe('automation inspection console', () => {
-  beforeEach(() => {
-    window.sessionStorage.clear()
-  })
-
   it('opens on a concise workflow overview and enters intake operations', async () => {
     const user = userEvent.setup()
     render(<App />)
@@ -69,29 +65,24 @@ describe('automation inspection console', () => {
     expect(
       screen.getByRole('button', { name: /1\. Referral intake/i }),
     ).toHaveAttribute('aria-current', 'page')
-    expect(screen.getByRole('tab', { name: /^Steps$/i })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    )
-    expect(screen.getByRole('tab', { name: /^Worklist$/i })).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: /^History$/i })).toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: /^Steps$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: /^Worklist$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: /^History$/i })).not.toBeInTheDocument()
     expect(screen.getByLabelText(/Patient steps/i)).toBeInTheDocument()
     expect(
       screen.getByRole('navigation', { name: /Automation steps/i }),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: /Confirm referral partner was contacted/i }),
-    ).toHaveAttribute('aria-current', 'step')
-    expect(
       screen.getByRole('button', { name: /Receive referral in inbox/i }),
-    ).toHaveAttribute('data-status', 'done')
-    expect(screen.getAllByText('Butler, Alva').length).toBeGreaterThan(0)
+    ).toHaveAttribute('aria-current', 'step')
+    expect(screen.getByLabelText(/Step updates/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/BUTLER, ALVA/i).length).toBeGreaterThan(0)
     expect(
       screen.queryByRole('list', { name: /Microstep run history/i }),
     ).not.toBeInTheDocument()
   })
 
-  it('shows Butler step detail by default and opens current step from Worklist', async () => {
+  it('shows open Slack-style messages with Butler PDF proof on step 1', async () => {
     const user = userEvent.setup()
     render(<App />)
     await user.click(
@@ -99,128 +90,207 @@ describe('automation inspection console', () => {
     )
 
     const stepsPanel = screen.getByLabelText(/Patient steps/i)
-    expect(
-      within(stepsPanel).getByRole('navigation', { name: /Automation steps/i }),
-    ).toBeInTheDocument()
-    expect(within(stepsPanel).getByText('Butler, Alva')).toBeInTheDocument()
-    expect(
-      within(stepsPanel).getByLabelText(/Confirm referral partner was contacted for this patient/i),
-    ).toBeInTheDocument()
-    expect(
-      within(stepsPanel).getByText(/Referral partner contact confirmation pending/i),
-    ).toBeInTheDocument()
+    expect(within(stepsPanel).getByLabelText(/Step updates/i)).toBeInTheDocument()
+    expect(within(stepsPanel).getAllByText(/BUTLER, ALVA/i).length).toBeGreaterThan(0)
+    expect(within(stepsPanel).getAllByText(/Gonzalez, Eric/i).length).toBeGreaterThan(0)
 
-    await user.click(
-      within(stepsPanel).getByRole('button', { name: /Receive referral in inbox/i }),
-    )
+    // Open by default — proof fields + Gmail-style attachment chip.
     expect(
-      within(stepsPanel).getByText(/Referral email identified/i),
+      within(stepsPanel).getByLabelText(
+        /Referral email identified.*BUTLER, ALVA.*Finished/i,
+      ),
     ).toBeInTheDocument()
+    expect(within(stepsPanel).getAllByLabelText(/Key proof/i).length).toBeGreaterThan(0)
+    expect(
+      within(stepsPanel).queryByRole('button', { name: /View pipeline/i }),
+    ).not.toBeInTheDocument()
+    expect(within(stepsPanel).queryByText(/^ATTACHMENT$/i)).not.toBeInTheDocument()
 
-    await user.click(
-      within(stepsPanel).getByRole('button', { name: /Patient list/i }),
-    )
-    const patientList = screen.getByRole('dialog', {
-      name: /Patients in this stage/i,
+    const attachment = within(stepsPanel).getByRole('button', {
+      name: /Open attachment BUTLER, ALVA demo\.pdf/i,
     })
+    expect(attachment).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: /BUTLER, ALVA demo\.pdf/i })).not.toBeInTheDocument()
+
+    await user.click(attachment)
+    const pdfDialog = screen.getByRole('dialog', { name: /BUTLER, ALVA demo\.pdf/i })
+    expect(pdfDialog).toBeInTheDocument()
+    expect(within(pdfDialog).getByLabelText(/Referral PDF/i)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /Close attachment/i }))
     expect(
-      within(patientList).getByRole('button', { name: /Butler, Alva/i }),
-    ).toHaveAttribute('aria-current', 'true')
-    await user.click(
-      within(patientList).getByRole('button', { name: /Close patient list/i }),
-    )
-
-    await user.click(screen.getByRole('tab', { name: /^Worklist$/i }))
-    const worklist = screen.getByLabelText(/^Worklist$/i)
-    expect(worklist).toBeInTheDocument()
-    await user.click(within(worklist).getByText('Butler, Alva'))
-
-    expect(screen.getByRole('tab', { name: /^Steps$/i })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    )
-    const returnedSteps = screen.getByLabelText(/Patient steps/i)
-    expect(within(returnedSteps).getByText('Butler, Alva')).toBeInTheDocument()
-    expect(
-      within(returnedSteps).getByRole('button', {
-        name: /Confirm referral partner was contacted/i,
-      }),
-    ).toHaveAttribute('aria-current', 'step')
-
-    await user.click(screen.getByRole('tab', { name: /^History$/i }))
-    const history = screen.getByLabelText(/^History$/i)
-    expect(within(history).getByText(/August 10, 2026/i)).toBeInTheDocument()
-    expect(within(history).getAllByText('Butler, Alva').length).toBeGreaterThan(0)
+      screen.queryByRole('dialog', { name: /BUTLER, ALVA demo\.pdf/i }),
+    ).not.toBeInTheDocument()
   })
 
-  it('shows Worklist and History on later stages', async () => {
+  it('shows extract-and-verify decision skim with expandable details', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(
+      screen.getByRole('button', { name: /Inspect Referral intake/i }),
+    )
+
+    const stepsPanel = screen.getByLabelText(/Patient steps/i)
+    await user.click(
+      within(stepsPanel).getByRole('button', {
+        name: /Extract and verify referral details/i,
+      }),
+    )
+
+    expect(
+      within(stepsPanel).getAllByLabelText(/Key decision/i).length,
+    ).toBeGreaterThan(0)
+    expect(within(stepsPanel).getAllByText(/^Not met$/i).length).toBeGreaterThan(0)
+    expect(within(stepsPanel).getAllByText(/Threshold/i).length).toBeGreaterThan(0)
+    expect(within(stepsPanel).getAllByText(/Completeness/i).length).toBeGreaterThan(0)
+
+    expect(
+      within(stepsPanel).queryByRole('button', {
+        name: /Minimum identity and contact gate/i,
+      }),
+    ).not.toBeInTheDocument()
+
+    expect(
+      within(stepsPanel).getAllByLabelText(/Seven required fields/i).length,
+    ).toBeGreaterThan(0)
+    expect(
+      within(stepsPanel).getAllByText(/^Patient name$/i).length,
+    ).toBeGreaterThan(0)
+
+    const expand = within(stepsPanel).getAllByRole('button', {
+      name: /Show extracted details/i,
+    })[0]
+    await user.click(expand)
+    expect(
+      within(stepsPanel).queryByRole('button', {
+        name: /Seven required fields/i,
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByRole('button', {
+        name: /Demographics/i,
+      }),
+    ).toBeInTheDocument()
+  })
+
+  it('lets an operator change and confirm the suggested case manager', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: /2\. Assignment/i }))
+    const stepsPanel = screen.getByLabelText(/Patient steps/i)
+    await user.click(
+      within(stepsPanel).getByRole('button', { name: /Assign Case Manager/i }),
+    )
+
+    expect(
+      within(stepsPanel).getAllByText(/AI recommendation/i).length,
+    ).toBeGreaterThan(0)
+
+    const managerSelect = within(stepsPanel)
+      .getAllByLabelText(/Assigned case manager/i)
+      .find((select) => !select.hasAttribute('disabled'))!
+    await user.selectOptions(managerSelect, 'ndelpelicano@westcoastwound.com')
+    expect(managerSelect).toHaveValue('ndelpelicano@westcoastwound.com')
+
+    await user.click(
+      within(stepsPanel).getAllByRole('button', {
+        name: /^Confirm$/i,
+      })[0],
+    )
+    expect(
+      within(stepsPanel).getByText(/^Assigned$/i),
+    ).toBeInTheDocument()
+
+    expect(
+      within(stepsPanel).getByRole('button', {
+        name: /Notify Case Manager, new update/i,
+      }),
+    ).toBeInTheDocument()
+    await user.click(
+      within(stepsPanel).getByRole('button', { name: /Notify Case Manager/i }),
+    )
+    expect(
+      within(stepsPanel).queryByRole('button', {
+        name: /Notify Case Manager, new update/i,
+      }),
+    ).not.toBeInTheDocument()
+    expect(within(stepsPanel).getByText(/^Unread$/i)).toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByText(/^Nadine Pelicano notified$/i),
+    ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).getAllByText(/ndelpelicano@westcoastwound\.com/i)
+        .length,
+    ).toBeGreaterThan(0)
+    expect(
+      within(stepsPanel).getAllByLabelText(
+        /Patient data shared with case manager/i,
+      ).length,
+    ).toBeGreaterThan(0)
+
+    await user.click(
+      within(stepsPanel).getByRole('button', { name: /Assign Case Manager/i }),
+    )
+    await user.click(
+      within(stepsPanel).getByRole('button', { name: /Notify Case Manager/i }),
+    )
+    expect(within(stepsPanel).queryByText(/^Unread$/i)).not.toBeInTheDocument()
+  })
+
+  it('shows referral-source notifications as email messages', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: /3\. Handoff/i }))
+    const stepsPanel = screen.getByLabelText(/Patient steps/i)
+
+    expect(
+      within(stepsPanel).getByRole('button', {
+        name: /Notify referral source/i,
+      }),
+    ).toHaveAttribute('aria-current', 'step')
+    expect(
+      within(stepsPanel).getAllByLabelText(
+        /Referral source notification email/i,
+      ).length,
+    ).toBeGreaterThan(0)
+    expect(within(stepsPanel).getAllByText(/^To$/i).length).toBeGreaterThan(0)
+    expect(within(stepsPanel).getAllByText(/^CC$/i).length).toBeGreaterThan(0)
+    expect(
+      within(stepsPanel).getAllByText(/^Subject$/i).length,
+    ).toBeGreaterThan(0)
+
+    await user.click(
+      within(stepsPanel).getByRole('button', {
+        name: /Create Monday\.com Record/i,
+      }),
+    )
+    expect(
+      within(stepsPanel).getAllByText(/^Monday\.com record created$/i).length,
+    ).toBeGreaterThan(0)
+    expect(
+      within(stepsPanel).getAllByLabelText(/Monday\.com record details/i).length,
+    ).toBe(6)
+
+    await user.click(
+      within(stepsPanel).getByRole('button', { name: /Create DRK Chart/i }),
+    )
+    expect(
+      within(stepsPanel).getAllByLabelText(/DRK chart draft details/i).length,
+    ).toBe(6)
+  })
+
+  it('keeps the step-first feed on later stages', async () => {
     const user = userEvent.setup()
     render(<App />)
 
     await user.click(screen.getByRole('button', { name: /5\. Scheduling/i }))
-    expect(screen.getByRole('tab', { name: /^Steps$/i })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    )
     expect(screen.getByLabelText(/Patient steps/i)).toBeInTheDocument()
-
-    await user.click(screen.getByRole('tab', { name: /^Worklist$/i }))
-    expect(screen.getByText(/Awaiting response/i)).toBeInTheDocument()
-    expect(screen.getByText('Maria Alvarez')).toBeInTheDocument()
-
-    await user.click(screen.getByRole('tab', { name: /^History$/i }))
-    const history = screen.getByLabelText(/^History$/i)
-    expect(within(history).getAllByText('Maria Alvarez').length).toBeGreaterThan(0)
+    expect(screen.getByLabelText(/Step updates/i)).toBeInTheDocument()
     expect(
-      within(history).getAllByText(/Awaiting provider response/i).length,
-    ).toBeGreaterThan(0)
-  })
-
-  it('records a human decision, advances the patient, and keeps it in history', async () => {
-    const user = userEvent.setup()
-    render(<App />)
-
-    await user.click(screen.getByRole('button', { name: /3\. Assignment/i }))
-    const steps = screen.getByLabelText(/Patient steps/i)
-    expect(within(steps).getByText('Marcus Feldman')).toBeInTheDocument()
-
-    await user.click(
-      within(steps).getByRole('button', {
-        name: /Cole Ramirez/i,
-      }),
-    )
-
-    expect(
-      within(steps).getByRole('button', {
-        name: /^Assign Owner/i,
-      }),
-    ).toHaveAttribute('data-status', 'done')
-
-    await user.click(screen.getByRole('tab', { name: /^History$/i }))
-    expect(
-      screen.getByText(/case-manager or marketer routing decision was recorded/i),
+      screen.getByRole('button', { name: /Filter by status/i }),
     ).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: /2\. Handoff/i }))
-    await user.click(screen.getByRole('button', { name: /3\. Assignment/i }))
-    expect(
-      screen.getByRole('button', { name: /^Assign Owner/i }),
-    ).toHaveAttribute('data-status', 'done')
-  })
-
-  it('records an alternate provider choice in the destination fields', async () => {
-    const user = userEvent.setup()
-    render(<App />)
-
-    await user.click(screen.getByRole('button', { name: /4\. Provider selection/i }))
-    const steps = screen.getByLabelText(/Patient steps/i)
-    await user.click(
-      within(steps).getByRole('button', { name: /Dr\. Mina Patel/i }),
-    )
-
-    expect(within(steps).getAllByText('Dr. Mina Patel').length).toBeGreaterThan(1)
-    expect(
-      within(steps).getByRole('button', { name: /^Record Provider Selection/i }),
-    ).toHaveAttribute('data-status', 'done')
+    expect(screen.getAllByText('Maria Alvarez').length).toBeGreaterThan(0)
   })
 })

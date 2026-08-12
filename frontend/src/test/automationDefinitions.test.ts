@@ -12,8 +12,8 @@ describe('automation stage definitions', () => {
   it('defines every workflow stage with inspectable microsteps', () => {
     expect(AUTOMATION_STAGES.map((stage) => stage.id)).toEqual([
       'intake',
-      'handoff',
       'assignment',
+      'handoff',
       'provider',
       'scheduling',
       'end-of-day',

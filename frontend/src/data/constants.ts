@@ -176,8 +176,8 @@ export const WORKFLOW_TAB_MINUTES: Record<string, number> = {
 export const WORKFLOW_MODAL_TABS = [
   { id: 'overview', label: 'Overview' },
   { id: 'intake', label: '1. Referral intake' },
-  { id: 'handoff', label: '2. Handoff' },
-  { id: 'assignment', label: '3. Assignment' },
+  { id: 'assignment', label: '2. Assignment' },
+  { id: 'handoff', label: '3. Handoff' },
   { id: 'provider', label: '4. Provider selection' },
   { id: 'scheduling', label: '5. Scheduling' },
   { id: 'end-of-day', label: '6. End-of-day check' },

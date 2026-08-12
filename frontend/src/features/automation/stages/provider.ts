@@ -6,7 +6,7 @@ export const PROVIDER_STAGE: AutomationStageDefinition = {
   title: '4. Provider selection',
   shortTitle: 'Provider selection',
   purpose: 'Select an approved provider for the patient location and care need.',
-  trigger: 'A WCW owner and service location are confirmed.',
+  trigger: 'The assigned owner is confirmed and the handoff is verified.',
   successDefinition: 'A provider is recorded, or a coverage gap has a named owner.',
   implementationStatus: 'planned',
   microsteps: [

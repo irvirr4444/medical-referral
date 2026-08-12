@@ -1,33 +1,37 @@
-import { Clock3 } from 'lucide-react'
-import { parseOpsDate, detailForPatientStep } from './ops'
-import type { HumanDecisionRecord } from './ops/types'
+import { ArtifactSections } from './ArtifactSections'
+import { IntakePdfPreview } from './IntakePdfPreview'
+import { detailForPatientStep, parseOpsDate } from './ops'
+import type { PatientStepStatus } from './ops/types'
+import './ArtifactSections.css'
 import './StageOps.css'
 
 type PatientStepDetail = ReturnType<typeof detailForPatientStep>
+
+const STATUS_MEANINGS: Array<{ id: PatientStepStatus; meaning: string }> = [
+  { id: 'waiting', meaning: 'Needs confirmation' },
+  { id: 'blocked', meaning: 'Stuck' },
+  { id: 'current', meaning: 'In progress' },
+  { id: 'done', meaning: 'Finished' },
+]
+
+export function statusMeaning(status: PatientStepStatus | string) {
+  return (
+    STATUS_MEANINGS.find((item) => item.id === status)?.meaning ?? 'Next'
+  )
+}
 
 export function StagePatientStepDetail({
   detail,
   canConfirm = false,
   isConfirmed = false,
   onConfirm,
-  actionLabel,
-  confirmedLabel,
-  options = [],
-  decision,
+  variant = 'page',
 }: {
   detail: PatientStepDetail
   canConfirm?: boolean
   isConfirmed?: boolean
-  onConfirm?: (selectedOption?: string) => void
-  actionLabel?: string
-  confirmedLabel?: string
-  options?: Array<{
-    value: string
-    label: string
-    detail?: string
-    recommended?: boolean
-  }>
-  decision?: HumanDecisionRecord
+  onConfirm?: () => void
+  variant?: 'page' | 'embedded'
 }) {
   const { microstep, progress, example } = detail
   if (!microstep || !progress) {
@@ -35,76 +39,46 @@ export function StagePatientStepDetail({
   }
 
   const when = progress.occurredAt ? parseOpsDate(progress.occurredAt) : null
-  const actionFields = (example?.actionFields ?? []).map((field) =>
-    decision?.selectedOption ? { ...field, value: decision.selectedOption } : field,
-  )
+  const rich = Boolean(example?.artifactSections?.length)
+  const patientName = example?.patientName ?? 'Patient'
   const showConfirmationPanel = canConfirm || isConfirmed
-  const fieldSectionTitle =
-    showConfirmationPanel && !isConfirmed
-      ? 'Proposed updates'
-      : actionFieldSectionTitle(microstep.id)
   const confirmationCopy = isConfirmed
-    ? `${confirmedLabel ?? 'Confirmed'} and recorded in this patient trail.`
+    ? 'Confirmed and recorded in this patient trail.'
     : progress.status === 'blocked'
       ? 'Blocked pending confirmation before this stage can proceed.'
       : progress.status === 'current'
         ? 'Ready for confirmation now.'
         : 'Awaiting confirmation.'
-  const confirmationCta = actionLabel ?? 'Confirm step'
+  const confirmationCta =
+    progress.status === 'blocked' ? 'Resolve and confirm' : 'Confirm step'
+  const embedded = variant === 'embedded'
+
   return (
     <article
-      className={`stage-ops-step-detail is-${progress.status}`}
+      className={`stage-ops-step-detail is-${progress.status}${embedded ? ' is-embedded' : ''}`}
       aria-label={`${microstep.name} for this patient`}
     >
-      <header className="stage-ops-step-detail__header">
-        <div>
-          <div className="stage-ops-step-detail__title">
-            <h2>{microstep.name}</h2>
-            <span className="stage-ops-steps__badge">
-              {statusLabel(progress.status, showConfirmationPanel)}
+      {embedded ? null : (
+        <header className="stage-ops-step-detail__header">
+          <div className="stage-ops-step-detail__meta">
+            {when ? (
+              <time dateTime={progress.occurredAt}>
+                {when.time} · {shortDate(when)}
+              </time>
+            ) : (
+              <span className="stage-ops-step-detail__time-fallback">—</span>
+            )}
+            <span
+              className={`stage-ops-step-detail__status is-${progress.status}`}
+            >
+              {statusMeaning(progress.status)}
             </span>
           </div>
-          <p>{microstep.description}</p>
-        </div>
-        {when ? (
-          <time dateTime={progress.occurredAt}>
-            <Clock3 size={16} aria-hidden="true" />
-            {when.label} · {when.time}
-          </time>
-        ) : null}
-      </header>
-
-      <section className="stage-ops-step-detail__outcome" aria-label="Result">
-        <p className="caption">Result</p>
-        <strong>{progress.summary}</strong>
-      </section>
-
-      {actionFields.length > 0 && progress.status !== 'upcoming' ? (
-        <section
-          className="stage-ops-step-detail__changes"
-          aria-label={fieldSectionTitle}
-        >
-          <h3>{fieldSectionTitle}</h3>
-          <div className="stage-ops-step-detail__change-table" role="table">
-            <div className="stage-ops-step-detail__change-head" role="row">
-              <span role="columnheader">Field</span>
-              <span role="columnheader">Value</span>
-              <span role="columnheader">System field</span>
-            </div>
-            {actionFields.map((field) => (
-              <div
-                key={`${field.label}-${field.meta ?? field.fieldPath ?? ''}`}
-                className="stage-ops-step-detail__change-row"
-                role="row"
-              >
-                <strong role="cell">{field.label}</strong>
-                <span role="cell">{field.value}</span>
-                <small role="cell">{field.meta ?? field.fieldPath ?? 'Workflow'}</small>
-              </div>
-            ))}
-          </div>
-        </section>
-      ) : null}
+          <p className="stage-ops-step-detail__patient">{patientName}</p>
+          <p className="stage-ops-step-detail__step">{microstep.name}</p>
+          <h2 className="stage-ops-step-detail__message">{progress.summary}</h2>
+        </header>
+      )}
 
       {showConfirmationPanel ? (
         <section
@@ -115,36 +89,14 @@ export function StagePatientStepDetail({
             <p className="caption">Confirmation</p>
             <strong>{confirmationCopy}</strong>
           </div>
-          {options.length > 0 && !isConfirmed ? (
-            <div className="stage-ops-step-detail__choices" aria-label="Available choices">
-              {options.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  className={`stage-ops-step-detail__choice${option.recommended ? ' is-recommended' : ''}`}
-                  onClick={() => onConfirm?.(option.value)}
-                  disabled={!canConfirm}
-                >
-                  <span>
-                    <strong>{option.label}</strong>
-                    {option.recommended ? <em>Recommended</em> : null}
-                  </span>
-                  {option.detail ? <small>{option.detail}</small> : null}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <button
-              type="button"
-              className={`stage-ops-step-detail__confirm${isConfirmed ? ' is-confirmed' : ''}${canConfirm && !isConfirmed ? ' is-actionable' : ''}`}
-              onClick={() => onConfirm?.()}
-              disabled={isConfirmed || !canConfirm}
-            >
-              {isConfirmed
-                ? decision?.selectedOption ?? 'Confirmed'
-                : confirmationCta}
-            </button>
-          )}
+          <button
+            type="button"
+            className={`stage-ops-step-detail__confirm${isConfirmed ? ' is-confirmed' : ''}${canConfirm && !isConfirmed ? ' is-actionable' : ''}`}
+            onClick={onConfirm}
+            disabled={isConfirmed || !canConfirm}
+          >
+            {isConfirmed ? 'Confirmed' : confirmationCta}
+          </button>
         </section>
       ) : null}
 
@@ -155,35 +107,38 @@ export function StagePatientStepDetail({
         </p>
       ) : null}
 
+      {example?.samplePdf ? (
+        <IntakePdfPreview samplePdf={example.samplePdf} />
+      ) : null}
+
+      {rich && example ? (
+        <section
+          className="stage-ops-step-detail__evidence"
+          aria-label="Produced output"
+        >
+          <ArtifactSections
+            sections={example.artifactSections ?? []}
+            artifactId={example.artifactId ?? microstep.id}
+          />
+        </section>
+      ) : progress.status !== 'upcoming' ? (
+        <section className="stage-ops-step-detail__facts" aria-label="Step facts">
+          <div>
+            <p className="caption">System</p>
+            <strong>{microstep.system}</strong>
+          </div>
+          <div>
+            <p className="caption">Next</p>
+            <strong>{microstep.next}</strong>
+          </div>
+        </section>
+      ) : null}
     </article>
   )
 }
 
-function statusLabel(status: string, isHumanGate: boolean) {
-  switch (status) {
-    case 'done':
-      return 'Done'
-    case 'current':
-      return 'In progress'
-    case 'waiting':
-      return isHumanGate ? 'Awaiting confirmation' : 'Waiting'
-    case 'blocked':
-      return isHumanGate ? 'Blocked pending confirmation' : 'Blocked'
-    default:
-      return 'Next'
-  }
-}
-
-const WRITE_ACTIONS = new Set([
-  'create-monday-record',
-  'create-update-drk',
-  'assign-owner',
-  'record-provider',
-  'confirm-record-appointment',
-  'record-visit-outcome',
-  'apply-weekly-rules',
-])
-
-function actionFieldSectionTitle(stepId: string) {
-  return WRITE_ACTIONS.has(stepId) ? 'Field updates' : 'Action data'
+function shortDate(when: ReturnType<typeof parseOpsDate>) {
+  const month =
+    when.month.charAt(0) + when.month.slice(1).toLowerCase()
+  return `${month} ${Number(when.day)}`
 }

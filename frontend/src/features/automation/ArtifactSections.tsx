@@ -5,12 +5,16 @@ import './ArtifactSections.css'
 export function ArtifactSections({
   sections,
   artifactId,
+  density = 'default',
 }: {
   sections: ArtifactSection[]
   artifactId: string
+  density?: 'default' | 'feed'
 }) {
   return (
-    <div className="artifact-sections">
+    <div
+      className={`artifact-sections${density === 'feed' ? ' is-feed' : ''}`}
+    >
       {sections.map((section) => (
         <ArtifactSectionBlock
           key={section.id}
