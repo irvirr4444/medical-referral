@@ -122,4 +122,86 @@ describe('demoReducer', () => {
     state = demoReducer(state, { type: 'SET_QUEUE_FILTER', filter: 'confirmed' })
     expect(filterReferrals(state).map((r) => r.id)).toContain('maria-alvarez')
   })
+
+  it('creates a scheduling handoff only after confirmed availability or completed placement', () => {
+    const provider = {
+      id: '59',
+      name: 'Charles Cho',
+      npi: '1053512566',
+      city: 'Los Angeles',
+    }
+    let state = createInitialState()
+    state = demoReducer(state, {
+      type: 'CONFIRM_PROVIDER_SELECTION',
+      patientId: 'thomas-reed',
+      requestedAt: 'August 12, 2026 at 2:18 PM',
+      deadlineAt: 'August 12, 2026 at 3:18 PM',
+    })
+    expect(state.schedulingHandoffUnread).toBe(false)
+
+    const afterTimeout = demoReducer(state, {
+      type: 'TIMEOUT_PROVIDER_AVAILABILITY',
+      patientId: 'thomas-reed',
+      resolvedAt: 'August 12, 2026 at 3:18 PM',
+    })
+    expect(afterTimeout.schedulingHandoffs).toHaveLength(0)
+    expect(afterTimeout.providerAvailability['thomas-reed']?.outcome).toBe(
+      'timeout',
+    )
+    expect(
+      demoReducer(afterTimeout, {
+        type: 'CONFIRM_PROVIDER_AVAILABILITY',
+        patientId: 'thomas-reed',
+        patientName: 'Thomas Reed',
+        provider,
+        resolvedAt: 'August 12, 2026 at 3:19 PM',
+      }),
+    ).toBe(afterTimeout)
+
+    state = demoReducer(state, {
+      type: 'CONFIRM_PROVIDER_AVAILABILITY',
+      patientId: 'thomas-reed',
+      patientName: 'Thomas Reed',
+      provider,
+      resolvedAt: 'August 12, 2026 at 2:31 PM',
+    })
+    expect(state.schedulingHandoffs[0]?.route).toBe('provider_confirmed')
+    expect(state.schedulingHandoffs[0]?.samplePdf).toBe('EC - REFERRAL FORM.pdf')
+    expect(state.providerRecordsUnread).toBe(true)
+    expect(state.providerRecordsMessageUnread).toBe(true)
+    expect(state.schedulingHandoffUnread).toBe(false)
+    expect(
+      demoReducer(state, {
+        type: 'TIMEOUT_PROVIDER_AVAILABILITY',
+        patientId: 'thomas-reed',
+        resolvedAt: 'August 12, 2026 at 3:18 PM',
+      }),
+    ).toBe(state)
+
+    state = demoReducer(state, { type: 'MARK_PROVIDER_RECORDS_READ' })
+    expect(state.providerRecordsUnread).toBe(false)
+    expect(state.providerRecordsMessageUnread).toBe(false)
+    expect(state.schedulingHandoffUnread).toBe(true)
+    expect(state.schedulingHandoffMessageUnread).toBe(true)
+
+    state = demoReducer(state, { type: 'SET_ACTIVE_PAGE', page: 'scheduling' })
+    expect(state.activePage).toBe('scheduling')
+    expect(state.schedulingHandoffUnread).toBe(false)
+    expect(state.schedulingHandoffMessageUnread).toBe(true)
+
+    state = demoReducer(state, { type: 'MARK_SCHEDULING_HANDOFF_READ' })
+    expect(state.schedulingHandoffMessageUnread).toBe(false)
+  })
+
+  it('does not create a scheduling handoff for discharged patients', () => {
+    let state = createInitialState()
+    state = demoReducer(state, {
+      type: 'RESOLVE_PROVIDER_TERRITORY',
+      patientId: 'betty-hayes',
+      resolution: 'discharged',
+    })
+    expect(state.providerTerritoryResolutions['betty-hayes']).toBe('discharged')
+    expect(state.schedulingHandoffs).toHaveLength(0)
+    expect(state.schedulingHandoffUnread).toBe(false)
+  })
 })

@@ -51,7 +51,11 @@ describe('stage operations fixtures', () => {
           sum + openEventsForSection(stageId, section.id).length,
         0,
       )
-      expect(openTotal).toBeGreaterThan(0)
+      if (stageId === 'handoff') {
+        expect(openTotal).toBe(0)
+      } else {
+        expect(openTotal).toBeGreaterThan(0)
+      }
     }
   })
 

@@ -116,7 +116,7 @@ export type AutomationRunId =
   | 'butler-alva'
   | 'maria-scheduling'
   | 'evelyn-end-of-day'
-  | 'gloria-weekly'
+  | 'walter-weekly'
 
 export interface AutomationRunFixture {
   id: AutomationRunId

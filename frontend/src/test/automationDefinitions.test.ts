@@ -40,7 +40,7 @@ describe('automation stage definitions', () => {
   it('retrieves a stage through the shared lookup', () => {
     expect(automationStage('intake').microsteps[0].id).toBe('receive-referral')
     expect(automationStage('weekly').microsteps.at(-1)?.id).toBe(
-      'notify-and-reconcile',
+      'patient-on-hold',
     )
   })
 

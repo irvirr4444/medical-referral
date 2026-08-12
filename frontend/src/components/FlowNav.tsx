@@ -14,18 +14,31 @@ export function FlowNav() {
       <div className="flow-nav__inner">
         {APP_NAV_ITEMS.map((item) => {
           const active = state.activePage === item.id
+          const needsAttention =
+            item.id === 'scheduling' && state.schedulingHandoffUnread
           return (
             <button
               key={item.id}
               type="button"
               className={`flow-nav__link ${active ? 'is-active' : ''}`}
               aria-current={active ? 'page' : undefined}
+              aria-label={
+                needsAttention ? `${item.label}, new update` : undefined
+              }
               onClick={() => {
                 dispatch({ type: 'SET_ACTIVE_PAGE', page: item.id })
                 window.scrollTo({ top: 0, behavior: 'smooth' })
               }}
             >
-              {item.label}
+              <span className="flow-nav__label-row">
+                {item.label}
+                {needsAttention ? (
+                  <span
+                    className="flow-nav__attention-dot"
+                    aria-hidden="true"
+                  />
+                ) : null}
+              </span>
             </button>
           )
         })}
