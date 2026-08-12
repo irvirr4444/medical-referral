@@ -51,10 +51,17 @@ describe('automation inspection console', () => {
     expect(screen.getByText('82')).toBeInTheDocument()
 
     await user.click(screen.getByRole('tab', { name: /Pick dates/i }))
-    await user.click(screen.getByRole('button', { name: /Confirm/i }))
+    const dateDialog = screen.getByRole('dialog')
+    await user.click(
+      within(dateDialog).getByRole('button', { name: /^Confirm$/i }),
+    )
     expect(screen.getByText('112')).toBeInTheDocument()
     expect(
-      screen.getByRole('heading', { name: /Seven inspectable stages/i }),
+      screen.getByRole('heading', { name: /^Needs attention$/i }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /^Ready for review$/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: /Live activity/i }),
     ).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: /^Inspect /i })).toHaveLength(
       7,

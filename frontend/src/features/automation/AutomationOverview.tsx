@@ -1,6 +1,8 @@
 import { ArrowRight, Target } from 'lucide-react'
+import { ActivityFeed } from '../../components/ActivityFeed'
 import { OverviewImpactBoard } from '../../components/OverviewImpactBoard'
 import { OPERATING_DATE } from '../../data/constants'
+import { OVERVIEW_ATTENTION_BUCKETS } from '../../data/overviewAttention'
 import { useDemo } from '../../state/useDemo'
 import { AUTOMATION_STAGES } from './stages'
 import './AutomationOverview.css'
@@ -50,6 +52,7 @@ export function AutomationOverview() {
                 <button
                   type="button"
                   className="overview-quick__link"
+                  aria-label={`Inspect ${stage.shortTitle}`}
                   onClick={() => openStage(stage.id)}
                 >
                   <span className="overview-quick__index">
@@ -63,51 +66,60 @@ export function AutomationOverview() {
           </ul>
         </aside>
 
-        <OverviewImpactBoard
-          density="compact"
-          title="Objectives"
-          showChart
-        />
+        <OverviewImpactBoard density="compact" title="Objectives" showChart />
       </div>
 
-      <section
-        className="automation-stage-map panel"
-        aria-labelledby="automation-stage-map-title"
-      >
-        <div className="section-heading">
-          <div>
-            <p className="mono-label">Pipeline</p>
-            <h2 id="automation-stage-map-title">Seven inspectable stages</h2>
+      <div className="overview-lower">
+        <section
+          className="overview-attention panel"
+          aria-labelledby="overview-attention-title"
+        >
+          <div className="section-heading">
+            <div>
+              <p className="mono-label">Queues</p>
+              <h2 id="overview-attention-title">Needs attention</h2>
+            </div>
           </div>
-        </div>
-        <ol className="automation-stage-map__grid">
-          {AUTOMATION_STAGES.map((stage, index) => (
-            <li key={stage.id}>
-              <button
-                type="button"
-                className="automation-stage-card"
-                onClick={() => openStage(stage.id)}
-                aria-label={`Inspect ${stage.shortTitle}`}
+          <div className="overview-attention__grid">
+            {OVERVIEW_ATTENTION_BUCKETS.map((bucket) => (
+              <article
+                key={bucket.id}
+                className={`overview-attention__bucket is-${bucket.tone}`}
               >
-                <span className="automation-stage-card__top">
-                  <span className="automation-stage-card__number">
-                    {String(index + 1).padStart(2, '0')}
-                  </span>
-                  <span className="automation-stage-card__steps mono-label">
-                    {stage.microsteps.length} steps
-                  </span>
-                </span>
-                <strong>{stage.shortTitle}</strong>
-                <span className="automation-stage-card__blurb">{stage.purpose}</span>
-                <span className="automation-stage-card__footer">
-                  Open stage
-                  <ArrowRight size={14} aria-hidden="true" />
-                </span>
-              </button>
-            </li>
-          ))}
-        </ol>
-      </section>
+                <header>
+                  <h3 className="mono-label">{bucket.title}</h3>
+                  <strong className="stat-number">
+                    {String(bucket.items.length).padStart(2, '0')}
+                  </strong>
+                </header>
+                <ul>
+                  {bucket.items.map((item) => (
+                    <li key={item.id}>
+                      <button
+                        type="button"
+                        className="overview-attention__row"
+                        aria-label={`Open ${item.name} in ${item.stageLabel}`}
+                        onClick={() => openStage(item.stageId)}
+                      >
+                        <span className="overview-attention__copy">
+                          <strong>{item.name}</strong>
+                          <small>{item.detail}</small>
+                        </span>
+                        <span className="overview-attention__meta mono-label">
+                          {item.stageLabel}
+                          <span aria-hidden="true">View ↗</span>
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <ActivityFeed stage="overview" />
+      </div>
     </main>
   )
 }
