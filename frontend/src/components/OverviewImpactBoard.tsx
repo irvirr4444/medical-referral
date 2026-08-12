@@ -30,8 +30,14 @@ import './OverviewImpactBoard.css'
 
 export function OverviewImpactBoard({
   scope = 'overview',
+  showChart = true,
+  density = 'comfortable',
+  title = 'Objectives',
 }: {
   scope?: BossMetricsScope
+  showChart?: boolean
+  density?: 'comfortable' | 'compact'
+  title?: string
 }) {
   const periodTabs = useMemo(
     () =>
@@ -235,9 +241,14 @@ export function OverviewImpactBoard({
   }, [active.metrics, customEnd, customStart, scope, selectedId])
 
   return (
-    <section className="impact-board panel" aria-labelledby={headingId}>
+    <section
+      className={`impact-board panel impact-board--${density}${
+        showChart ? '' : ' impact-board--no-chart'
+      }`}
+      aria-labelledby={headingId}
+    >
       <div className="impact-board__toolbar">
-        <h2 id={headingId}>Objectives</h2>
+        <h2 id={headingId}>{title}</h2>
         <div
           className="impact-board__segment"
           role="tablist"
@@ -333,11 +344,13 @@ export function OverviewImpactBoard({
               )
             })}
           </ul>
-          <DotMatrixChart
-            series={trendSeries}
-            title="Activity density"
-            maxRows={10}
-          />
+          {showChart ? (
+            <DotMatrixChart
+              series={trendSeries}
+              title="Activity density"
+              maxRows={density === 'compact' ? 8 : 10}
+            />
+          ) : null}
         </div>
       </article>
 

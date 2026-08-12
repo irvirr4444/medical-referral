@@ -17,12 +17,14 @@ describe('automation inspection console', () => {
     )
     expect(
       screen.getByRole('heading', {
-        name: /Referral Intake & Scheduling/i,
+        name: /Today's Overview/i,
       }),
     ).toBeInTheDocument()
+    expect(screen.getByText(/Referral Intake & Scheduling/i)).toBeInTheDocument()
     expect(
       screen.getByRole('heading', { name: /Objectives/i }),
     ).toBeInTheDocument()
+    expect(screen.getByLabelText(/Quick access/i)).toBeInTheDocument()
     expect(screen.getByText(/New referrals/i)).toBeInTheDocument()
     expect(screen.getByText(/Patients scheduled/i)).toBeInTheDocument()
     expect(screen.getByText(/^Patients seen$/i)).toBeInTheDocument()
