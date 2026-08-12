@@ -20,8 +20,8 @@ export function FlowNav() {
             window.scrollTo({ top: 0, behavior: 'smooth' })
           }}
         >
-          <span className="flow-nav__brand-mark">WCW</span>
-          <span className="flow-nav__brand-sub">Referral Ops</span>
+          <span className="flow-nav__brand-mark">MedRef</span>
+
         </button>
 
         <div className="flow-nav__tabs" role="presentation">
