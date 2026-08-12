@@ -69,7 +69,7 @@ export const INTAKE_STAGE: AutomationStageDefinition = {
       description:
         'Check available DRK patient information before preparing a new chart action.',
       system: 'DRK reader',
-      next: 'Confirm partner contacted',
+      next: 'Referral partner contacted',
       input: 'Patient name and DOB',
       output: 'No exact DRK chart match found',
       validation:
@@ -78,11 +78,11 @@ export const INTAKE_STAGE: AutomationStageDefinition = {
     }),
     step({
       id: 'confirm-referral-contacted',
-      name: 'Confirm partner contacted',
+      name: 'Referral partner contacted',
       description:
         'Confirm that the referral partner was contacted and outreach notes are captured.',
       system: 'DRK intake team',
-      next: 'Confirm and complete intake',
+      next: 'Begin the Handoff stage',
       input: 'Contact status, outreach note, and supporting intake context',
       output: 'Referral partner contact confirmed',
       validation:
@@ -91,24 +91,6 @@ export const INTAKE_STAGE: AutomationStageDefinition = {
         input: 'No documented partner contact yet',
         output: 'Contact confirmation pending',
         validation: 'The reviewer sees every blocker before responding.',
-      },
-    }),
-    step({
-      id: 'confirm-information-complete',
-      name: 'Confirm and complete intake',
-      description:
-        'A DRK team member confirms extracted data accuracy and marks intake complete.',
-      system: 'DRK intake team',
-      next: 'Begin the Handoff stage',
-      input: 'Extracted referral details, field checks, Monday/DRK checks, and contact confirmation',
-      output: 'Referral Intake completed and ready for handoff',
-      validation:
-        'Intake is complete only when outreach is confirmed and the information is approved as accurate.',
-      exception: {
-        input: 'Contact or accuracy confirmation missing',
-        output: 'Intake completion blocked',
-        validation:
-          'The run remains available for correction and later review.',
       },
     }),
   ],

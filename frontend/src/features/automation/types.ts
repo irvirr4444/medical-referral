@@ -41,6 +41,13 @@ export interface FeedDecision {
   identityLine: string
 }
 
+/** Skim-layer facts for referral partner contact confirmation. */
+export interface FeedContactConfirmation {
+  partnerName: string
+  partnerEmail?: string
+  contactedBack: boolean
+}
+
 export interface MicrostepExample {
   status: MicrostepRunStatus
   duration: string
@@ -58,6 +65,7 @@ export interface MicrostepExample {
   /** Local samples PDF filename served at /referrals/... */
   samplePdf?: string
   feedDecision?: FeedDecision
+  feedContactConfirmation?: FeedContactConfirmation
 }
 
 export interface MicrostepExecutionSnapshot {
@@ -77,6 +85,7 @@ export interface MicrostepExecutionSnapshot {
   knownAtThisPoint: AutomationValue[]
   artifactSections: ArtifactSection[]
   feedDecision?: FeedDecision
+  feedContactConfirmation?: FeedContactConfirmation
 }
 
 export interface AutomationMicrostep {
@@ -137,6 +146,7 @@ export function snapshotToExample(
     knownAtThisPoint: snapshot.knownAtThisPoint,
     artifactSections: snapshot.artifactSections,
     feedDecision: snapshot.feedDecision,
+    feedContactConfirmation: snapshot.feedContactConfirmation,
     inputs: [{ label: 'Input received', value: snapshot.input }],
     outputs: [{ label: 'Output produced', value: snapshot.output }],
   }

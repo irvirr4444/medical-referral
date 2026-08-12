@@ -12,8 +12,8 @@ import {
 import { automationStage } from '../features/automation/stages'
 
 describe('Butler intake walkthrough fixtures', () => {
-  it('defines all 6 intake snapshots with unique artifact IDs', () => {
-    expect(BUTLER_INTAKE_STEP_IDS).toHaveLength(6)
+  it('defines all 5 intake snapshots with unique artifact IDs', () => {
+    expect(BUTLER_INTAKE_STEP_IDS).toHaveLength(5)
     expect(Object.keys(BUTLER_INTAKE_SNAPSHOTS).sort()).toEqual(
       [...BUTLER_INTAKE_STEP_IDS].sort(),
     )
@@ -21,7 +21,7 @@ describe('Butler intake walkthrough fixtures', () => {
     const artifactIds = Object.values(BUTLER_INTAKE_SNAPSHOTS).map(
       (snapshot) => snapshot.artifactId,
     )
-    expect(new Set(artifactIds).size).toBe(6)
+    expect(new Set(artifactIds).size).toBe(5)
   })
 
   it('defines one explicit input and output for every intake step', () => {

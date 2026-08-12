@@ -9,7 +9,7 @@ import './StageOps.css'
 type StepDetail = ReturnType<typeof detailForPatientStep>
 
 function isHiddenProofField(label: string) {
-  return /attachment|pdf|file name|filename|message id|attachment id|received/i.test(
+  return /attachment|pdf|file name|filename|message id|attachment id|received|result/i.test(
     label,
   )
 }
@@ -22,6 +22,8 @@ export function StageFeedMessage({
   occurredAt,
   detail,
   showPdf = false,
+  isPartnerConfirmed = false,
+  onConfirmPartner,
 }: {
   summary: string
   patientName: string
@@ -29,12 +31,17 @@ export function StageFeedMessage({
   occurredAt?: string
   detail: StepDetail | null
   showPdf?: boolean
+  isPartnerConfirmed?: boolean
+  onConfirmPartner?: () => void
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
   const when = occurredAt ? parseOpsDate(occurredAt) : null
   const meaning = statusMeaning(status)
   const decision = detail?.example?.feedDecision
-  const proofFields = decision
+  const contactConfirmation = detail?.example?.feedContactConfirmation
+  const contactedBack =
+    isPartnerConfirmed || contactConfirmation?.contactedBack || false
+  const proofFields = decision || contactConfirmation
     ? []
     : (detail?.example?.artifactSections?.[0]?.fields ?? [])
         .filter((field) => !isHiddenProofField(field.label))
@@ -170,6 +177,47 @@ export function StageFeedMessage({
                 ) : null}
               </div>
             ) : null}
+          </div>
+        ) : contactConfirmation ? (
+          <div
+            className="stage-ops-step-feed__contact"
+            aria-label="Referral partner contact confirmation"
+          >
+            <div className="stage-ops-step-feed__partner">
+              <p className="stage-ops-step-feed__partner-label">Referral partner</p>
+              <p className="stage-ops-step-feed__partner-name">
+                {contactConfirmation.partnerName}
+              </p>
+              {contactConfirmation.partnerEmail ? (
+                <p className="stage-ops-step-feed__partner-email">
+                  {contactConfirmation.partnerEmail}
+                </p>
+              ) : null}
+            </div>
+            <div className="stage-ops-step-feed__contact-action">
+              <div className="stage-ops-step-feed__reply-status">
+                <span className="stage-ops-step-feed__reply-label">
+                  Partner replied?
+                </span>
+                <span
+                  className={`stage-ops-step-feed__reply-pill${
+                    contactedBack ? ' is-confirmed' : ' is-pending'
+                  }`}
+                >
+                  {contactedBack ? 'Confirmed' : 'Not yet'}
+                </span>
+              </div>
+              {!contactedBack ? (
+                <button
+                  type="button"
+                  className="stage-ops-step-feed__confirm is-actionable"
+                  onClick={onConfirmPartner}
+                  disabled={!onConfirmPartner}
+                >
+                  Mark partner contacted
+                </button>
+              ) : null}
+            </div>
           </div>
         ) : proofFields.length || samplePdf ? (
           <div className="stage-ops-step-feed__meta-row">

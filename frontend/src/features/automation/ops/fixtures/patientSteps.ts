@@ -9,7 +9,6 @@ export const STAGE_STEP_IDS: Record<FlowOpsPageId, string[]> = {
     'check-monday',
     'check-drk',
     'confirm-referral-contacted',
-    'confirm-information-complete',
   ],
   handoff: [
     'load-approved-plan',
@@ -214,17 +213,13 @@ const intakeFromDemo = (patientId: string): PatientStepProgress[] => {
   if (story === 'complete') {
     return order.map((stepId) => {
       const snap = demo.snapshots[stepId]
-      const confirmDone =
-        stepId === 'confirm-referral-contacted' ||
-        stepId === 'confirm-information-complete'
       return {
         stepId,
         status: 'done' as const,
-        summary: confirmDone
-          ? stepId === 'confirm-referral-contacted'
+        summary:
+          stepId === 'confirm-referral-contacted'
             ? 'Partner contact confirmed'
-            : 'Approved and authorized for handoff'
-          : snap.output,
+            : snap.output,
         occurredAt: snap.executedAt,
       }
     })
@@ -248,9 +243,7 @@ const intakeFromDemo = (patientId: string): PatientStepProgress[] => {
   // waiting on confirmation after clear duplicate checks
   return order.map((stepId) => {
     const snap = demo.snapshots[stepId]
-    const pending =
-      stepId === 'confirm-referral-contacted' ||
-      stepId === 'confirm-information-complete'
+    const pending = stepId === 'confirm-referral-contacted'
     return {
       stepId,
       status: pending ? ('waiting' as const) : ('done' as const),

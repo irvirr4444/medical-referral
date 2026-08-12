@@ -35,6 +35,32 @@ function senderDisplay(record: CanonicalReferral) {
   return '—'
 }
 
+function referralPartnerDetails(record: CanonicalReferral) {
+  const provider = record.referral_source.provider_name?.trim()
+  const contact = record.referral_source.organization.contact_name?.trim()
+  const orgEmail = record.referral_source.organization.email?.trim()
+  const sentBy = record.source.sent_by?.trim() ?? ''
+  const sentMatch = sentBy.match(/^(.+?)\s*<([^>]+)>$/)
+
+  const rawName =
+    provider ||
+    contact ||
+    sentMatch?.[1]?.trim() ||
+    record.referral_source.organization.name?.trim() ||
+    '—'
+  const name = rawName.replace(/\s*\([^)]*\)\s*/g, ' ').replace(/\s{2,}/g, ' ').trim()
+  const email = orgEmail || sentMatch?.[2]?.trim()
+
+  return { name, email }
+}
+
+function referralPartnerLine(record: CanonicalReferral) {
+  const { name, email } = referralPartnerDetails(record)
+  if (name !== '—' && email) return `${name} · ${email}`
+  if (email) return email
+  return name
+}
+
 function identityAndContact(record: CanonicalReferral) {
   return [
     ...identityKnown(record),
@@ -342,19 +368,7 @@ export function buildIntakeSnapshots(
               label: 'Query identity',
               value: `${patientName} · ${dob}`,
             },
-            {
-              label: 'Source patient ID',
-              value: record.patient.source_patient_id ?? '—',
-              fieldPath: 'patient.source_patient_id',
-            },
-            {
-              label: 'MRN used',
-              value: 'None — MRN not inferred from source ID',
-            },
-            {
-              label: 'Exact chart match',
-              value: 'No exact DRK chart match found',
-            },
+            { label: 'Candidates found', value: '0' },
           ],
         },
       ],
@@ -367,8 +381,16 @@ export function buildIntakeSnapshots(
       validation:
         'Intake cannot complete until referral partner contact is explicitly confirmed.',
       input: 'Outreach note and intake review context',
-      output: 'Referral partner contact confirmation pending',
+      output: 'Awaiting partner confirmation',
       knownAtThisPoint: identityAndContact(record),
+      feedContactConfirmation: (() => {
+        const partner = referralPartnerDetails(record)
+        return {
+          partnerName: partner.name,
+          partnerEmail: partner.email,
+          contactedBack: false,
+        }
+      })(),
       artifactSections: [
         {
           id: 'contact-confirmation',
@@ -376,52 +398,12 @@ export function buildIntakeSnapshots(
           defaultExpanded: true,
           fields: [
             {
-              label: 'Referral partner contacted',
-              value: 'Pending confirmation',
-            },
-            { label: 'Outreach owner', value: 'DRK intake screen watcher' },
-            { label: 'Expected note', value: 'Call or callback outcome logged' },
-            {
-              label: 'Escalation path',
-              value: 'Marketer follow-up if unreachable',
-            },
-            { label: 'Attachment', value: pdfName },
-            { label: 'Thread', value: emailId },
-          ],
-        },
-      ],
-    }),
-    'confirm-information-complete': snap('confirm-information-complete', {
-      status: 'waiting',
-      duration: 'Awaiting human confirmation',
-      executedAt,
-      artifactTitle: 'Referral Intake completion confirmation',
-      validation:
-        'A DRK team member must confirm accuracy before intake is complete.',
-      input:
-        'Extracted referral details + Monday/DRK checks + contact confirmation',
-      output: 'Waiting for DRK confirmation that information is correct',
-      knownAtThisPoint: identityAndContact(record),
-      artifactSections: [
-        {
-          id: 'completion-confirmation',
-          title: 'Intake completion gate',
-          defaultExpanded: true,
-          fields: [
-            {
-              label: 'Information verified as correct',
-              value: 'Pending confirmation',
+              label: 'Referral partner',
+              value: referralPartnerLine(record),
             },
             {
-              label: 'Seven required fields',
-              value: `${completeCount} of 7 complete`,
-            },
-            { label: 'Monday check', value: 'No existing patient found' },
-            { label: 'DRK check', value: 'No existing chart found' },
-            { label: 'Gaps', value: gapLabel },
-            {
-              label: 'Decision',
-              value: 'Intake remains open until confirmation is recorded',
+              label: 'Partner replied?',
+              value: 'Not yet',
             },
           ],
         },
@@ -447,5 +429,4 @@ export const BUTLER_INTAKE_STEP_IDS = [
   'check-monday',
   'check-drk',
   'confirm-referral-contacted',
-  'confirm-information-complete',
 ] as const

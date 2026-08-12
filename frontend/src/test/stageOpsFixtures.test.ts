@@ -133,11 +133,10 @@ describe('stage operations fixtures', () => {
     expect(handoffPatient.example?.artifactSections?.length).toBeGreaterThan(0)
   })
 
-  it('keeps intake patient step stories aligned to the six current steps', () => {
+  it('keeps intake patient step stories aligned to the current steps', () => {
     const butler = stepsForPatient('intake', 'butler-alva')
-    expect(butler).toHaveLength(6)
+    expect(butler).toHaveLength(5)
     expect(butler[4]?.status).toBe('waiting')
-    expect(butler[5]?.status).toBe('waiting')
 
     const frank = stepsForPatient('intake', 'sardina-frank')
     expect(frank[1]?.status).toBe('blocked')
@@ -145,7 +144,7 @@ describe('stage operations fixtures', () => {
 
     const fay = stepsForPatient('intake', 'fay-william')
     expect(fay.every((step) => step.status === 'done')).toBe(true)
-    expect(fay[5]?.summary).toMatch(/Approved and authorized for handoff/i)
+    expect(fay[4]?.summary).toMatch(/Partner contact confirmed/i)
   })
 
   it('keeps the activity feed newest-first within each day', () => {

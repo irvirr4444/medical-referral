@@ -37,6 +37,9 @@ export function StagePatientSteps({
   const [patientQuery, setPatientQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilterValue>('all')
   const [statusMenuOpen, setStatusMenuOpen] = useState(false)
+  const [partnerConfirmed, setPartnerConfirmed] = useState<Record<string, boolean>>(
+    {},
+  )
   const statusMenuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -44,6 +47,7 @@ export function StagePatientSteps({
     setPatientQuery('')
     setStatusFilter('all')
     setStatusMenuOpen(false)
+    setPartnerConfirmed({})
   }, [stageId, microsteps[0]?.id])
 
   useEffect(() => {
@@ -81,6 +85,15 @@ export function StagePatientSteps({
     [stageId, selectedStepId, patientQuery, statuses],
   )
 
+  const waitingPartnerCount = useMemo(() => {
+    if (selectedStepId !== 'confirm-referral-contacted') return 0
+    return days.reduce(
+      (count, day) =>
+        count + day.rows.filter((row) => row.status === 'waiting').length,
+      0,
+    )
+  }, [days, selectedStepId])
+
   const selectStep = (stepId: string) => {
     setSelectedStepId(stepId)
   }
@@ -113,6 +126,13 @@ export function StagePatientSteps({
         <div className="stage-ops-steps__toolbar">
           <div className="stage-ops-steps__toolbar-copy">
             <h3>{selectedStep?.name ?? 'Step'}</h3>
+            {waitingPartnerCount > 0 ? (
+              <p className="stage-ops-steps__queue-hint">
+                {waitingPartnerCount}{' '}
+                {waitingPartnerCount === 1 ? 'patient' : 'patients'} need partner
+                confirmation
+              </p>
+            ) : null}
           </div>
 
           <div
@@ -225,6 +245,19 @@ export function StagePatientSteps({
                           occurredAt={row.occurredAt}
                           detail={detail}
                           showPdf={selectedStepId === 'receive-referral'}
+                          isPartnerConfirmed={
+                            row.status === 'done' ||
+                            Boolean(partnerConfirmed[row.patientId])
+                          }
+                          onConfirmPartner={
+                            selectedStepId === 'confirm-referral-contacted'
+                              ? () =>
+                                  setPartnerConfirmed((current) => ({
+                                    ...current,
+                                    [row.patientId]: true,
+                                  }))
+                              : undefined
+                          }
                         />
                       </li>
                     )

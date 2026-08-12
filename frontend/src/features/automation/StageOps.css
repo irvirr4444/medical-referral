@@ -340,6 +340,12 @@
   margin: 0.2rem 0 0;
 }
 
+.stage-ops-steps__queue-hint {
+  color: #9a6708;
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
 .stage-ops-steps__filter-bar {
   display: flex;
   align-items: center;
@@ -1033,6 +1039,93 @@
   flex: 0 1 18rem;
   max-width: min(100%, 20rem);
   margin-left: auto;
+}
+
+.stage-ops-step-feed__contact {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.stage-ops-step-feed__partner {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.stage-ops-step-feed__partner-label,
+.stage-ops-step-feed__reply-label {
+  margin: 0;
+  color: var(--gray);
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.stage-ops-step-feed__partner-name {
+  margin: 0;
+  color: var(--navy);
+  font-size: 0.9rem;
+  font-weight: 650;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.stage-ops-step-feed__partner-email {
+  margin: 0;
+  color: var(--navy);
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.stage-ops-step-feed__contact-action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem 0.85rem;
+}
+
+.stage-ops-step-feed__reply-status {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.stage-ops-step-feed__reply-pill {
+  font-size: 0.84rem;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.stage-ops-step-feed__reply-pill.is-pending {
+  color: #9a6708;
+}
+
+.stage-ops-step-feed__reply-pill.is-confirmed {
+  color: #4a6b59;
+}
+
+.stage-ops-step-feed__confirm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid rgba(14, 124, 134, 0.45);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--teal);
+  font-size: 0.84rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.stage-ops-step-feed__confirm.is-actionable:hover {
+  background: rgba(14, 124, 134, 0.08);
 }
 
 .stage-ops-step-feed__decision {
