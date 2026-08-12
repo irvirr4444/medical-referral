@@ -23,9 +23,11 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 export function IntakePdfPreview({
   samplePdf,
   label,
+  fileUrl: explicitFileUrl,
 }: {
   samplePdf: string
   label?: string
+  fileUrl?: string
   /** @deprecated Preview opens in a modal; compact is ignored. */
   compact?: boolean
 }) {
@@ -37,8 +39,8 @@ export function IntakePdfPreview({
   const [baseWidth, setBaseWidth] = useState(780)
   const title = label ?? samplePdf
   const fileUrl = useMemo(
-    () => `/referrals/${encodeURIComponent(samplePdf)}`,
-    [samplePdf],
+    () => explicitFileUrl ?? `/referrals/${encodeURIComponent(samplePdf)}`,
+    [explicitFileUrl, samplePdf],
   )
   const pageWidth = Math.round(baseWidth * zoom)
 

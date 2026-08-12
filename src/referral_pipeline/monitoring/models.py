@@ -60,6 +60,40 @@ class WorkflowEvent(StrictModel):
     details: dict[str, Any] = Field(default_factory=dict)
 
 
+class WorkflowCase(StrictModel):
+    """Minimal cross-stage identity and current state for one referral."""
+
+    case_id: str
+    source_ref: str
+    source: Literal["outlook-graph", "eml-fixture"]
+    attachment_sha256: str | None = None
+    referral_id: str | None = None
+    patient_label: str | None = None
+    current_stage: int = Field(default=1, ge=1, le=7)
+    status: Literal["discovered", "processing", "needs_attention", "completed", "failed"]
+    source_received_at: datetime | None = None
+    monday_item_id: str | None = None
+    drk_patient_id: str | None = None
+    created_at: datetime
+    updated_at: datetime
+    completed_at: datetime | None = None
+
+
+class OutboundAcknowledgement(StrictModel):
+    """Idempotency and delivery state for the one partner acknowledgement."""
+
+    case_id: str
+    recipient: str
+    payload_digest: str
+    status: Literal["pending", "sending", "sent", "failed"] = "pending"
+    attempts: int = Field(default=0, ge=0)
+    lease_until: datetime | None = None
+    sent_at: datetime | None = None
+    last_error: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
 class WorkflowException(StrictModel):
     exception_key: str
     exception_type: str

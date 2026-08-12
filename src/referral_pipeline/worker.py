@@ -6,6 +6,7 @@ import argparse
 import json
 import logging
 import os
+import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -16,6 +17,7 @@ from Outlook.review_mail import OutlookReviewMailbox
 from referral_pipeline.monitoring.config import DEFAULT_CONFIG_PATH
 from referral_pipeline.monitoring.drk_capture import DEFAULT_PROFILE_PATH
 from referral_pipeline.monitoring.health import WorkerHealthReporter, create_worker_health_reporter
+from referral_pipeline.monitoring.store import create_workflow_store
 from referral_pipeline.monitoring.worker_cycle import run_monitor_cycle
 from referral_pipeline.review.workflow import ApprovalProcessor
 from referral_pipeline.runner import main as run_inbound_main
@@ -57,6 +59,19 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--max-messages", type=int, default=DEFAULT_MAX_MESSAGES)
     parser.add_argument("--max-jobs", type=int, default=DEFAULT_MAX_RETRY_JOBS)
     parser.add_argument("--max-approval-messages", type=int, default=DEFAULT_MAX_APPROVAL_MESSAGES)
+    parser.add_argument("--review-recipient", default=os.getenv("REVIEW_RECIPIENT_EMAIL"))
+    parser.add_argument(
+        "--partner-acknowledgement",
+        action=argparse.BooleanOptionalAction,
+        default=_env_flag("INTAKE_PARTNER_ACKNOWLEDGEMENT_ENABLED"),
+        help="Reply once to each referral source after Stage 1 checks; disabled by default.",
+    )
+    parser.add_argument(
+        "--stage-one-drk-check",
+        action=argparse.BooleanOptionalAction,
+        default=_env_flag("INTAKE_STAGE_ONE_DRK_CHECK_ENABLED"),
+        help="Run the read-only Selenium DRK duplicate gate; disabled by default.",
+    )
     parser.add_argument(
         "--execute-approvals",
         action="store_true",
@@ -159,6 +174,11 @@ def run_poll_cycle(
     data_root: Path,
     max_messages: int,
     quiet: bool = False,
+    partner_acknowledgement: bool = False,
+    stage_one_drk_check: bool = False,
+    workflow_database_backend: str | None = None,
+    workflow_sqlite_path: Path | None = None,
+    review_recipient: str | None = None,
     run_main: Callable[[list[str]], int] = run_inbound_main,
 ) -> dict:
     """One Outlook discovery cycle; failures are logged and returned, not raised."""
@@ -166,6 +186,7 @@ def run_poll_cycle(
         "--outlook-poll",
         "--max-messages",
         str(max_messages),
+        "--newest-only",
         "--master-sheet-mode",
         "dry-run",
         "--send-review",
@@ -174,9 +195,22 @@ def run_poll_cycle(
         "--agency-mode",
         "live-readonly",
     ]
+    if partner_acknowledgement:
+        argv.append("--send-partner-acknowledgement")
+    if stage_one_drk_check:
+        argv.append("--drk-duplicate-check")
+    if review_recipient:
+        argv.extend(("--review-recipient", review_recipient))
     if not quiet:
         argv.append("--verbose")
-    return _run_intake_cycle(kind="poll", data_root=data_root, argv=argv, run_main=run_main)
+    return _run_intake_cycle(
+        kind="poll",
+        data_root=data_root,
+        argv=argv,
+        run_main=run_main,
+        workflow_database_backend=workflow_database_backend,
+        workflow_sqlite_path=workflow_sqlite_path,
+    )
 
 
 def run_retry_cycle(
@@ -184,6 +218,11 @@ def run_retry_cycle(
     data_root: Path,
     max_jobs: int,
     quiet: bool = False,
+    partner_acknowledgement: bool = False,
+    stage_one_drk_check: bool = False,
+    workflow_database_backend: str | None = None,
+    workflow_sqlite_path: Path | None = None,
+    review_recipient: str | None = None,
     run_main: Callable[[list[str]], int] = run_inbound_main,
 ) -> dict:
     """One durable retry drain cycle; failures are logged and returned, not raised."""
@@ -199,9 +238,22 @@ def run_retry_cycle(
         "--agency-mode",
         "live-readonly",
     ]
+    if partner_acknowledgement:
+        argv.append("--send-partner-acknowledgement")
+    if stage_one_drk_check:
+        argv.append("--drk-duplicate-check")
+    if review_recipient:
+        argv.extend(("--review-recipient", review_recipient))
     if not quiet:
         argv.append("--verbose")
-    return _run_intake_cycle(kind="retries", data_root=data_root, argv=argv, run_main=run_main)
+    return _run_intake_cycle(
+        kind="retries",
+        data_root=data_root,
+        argv=argv,
+        run_main=run_main,
+        workflow_database_backend=workflow_database_backend,
+        workflow_sqlite_path=workflow_sqlite_path,
+    )
 
 
 def _run_intake_cycle(
@@ -210,9 +262,17 @@ def _run_intake_cycle(
     data_root: Path,
     argv: list[str],
     run_main: Callable[[list[str]], int],
+    workflow_database_backend: str | None = None,
+    workflow_sqlite_path: Path | None = None,
 ) -> dict:
     run_dir = _new_run_dir(data_root / "inbox-runs")
     argv.extend(("--output-dir", str(run_dir), "--state-db", str(data_root / "state.sqlite")))
+    if workflow_database_backend is not None:
+        argv.extend(("--workflow-database-backend", workflow_database_backend))
+    if workflow_sqlite_path is not None:
+        argv.extend(("--workflow-sqlite-path", str(workflow_sqlite_path)))
+    elif workflow_database_backend != "supabase":
+        argv.extend(("--workflow-sqlite-path", str(data_root / "workflow-monitor.sqlite")))
     started = time.perf_counter()
     try:
         exit_code = run_main(argv)
@@ -241,6 +301,8 @@ def run_approval_cycle(
     execute: bool = False,
     dry_run: bool = False,
     processor_factory: Callable[[Path], ApprovalProcessor] | None = None,
+    workflow_database_backend: str | None = None,
+    workflow_sqlite_path: Path | None = None,
 ) -> dict:
     """Poll reviewer replies. Workers never create Monday items."""
     state_db = data_root / "state.sqlite"
@@ -253,6 +315,10 @@ def run_approval_cycle(
             processor = ApprovalProcessor(
                 state_db=state_db,
                 mailbox=OutlookReviewMailbox(client),
+                workflow_store=create_workflow_store(
+                    backend=workflow_database_backend,
+                    sqlite_path=workflow_sqlite_path,
+                ),
             )
         else:
             processor = processor_factory(state_db)
@@ -319,6 +385,14 @@ def run_worker_loop(
     health_send_alerts: bool = False,
     health_failure_threshold: int = 3,
     health_reporter: WorkerHealthReporter | None = None,
+    partner_acknowledgement: bool = False,
+    stage_one_drk_check: bool = False,
+    workflow_database_backend: str | None = None,
+    workflow_sqlite_path: Path | None = None,
+    review_recipient: str | None = None,
+    stop_event: threading.Event | None = None,
+    on_cycle_start: Callable[[str], None] | None = None,
+    on_result: Callable[[dict], None] | None = None,
 ) -> list[dict]:
     """Run intake, approval, and optional monitoring cycles independently."""
     if poll_interval_seconds < 1:
@@ -356,6 +430,16 @@ def run_worker_loop(
         if effective_health_reporter is not None:
             effective_health_reporter.record(result)
 
+    def record_result(result: dict) -> None:
+        results.append(result)
+        record_health(result)
+        if on_result is not None:
+            on_result(result)
+        print(json.dumps(result, indent=2), flush=True)
+
+    def stopping() -> bool:
+        return stop_event is not None and stop_event.is_set()
+
     results: list[dict] = []
     now = clock()
     next_poll_at = now if not skip_poll else float("inf")
@@ -363,49 +447,69 @@ def run_worker_loop(
     next_approval_at = now if not skip_approvals else float("inf")
     next_monitor_at = now if monitor_enabled else float("inf")
 
-    while True:
+    while not stopping():
         now = clock()
         if now >= next_retry_at and not skip_retries:
+            if on_cycle_start is not None:
+                on_cycle_start("retries")
             result = run_retry_cycle(
                 data_root=data_root,
                 max_jobs=max_jobs,
                 quiet=quiet,
+                partner_acknowledgement=partner_acknowledgement,
+                stage_one_drk_check=stage_one_drk_check,
+                workflow_database_backend=workflow_database_backend,
+                workflow_sqlite_path=workflow_sqlite_path,
+                review_recipient=review_recipient,
                 run_main=run_main,
             )
-            results.append(result)
-            record_health(result)
-            print(json.dumps(result, indent=2), flush=True)
+            record_result(result)
             next_retry_at = clock() + retry_interval_seconds
+            if stopping():
+                break
 
         now = clock()
         if now >= next_poll_at and not skip_poll:
+            if on_cycle_start is not None:
+                on_cycle_start("poll")
             result = run_poll_cycle(
                 data_root=data_root,
                 max_messages=max_messages,
                 quiet=quiet,
+                partner_acknowledgement=partner_acknowledgement,
+                stage_one_drk_check=stage_one_drk_check,
+                workflow_database_backend=workflow_database_backend,
+                workflow_sqlite_path=workflow_sqlite_path,
+                review_recipient=review_recipient,
                 run_main=run_main,
             )
-            results.append(result)
-            record_health(result)
-            print(json.dumps(result, indent=2), flush=True)
+            record_result(result)
             next_poll_at = clock() + poll_interval_seconds
+            if stopping():
+                break
 
         now = clock()
         if now >= next_approval_at and not skip_approvals:
+            if on_cycle_start is not None:
+                on_cycle_start("approvals")
             result = run_approval_cycle(
                 data_root=data_root,
                 max_messages=max_approval_messages,
                 execute=execute_approvals,
                 dry_run=dry_run_approvals,
                 processor_factory=approval_processor_factory,
+                workflow_database_backend=workflow_database_backend,
+                workflow_sqlite_path=workflow_sqlite_path,
             )
-            results.append(result)
-            record_health(result)
-            print(json.dumps(result, indent=2), flush=True)
+            record_result(result)
             next_approval_at = clock() + approval_interval_seconds
+            if stopping():
+                break
 
         now = clock()
         if now >= next_monitor_at and monitor_enabled:
+            if on_cycle_start is not None:
+                on_cycle_start("monitor")
             result = monitor_cycle(
                 data_root=data_root,
                 send_alerts=monitor_send_alerts,
@@ -419,12 +523,12 @@ def run_worker_loop(
                 drk_max_patients=drk_max_patients,
                 drk_live_profile_dir=drk_live_profile_dir,
             )
-            results.append(result)
-            record_health(result)
-            print(json.dumps(result, indent=2), flush=True)
+            record_result(result)
             next_monitor_at = clock() + monitor_interval_seconds
+            if stopping():
+                break
 
-        if once:
+        if once or stopping():
             break
 
         now = clock()
@@ -434,7 +538,11 @@ def run_worker_loop(
             next_approval_at - now,
             next_monitor_at - now,
         )
-        sleep_fn(max(wake_in, 1.0))
+        wait_seconds = max(wake_in, 1.0)
+        if stop_event is None:
+            sleep_fn(wait_seconds)
+        else:
+            stop_event.wait(wait_seconds)
 
     return results
 
@@ -486,6 +594,9 @@ def main(argv: list[str] | None = None) -> int:
         health_enabled=args.health,
         health_send_alerts=args.health_send_alerts,
         health_failure_threshold=args.health_failure_threshold,
+        partner_acknowledgement=args.partner_acknowledgement,
+        stage_one_drk_check=args.stage_one_drk_check,
+        review_recipient=args.review_recipient,
         quiet=args.quiet,
     )
     return 0

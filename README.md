@@ -183,6 +183,49 @@ PYTHONPATH=src python3.11 src/monday.com/push_referral.py \
   --dry-run
 ```
 
+### Live testing-infobox feed
+
+Referral Intake keeps its demo referrals and can additionally show real PDF arrivals
+from the configured testing inbox. Start the local Stage 1 service in one terminal
+and Vite in another:
+
+```powershell
+$env:PYTHONPATH='src'
+python run_pipeline.py inbox-api
+
+cd frontend
+npm run dev
+```
+
+Vite proxies `/api` to `http://127.0.0.1:8787`. On **Referral intake**, the live
+status control can start and stop autonomous Outlook polling. It runs extraction,
+safe duplicate reads, durable retries, review-email delivery, and reply polling.
+Stopping during a PDF finishes that active cycle before the worker exits. The
+service always starts OFF unless `--start-monitor` is supplied:
+
+```powershell
+python run_pipeline.py inbox-api --start-monitor
+```
+
+`inbox-api` is the local UI control plane and remains running when live monitoring
+is OFF. The frontend continues making read-only `GET /api/intake/inbox` and
+`GET /api/intake/monitor` requests so it can display saved referrals and worker
+status; those requests appear in the terminal but do not poll Outlook, run
+extraction, send email, or write to Monday or DRK. Pressing **Stop** only stops the
+background inbox worker. Press `Ctrl+C` in the API terminal to stop the local
+service completely, which also makes the live-inbox panel unavailable.
+
+The local service cannot write Monday or DRK. Partner acknowledgement and the DRK
+duplicate check remain disabled unless their explicit CLI flags or environment
+toggles are enabled. `REVIEW_RECIPIENT_EMAIL` is required before the monitor can
+start, preventing review summaries from falling back to the referral sender.
+Microsoft credentials and PDF bytes stay server-side. If the
+API or Graph is unavailable, the frontend reports that state and keeps demo data.
+For a referral without a persisted DRK result, the feed says **DRK chart check
+disabled** only when the service explicitly reports that check OFF. It says
+**Queued for DRK chart check** when enabled or when configuration is temporarily
+unavailable; persisted DRK results always take priority.
+
 ### Synthetic inbox-to-Monday rehearsal
 
 The synthetic inbox fixtures contain no real patient data. They exercise four cases:
@@ -214,6 +257,10 @@ manual-preview commands are:
 python run_pipeline.py outlook
 python run_pipeline.py apply --confirm-master-sheet-write
 ```
+
+The durable Stage 1 test-inbox path, acknowledgement gate, Supabase migration,
+and read-only Monday/DRK checks are documented in
+[docs/STAGE_ONE_INTAKE.md](docs/STAGE_ONE_INTAKE.md).
 
 Step 4 scheduling monitoring and Step 5 visit monitoring are documented in
 [docs/WORKFLOW_MONITORING.md](docs/WORKFLOW_MONITORING.md). They are read-only

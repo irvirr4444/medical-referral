@@ -15,6 +15,17 @@ NOT_DOCUMENTED = "Not documented"
 NO_KNOWN_ALLERGIES = "No known allergies"
 CLINICAL_SUMMARY_MAX_CHARS = 320
 CLINICAL_SUMMARY_MAX_SENTENCES = 2
+PARTNER_CONTACT_ACTION_TITLE = "Referral Partner Follow-up"
+PARTNER_CONTACT_ACTION_COPY = (
+    "Please contact the referral partner to acknowledge receipt and resolve any missing or "
+    "unclear information. After outreach is complete, reply Confirm. If any referral details "
+    "need to be corrected, reply with the corrected information."
+)
+REVIEW_ACTION_TITLE = "Referral Review"
+REVIEW_ACTION_COPY = (
+    "Please review the referral summary. Reply Confirm if the information is accurate, "
+    "or reply with the corrected information."
+)
 
 
 @dataclass(frozen=True)
@@ -85,6 +96,7 @@ class ReviewPresentation:
     approval_allowed: bool
     review_id: str
     token: str
+    purpose: str = "destination_write"
 
 
 def render_review_email(
@@ -97,6 +109,7 @@ def render_review_email(
     drk_draft_path: str | Path,
     write_config_path: str | Path,
     approval_allowed: bool = True,
+    purpose: str = "destination_write",
 ) -> ReviewEmail:
     del monday_preview_path, drk_draft_path, write_config_path
     canonical = _load(canonical_path)
@@ -107,9 +120,14 @@ def render_review_email(
         review_id=review_id,
         token=token,
         approval_allowed=approval_allowed,
+        purpose=purpose,
     )
     return ReviewEmail(
-        subject=f"Referral Review: {presentation.patient_heading}",
+        subject=(
+            f"Referral Follow-up: {presentation.patient_heading}"
+            if purpose == "partner_contact"
+            else f"Referral Review: {presentation.patient_heading}"
+        ),
         html_body=render_html(presentation),
         text_body=render_text(presentation),
         content_type="HTML",
@@ -123,6 +141,7 @@ def build_presentation(
     review_id: str,
     token: str,
     approval_allowed: bool,
+    purpose: str = "destination_write",
 ) -> ReviewPresentation:
     patient = canonical.get("patient") or {}
     name = patient.get("name") or {}
@@ -204,6 +223,7 @@ def build_presentation(
         approval_allowed=approval_allowed,
         review_id=review_id,
         token=token,
+        purpose=purpose,
     )
 
 
@@ -310,9 +330,9 @@ def render_text(presentation: ReviewPresentation) -> str:
         [
             "----------------------------------------",
             "",
-            "Confirm Patient",
+            _action_title(presentation),
             "",
-            "Reply with confirm if you wanna insert this client into monday and DRK",
+            _action_copy(presentation),
             "",
         ]
     )
@@ -619,14 +639,30 @@ def _html_allergies(presentation: ReviewPresentation) -> str:
 
 
 def _html_action(_presentation: ReviewPresentation) -> str:
-    content = "<div>Reply with confirm if you wanna insert this client into monday and DRK</div>"
+    content = f"<div>{escape(_action_copy(_presentation))}</div>"
     return (
         '<tr><td style="padding:8px 24px 24px 24px;">'
         '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
         'style="background:#f0f4f8;border:1px solid #d9e2ec;border-radius:6px;">'
         '<tr><td style="padding:14px 16px;">'
-        '<div style="font-weight:bold;margin-bottom:8px;">Confirm Patient</div>'
+        f'<div style="font-weight:bold;margin-bottom:8px;">{escape(_action_title(_presentation))}</div>'
         f"{content}</td></tr></table></td></tr>"
+    )
+
+
+def _action_title(presentation: ReviewPresentation) -> str:
+    return (
+        PARTNER_CONTACT_ACTION_TITLE
+        if presentation.purpose == "partner_contact"
+        else REVIEW_ACTION_TITLE
+    )
+
+
+def _action_copy(presentation: ReviewPresentation) -> str:
+    return (
+        PARTNER_CONTACT_ACTION_COPY
+        if presentation.purpose == "partner_contact"
+        else REVIEW_ACTION_COPY
     )
 
 

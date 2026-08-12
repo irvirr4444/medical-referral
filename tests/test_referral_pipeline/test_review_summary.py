@@ -100,9 +100,9 @@ def test_summary_renders_readable_html_and_plain_text(tmp_path) -> None:
     assert "1 Test Way, Fresno, CA, 93701" in email.html_body
     assert "CONFIRMED review_" not in email.html_body
     assert "abcdefghijklmnop" not in email.text_body
-    assert "Confirm Patient" in email.html_body
-    assert "Reply with confirm if you wanna insert this client into monday and DRK" in email.html_body
-    assert "Reply with confirm if you wanna insert this client into monday and DRK" in email.text_body
+    assert "Referral Review" in email.html_body
+    assert "Reply Confirm if the information is accurate" in email.html_body
+    assert "Reply Confirm if the information is accurate" in email.text_body
     assert "Duplicate found in Monday" not in email.text_body
     assert "Clinical summary" in email.text_body
     assert "Document observations" not in email.text_body
@@ -182,7 +182,7 @@ def test_explicit_nka_is_distinguished_from_missing_allergies(tmp_path) -> None:
     assert "no NKA/NKDA statement found" not in email.html_body
 
 
-def test_confirmation_copy_stays_static_until_scenarios_are_defined(tmp_path) -> None:
+def test_confirmation_copy_is_professional_when_writes_are_blocked(tmp_path) -> None:
     canonical, monday, plan, drk, config = _base_paths(tmp_path)
     _write(canonical, {"source": {"file_name": "synthetic.pdf"}, "patient": {}, "field_quality": {}, "warnings": [], "clinical": {}, "insurances": [], "requested_services": []})
     _write(plan, {"outcome": "blocked_missing_threshold", "monday_duplicate_check": {"status": "skipped_missing_identity"}})
@@ -200,8 +200,8 @@ def test_confirmation_copy_stays_static_until_scenarios_are_defined(tmp_path) ->
         approval_allowed=False,
     )
 
-    assert "Confirm Patient" in email.text_body
-    assert "Reply with confirm if you wanna insert this client into monday and DRK" in email.text_body
+    assert "Referral Review" in email.text_body
+    assert "Reply Confirm if the information is accurate" in email.text_body
     assert "CONFIRMED review_" not in email.text_body
     assert "CONFIRMED review_" not in email.html_body
 
@@ -260,5 +260,39 @@ def test_duplicate_warning_lists_four_matching_monday_fields(tmp_path) -> None:
     assert "DOB: January 2, 1980" in email.text_body
     assert "Phone: (555) 555-0100" in email.text_body
     assert "Address: 100 Example Street, Tampa, FL 33602" in email.text_body
-    assert "Confirm Patient" in email.html_body
+    assert "Referral Review" in email.html_body
     assert "CONFIRMED review_" not in email.text_body
+
+
+def test_partner_contact_email_has_one_clear_stage_one_action(tmp_path) -> None:
+    canonical, monday, plan, drk, config = _base_paths(tmp_path)
+    _write(
+        canonical,
+        {
+            "patient": {"name": {"full": "Jamie Tester"}},
+            "clinical": {},
+            "field_quality": {},
+            "insurances": [],
+            "requested_services": [],
+        },
+    )
+    _write(monday, {"blocked": True, "blockers": ["missing_patient_phone"]})
+
+    email = render_review_email(
+        review_id="review_contact",
+        token="unused-token",
+        canonical_path=canonical,
+        intake_plan_path=plan,
+        monday_preview_path=monday,
+        drk_draft_path=drk,
+        write_config_path=config,
+        approval_allowed=True,
+        purpose="partner_contact",
+    )
+
+    assert email.subject == "Referral Follow-up: Jamie Tester"
+    assert "Referral Partner Follow-up" in email.html_body
+    assert "contact the referral partner" in email.text_body
+    assert "After outreach is complete, reply Confirm" in email.text_body
+    assert "Monday" not in email.text_body
+    assert "DRK" not in email.text_body

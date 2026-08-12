@@ -16,6 +16,8 @@ from referral_pipeline.review.store import build_review_store
 from referral_pipeline.review.summary import render_review_email
 from referral_pipeline.monitoring.models import PatientLink, utc_now
 from referral_pipeline.monitoring.observer import record_lifecycle_event
+from referral_pipeline.monitoring.store import WorkflowStore
+from referral_pipeline.stage_one.tracker import StageOneTracker
 
 
 class ReviewWorkflowError(RuntimeError):
@@ -29,6 +31,8 @@ def create_and_send_review(
     write_config_path: str | Path,
     state_db: str | Path,
     mailbox: OutlookReviewMailbox,
+    purpose: str = "destination_write",
+    workflow_case_id: str | None = None,
 ) -> dict[str, Any]:
     recipient = recipient.strip()
     if not recipient:
@@ -53,6 +57,7 @@ def create_and_send_review(
         artifact_digest=digest,
         source_message_id=source_message_id,
         recipient=recipient,
+        purpose=purpose,
     )
     if existing is not None and (existing.email_html_body or existing.email_text_body or existing.email_body):
         subject = existing.email_subject or f"[WCW REFERRAL REVIEW] {existing.review_id}"
@@ -106,6 +111,7 @@ def create_and_send_review(
             text_body=text_body or "",
             content_type=content_type,
             reused=True,
+            purpose=purpose,
         )
         return {
             "review_id": review_id,
@@ -114,12 +120,13 @@ def create_and_send_review(
             "review_audit_path": str(audit_path),
             "review_reused": True,
             "review_content_type": content_type,
+            "review_purpose": purpose,
         }
 
     review_id = f"review_{digest[:12]}_{secrets.token_hex(3)}"
     token = secrets.token_urlsafe(18)
     preview = snapshots["monday"]
-    approval_allowed = not bool(preview.get("blocked"))
+    approval_allowed = purpose == "partner_contact" or not bool(preview.get("blocked"))
     review_status = "awaiting_confirmation" if approval_allowed else "needs_correction"
     email = render_review_email(
         review_id=review_id,
@@ -130,6 +137,7 @@ def create_and_send_review(
         drk_draft_path=paths["drk"],
         write_config_path=write_config_path,
         approval_allowed=approval_allowed,
+        purpose=purpose,
     )
     store.add(
         review_id=review_id,
@@ -148,6 +156,8 @@ def create_and_send_review(
         monday_preview=snapshots["monday"],
         drk_draft=snapshots["drk"],
         status=review_status,
+        purpose=purpose,
+        workflow_case_id=workflow_case_id,
         email_subject=email.subject,
         email_html_body=email.html_body,
         email_text_body=email.text_body,
@@ -192,6 +202,7 @@ def create_and_send_review(
         text_body=email.text_body,
         content_type=email.content_type,
         reused=False,
+        purpose=purpose,
     )
     return {
         "review_id": review_id,
@@ -200,6 +211,7 @@ def create_and_send_review(
         "review_audit_path": str(audit_path),
         "review_reused": False,
         "review_content_type": email.content_type,
+        "review_purpose": purpose,
     }
 
 
@@ -215,6 +227,7 @@ def _write_review_audit(
     text_body: str,
     content_type: str,
     reused: bool,
+    purpose: str,
 ) -> Path:
     audit_path = output_dir / "review-request.json"
     text_path = output_dir / "review-email.txt"
@@ -231,6 +244,7 @@ def _write_review_audit(
                 "artifact_digest": artifact_digest,
                 "subject": subject,
                 "content_type": content_type,
+                "purpose": purpose,
                 "email_path": str(text_path),
                 "html_email_path": str(html_path) if html_body else None,
                 "reused": reused,
@@ -250,11 +264,13 @@ class ApprovalProcessor:
         state_db: str | Path,
         mailbox: OutlookReviewMailbox,
         intent_classifier: Callable[[str], IntentResult] = classify_reply_intent,
+        workflow_store: WorkflowStore | None = None,
     ) -> None:
         self.state_db = Path(state_db)
         self.store = build_review_store(state_db)
         self.mailbox = mailbox
         self.intent_classifier = intent_classifier
+        self.workflow_store = workflow_store
 
     def poll(
         self,
@@ -266,6 +282,7 @@ class ApprovalProcessor:
         if execute and dry_run:
             raise ReviewWorkflowError("execute and dry_run modes are mutually exclusive")
         accepted: list[str] = []
+        partner_contacts: list[str] = []
         corrections: list[str] = []
         unclear: list[str] = []
         duplicates: list[str] = []
@@ -311,10 +328,23 @@ class ApprovalProcessor:
             if response_result == "duplicate":
                 duplicates.append(reply.message_id)
                 continue
-            if response_result == "confirmed":
-                accepted.append(review.review_id)
+            if response_result in {"confirmed", "partner_contact_confirmed"}:
+                if response_result == "partner_contact_confirmed":
+                    partner_contacts.append(review.review_id)
+                    if self.workflow_store is not None and review.workflow_case_id:
+                        StageOneTracker(self.workflow_store).partner_contact_confirmed(
+                            review.workflow_case_id,
+                            confirmed_by=reply.sender,
+                            message_id=reply.message_id,
+                        )
+                else:
+                    accepted.append(review.review_id)
                 record_lifecycle_event(
-                    "review_confirmed",
+                    (
+                        "partner_contact_confirmed"
+                        if response_result == "partner_contact_confirmed"
+                        else "review_confirmed"
+                    ),
                     entity_id=_workflow_entity_id(
                         Path(review.canonical_path),
                         fallback_digest=review.artifact_digest,
@@ -371,6 +401,7 @@ class ApprovalProcessor:
             "mode": "execute" if execute else ("dry_run" if dry_run else "check_only"),
             "writes_attempted": bool(execute),
             "accepted_confirmations": accepted,
+            "partner_contact_confirmations": partner_contacts,
             "correction_or_denial_reviews": corrections,
             "unclear_reviews": unclear,
             "duplicate_response_messages": duplicates,

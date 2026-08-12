@@ -67,6 +67,8 @@ class SupabaseReviewStore:
         monday_preview: dict[str, Any] | None = None,
         drk_draft: dict[str, Any] | None = None,
         status: str = "awaiting_confirmation",
+        purpose: str = "destination_write",
+        workflow_case_id: str | None = None,
         email_subject: str | None = None,
         email_body: str | None = None,
         email_html_body: str | None = None,
@@ -93,6 +95,8 @@ class SupabaseReviewStore:
                 "review_id": review_id,
                 "recipient": recipient.casefold(),
                 "status": status,
+                "review_purpose": purpose,
+                "workflow_case_id": workflow_case_id,
                 "source_message_id": source_message_id,
                 "source_conversation_id": source_conversation_id,
                 "source_attachment_sha256": source_attachment_sha256,
@@ -112,6 +116,7 @@ class SupabaseReviewStore:
         artifact_digest: str,
         source_message_id: str,
         recipient: str,
+        purpose: str = "destination_write",
     ) -> ReviewRequest | None:
         rows = self._get(
             "referral_reviews",
@@ -119,6 +124,7 @@ class SupabaseReviewStore:
                 "artifact_digest": f"eq.{artifact_digest}",
                 "source_message_id": f"eq.{source_message_id}",
                 "recipient": f"eq.{recipient.casefold()}",
+                "review_purpose": f"eq.{purpose}",
                 "status": "in.(awaiting_confirmation,needs_correction,review_send_failed)",
                 "order": "created_at.desc",
                 "limit": "1",
@@ -274,6 +280,7 @@ class SupabaseReviewStore:
                 "status": "eq.awaiting_confirmation",
                 "recipient": f"eq.{sender.casefold()}",
                 "source_conversation_id": f"eq.{conversation_id}",
+                "review_purpose": "eq.destination_write",
             },
             {
                 "status": "confirmed",
@@ -372,6 +379,7 @@ class SupabaseReviewStore:
                 "referral_reviews",
                 {
                     "status": "in.(confirmed,dry_run_completed)",
+                    "review_purpose": "eq.destination_write",
                     "order": "created_at.asc",
                 },
             )
@@ -472,6 +480,8 @@ def _request_from_row(row: dict[str, Any]) -> ReviewRequest:
         source_message_id=str(row["source_message_id"]),
         source_conversation_id=str(row.get("source_conversation_id") or "") or None,
         created_at=str(row["created_at"]),
+        purpose=str(row.get("review_purpose") or "destination_write"),
+        workflow_case_id=_optional_text(row.get("workflow_case_id")),
         monday_item_id=_optional_text(row.get("monday_item_id")),
         drk_status=_optional_text(row.get("drk_status")),
         email_subject=_optional_text(row.get("email_subject")),

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace
 
 from Outlook.review_mail import ReviewReply
 from referral_pipeline.review.store import ReviewStore
 from referral_pipeline.review.workflow import ApprovalProcessor, artifact_digest
+from referral_pipeline.monitoring.sqlite_store import SQLiteWorkflowStore
+from referral_pipeline.stage_one.tracker import StageOneTracker
 
 
 class FakeMailbox:
@@ -133,6 +136,70 @@ def test_original_source_message_cannot_be_classified_as_confirmation(tmp_path) 
 
     assert result["accepted_confirmations"] == []
     assert result["ignored_confirmations"][0]["reason"] == "message_predates_review_request"
+
+
+def test_partner_contact_reply_completes_stage_one_without_destination_execution(tmp_path) -> None:
+    paths = []
+    for name in ("canonical.json", "plan.json", "monday.json", "drk.json"):
+        path = tmp_path / name
+        _write(path, {"blocked": False})
+        paths.append(path)
+    workflow_store = SQLiteWorkflowStore(tmp_path / "workflow.sqlite")
+    tracker = StageOneTracker(workflow_store)
+    case = tracker.discover(
+        SimpleNamespace(
+            message_id="source-message",
+            attachment_id="attachment-1",
+            source="outlook-graph",
+            sha256="a" * 64,
+            received_at="2026-08-12T09:00:00+00:00",
+            safe_filename="referral.pdf",
+            filename="referral.pdf",
+            sender="partner@example.test",
+        )
+    )
+    state_db = tmp_path / "state.sqlite"
+    ReviewStore(state_db).add(
+        review_id="review_partner_contact",
+        token="internal-token",
+        recipient="reviewer@example.test",
+        artifact_digest=artifact_digest(paths),
+        canonical_path=str(paths[0]),
+        intake_plan_path=str(paths[1]),
+        monday_preview_path=str(paths[2]),
+        drk_draft_path=str(paths[3]),
+        source_message_id="source-message",
+        source_conversation_id="conversation-1",
+        purpose="partner_contact",
+        workflow_case_id=case.case_id,
+    )
+    mailbox = FakeMailbox(
+        [
+            ReviewReply(
+                message_id="reply-contacted",
+                sender="reviewer@example.test",
+                subject="Re: referral follow-up",
+                received_at="2099-08-12T10:00:00+00:00",
+                conversation_id="conversation-1",
+                text="Confirm",
+            )
+        ]
+    )
+
+    result = ApprovalProcessor(
+        state_db=state_db,
+        mailbox=mailbox,
+        workflow_store=workflow_store,
+    ).poll()
+
+    assert result["partner_contact_confirmations"] == ["review_partner_contact"]
+    assert result["accepted_confirmations"] == []
+    assert result["executed"] == []
+    assert workflow_store.workflow_case(case.case_id).status == "completed"
+    assert any(
+        event.event_type == "partner_contact_confirmed"
+        for event in workflow_store.list_events(case.case_id)
+    )
 
 
 def test_execute_creates_monday_once_and_leaves_drk_pending(tmp_path, monkeypatch) -> None:
@@ -386,7 +453,7 @@ def test_create_and_send_review_reuses_active_request(tmp_path) -> None:
     assert (tmp_path / "review-email.html").is_file()
     assert (tmp_path / "review-email.txt").is_file()
     email_text = (tmp_path / "review-email.txt").read_text(encoding="utf-8")
-    assert "Reply with confirm if you wanna insert this client into monday and DRK" in email_text
+    assert "Reply Confirm if the information is accurate" in email_text
     assert "CONFIRMED " not in email_text
 
 

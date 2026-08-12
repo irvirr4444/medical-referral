@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
 
 from Outlook.mail import InboundPdfAttachment
@@ -123,6 +124,65 @@ def test_permanent_review_failure_replies_in_original_thread(tmp_path, monkeypat
         attachment=attachment,
         manifest={"source_sender": "external@example.test"},
     ) == "external@example.test"
+
+
+def test_database_failure_never_tells_sender_to_resend_pdf(tmp_path, monkeypatch) -> None:
+    pdf = tmp_path / "referral.pdf"
+    pdf.write_bytes(b"%PDF-1.4\nsynthetic")
+    attachment = InboundPdfAttachment(
+        "outlook-graph",
+        "message-1",
+        "attachment-1",
+        "referral.pdf",
+        pdf.read_bytes(),
+        sender="external@example.test",
+    )
+    state = InboxState(tmp_path / "state.sqlite")
+    state.enqueue(
+        attachment,
+        artifact_path=pdf,
+        options={"send_review": True, "source_sender": "external@example.test"},
+    )
+    job = state.claim_job(attachment)
+    assert job is not None
+    sent: list[dict] = []
+
+    class FakeMailbox:
+        def __init__(self, _client) -> None:
+            pass
+
+        def send_reply(self, **kwargs) -> None:
+            sent.append(kwargs)
+
+    monkeypatch.setattr(runner, "OutlookReviewMailbox", FakeMailbox)
+    monkeypatch.setattr(
+        runner,
+        "process_inbound_pdf",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            sqlite3.IntegrityError("duplicate workflow case")
+        ),
+    )
+    args = runner._parse_args(
+        [
+            "--process-retries",
+            "--send-review",
+            "--output-dir",
+            str(tmp_path / "out"),
+            "--state-db",
+            str(tmp_path / "state.sqlite"),
+        ]
+    )
+
+    result = runner.process_claimed_job(
+        job,
+        state=state,
+        args=args,
+        graph_client=object(),
+    )
+
+    assert result["status"] == STATUS_FAILED
+    assert result["failure_reply_sent"] is False
+    assert sent == []
 
 
 def test_process_claimed_job_defers_capacity_failures(tmp_path, monkeypatch) -> None:

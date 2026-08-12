@@ -19,6 +19,8 @@ class ReviewRequest:
     source_message_id: str
     source_conversation_id: str | None
     created_at: str
+    purpose: str = "destination_write"
+    workflow_case_id: str | None = None
     monday_item_id: str | None = None
     drk_status: str | None = None
     email_subject: str | None = None

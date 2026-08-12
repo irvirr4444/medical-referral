@@ -27,6 +27,7 @@ from referral_pipeline.review.workflow import create_and_send_review  # noqa: E4
 from referral_pipeline.runner import main as run_inbound_main  # noqa: E402
 from referral_pipeline.state import InboxState  # noqa: E402
 from referral_pipeline.monitoring.cli import add_monitoring_commands, run_monitoring_command  # noqa: E402
+from referral_pipeline.api.server import main as run_intake_api  # noqa: E402
 
 
 DEFAULT_OUTPUT_ROOT = Path("tmp") / "inbox-runs"
@@ -59,6 +60,36 @@ def _build_parser() -> argparse.ArgumentParser:
         default=25,
         help="Maximum eligible new referral emails to process (newest first).",
     )
+
+    inbox_api = commands.add_parser(
+        "inbox-api",
+        help="Serve the read-only testing-infobox feed for the frontend.",
+    )
+    inbox_api.add_argument("--host", default="127.0.0.1")
+    inbox_api.add_argument("--port", type=int, default=8787)
+    inbox_api.add_argument(
+        "--max-messages",
+        type=int,
+        default=1,
+        help="Newest PDF emails exposed and processed per live test cycle.",
+    )
+    inbox_api.add_argument("--cache-ttl-seconds", type=int, default=30)
+    inbox_api.add_argument("--workflow-database-backend", choices=("sqlite", "supabase"))
+    inbox_api.add_argument("--workflow-sqlite-path", type=Path)
+    inbox_api.add_argument(
+        "--data-root",
+        type=Path,
+        default=Path(os.getenv("INTAKE_DATA_ROOT", "tmp/intake-service")),
+    )
+    inbox_api.add_argument("--poll-interval-seconds", type=int, default=60)
+    inbox_api.add_argument("--retry-interval-seconds", type=int, default=60)
+    inbox_api.add_argument("--approval-interval-seconds", type=int, default=30)
+    inbox_api.add_argument("--max-retry-jobs", type=int, default=10)
+    inbox_api.add_argument("--max-approval-messages", type=int, default=100)
+    inbox_api.add_argument("--review-recipient", default=os.getenv("REVIEW_RECIPIENT_EMAIL"))
+    inbox_api.add_argument("--partner-acknowledgement", action="store_true")
+    inbox_api.add_argument("--stage-one-drk-check", action="store_true")
+    inbox_api.add_argument("--start-monitor", action="store_true")
     outlook.add_argument("--input-mode", choices=("auto", "text", "image", "hybrid"), default="image")
     outlook.add_argument("--max-pages", type=int)
     outlook.add_argument(
@@ -76,10 +107,26 @@ def _build_parser() -> argparse.ArgumentParser:
     outlook.add_argument("--state-db", type=Path)
     outlook.add_argument("--force", action="store_true", help="Reprocess eligible PDFs even when already recorded.")
     outlook.add_argument("--quiet", action="store_true", help="Suppress progress logs while retaining the final summary.")
-    outlook.add_argument("--send-review", action="store_true", help="Email the generated review summary instead of writing immediately.")
+    outlook.add_argument(
+        "--send-review",
+        action="store_true",
+        help="Email the referral summary and request confirmation of partner outreach.",
+    )
+    outlook.add_argument(
+        "--send-partner-acknowledgement",
+        action="store_true",
+        help="Reply once to the referral source after the Stage 1 checks finish.",
+    )
+    outlook.add_argument(
+        "--drk-duplicate-check",
+        action="store_true",
+        help="Run the read-only DRK duplicate check after extraction.",
+    )
+    outlook.add_argument("--workflow-database-backend", choices=("sqlite", "supabase"))
+    outlook.add_argument("--workflow-sqlite-path", type=Path)
     outlook.add_argument(
         "--review-recipient",
-        help="Override reviewer email; by default the review reply goes to the original sender.",
+        help="Internal reviewer responsible for confirming referral-partner outreach.",
     )
 
     apply = commands.add_parser(
@@ -231,6 +278,16 @@ def _run_outlook(args: argparse.Namespace) -> int:
         delegated.append("--send-review")
     if args.review_recipient:
         delegated.extend(("--review-recipient", args.review_recipient))
+    if args.send_partner_acknowledgement:
+        delegated.append("--send-partner-acknowledgement")
+    if args.drk_duplicate_check:
+        delegated.append("--drk-duplicate-check")
+    if args.workflow_database_backend:
+        delegated.extend(("--workflow-database-backend", args.workflow_database_backend))
+    if args.workflow_sqlite_path is not None:
+        delegated.extend(
+            ("--workflow-sqlite-path", str(args.workflow_sqlite_path.resolve()))
+        )
 
     print(f"[intake] source: Outlook ({args.max_messages} newest message{'s' if args.max_messages != 1 else ''})")
     print(f"[intake] mode: {mode}")
@@ -268,6 +325,7 @@ def _record_latest_run(output_root: Path, run_dir: Path) -> dict[str, Any]:
             "created_item_id": result.get("created_item_id"),
             "review_id": result.get("review_id"),
             "review_status": result.get("review_status"),
+            "review_purpose": result.get("review_purpose"),
             "elapsed_seconds": result.get("elapsed_seconds"),
         }
     )
@@ -332,7 +390,11 @@ def _print_run_result(pointer: dict[str, Any], *, output_root: Path) -> None:
         print("[intake] next: python run_pipeline.py apply --confirm-master-sheet-write")
     elif status == "awaiting_confirmation":
         print(f"[intake] review request: {pointer.get('review_id')}")
-        print("[intake] next: reply to the review email, then run python run_pipeline.py approvals --execute")
+        if pointer.get("review_purpose") == "partner_contact":
+            print("[intake] next: contact the referral partner, then reply Confirm to the email")
+            print("[intake] this confirmation completes Referral Intake step 5 only")
+        else:
+            print("[intake] next: reply to the review email, then check approvals")
     elif status == "needs_correction":
         print(f"[intake] review request: {pointer.get('review_id')}")
         print(f"[intake] correction required: {pointer.get('reason', 'review is blocked')}")
@@ -581,6 +643,46 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "outlook":
             return _run_outlook(args)
+        if args.command == "inbox-api":
+            api_args = [
+                "--host",
+                args.host,
+                "--port",
+                str(args.port),
+                "--max-messages",
+                str(args.max_messages),
+                "--cache-ttl-seconds",
+                str(args.cache_ttl_seconds),
+            ]
+            if args.workflow_database_backend:
+                api_args.extend(("--workflow-database-backend", args.workflow_database_backend))
+            if args.workflow_sqlite_path:
+                api_args.extend(("--workflow-sqlite-path", str(args.workflow_sqlite_path.resolve())))
+            api_args.extend(
+                (
+                    "--data-root",
+                    str(args.data_root.resolve()),
+                    "--poll-interval-seconds",
+                    str(args.poll_interval_seconds),
+                    "--retry-interval-seconds",
+                    str(args.retry_interval_seconds),
+                    "--approval-interval-seconds",
+                    str(args.approval_interval_seconds),
+                    "--max-retry-jobs",
+                    str(args.max_retry_jobs),
+                    "--max-approval-messages",
+                    str(args.max_approval_messages),
+                )
+            )
+            if args.partner_acknowledgement:
+                api_args.append("--partner-acknowledgement")
+            if args.stage_one_drk_check:
+                api_args.append("--stage-one-drk-check")
+            if args.start_monitor:
+                api_args.append("--start-monitor")
+            if args.review_recipient:
+                api_args.extend(("--review-recipient", args.review_recipient))
+            return run_intake_api(api_args)
         if args.command == "apply":
             return _apply_preview(args)
         if args.command == "approvals":

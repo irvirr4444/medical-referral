@@ -13,6 +13,9 @@ import {
   referralSourceNotification,
 } from './fixtures/caseManagerAssignments'
 import { intakeDemoPatient } from './fixtures/intakeDemoPatients'
+import { mergeLiveInboxFeed, isLiveInboxRow } from './liveInbox/feed'
+import { LiveInboxStatus } from './liveInbox/LiveInboxStatus'
+import { useLiveInbox } from './liveInbox/useLiveInbox'
 import type { FlowOpsPageId } from '../../data/flowOps'
 import type { PatientStepStatus } from './ops/types'
 import type { AutomationMicrostep } from './types'
@@ -52,7 +55,8 @@ export function StagePatientSteps({
   stageId: FlowOpsPageId
   microsteps: AutomationMicrostep[]
 }) {
-  const [selectedStepId, setSelectedStepId] = useState(microsteps[0]?.id ?? '')
+  const firstMicrostepId = microsteps[0]?.id ?? ''
+  const [selectedStepId, setSelectedStepId] = useState(firstMicrostepId)
   const [patientQuery, setPatientQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilterValue>('all')
   const [statusMenuOpen, setStatusMenuOpen] = useState(false)
@@ -72,9 +76,10 @@ export function StagePatientSteps({
   const [showUnreadAssignmentMessage, setShowUnreadAssignmentMessage] =
     useState(false)
   const statusMenuRef = useRef<HTMLDivElement>(null)
+  const liveInbox = useLiveInbox(stageId === 'intake')
 
   useEffect(() => {
-    setSelectedStepId(microsteps[0]?.id ?? '')
+    setSelectedStepId(firstMicrostepId)
     setPatientQuery('')
     setStatusFilter('all')
     setStatusMenuOpen(false)
@@ -84,7 +89,7 @@ export function StagePatientSteps({
     setLatestAssignmentNotification(null)
     setAssignmentNotificationUnread(false)
     setShowUnreadAssignmentMessage(false)
-  }, [stageId, microsteps[0]?.id])
+  }, [firstMicrostepId, stageId])
 
   useEffect(() => {
     if (!statusMenuOpen) return
@@ -105,21 +110,40 @@ export function StagePatientSteps({
   const selectedStep =
     microsteps.find((step) => step.id === selectedStepId) ?? microsteps[0]
 
-  const statuses =
-    statusFilter === 'all' ? DEFAULT_STATUSES : [statusFilter]
+  const statuses = useMemo(
+    () => (statusFilter === 'all' ? DEFAULT_STATUSES : [statusFilter]),
+    [statusFilter],
+  )
 
   const selectedStatusOption =
     statusFilter === 'all'
       ? null
       : STATUS_FILTERS.find((item) => item.id === statusFilter) ?? null
 
-  const days = useMemo(
-    () =>
-      selectedStepId
-        ? feedForStep(stageId, selectedStepId, { patientQuery, statuses })
-        : [],
-    [stageId, selectedStepId, patientQuery, statuses],
-  )
+  const days = useMemo(() => {
+    const demoDays = selectedStepId
+      ? feedForStep(stageId, selectedStepId, { patientQuery, statuses })
+      : []
+    if (stageId !== 'intake') {
+      return demoDays
+    }
+    return mergeLiveInboxFeed({
+      demoDays,
+      referrals: liveInbox.referrals,
+      drkDuplicateCheckEnabled:
+        liveInbox.monitor?.safety.drk_duplicate_check,
+      patientQuery,
+      statuses,
+      selectedStepId,
+    })
+  }, [
+    liveInbox.referrals,
+    liveInbox.monitor?.safety.drk_duplicate_check,
+    patientQuery,
+    selectedStepId,
+    stageId,
+    statuses,
+  ])
 
   const waitingPartnerCount = useMemo(() => {
     if (selectedStepId !== 'confirm-referral-contacted') return 0
@@ -223,6 +247,14 @@ export function StagePatientSteps({
               </p>
             ) : null}
           </div>
+
+          {stageId === 'intake' ? (
+            <LiveInboxStatus
+              state={liveInbox}
+              onRefresh={liveInbox.refresh}
+              onToggle={liveInbox.toggleMonitor}
+            />
+          ) : null}
 
           <div
             className="stage-ops-steps__filter-bar"
@@ -374,7 +406,13 @@ export function StagePatientSteps({
                             row.patientName,
                             canonical,
                           )
-                        : undefined
+                          : undefined
+                    const liveInboxReferral = isLiveInboxRow(row)
+                      ? row.inbox
+                      : undefined
+                    const liveInboxStep = isLiveInboxRow(row)
+                      ? row.workflowStep
+                      : undefined
                     return (
                       <li
                         key={`${row.patientId}-${row.stepId}`}
@@ -414,7 +452,7 @@ export function StagePatientSteps({
                             Boolean(partnerConfirmed[row.patientId])
                           }
                           onConfirmPartner={
-                            selectedStepId === 'confirm-referral-contacted'
+                            selectedStepId === 'confirm-referral-contacted' && !liveInboxReferral
                               ? () =>
                                   setPartnerConfirmed((current) => ({
                                     ...current,
@@ -460,6 +498,8 @@ export function StagePatientSteps({
                             row.patientId ===
                               latestAssignmentNotification?.patientId
                           }
+                          liveInboxReferral={liveInboxReferral}
+                          liveInboxStep={liveInboxStep}
                         />
                       </li>
                     )

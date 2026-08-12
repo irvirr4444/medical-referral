@@ -12,6 +12,7 @@ import type {
   MondayRecord,
   ReferralSourceNotification,
 } from './fixtures/caseManagerAssignments'
+import type { LiveInboxReferral, LiveInboxStep } from './liveInbox/types'
 import './StageOps.css'
 
 type StepDetail = ReturnType<typeof detailForPatientStep>
@@ -43,6 +44,8 @@ export function StageFeedMessage({
   mondayRecord,
   drkDraft,
   isUnread = false,
+  liveInboxReferral,
+  liveInboxStep,
 }: {
   summary: string
   patientName: string
@@ -63,10 +66,15 @@ export function StageFeedMessage({
   mondayRecord?: MondayRecord
   drkDraft?: DrkDraftRecord
   isUnread?: boolean
+  liveInboxReferral?: LiveInboxReferral
+  liveInboxStep?: LiveInboxStep
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
   const when = occurredAt ? parseOpsDate(occurredAt) : null
-  const meaning = statusMeaning(status)
+  const meaning =
+    liveInboxReferral && !liveInboxStep && status === 'waiting'
+      ? 'Queued'
+      : statusMeaning(status)
   const decision = detail?.example?.feedDecision
   const contactConfirmation = detail?.example?.feedContactConfirmation
   const contactedBack =
@@ -118,7 +126,29 @@ export function StageFeedMessage({
       </header>
 
       <div className="stage-ops-step-feed__body">
-        {decision ? (
+        {liveInboxReferral && (!liveInboxStep || liveInboxStep.step_id === 'receive-referral') ? (
+          <div className="stage-ops-step-feed__meta-row" aria-label="Live inbox message">
+            <dl className="stage-ops-step-feed__proof" aria-label="Key proof">
+              <div className="stage-ops-step-feed__proof-item">
+                <dt>Sender</dt>
+                <dd>{liveInboxReferral.sender || 'Sender unavailable'}</dd>
+              </div>
+            </dl>
+            <IntakePdfPreview
+              samplePdf={liveInboxReferral.filename}
+              fileUrl={`/api/intake/inbox/pdf/${encodeURIComponent(liveInboxReferral.id)}`}
+            />
+          </div>
+        ) : liveInboxStep ? (
+          <dl className="stage-ops-step-feed__proof is-live-workflow" aria-label="Live workflow output">
+            {liveStepProof(liveInboxStep).map((field) => (
+              <div className="stage-ops-step-feed__proof-item" key={field.label}>
+                <dt>{field.label}</dt>
+                <dd>{field.value}</dd>
+              </div>
+            ))}
+          </dl>
+        ) : decision ? (
           <div className="stage-ops-step-feed__decision" aria-label="Key decision">
             <dl className="stage-ops-step-feed__decision-grid">
               <div className="stage-ops-step-feed__decision-item is-wide">
@@ -553,4 +583,24 @@ export function StageFeedMessage({
       </div>
     </article>
   )
+}
+
+function liveStepProof(step: LiveInboxStep): Array<{ label: string; value: string }> {
+  const fields = step.details.fields
+  if (fields && typeof fields === 'object' && !Array.isArray(fields)) {
+    return Object.entries(fields)
+      .filter(([, value]) => value !== null && value !== undefined && String(value).trim())
+      .map(([label, value]) => ({ label: readableLabel(label), value: String(value) }))
+  }
+  return Object.entries(step.details)
+    .filter(([label, value]) => label !== 'write_performed' && value !== null && value !== undefined)
+    .slice(0, 4)
+    .map(([label, value]) => ({
+      label: readableLabel(label),
+      value: Array.isArray(value) ? value.join(', ') : String(value),
+    }))
+}
+
+function readableLabel(value: string) {
+  return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
