@@ -65,6 +65,7 @@ export function StageFeedMessage({
   isUnread?: boolean
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
+  const [fieldsOpen, setFieldsOpen] = useState(false)
   const when = occurredAt ? parseOpsDate(occurredAt) : null
   const meaning = statusMeaning(status)
   const decision = detail?.example?.feedDecision
@@ -156,40 +157,70 @@ export function StageFeedMessage({
             </dl>
 
             {requiredFields.length ? (
-              <dl
-                className="stage-ops-step-feed__required"
-                aria-label="Seven required fields"
-              >
-                {requiredFields.map((field) => {
-                  const missing = missingSet.has(field.label)
-                  const unclear = unclearSet.has(field.label)
-                  const isLong = !/^(Patient name|Date of birth|Contact number|Patient address)$/i.test(
-                    field.label,
-                  )
-                  return (
-                    <div
-                      key={`${field.label}-${field.value}`}
-                      className={`stage-ops-step-feed__decision-item${
-                        isLong ? ' is-wide' : ''
-                      }`}
-                    >
-                      <dt>{field.label}</dt>
-                      <dd
-                        className={
-                          missing ? 'is-bad' : unclear ? 'is-warn' : 'is-ok'
-                        }
-                        title={
-                          unclear
-                            ? 'Extracted value conflicts with other evidence — needs review'
-                            : undefined
-                        }
-                      >
-                        {field.value}
-                      </dd>
-                    </div>
-                  )
-                })}
-              </dl>
+              <div className="stage-ops-step-feed__fields-panel">
+                <button
+                  type="button"
+                  className={`stage-ops-step-feed__fields-toggle${
+                    fieldsOpen ? ' is-open' : ''
+                  }`}
+                  aria-expanded={fieldsOpen}
+                  aria-controls={`${artifactId}-required-fields`}
+                  onClick={() => setFieldsOpen((current) => !current)}
+                >
+                  <span className="stage-ops-step-feed__fields-toggle-copy">
+                    <strong>Detailed info</strong>
+                    <small>
+                      {requiredFields.length} fields
+                      {decision
+                        ? ` · ${decision.completeCount}/${decision.totalRequired}`
+                        : ''}
+                    </small>
+                  </span>
+                  <ChevronDown size={16} aria-hidden="true" />
+                </button>
+                {fieldsOpen ? (
+                  <dl
+                    id={`${artifactId}-required-fields`}
+                    className="stage-ops-step-feed__required"
+                    aria-label="Seven required fields"
+                  >
+                    {requiredFields.map((field) => {
+                      const missing = missingSet.has(field.label)
+                      const unclear = unclearSet.has(field.label)
+                      const isLong =
+                        !/^(Patient name|Date of birth|Contact number|Patient address)$/i.test(
+                          field.label,
+                        )
+                      return (
+                        <div
+                          key={`${field.label}-${field.value}`}
+                          className={`stage-ops-step-feed__decision-item${
+                            isLong ? ' is-wide' : ''
+                          }`}
+                        >
+                          <dt>{field.label}</dt>
+                          <dd
+                            className={
+                              missing
+                                ? 'is-bad'
+                                : unclear
+                                  ? 'is-warn'
+                                  : 'is-ok'
+                            }
+                            title={
+                              unclear
+                                ? 'Extracted value conflicts with other evidence — needs review'
+                                : undefined
+                            }
+                          >
+                            {field.value}
+                          </dd>
+                        </div>
+                      )
+                    })}
+                  </dl>
+                ) : null}
+              </div>
             ) : null}
 
             {sections.length ? (

@@ -155,6 +155,11 @@ describe('automation inspection console', () => {
       }),
     ).not.toBeInTheDocument()
 
+    const fieldsToggle = within(stepsPanel).getAllByRole('button', {
+      name: /Detailed info/i,
+    })[0]
+    expect(fieldsToggle).toHaveAttribute('aria-expanded', 'false')
+    await user.click(fieldsToggle)
     expect(
       within(stepsPanel).getAllByLabelText(/Seven required fields/i).length,
     ).toBeGreaterThan(0)
