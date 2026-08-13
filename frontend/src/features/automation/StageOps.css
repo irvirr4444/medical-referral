@@ -1239,6 +1239,14 @@
   min-width: 0;
 }
 
+.stage-ops-step-feed__action-error {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #b42318;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
 .stage-ops-step-feed__manager-select {
   display: grid;
   gap: 0.2rem;

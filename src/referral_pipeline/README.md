@@ -42,6 +42,9 @@ referral, intake plan, Monday preview, and DRK draft JSON. `review_responses`
 records one hashed, classified event per Outlook reply. The raw reply body remains
 in Outlook; the confirmation transition and response insert happen atomically.
 Both tables have RLS enabled and are accessed only with the backend service key.
+During synthetic testing, remote persistence is additionally restricted by the
+SHA-256 allowlist in `SYNTHETIC_DATASET_MANIFEST`. Unknown referrals fall back to
+local SQLite even when Supabase is configured; filenames are not trusted.
 
 ## Commands
 
@@ -49,13 +52,39 @@ Stage 1 can persist its case and microstep timeline in SQLite or Supabase. The
 partner acknowledgement and read-only DRK duplicate check are explicit opt-ins:
 
 ```powershell
-python run_pipeline.py outlook --max-messages 1 --monday-mode live-readonly --drk-duplicate-check --send-partner-acknowledgement
+python run_pipeline.py stage-one-doctor --live
+python run_pipeline.py outlook --max-messages 1 --monday-mode live-readonly --drk-duplicate-check --send-partner-acknowledgement --send-review
+python run_pipeline.py stage-one-email-preview --run tmp\inbox-runs\<timestamp>
 python run_pipeline.py inbox-api
 ```
 
 Neither command writes to Monday or DRK. See
 [`docs/STAGE_ONE_INTAKE.md`](../../docs/STAGE_ONE_INTAKE.md) for schema setup,
 security boundaries, and continuous-worker settings.
+
+## Stages 2 and 3
+
+Apply `supabase/migrations/202608130002_create_workflow_execution.sql` before
+using Supabase for assignment or handoff state. It adds three shared execution
+tables: work items, human decisions, and idempotent external operations.
+
+After Stage 1 records a successful referral-partner contact outcome, the local
+API exposes the referral at `GET /api/workflow/assignments`. The Assignment page
+loads the configured case-manager roster and persists an explicit selection via
+`POST /api/workflow/assignments/{case_id}/confirm`. Live referrals do not receive
+a fabricated AI recommendation while WCW territory rules are unavailable.
+
+A confirmed assignment advances the case to Handoff and prepares three separate
+operations visible at `GET /api/workflow/handoffs`:
+
+- notify the assigned case manager
+- create the Monday.com record
+- open and prefill the DRK chart for employee review
+
+These operations initially have status `ready`. This implementation does not yet
+send the notification, write Monday.com, or submit DRK. Each destination will be
+connected behind its own idempotent action so one failure cannot repeat a
+successful write in another system.
 
 Process new Outlook PDF referrals, build destination drafts, and send the internal
 Stage 1 follow-up request:

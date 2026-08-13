@@ -64,7 +64,8 @@ export function AutomationOverview() {
                 <strong>{stage.shortTitle}</strong>
                 <span>{stage.purpose}</span>
                 <span className="automation-stage-card__footer">
-                  {stage.microsteps.length} actions
+                  {stage.microsteps.length}{' '}
+                  {stage.microsteps.length === 1 ? 'action' : 'actions'}
                   <ArrowRight size={16} aria-hidden="true" />
                 </span>
               </button>

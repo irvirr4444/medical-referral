@@ -52,3 +52,18 @@ def test_incomplete_anthropic_stream_is_retryable() -> None:
 
 def test_validation_error_is_terminal() -> None:
     assert classify_retry(ValueError("patient date is malformed")) is None
+
+
+def test_drk_browser_startup_failure_is_retryable() -> None:
+    SessionNotCreatedException = type(
+        "SessionNotCreatedException",
+        (RuntimeError,),
+        {"__module__": "selenium.common.exceptions"},
+    )
+
+    decision = classify_retry(
+        SessionNotCreatedException("DevToolsActivePort file doesn't exist")
+    )
+
+    assert decision is not None
+    assert decision.error_kind == "drk_transient"

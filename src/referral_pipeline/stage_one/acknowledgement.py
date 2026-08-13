@@ -43,7 +43,7 @@ def send_partner_acknowledgement(
     if claim != "claimed":
         raise TimeoutError(f"partner acknowledgement is temporarily unavailable ({claim})")
 
-    text, html = _render_acknowledgement(manifest)
+    text, html = render_partner_acknowledgement(manifest)
     try:
         mailbox.send_reply(
             source_message_id=source_message_id,
@@ -60,7 +60,8 @@ def send_partner_acknowledgement(
     return "sent"
 
 
-def _render_acknowledgement(manifest: dict[str, Any]) -> tuple[str, str]:
+def render_partner_acknowledgement(manifest: dict[str, Any]) -> tuple[str, str]:
+    """Render the external receipt acknowledgement without sending it."""
     missing = _missing_field_labels(manifest)
     if missing:
         missing_text = ", ".join(missing)

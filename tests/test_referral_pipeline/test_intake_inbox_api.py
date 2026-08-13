@@ -3,10 +3,17 @@ from __future__ import annotations
 import http.client
 import json
 import threading
+from http import HTTPStatus
+from unittest.mock import Mock
 
 from Outlook.mail import InboundPdfMetadata
 from referral_pipeline.api.intake_inbox import IntakeInboxFeed
-from referral_pipeline.api.server import _parse_limit, create_server
+from referral_pipeline.api.intake_inbox import _step_projection
+from referral_pipeline.api.server import IntakeApiHandler, _parse_limit, create_server
+from referral_pipeline.monitoring.models import WorkflowCase, WorkflowEvent
+from referral_pipeline.monitoring.sqlite_store import SQLiteWorkflowStore
+from referral_pipeline.workflow.service import WorkflowExecutionService
+from datetime import datetime, timezone
 
 
 class _GraphClient:
@@ -68,6 +75,76 @@ def test_inbox_feed_projects_metadata_without_pdf_content() -> None:
     assert content.startswith(b"%PDF-")
 
 
+def test_cached_mailbox_metadata_refreshes_workflow_projection(tmp_path) -> None:
+    client = _GraphClient()
+    store = SQLiteWorkflowStore(tmp_path / "workflow.sqlite")
+    feed = IntakeInboxFeed(
+        lambda: client,
+        cache_ttl_seconds=30,
+        clock=lambda: 10.0,
+        workflow_store=store,
+    )
+    first = feed.read(limit=10)
+    referral_id = first["referrals"][0]["id"]
+    now = datetime.now(timezone.utc)
+    store.upsert_workflow_case(
+        WorkflowCase(
+            case_id="case-test",
+            source_ref=referral_id,
+            source="outlook-graph",
+            current_stage=1,
+            status="processing",
+            created_at=now,
+            updated_at=now,
+        )
+    )
+    store.record_event(
+        WorkflowEvent(
+            event_key="monday-check-test",
+            event_type="monday_duplicate_checked",
+            entity_id="case-test",
+            source="monday",
+            occurred_at=now,
+            details={"status": "no_candidates_found", "write_performed": False},
+        )
+    )
+
+    second = feed.read(limit=10)
+
+    assert client.calls == 1
+    step = second["referrals"][0]["steps"]["check-monday"]
+    assert step["summary"] == "No matching Monday.com patient found"
+    assert step["details"]["status"] == "No matching patient found"
+    assert step["details"]["status_code"] == "no_candidates_found"
+
+
+def test_partner_contact_projection_hides_graph_message_id() -> None:
+    now = datetime.now(timezone.utc)
+    steps = _step_projection(
+        [
+            WorkflowEvent(
+                event_key="contact-test",
+                event_type="partner_contact_confirmed",
+                entity_id="case-test",
+                source="outlook",
+                occurred_at=now,
+                details={
+                    "confirmed_by": "intake@example.test",
+                    "confirmation_message_id": "graph-message-id",
+                    "contact_outcome": "reached",
+                },
+            )
+        ]
+    )
+
+    step = steps["confirm-referral-contacted"]
+    assert step["summary"] == "Referral partner reached"
+    assert step["details"] == {
+        "confirmed_by": "intake@example.test",
+        "contact_outcome": "Reached",
+    }
+
+
 def test_inbox_api_limit_is_bounded() -> None:
     assert _parse_limit("1") == 1
     assert _parse_limit("25") == 25
@@ -79,6 +156,34 @@ def test_inbox_api_limit_is_bounded() -> None:
             pass
         else:
             raise AssertionError(f"Expected invalid limit to fail: {invalid}")
+
+
+def test_api_response_ignores_client_disconnect() -> None:
+    handler = object.__new__(IntakeApiHandler)
+    handler.send_response = Mock()
+    handler.send_header = Mock()
+    handler.end_headers = Mock()
+    handler.wfile = Mock()
+    handler.wfile.write.side_effect = ConnectionAbortedError(10053, "client disconnected")
+    handler.close_connection = False
+
+    handler._send_json(HTTPStatus.OK, {"status": "ok"})
+
+    assert handler.close_connection is True
+
+
+def test_pdf_response_ignores_client_disconnect() -> None:
+    handler = object.__new__(IntakeApiHandler)
+    handler.send_response = Mock()
+    handler.send_header = Mock()
+    handler.end_headers = Mock()
+    handler.wfile = Mock()
+    handler.wfile.write.side_effect = BrokenPipeError("client disconnected")
+    handler.close_connection = False
+
+    handler._send_pdf("referral.pdf", b"%PDF-1.4")
+
+    assert handler.close_connection is True
 
 
 def test_inbox_api_cannot_bind_publicly_without_authentication() -> None:
@@ -142,6 +247,86 @@ def test_inbox_api_exposes_local_monitor_controls() -> None:
         response = connection.getresponse()
         assert response.status == 403
         response.read()
+    finally:
+        connection.close()
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+
+def test_workflow_api_persists_assignment_and_prepares_handoff(tmp_path) -> None:
+    class FakeMonitor:
+        def status(self):
+            return {"available": True, "state": "stopped", "enabled": False}
+
+        def start(self):
+            return self.status()
+
+        def stop(self, *, wait: bool = False):
+            return self.status()
+
+    store = SQLiteWorkflowStore(tmp_path / "workflow.sqlite")
+    now = datetime.now(timezone.utc)
+    case = WorkflowCase(
+        case_id="case-api",
+        source_ref="message:attachment",
+        source="outlook-graph",
+        patient_label="Synthetic Patient",
+        current_stage=1,
+        status="completed",
+        created_at=now,
+        updated_at=now,
+        completed_at=now,
+    )
+    store.upsert_workflow_case(case)
+    store.record_event(
+        WorkflowEvent(
+            event_key="contact-api",
+            event_type="partner_contact_confirmed",
+            entity_id=case.case_id,
+            source="outlook",
+            occurred_at=now,
+            details={"contact_outcome": "reached"},
+        )
+    )
+    execution = WorkflowExecutionService(
+        store,
+        case_managers=[{"name": "Case Manager", "email": "manager@example.test"}],
+    )
+    server = create_server(
+        host="127.0.0.1",
+        port=0,
+        feed=IntakeInboxFeed(lambda: _GraphClient()),
+        monitor=FakeMonitor(),  # type: ignore[arg-type]
+        workflow_execution=execution,
+    )
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    connection = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=2)
+    try:
+        connection.request("GET", "/api/workflow/assignments")
+        response = connection.getresponse()
+        assert response.status == 200
+        assert json.loads(response.read())["items"][0]["status"] == "waiting"
+
+        connection.request(
+            "POST",
+            f"/api/workflow/assignments/{case.case_id}/confirm",
+            body=json.dumps({"case_manager_email": "manager@example.test"}),
+            headers={
+                "Content-Type": "application/json",
+                "Origin": "http://localhost:5173",
+            },
+        )
+        response = connection.getresponse()
+        assert response.status == 200
+        assert json.loads(response.read())["status"] == "completed"
+
+        connection.request("GET", "/api/workflow/handoffs")
+        response = connection.getresponse()
+        handoff = json.loads(response.read())["items"][0]
+        assert len(handoff["operations"]) == 3
+        assert {item["status"] for item in handoff["operations"]} == {"ready"}
     finally:
         connection.close()
         server.shutdown()

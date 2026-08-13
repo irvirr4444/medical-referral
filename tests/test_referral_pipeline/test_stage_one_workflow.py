@@ -149,6 +149,21 @@ def test_partner_acknowledgement_is_sent_once(tmp_path) -> None:
     ) == 1
 
 
+def test_partner_contact_request_is_a_valid_persisted_state(tmp_path) -> None:
+    store = SQLiteWorkflowStore(tmp_path / "workflow.sqlite")
+    tracker = StageOneTracker(store)
+    case = tracker.discover(_attachment())
+
+    stored = tracker.contact_confirmation_requested(
+        case,
+        recipient="partner@example.test",
+        review_id="review-synthetic",
+    )
+
+    assert stored.status == "awaiting_partner_contact"
+    assert store.workflow_case(case.case_id).status == "awaiting_partner_contact"
+
+
 def test_reprocessing_does_not_reopen_a_completed_stage_one_case(tmp_path) -> None:
     store = SQLiteWorkflowStore(tmp_path / "workflow.sqlite")
     tracker = StageOneTracker(store)

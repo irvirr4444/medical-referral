@@ -293,6 +293,8 @@ def test_partner_contact_email_has_one_clear_stage_one_action(tmp_path) -> None:
     assert email.subject == "Referral Follow-up: Jamie Tester"
     assert "Referral Partner Follow-up" in email.html_body
     assert "contact the referral partner" in email.text_body
-    assert "After outreach is complete, reply Confirm" in email.text_body
+    assert "Reply Confirmed when contact is complete" in email.text_body
+    assert "No answer when outreach was unsuccessful" in email.text_body
+    assert "Information missing with the remaining gap" in email.text_body
     assert "Monday" not in email.text_body
     assert "DRK" not in email.text_body

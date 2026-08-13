@@ -9,14 +9,17 @@ import requests
 
 from referral_pipeline.monitoring.models import (
     ComponentHealth,
+    ExternalOperation,
     NotificationRecord,
     OperationalSnapshot,
     OutboundAcknowledgement,
     PatientLink,
     WorkflowCase,
     WorkflowCounter,
+    WorkflowDecision,
     WorkflowEvent,
     WorkflowException,
+    WorkflowWorkItem,
     utc_now,
 )
 
@@ -34,10 +37,14 @@ class SupabaseWorkflowStore:
     @classmethod
     def from_environment(cls) -> "SupabaseWorkflowStore":
         url = os.getenv("SUPABASE_URL", "").strip()
-        key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+        key = (
+            os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+            or os.getenv("SUPABASE_SERVICE_KEY", "").strip()
+        )
         if not url or not key:
             raise SupabaseWorkflowError(
-                "Supabase monitoring requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY"
+                "Supabase monitoring requires SUPABASE_URL and "
+                "SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SERVICE_KEY)"
             )
         return cls(url=url, service_role_key=key)
 
@@ -65,6 +72,92 @@ class SupabaseWorkflowStore:
             params={"select": "*", "order": "updated_at.desc", "limit": str(max(1, min(limit, 500)))},
         )
         return [WorkflowCase.model_validate(row) for row in rows]
+
+    def upsert_work_item(self, item: WorkflowWorkItem) -> WorkflowWorkItem:
+        self._upsert(
+            "wcw_work_items",
+            item.model_dump(mode="json"),
+            on_conflict="work_item_id",
+        )
+        stored = self.work_item(item.work_item_id)
+        if stored is None:
+            raise SupabaseWorkflowError("workflow work item upsert did not return a row")
+        return stored
+
+    def work_item(self, work_item_id: str) -> WorkflowWorkItem | None:
+        rows = self._request(
+            "GET",
+            "wcw_work_items",
+            params={"select": "*", "work_item_id": f"eq.{work_item_id}", "limit": "1"},
+        )
+        return None if not rows else WorkflowWorkItem.model_validate(rows[0])
+
+    def list_work_items(
+        self,
+        *,
+        stage: int | None = None,
+        case_id: str | None = None,
+        limit: int = 100,
+    ) -> list[WorkflowWorkItem]:
+        params = {
+            "select": "*",
+            "order": "updated_at.desc",
+            "limit": str(max(1, min(limit, 500))),
+        }
+        if stage is not None:
+            params["stage"] = f"eq.{stage}"
+        if case_id is not None:
+            params["case_id"] = f"eq.{case_id}"
+        rows = self._request("GET", "wcw_work_items", params=params)
+        return [WorkflowWorkItem.model_validate(row) for row in rows]
+
+    def record_decision(self, decision: WorkflowDecision) -> bool:
+        rows = self._request(
+            "POST",
+            "wcw_workflow_decisions",
+            json_body=decision.model_dump(mode="json"),
+            params={"on_conflict": "idempotency_key"},
+            prefer="resolution=ignore-duplicates,return=representation",
+        )
+        return bool(rows)
+
+    def list_decisions(self, case_id: str) -> list[WorkflowDecision]:
+        rows = self._request(
+            "GET",
+            "wcw_workflow_decisions",
+            params={
+                "select": "*",
+                "case_id": f"eq.{case_id}",
+                "order": "created_at.asc",
+            },
+        )
+        return [WorkflowDecision.model_validate(row) for row in rows]
+
+    def upsert_external_operation(self, operation: ExternalOperation) -> ExternalOperation:
+        self._upsert(
+            "wcw_external_operations",
+            operation.model_dump(mode="json"),
+            on_conflict="operation_id",
+        )
+        operations = [
+            item for item in self.list_external_operations(operation.case_id)
+            if item.operation_id == operation.operation_id
+        ]
+        if not operations:
+            raise SupabaseWorkflowError("external operation upsert did not return a row")
+        return operations[0]
+
+    def list_external_operations(self, case_id: str) -> list[ExternalOperation]:
+        rows = self._request(
+            "GET",
+            "wcw_external_operations",
+            params={
+                "select": "*",
+                "case_id": f"eq.{case_id}",
+                "order": "created_at.asc",
+            },
+        )
+        return [ExternalOperation.model_validate(row) for row in rows]
 
     def list_events(self, entity_id: str, *, limit: int = 100) -> list[WorkflowEvent]:
         rows = self._request(

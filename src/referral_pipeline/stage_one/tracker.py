@@ -159,6 +159,7 @@ class StageOneTracker:
         *,
         confirmed_by: str,
         message_id: str,
+        outcome: str = "reached",
     ) -> WorkflowCase | None:
         case = self.store.workflow_case(case_id)
         if case is None:
@@ -174,7 +175,11 @@ class StageOneTracker:
             "partner_contact_confirmed",
             source="outlook",
             event_key=f"stage1:{case.source_ref}:partner-contact-confirmed:{message_id}",
-            details={"confirmed_by": confirmed_by, "confirmation_message_id": message_id},
+            details={
+                "confirmed_by": confirmed_by,
+                "confirmation_message_id": message_id,
+                "contact_outcome": outcome,
+            },
         )
         return stored
 
@@ -187,6 +192,24 @@ class StageOneTracker:
             source="pipeline",
             event_key=f"stage1:{case.source_ref}:{event_type}",
             details={"error_code": error_code},
+        )
+        return stored
+
+    def retry_scheduled(
+        self,
+        case: WorkflowCase,
+        *,
+        error_kind: str,
+        attempt_count: int,
+    ) -> WorkflowCase:
+        updated = case.model_copy(update={"status": "processing", "updated_at": _utc_now()})
+        stored = self.store.upsert_workflow_case(updated)
+        self.record(
+            case.case_id,
+            "stage_one_retry_scheduled",
+            source="pipeline",
+            event_key=f"stage1:{case.source_ref}:retry:{attempt_count}",
+            details={"error_kind": error_kind, "attempt_count": attempt_count},
         )
         return stored
 

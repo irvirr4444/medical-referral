@@ -11,7 +11,7 @@ export const HANDOFF_OPS_FIXTURE: StageOpsFixture = {
       patient.patientId,
       patient.patientName,
       patient.receivedAt,
-      'Referral source notified · assigned case manager CCd',
+      'Assigned case manager notified',
       'resolved',
     ),
     ev(
@@ -29,7 +29,7 @@ export const HANDOFF_OPS_FIXTURE: StageOpsFixture = {
       patient.patientId,
       patient.patientName,
       patient.receivedAt,
-      'DRK chart created from approved intake data',
+      'DRK chart prefilled for employee review',
       'resolved',
     ),
   ]),

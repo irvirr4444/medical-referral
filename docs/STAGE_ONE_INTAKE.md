@@ -47,6 +47,7 @@ including:
 2. `supabase/migrations/202608120001_create_stage_one_workflow.sql`
 3. `supabase/migrations/202608120002_allow_duplicate_referral_ids.sql`
 4. `supabase/migrations/202608120003_scope_review_confirmation.sql`
+5. `supabase/migrations/202608130001_harden_stage_one_workflow.sql`
 
 After applying them, set the backend environment only:
 
@@ -54,7 +55,15 @@ After applying them, set the backend environment only:
 WORKFLOW_DATABASE_BACKEND=supabase
 SUPABASE_URL=...
 SUPABASE_SERVICE_ROLE_KEY=...
+SYNTHETIC_DATASET_MANIFEST=output/pdf/synthetic-referrals/dataset.json
 ```
+
+Referral persistence is fail-closed while this project uses test data. A PDF may
+enter Supabase only when its SHA-256 hash appears in a manifest marked
+`synthetic_only: true`. Unknown PDFs, including the WCW samples under `samples/`,
+continue through local processing but use SQLite for Stage 1 and review records.
+The filename is never trusted as proof that a document is synthetic. If the
+manifest is missing or invalid, no referral is eligible for remote persistence.
 
 Use SQLite locally without any migration command:
 
@@ -68,7 +77,8 @@ WORKFLOW_SQLITE_PATH=tmp/workflow-monitor.sqlite
 The complete test-inbox Stage 1 path is:
 
 ```powershell
-python run_pipeline.py outlook --max-messages 1 --monday-mode live-readonly --drk-duplicate-check --send-partner-acknowledgement
+python run_pipeline.py stage-one-doctor --live
+python run_pipeline.py outlook --max-messages 1 --monday-mode live-readonly --drk-duplicate-check --send-partner-acknowledgement --send-review
 ```
 
 This command:
@@ -79,12 +89,21 @@ This command:
 4. Checks Monday for a patient candidate without writing.
 5. Checks DRK through the read-only Selenium duplicate gate without writing.
 6. Sends the extracted summary to the configured internal reviewer.
-7. Marks microstep 5 complete only after that reviewer confirms referral-partner
-   outreach in the same Outlook thread.
+7. Marks microstep 5 complete only after that reviewer reports `Confirmed`,
+   `No answer`, or `Information missing` in the same Outlook thread. The normalized
+   outcome is stored on the Stage 1 event for Stage 2 routing.
 8. Exposes the persisted microsteps to the local intake API and frontend.
 
 The acknowledgement and DRK check are explicit flags. Omitting them cannot send
 the partner email or open the DRK browser. Monday and DRK writes remain disabled.
+The detailed summary has no external fallback: `REVIEW_RECIPIENT_EMAIL` must be an
+explicit internal intake-team address whenever `--send-review` is enabled.
+
+Preview both outbound messages without sending or persisting anything:
+
+```powershell
+python run_pipeline.py stage-one-email-preview --run tmp\inbox-runs\<timestamp>
+```
 
 Run the frontend projection separately:
 

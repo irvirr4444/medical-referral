@@ -12,13 +12,16 @@ const ACTION_GROUPS: Partial<
   },
   assignment: {
     'determine-owner': [
+      'determine-owner',
+      'assign-owner',
       'load-assignment-context',
       'normalize-location',
       'load-territories',
       'match-owner',
       'classify-assignment',
+      'confirm-assignment',
+      'write-assignment',
     ],
-    'assign-owner': ['confirm-assignment', 'write-assignment'],
   },
   provider: {
     'find-eligible-providers': [

@@ -803,11 +803,13 @@ export function StageFeedMessage({
   isPartnerConfirmed = false,
   onConfirmPartner,
   assignmentSuggestion,
+  assignmentManualSelection = false,
   caseManagerOptions = [],
   selectedCaseManagerEmail,
   isAssignmentConfirmed = false,
   onCaseManagerChange,
   onConfirmAssignment,
+  actionError,
   caseManagerNotification,
   referralNotification,
   mondayRecord,
@@ -860,11 +862,13 @@ export function StageFeedMessage({
   isPartnerConfirmed?: boolean
   onConfirmPartner?: () => void
   assignmentSuggestion?: CaseManagerSuggestion
+  assignmentManualSelection?: boolean
   caseManagerOptions?: CaseManagerOption[]
   selectedCaseManagerEmail?: string
   isAssignmentConfirmed?: boolean
   onCaseManagerChange?: (email: string) => void
   onConfirmAssignment?: () => void
+  actionError?: string | null
   caseManagerNotification?: CaseManagerNotification
   referralNotification?: ReferralSourceNotification
   mondayRecord?: MondayRecord
@@ -1107,20 +1111,20 @@ export function StageFeedMessage({
               </div>
             ) : null}
           </div>
-        ) : assignmentSuggestion && selectedCaseManager ? (
+        ) : assignmentSuggestion || assignmentManualSelection ? (
           <div
             className="stage-ops-step-feed__assignment"
             aria-label="Case manager assignment"
           >
             <div className="stage-ops-step-feed__assignment-suggestion">
               <p className="stage-ops-step-feed__partner-label">
-                AI recommendation
+                {assignmentSuggestion ? 'AI recommendation' : 'Assignment rule'}
               </p>
               <p className="stage-ops-step-feed__partner-name">
-                {assignmentSuggestion.name}
+                {assignmentSuggestion?.name ?? 'Choose a case manager'}
               </p>
               <p className="stage-ops-step-feed__partner-email">
-                {assignmentSuggestion.email}
+                {assignmentSuggestion?.email ?? 'Territory rules are not connected yet'}
               </p>
             </div>
 
@@ -1130,12 +1134,17 @@ export function StageFeedMessage({
                   Assigned case manager
                 </span>
                 <select
-                  value={selectedCaseManager.email}
+                  value={selectedCaseManager?.email ?? ''}
                   onChange={(event) =>
                     onCaseManagerChange?.(event.target.value)
                   }
                   disabled={isAssignmentConfirmed}
                 >
+                  {assignmentManualSelection ? (
+                    <option value="" disabled>
+                      Choose case manager
+                    </option>
+                  ) : null}
                   {caseManagerOptions.map((manager) => (
                     <option key={manager.email} value={manager.email}>
                       {manager.name}
@@ -1149,13 +1158,22 @@ export function StageFeedMessage({
                   isAssignmentConfirmed ? ' is-confirmed' : ' is-actionable'
                 }`}
                 onClick={onConfirmAssignment}
-                disabled={isAssignmentConfirmed || !onConfirmAssignment}
+                disabled={
+                  isAssignmentConfirmed ||
+                  !onConfirmAssignment ||
+                  !selectedCaseManager
+                }
               >
                 {isAssignmentConfirmed
                   ? 'Assigned'
                   : 'Confirm'}
               </button>
             </div>
+            {actionError ? (
+              <p className="stage-ops-step-feed__action-error" role="alert">
+                {actionError}
+              </p>
+            ) : null}
           </div>
         ) : providerSelectionLocation && providerOptions.length === 0 ? (
           <div

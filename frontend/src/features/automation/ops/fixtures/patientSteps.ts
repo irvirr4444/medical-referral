@@ -17,7 +17,6 @@ export const STAGE_STEP_IDS: Record<FlowOpsPageId, string[]> = {
   ],
   assignment: [
     'determine-owner',
-    'assign-owner',
   ],
   provider: [
     'select-provider',

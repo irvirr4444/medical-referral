@@ -11,13 +11,16 @@ from pathlib import Path
 from typing import Any, Callable
 
 from Outlook.review_mail import OutlookReviewMailbox
+from referral_pipeline.review.contact_outcome import classify_partner_contact
 from referral_pipeline.review.intent import IntentResult, classify_reply_intent
 from referral_pipeline.review.store import build_review_store
 from referral_pipeline.review.summary import render_review_email
 from referral_pipeline.monitoring.models import PatientLink, utc_now
 from referral_pipeline.monitoring.observer import record_lifecycle_event
 from referral_pipeline.monitoring.store import WorkflowStore
+from referral_pipeline.persistence_policy import SyntheticPersistencePolicy
 from referral_pipeline.stage_one.tracker import StageOneTracker
+from referral_pipeline.workflow import WorkflowExecutionService
 
 
 class ReviewWorkflowError(RuntimeError):
@@ -52,7 +55,10 @@ def create_and_send_review(
     }
     digest = artifact_payload_digest(snapshots)
     entity_id = _workflow_entity_id(paths["canonical"], fallback_digest=digest)
-    store = build_review_store(state_db)
+    remote_persistence_allowed = SyntheticPersistencePolicy.from_environment().permits(
+        str(manifest.get("attachment_sha256") or "") or None
+    )
+    store = build_review_store(state_db, allow_supabase=remote_persistence_allowed)
     existing = store.find_active(
         artifact_digest=digest,
         source_message_id=source_message_id,
@@ -99,6 +105,7 @@ def create_and_send_review(
             source="outlook",
             event_key=f"review-requested:{review_id}",
             details={"review_id": review_id, "recipient": recipient, "status": review_status, "reused": True},
+            allow_remote_persistence=remote_persistence_allowed,
         )
         audit_path = _write_review_audit(
             paths["monday"].parent,
@@ -189,6 +196,7 @@ def create_and_send_review(
         source="outlook",
         event_key=f"review-requested:{review_id}",
         details={"review_id": review_id, "recipient": recipient, "status": review_status, "reused": False},
+        allow_remote_persistence=remote_persistence_allowed,
     )
 
     audit_path = _write_review_audit(
@@ -283,6 +291,7 @@ class ApprovalProcessor:
             raise ReviewWorkflowError("execute and dry_run modes are mutually exclusive")
         accepted: list[str] = []
         partner_contacts: list[str] = []
+        partner_contact_outcomes: list[dict[str, str]] = []
         corrections: list[str] = []
         unclear: list[str] = []
         duplicates: list[str] = []
@@ -313,7 +322,15 @@ class ApprovalProcessor:
                 )
                 continue
 
-            intent = self.intent_classifier(reply.text)
+            contact = (
+                classify_partner_contact(
+                    reply.text,
+                    intent_classifier=self.intent_classifier,
+                )
+                if review.purpose == "partner_contact"
+                else None
+            )
+            intent = contact.intent if contact is not None else self.intent_classifier(reply.text)
             response_result = self.store.process_response(
                 review_id=review.review_id,
                 message_id=reply.message_id,
@@ -331,12 +348,28 @@ class ApprovalProcessor:
             if response_result in {"confirmed", "partner_contact_confirmed"}:
                 if response_result == "partner_contact_confirmed":
                     partner_contacts.append(review.review_id)
+                    partner_contact_outcomes.append(
+                        {
+                            "review_id": review.review_id,
+                            "outcome": contact.outcome if contact is not None else "reached",
+                        }
+                    )
                     if self.workflow_store is not None and review.workflow_case_id:
-                        StageOneTracker(self.workflow_store).partner_contact_confirmed(
+                        completed_case = StageOneTracker(
+                            self.workflow_store
+                        ).partner_contact_confirmed(
                             review.workflow_case_id,
                             confirmed_by=reply.sender,
                             message_id=reply.message_id,
+                            outcome=contact.outcome if contact is not None else "reached",
                         )
+                        if completed_case is not None:
+                            WorkflowExecutionService(self.workflow_store).start_assignment(
+                                completed_case.case_id,
+                                contact_outcome=(
+                                    contact.outcome if contact is not None else "reached"
+                                ),
+                            )
                 else:
                     accepted.append(review.review_id)
                 record_lifecycle_event(
@@ -354,7 +387,13 @@ class ApprovalProcessor:
                     details={
                         "review_id": review.review_id,
                         "confirmation_message_id": reply.message_id,
+                        **(
+                            {"contact_outcome": contact.outcome}
+                            if contact is not None and contact.outcome is not None
+                            else {}
+                        ),
                     },
+                    allow_remote_persistence=_review_allows_remote_persistence(review),
                 )
             elif response_result == "needs_correction":
                 corrections.append(review.review_id)
@@ -402,6 +441,7 @@ class ApprovalProcessor:
             "writes_attempted": bool(execute),
             "accepted_confirmations": accepted,
             "partner_contact_confirmations": partner_contacts,
+            "partner_contact_outcomes": partner_contact_outcomes,
             "correction_or_denial_reviews": corrections,
             "unclear_reviews": unclear,
             "duplicate_response_messages": duplicates,
@@ -590,6 +630,7 @@ class ApprovalProcessor:
                 patient_label=str(preview.get("item_name") or "") or None,
                 updated_at=utc_now(),
             ),
+            allow_remote_persistence=_review_allows_remote_persistence(review),
         )
         record_lifecycle_event(
             "drk_handoff_created",
@@ -597,6 +638,7 @@ class ApprovalProcessor:
             source="drk",
             event_key=f"drk-handoff:{review_id}",
             details={"review_id": review_id, "status": "pending_guarded_drk_execution"},
+            allow_remote_persistence=_review_allows_remote_persistence(review),
         )
         return {
             "review_id": review_id,
@@ -619,6 +661,12 @@ def artifact_digest(paths: Any) -> str:
         digest.update(path.read_bytes())
         digest.update(b"\0")
     return digest.hexdigest()
+
+
+def _review_allows_remote_persistence(review: Any) -> bool:
+    return SyntheticPersistencePolicy.from_environment().permits(
+        getattr(review, "source_attachment_sha256", None)
+    )
 
 
 def artifact_payload_digest(snapshots: dict[str, dict[str, Any]]) -> str:

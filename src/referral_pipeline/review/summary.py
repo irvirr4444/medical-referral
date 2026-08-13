@@ -18,8 +18,9 @@ CLINICAL_SUMMARY_MAX_SENTENCES = 2
 PARTNER_CONTACT_ACTION_TITLE = "Referral Partner Follow-up"
 PARTNER_CONTACT_ACTION_COPY = (
     "Please contact the referral partner to acknowledge receipt and resolve any missing or "
-    "unclear information. After outreach is complete, reply Confirm. If any referral details "
-    "need to be corrected, reply with the corrected information."
+    "unclear information. Reply Confirmed when contact is complete, No answer when outreach "
+    "was unsuccessful, or Information missing with the remaining gap. Reply with corrected "
+    "referral details when changes are required."
 )
 REVIEW_ACTION_TITLE = "Referral Review"
 REVIEW_ACTION_COPY = (
@@ -229,7 +230,7 @@ def build_presentation(
 
 def render_html(presentation: ReviewPresentation) -> str:
     sections = [
-        _html_title(presentation.patient_heading),
+        _html_title(presentation),
         _html_attention(presentation.attention),
         _html_patient(presentation),
         _html_section("Insurance", _html_insurance(presentation.insurances)),
@@ -262,7 +263,7 @@ def render_html(presentation: ReviewPresentation) -> str:
 
 def render_text(presentation: ReviewPresentation) -> str:
     lines = [
-        f"Referral Review: {presentation.patient_heading}",
+        f"{_message_title(presentation)}: {presentation.patient_heading}",
         "",
     ]
     if presentation.attention:
@@ -527,12 +528,17 @@ def _join_parts(*values: Any) -> str:
     return " / ".join(str(value).strip() for value in values if value not in (None, ""))
 
 
-def _html_title(patient_heading: str) -> str:
+def _html_title(presentation: ReviewPresentation) -> str:
     return (
         '<tr><td style="padding:20px 24px 8px 24px;">'
-        f'<div style="font-size:20px;font-weight:bold;color:#102a43;">Referral Review: {escape(patient_heading)}</div>'
+        f'<div style="font-size:20px;font-weight:bold;color:#102a43;">'
+        f'{escape(_message_title(presentation))}: {escape(presentation.patient_heading)}</div>'
         "</td></tr>"
     )
+
+
+def _message_title(presentation: ReviewPresentation) -> str:
+    return "Referral Follow-up" if presentation.purpose == "partner_contact" else "Referral Review"
 
 
 def _html_attention(items: list[AttentionItem]) -> str:

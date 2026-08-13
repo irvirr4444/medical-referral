@@ -203,42 +203,13 @@ describe('automation inspection console', () => {
     ).toBeInTheDocument()
 
     expect(
-      within(stepsPanel).getByRole('button', {
-        name: /Notify Case Manager, new update/i,
-      }),
-    ).toBeInTheDocument()
-    await user.click(
-      within(stepsPanel).getByRole('button', { name: /Notify Case Manager/i }),
-    )
-    expect(
       within(stepsPanel).queryByRole('button', {
-        name: /Notify Case Manager, new update/i,
+        name: /Notify Case Manager/i,
       }),
     ).not.toBeInTheDocument()
-    expect(within(stepsPanel).getByText(/^Unread$/i)).toBeInTheDocument()
-    expect(
-      within(stepsPanel).getByText(/^Nadine Pelicano notified$/i),
-    ).toBeInTheDocument()
-    expect(
-      within(stepsPanel).getAllByText(/ndelpelicano@westcoastwound\.com/i)
-        .length,
-    ).toBeGreaterThan(0)
-    expect(
-      within(stepsPanel).getAllByLabelText(
-        /Patient data shared with case manager/i,
-      ).length,
-    ).toBeGreaterThan(0)
-
-    await user.click(
-      within(stepsPanel).getByRole('button', { name: /Assign Case Manager/i }),
-    )
-    await user.click(
-      within(stepsPanel).getByRole('button', { name: /Notify Case Manager/i }),
-    )
-    expect(within(stepsPanel).queryByText(/^Unread$/i)).not.toBeInTheDocument()
   })
 
-  it('shows referral-source notifications as email messages', async () => {
+  it('shows case-manager notifications as email messages', async () => {
     const user = userEvent.setup()
     render(<App />)
 
@@ -247,16 +218,17 @@ describe('automation inspection console', () => {
 
     expect(
       within(stepsPanel).getByRole('button', {
-        name: /Notify referral source/i,
+        name: /Notify Case Manager/i,
       }),
     ).toHaveAttribute('aria-current', 'step')
     expect(
       within(stepsPanel).getAllByLabelText(
-        /Referral source notification email/i,
+        /Patient data shared with case manager/i,
       ).length,
     ).toBeGreaterThan(0)
-    expect(within(stepsPanel).getAllByText(/^To$/i).length).toBeGreaterThan(0)
-    expect(within(stepsPanel).getAllByText(/^CC$/i).length).toBeGreaterThan(0)
+    expect(
+      within(stepsPanel).getAllByText(/^Sent to$/i).length,
+    ).toBeGreaterThan(0)
     expect(
       within(stepsPanel).getAllByText(/^Subject$/i).length,
     ).toBeGreaterThan(0)
@@ -274,7 +246,7 @@ describe('automation inspection console', () => {
     ).toBe(6)
 
     await user.click(
-      within(stepsPanel).getByRole('button', { name: /Create DRK Chart/i }),
+      within(stepsPanel).getByRole('button', { name: /Prepare DRK Chart/i }),
     )
     expect(
       within(stepsPanel).getAllByLabelText(/DRK chart draft details/i).length,

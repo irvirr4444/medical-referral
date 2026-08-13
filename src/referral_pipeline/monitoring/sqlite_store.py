@@ -9,14 +9,17 @@ from pathlib import Path
 
 from referral_pipeline.monitoring.models import (
     ComponentHealth,
+    ExternalOperation,
     NotificationRecord,
     OperationalSnapshot,
     OutboundAcknowledgement,
     PatientLink,
     WorkflowCase,
     WorkflowCounter,
+    WorkflowDecision,
     WorkflowEvent,
     WorkflowException,
+    WorkflowWorkItem,
     utc_now,
 )
 
@@ -47,7 +50,7 @@ class SQLiteWorkflowStore:
                     monday_item_id = COALESCE(excluded.monday_item_id, monday_item_id),
                     drk_patient_id = COALESCE(excluded.drk_patient_id, drk_patient_id),
                     updated_at = excluded.updated_at,
-                    completed_at = COALESCE(excluded.completed_at, completed_at)
+                    completed_at = excluded.completed_at
                 """,
                 (
                     payload["case_id"], payload["source_ref"], payload["source"],
@@ -75,6 +78,139 @@ class SQLiteWorkflowStore:
                 (max(1, min(limit, 500)),),
             ).fetchall()
         return [WorkflowCase.model_validate(dict(row)) for row in rows]
+
+    def upsert_work_item(self, item: WorkflowWorkItem) -> WorkflowWorkItem:
+        payload = item.model_dump(mode="json")
+        with self._connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO wcw_work_items
+                    (work_item_id, case_id, stage, step_id, owner_role, status,
+                     recommended_assignee, recommendation_reason, assigned_to,
+                     payload_json, created_at, updated_at, completed_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(work_item_id) DO UPDATE SET
+                    status = excluded.status,
+                    recommended_assignee = excluded.recommended_assignee,
+                    recommendation_reason = excluded.recommendation_reason,
+                    assigned_to = excluded.assigned_to,
+                    payload_json = excluded.payload_json,
+                    updated_at = excluded.updated_at,
+                    completed_at = excluded.completed_at
+                """,
+                (
+                    payload["work_item_id"], payload["case_id"], payload["stage"],
+                    payload["step_id"], payload["owner_role"], payload["status"],
+                    payload["recommended_assignee"], payload["recommendation_reason"],
+                    payload["assigned_to"], _json(payload["payload"]),
+                    payload["created_at"], payload["updated_at"], payload["completed_at"],
+                ),
+            )
+        stored = self.work_item(item.work_item_id)
+        if stored is None:
+            raise RuntimeError("workflow work item upsert did not return a row")
+        return stored
+
+    def work_item(self, work_item_id: str) -> WorkflowWorkItem | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM wcw_work_items WHERE work_item_id = ?",
+                (work_item_id,),
+            ).fetchone()
+        return None if row is None else _work_item_from_row(row)
+
+    def list_work_items(
+        self,
+        *,
+        stage: int | None = None,
+        case_id: str | None = None,
+        limit: int = 100,
+    ) -> list[WorkflowWorkItem]:
+        clauses: list[str] = []
+        values: list[object] = []
+        if stage is not None:
+            clauses.append("stage = ?")
+            values.append(stage)
+        if case_id is not None:
+            clauses.append("case_id = ?")
+            values.append(case_id)
+        where = f" WHERE {' AND '.join(clauses)}" if clauses else ""
+        values.append(max(1, min(limit, 500)))
+        with self._connect() as connection:
+            rows = connection.execute(
+                f"SELECT * FROM wcw_work_items{where} ORDER BY updated_at DESC LIMIT ?",
+                values,
+            ).fetchall()
+        return [_work_item_from_row(row) for row in rows]
+
+    def record_decision(self, decision: WorkflowDecision) -> bool:
+        payload = decision.model_dump(mode="json")
+        with self._connect() as connection:
+            cursor = connection.execute(
+                """
+                INSERT OR IGNORE INTO wcw_workflow_decisions
+                    (decision_id, idempotency_key, case_id, stage, step_id,
+                     decision_type, selected_value_json, decided_by, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    payload["decision_id"], payload["idempotency_key"], payload["case_id"],
+                    payload["stage"], payload["step_id"], payload["decision_type"],
+                    _json(payload["selected_value"]), payload["decided_by"], payload["created_at"],
+                ),
+            )
+        return cursor.rowcount == 1
+
+    def list_decisions(self, case_id: str) -> list[WorkflowDecision]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT * FROM wcw_workflow_decisions WHERE case_id = ? ORDER BY created_at",
+                (case_id,),
+            ).fetchall()
+        return [_decision_from_row(row) for row in rows]
+
+    def upsert_external_operation(self, operation: ExternalOperation) -> ExternalOperation:
+        payload = operation.model_dump(mode="json")
+        with self._connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO wcw_external_operations
+                    (operation_id, idempotency_key, case_id, stage, operation_type,
+                     status, request_payload_json, result_json, attempts, last_error,
+                     created_at, updated_at, completed_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(operation_id) DO UPDATE SET
+                    status = excluded.status,
+                    request_payload_json = excluded.request_payload_json,
+                    result_json = excluded.result_json,
+                    attempts = excluded.attempts,
+                    last_error = excluded.last_error,
+                    updated_at = excluded.updated_at,
+                    completed_at = excluded.completed_at
+                """,
+                (
+                    payload["operation_id"], payload["idempotency_key"], payload["case_id"],
+                    payload["stage"], payload["operation_type"], payload["status"],
+                    _json(payload["request_payload"]), _json(payload["result"]),
+                    payload["attempts"], payload["last_error"], payload["created_at"],
+                    payload["updated_at"], payload["completed_at"],
+                ),
+            )
+        operations = [
+            item for item in self.list_external_operations(operation.case_id)
+            if item.operation_id == operation.operation_id
+        ]
+        if not operations:
+            raise RuntimeError("external operation upsert did not return a row")
+        return operations[0]
+
+    def list_external_operations(self, case_id: str) -> list[ExternalOperation]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT * FROM wcw_external_operations WHERE case_id = ? ORDER BY created_at",
+                (case_id,),
+            ).fetchall()
+        return [_external_operation_from_row(row) for row in rows]
 
     def list_events(self, entity_id: str, *, limit: int = 100) -> list[WorkflowEvent]:
         with self._connect() as connection:
@@ -508,6 +644,25 @@ def _json(value: object) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True)
 
 
+def _work_item_from_row(row: sqlite3.Row) -> WorkflowWorkItem:
+    payload = dict(row)
+    payload["payload"] = json.loads(payload.pop("payload_json"))
+    return WorkflowWorkItem.model_validate(payload)
+
+
+def _decision_from_row(row: sqlite3.Row) -> WorkflowDecision:
+    payload = dict(row)
+    payload["selected_value"] = json.loads(payload.pop("selected_value_json"))
+    return WorkflowDecision.model_validate(payload)
+
+
+def _external_operation_from_row(row: sqlite3.Row) -> ExternalOperation:
+    payload = dict(row)
+    payload["request_payload"] = json.loads(payload.pop("request_payload_json"))
+    payload["result"] = json.loads(payload.pop("result_json"))
+    return ExternalOperation.model_validate(payload)
+
+
 def _allow_duplicate_referral_ids(connection: sqlite3.Connection) -> None:
     """Migrate the early Stage 1 schema without discarding workflow history."""
     unique_referral_index = False
@@ -583,6 +738,54 @@ CREATE INDEX IF NOT EXISTS idx_wcw_workflow_cases_attachment_sha256
 CREATE INDEX IF NOT EXISTS idx_wcw_workflow_cases_referral_id
     ON wcw_workflow_cases(referral_id)
     WHERE referral_id IS NOT NULL;
+CREATE TABLE IF NOT EXISTS wcw_work_items (
+    work_item_id TEXT PRIMARY KEY,
+    case_id TEXT NOT NULL REFERENCES wcw_workflow_cases(case_id) ON DELETE CASCADE,
+    stage INTEGER NOT NULL,
+    step_id TEXT NOT NULL,
+    owner_role TEXT NOT NULL,
+    status TEXT NOT NULL,
+    recommended_assignee TEXT,
+    recommendation_reason TEXT,
+    assigned_to TEXT,
+    payload_json TEXT NOT NULL DEFAULT '{}',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    completed_at TEXT,
+    UNIQUE(case_id, stage, step_id)
+);
+CREATE INDEX IF NOT EXISTS idx_wcw_work_items_queue
+    ON wcw_work_items(stage, status, updated_at DESC);
+CREATE TABLE IF NOT EXISTS wcw_workflow_decisions (
+    decision_id TEXT PRIMARY KEY,
+    idempotency_key TEXT NOT NULL UNIQUE,
+    case_id TEXT NOT NULL REFERENCES wcw_workflow_cases(case_id) ON DELETE CASCADE,
+    stage INTEGER NOT NULL,
+    step_id TEXT NOT NULL,
+    decision_type TEXT NOT NULL,
+    selected_value_json TEXT NOT NULL,
+    decided_by TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_wcw_workflow_decisions_case
+    ON wcw_workflow_decisions(case_id, created_at DESC);
+CREATE TABLE IF NOT EXISTS wcw_external_operations (
+    operation_id TEXT PRIMARY KEY,
+    idempotency_key TEXT NOT NULL UNIQUE,
+    case_id TEXT NOT NULL REFERENCES wcw_workflow_cases(case_id) ON DELETE CASCADE,
+    stage INTEGER NOT NULL,
+    operation_type TEXT NOT NULL,
+    status TEXT NOT NULL,
+    request_payload_json TEXT NOT NULL DEFAULT '{}',
+    result_json TEXT NOT NULL DEFAULT '{}',
+    attempts INTEGER NOT NULL DEFAULT 0,
+    last_error TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    completed_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_wcw_external_operations_case
+    ON wcw_external_operations(case_id, stage, updated_at DESC);
 CREATE TABLE IF NOT EXISTS wcw_outbound_acknowledgements (
     case_id TEXT PRIMARY KEY REFERENCES wcw_workflow_cases(case_id) ON DELETE CASCADE,
     recipient TEXT NOT NULL,

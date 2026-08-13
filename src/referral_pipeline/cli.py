@@ -10,6 +10,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from dotenv import load_dotenv
+
 
 # `monday.com` is a scripts directory rather than an importable package. Keep its
 # path handling at the cross-system orchestration boundary.
@@ -28,6 +30,8 @@ from referral_pipeline.runner import main as run_inbound_main  # noqa: E402
 from referral_pipeline.state import InboxState  # noqa: E402
 from referral_pipeline.monitoring.cli import add_monitoring_commands, run_monitoring_command  # noqa: E402
 from referral_pipeline.api.server import main as run_intake_api  # noqa: E402
+from referral_pipeline.stage_one.email_preview import render_stage_one_email_preview  # noqa: E402
+from referral_pipeline.stage_one.preflight import run_stage_one_preflight  # noqa: E402
 
 
 DEFAULT_OUTPUT_ROOT = Path("tmp") / "inbox-runs"
@@ -41,6 +45,7 @@ class IntakeCLIError(RuntimeError):
 
 
 def _build_parser() -> argparse.ArgumentParser:
+    load_dotenv()
     parser = argparse.ArgumentParser(
         description="Run the Outlook-to-Monday referral intake flow with safe defaults.",
     )
@@ -165,7 +170,7 @@ def _build_parser() -> argparse.ArgumentParser:
     review_send.add_argument("--run", type=Path, required=True, help="Existing timestamped intake run directory.")
     review_send.add_argument(
         "--review-recipient",
-        help="Override reviewer email; defaults to the original sender stored on the run manifest.",
+        help="Internal reviewer email; defaults to REVIEW_RECIPIENT_EMAIL.",
     )
     review_send.add_argument(
         "--config",
@@ -173,6 +178,32 @@ def _build_parser() -> argparse.ArgumentParser:
         default=MONDAY_DIR / "master_sheet_write_config.example.json",
     )
     review_send.add_argument("--state-db", type=Path)
+
+    doctor = commands.add_parser(
+        "stage-one-doctor",
+        help="Validate Stage 1 configuration without changing Outlook, Monday, DRK, or Supabase.",
+    )
+    doctor.add_argument(
+        "--live",
+        action="store_true",
+        help="Also run read-only Outlook, Monday, and Supabase connectivity checks.",
+    )
+
+    email_preview = commands.add_parser(
+        "stage-one-email-preview",
+        help="Render Stage 1 internal and partner emails without sending them.",
+    )
+    email_preview.add_argument("--run", type=Path, required=True)
+    email_preview.add_argument(
+        "--review-recipient",
+        default=os.getenv("REVIEW_RECIPIENT_EMAIL"),
+        help="Internal intake-team reviewer; defaults to REVIEW_RECIPIENT_EMAIL.",
+    )
+    email_preview.add_argument(
+        "--config",
+        type=Path,
+        default=MONDAY_DIR / "master_sheet_write_config.example.json",
+    )
 
     retries = commands.add_parser(
         "retries",
@@ -525,13 +556,11 @@ def _resend_review(args: argparse.Namespace) -> int:
     graph_client = OutlookGraphClient(OutlookGraphConfig.from_environment())
     recipient = (
         (args.review_recipient or "").strip()
-        or str(manifest.get("source_sender") or "").strip()
         or os.getenv("REVIEW_RECIPIENT_EMAIL", "").strip()
     )
     if not recipient:
         raise IntakeCLIError(
-            "review-send requires the original sender on the manifest, "
-            "--review-recipient, or REVIEW_RECIPIENT_EMAIL"
+            "review-send requires --review-recipient or REVIEW_RECIPIENT_EMAIL"
         )
     state_db = (args.state_db or run_dir.parent / "state.sqlite").resolve()
 
@@ -545,6 +574,22 @@ def _resend_review(args: argparse.Namespace) -> int:
         mailbox=OutlookReviewMailbox(graph_client),
     )
     print(json.dumps(result, indent=2))
+    return 0
+
+
+def _run_stage_one_doctor(args: argparse.Namespace) -> int:
+    result = run_stage_one_preflight(live=args.live)
+    print(json.dumps(result, indent=2))
+    return 0 if result["ready"] else 1
+
+
+def _run_stage_one_email_preview(args: argparse.Namespace) -> int:
+    result = render_stage_one_email_preview(
+        args.run,
+        reviewer=(args.review_recipient or ""),
+        write_config_path=args.config,
+    )
+    print(json.dumps(result, indent=2, ensure_ascii=False))
     return 0
 
 
@@ -691,6 +736,10 @@ def main(argv: list[str] | None = None) -> int:
             return _run_retries(args)
         if args.command == "failures":
             return _run_failures(args)
+        if args.command == "stage-one-doctor":
+            return _run_stage_one_doctor(args)
+        if args.command == "stage-one-email-preview":
+            return _run_stage_one_email_preview(args)
         if args.command in {"monitor", "monitor-status", "health"}:
             return run_monitoring_command(args)
         return _resend_review(args)

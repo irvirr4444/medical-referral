@@ -6,7 +6,6 @@ import argparse
 import json
 import logging
 import os
-import sqlite3
 import sys
 import time
 from pathlib import Path
@@ -24,10 +23,12 @@ for import_path in (SRC_ROOT, MONDAY_DIR):
 from Outlook.graph import OutlookGraphClient, OutlookGraphConfig
 from Outlook.mail import InboundPdfAttachment, materialize_attachments, read_eml_pdf_attachments
 from Outlook.review_mail import OutlookReviewMailbox
+from referral_pipeline.failure_policy import can_notify_referral_sender
 from referral_pipeline.retry_policy import classify_retry
 from referral_pipeline.review.workflow import create_and_send_review
 from referral_pipeline.service import process_inbound_pdf
 from referral_pipeline.monitoring.store import create_workflow_store
+from referral_pipeline.persistence_policy import SyntheticPersistencePolicy
 from referral_pipeline.stage_one.acknowledgement import send_partner_acknowledgement
 from referral_pipeline.stage_one.tracker import StageOneTracker
 from referral_pipeline.state import (
@@ -167,14 +168,19 @@ def _review_recipient(
     attachment: InboundPdfAttachment,
     manifest: dict[str, Any],
 ) -> str:
-    """Prefer an explicit override; otherwise reply to the original sender."""
+    """Resolve only an explicitly configured internal review recipient."""
+    del attachment, manifest
     return (
         str(options.get("review_recipient") or "").strip()
         or str(getattr(args, "review_recipient", None) or "").strip()
-        or str(manifest.get("source_sender") or "").strip()
-        or str(getattr(attachment, "sender", None) or "").strip()
-        or str(options.get("source_sender") or "").strip()
         or os.getenv("REVIEW_RECIPIENT_EMAIL", "").strip()
+    )
+
+
+def _source_recipient(attachment: InboundPdfAttachment, options: dict[str, Any]) -> str:
+    return (
+        str(getattr(attachment, "sender", None) or "").strip()
+        or str(options.get("source_sender") or "").strip()
     )
 
 
@@ -268,8 +274,8 @@ def process_claimed_job(
             )
             if not recipient:
                 raise ValueError(
-                    "--send-review requires the original sender address, "
-                    "--review-recipient, or REVIEW_RECIPIENT_EMAIL"
+                    "--send-review requires an internal --review-recipient "
+                    "or REVIEW_RECIPIENT_EMAIL"
                 )
             if graph_client is None:
                 graph_client = OutlookGraphClient(OutlookGraphConfig.from_environment())
@@ -291,14 +297,6 @@ def process_claimed_job(
                     review_id=str(review_result["review_id"]),
                 )
     except Exception as error:
-        if tracker is not None and workflow_case is not None:
-            current_case = tracker.store.workflow_case(workflow_case.case_id)
-            if current_case is None or current_case.status != "completed":
-                tracker.failed(
-                    current_case or workflow_case,
-                    event_type="stage_one_failed",
-                    error_code=type(error).__name__,
-                )
         elapsed_seconds = round(time.perf_counter() - attachment_started, 2)
         retry = classify_retry(error)
         if retry is not None:
@@ -307,6 +305,26 @@ def process_claimed_job(
                 error=str(error),
                 error_kind=retry.error_kind,
             )
+            if (
+                updated.status == STATUS_PENDING_RETRY
+                and tracker is not None
+                and workflow_case is not None
+            ):
+                current_case = tracker.store.workflow_case(workflow_case.case_id)
+                if current_case is None or current_case.status != "completed":
+                    tracker.retry_scheduled(
+                        current_case or workflow_case,
+                        error_kind=retry.error_kind,
+                        attempt_count=updated.attempt_count,
+                    )
+            elif tracker is not None and workflow_case is not None:
+                current_case = tracker.store.workflow_case(workflow_case.case_id)
+                if current_case is None or current_case.status != "completed":
+                    tracker.failed(
+                        current_case or workflow_case,
+                        event_type="stage_one_failed",
+                        error_code=type(error).__name__,
+                    )
             _progress(
                 args,
                 f"Deferred after {elapsed_seconds:.2f}s: {attachment.filename} "
@@ -322,6 +340,14 @@ def process_claimed_job(
                 "elapsed_seconds": elapsed_seconds,
                 "artifact_path": str(pdf_path),
             }
+        if tracker is not None and workflow_case is not None:
+            current_case = tracker.store.workflow_case(workflow_case.case_id)
+            if current_case is None or current_case.status != "completed":
+                tracker.failed(
+                    current_case or workflow_case,
+                    event_type="stage_one_failed",
+                    error_code=type(error).__name__,
+                )
         return _handle_terminal_failure(
             job,
             attachment=attachment,
@@ -361,17 +387,12 @@ def _handle_terminal_failure(
     elapsed_seconds: float,
     artifact_path: Path | None = None,
 ) -> dict[str, Any]:
-    """Record a permanent failure and ensure review-mode emails get a reply."""
+    """Record a terminal failure and notify only for sender-actionable problems."""
     options = job.options or _processing_options(args)
     notification_error: Exception | None = None
     failure_reply_sent = False
-    if bool(options.get("send_review", args.send_review)) and _can_notify_submission_failure(error):
-        recipient = _review_recipient(
-            options=options,
-            args=args,
-            attachment=attachment,
-            manifest={},
-        )
+    if bool(options.get("send_review", args.send_review)) and can_notify_referral_sender(error):
+        recipient = _source_recipient(attachment, options)
         try:
             if not recipient:
                 raise ValueError("original sender address is unavailable")
@@ -381,12 +402,14 @@ def _handle_terminal_failure(
                 recipient=recipient,
                 content_type="HTML",
                 html_body=(
-                    "<p>We could not complete this referral automatically.</p>"
-                    "<p>Please review the attached PDF and resend it, or contact the referral team for help.</p>"
+                    "<p>We could not process the submitted referral document.</p>"
+                    "<p>Please verify that the attached PDF opens correctly and resend it. "
+                    "If the issue continues, contact the referral team.</p>"
                 ),
                 text_body=(
-                    "We could not complete this referral automatically.\n\n"
-                    "Please review the attached PDF and resend it, or contact the referral team for help."
+                    "We could not process the submitted referral document.\n\n"
+                    "Please verify that the attached PDF opens correctly and resend it. "
+                    "If the issue continues, contact the referral team."
                 ),
             )
             failure_reply_sent = True
@@ -416,23 +439,38 @@ def _handle_terminal_failure(
     return result
 
 
-def _can_notify_submission_failure(error: Exception) -> bool:
-    """Never blame the submitted PDF for an internal persistence failure."""
-    current: BaseException | None = error
-    seen: set[int] = set()
-    while isinstance(current, Exception) and id(current) not in seen:
-        seen.add(id(current))
-        if isinstance(current, sqlite3.Error):
-            return False
-        current = current.__cause__ or current.__context__
-    return True
+def _requested_workflow_backend(args: argparse.Namespace) -> str:
+    return (
+        args.workflow_database_backend or os.getenv("WORKFLOW_DATABASE_BACKEND") or "sqlite"
+    ).strip().casefold()
 
 
-def _workflow_tracker(args: argparse.Namespace) -> StageOneTracker:
-    backend = args.workflow_database_backend or os.getenv("WORKFLOW_DATABASE_BACKEND") or "sqlite"
+def _workflow_tracker(
+    args: argparse.Namespace,
+    *,
+    backend: str | None = None,
+) -> StageOneTracker:
     return StageOneTracker(
-        create_workflow_store(backend=backend, sqlite_path=args.workflow_sqlite_path)
+        create_workflow_store(
+            backend=backend or _requested_workflow_backend(args),
+            sqlite_path=args.workflow_sqlite_path,
+        )
     )
+
+
+def _tracker_for_job(
+    args: argparse.Namespace,
+    job: AttachmentJob,
+    policy: SyntheticPersistencePolicy,
+) -> StageOneTracker | None:
+    if not args.workflow_tracking:
+        return None
+    persisted_backend = str(job.options.get("workflow_database_backend") or "").strip()
+    backend = persisted_backend or policy.stage_one_backend(
+        _requested_workflow_backend(args),
+        job.sha256,
+    )
+    return _workflow_tracker(args, backend=backend)
 
 
 def _run_drk_duplicate_check(manifest: dict[str, Any]) -> dict[str, Any]:
@@ -462,7 +500,7 @@ def main(argv: list[str] | None = None) -> int:
         logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s:%(message)s")
 
     state = InboxState(args.state_db)
-    tracker = _workflow_tracker(args) if args.workflow_tracking else None
+    persistence_policy = SyntheticPersistencePolicy.from_environment()
     needs_graph = bool(args.outlook_poll or args.send_review or args.process_retries)
     graph_client = OutlookGraphClient(OutlookGraphConfig.from_environment()) if needs_graph else None
     summaries: list[dict] = []
@@ -484,7 +522,11 @@ def main(argv: list[str] | None = None) -> int:
                 _progress(args, f"Claimed due job {processed_jobs}/{max_jobs}")
                 summaries.append(
                     process_claimed_job(
-                        jobs[0], state=state, args=args, graph_client=graph_client, tracker=tracker
+                        jobs[0],
+                        state=state,
+                        args=args,
+                        graph_client=graph_client,
+                        tracker=_tracker_for_job(args, jobs[0], persistence_policy),
                     )
                 )
             _progress(args, f"Processed {processed_jobs} due job(s)")
@@ -494,9 +536,27 @@ def main(argv: list[str] | None = None) -> int:
         _progress(args, f"Found {len(attachments)} genuine PDF attachment(s)")
         args.output_dir.mkdir(parents=True, exist_ok=True)
         for attachment, pdf_path in materialize_attachments(attachments, args.output_dir):
+            workflow_backend = persistence_policy.stage_one_backend(
+                _requested_workflow_backend(args),
+                attachment.sha256,
+            )
+            tracker = (
+                _workflow_tracker(args, backend=workflow_backend)
+                if args.workflow_tracking
+                else None
+            )
+            if workflow_backend == "sqlite" and _requested_workflow_backend(args) == "supabase":
+                _progress(
+                    args,
+                    f"Keeping non-allowlisted referral local: {attachment.filename}",
+                )
             if tracker is not None:
                 tracker.discover(attachment)
             job_options = dict(options)
+            job_options["workflow_database_backend"] = workflow_backend
+            job_options["synthetic_persistence_allowed"] = persistence_policy.permits(
+                attachment.sha256
+            )
             if attachment.sender:
                 job_options["source_sender"] = attachment.sender
             if attachment.conversation_id:

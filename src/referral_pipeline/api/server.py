@@ -17,12 +17,15 @@ from Outlook.graph import OutlookGraphClient, OutlookGraphConfig, OutlookGraphEr
 from referral_pipeline.api.intake_inbox import IntakeInboxFeed
 from referral_pipeline.live_monitor import LiveInboxMonitor, LiveInboxMonitorConfig
 from referral_pipeline.monitoring.store import create_workflow_store
+from referral_pipeline.workflow import WorkflowExecutionService
+from referral_pipeline.workflow.service import WorkflowExecutionError
 
 
 class IntakeApiServer(ThreadingHTTPServer):
     feed: IntakeInboxFeed
     monitor: LiveInboxMonitor
     default_limit: int
+    workflow_execution: WorkflowExecutionService
 
     def server_close(self) -> None:
         self.monitor.stop(wait=False)
@@ -39,6 +42,16 @@ class IntakeApiHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/intake/monitor":
             self._send_json(HTTPStatus.OK, self.server.monitor.status())
+            return
+        if parsed.path == "/api/workflow/assignments":
+            query = parse_qs(parsed.query)
+            limit = _parse_workflow_limit(query.get("limit", ["100"])[0])
+            self._send_json(HTTPStatus.OK, self.server.workflow_execution.assignments(limit=limit))
+            return
+        if parsed.path == "/api/workflow/handoffs":
+            query = parse_qs(parsed.query)
+            limit = _parse_workflow_limit(query.get("limit", ["100"])[0])
+            self._send_json(HTTPStatus.OK, self.server.workflow_execution.handoffs(limit=limit))
             return
         if parsed.path.startswith("/api/intake/inbox/pdf/"):
             referral_id = parsed.path.rsplit("/", 1)[-1]
@@ -95,7 +108,15 @@ class IntakeApiHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API
         parsed = urlparse(self.path)
-        if parsed.path not in {"/api/intake/monitor/start", "/api/intake/monitor/stop"}:
+        monitor_control = parsed.path in {
+            "/api/intake/monitor/start",
+            "/api/intake/monitor/stop",
+        }
+        assignment_confirm = (
+            parsed.path.startswith("/api/workflow/assignments/")
+            and parsed.path.endswith("/confirm")
+        )
+        if not monitor_control and not assignment_confirm:
             self._send_json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
             return
         if not self._is_local_control_request():
@@ -108,10 +129,25 @@ class IntakeApiHandler(BaseHTTPRequestHandler):
                 {"error": "application_json_required"},
             )
             return
-        if parsed.path.endswith("/start"):
-            payload = self.server.monitor.start()
-        else:
-            payload = self.server.monitor.stop(wait=False)
+        if monitor_control:
+            if parsed.path.endswith("/start"):
+                payload = self.server.monitor.start()
+            else:
+                payload = self.server.monitor.stop(wait=False)
+            self._send_json(HTTPStatus.OK, payload)
+            return
+
+        case_id = parsed.path.split("/")[-2]
+        try:
+            body = self._read_json_object()
+            payload = self.server.workflow_execution.confirm_assignment(
+                case_id,
+                case_manager_email=str(body.get("case_manager_email") or ""),
+                decided_by=str(body.get("decided_by") or "demo-operator"),
+            )
+        except (ValueError, WorkflowExecutionError) as error:
+            self._send_json(HTTPStatus.CONFLICT, {"error": str(error)})
+            return
         self._send_json(HTTPStatus.OK, payload)
 
     def _is_local_control_request(self) -> bool:
@@ -120,29 +156,56 @@ class IntakeApiHandler(BaseHTTPRequestHandler):
             return True
         return urlparse(origin).hostname in {"127.0.0.1", "localhost", "::1"}
 
+    def _read_json_object(self) -> dict[str, Any]:
+        length = int(self.headers.get("Content-Length") or "0")
+        if length > 16_384:
+            raise ValueError("request body is too large")
+        payload = json.loads(self.rfile.read(length) or b"{}")
+        if not isinstance(payload, dict):
+            raise ValueError("request body must be a JSON object")
+        return payload
+
     def log_message(self, format: str, *args: Any) -> None:
         print(f"[intake-api] {self.address_string()} - {format % args}")
 
     def _send_json(self, status: HTTPStatus, payload: dict[str, Any]) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-store")
-        self.send_header("X-Content-Type-Options", "nosniff")
-        self.end_headers()
-        self.wfile.write(body)
+        self._send_body(
+            status,
+            body,
+            content_type="application/json; charset=utf-8",
+        )
 
     def _send_pdf(self, filename: str, content: bytes) -> None:
         safe_name = filename.replace('"', "").replace("\r", "").replace("\n", "")
-        self.send_response(HTTPStatus.OK)
-        self.send_header("Content-Type", "application/pdf")
-        self.send_header("Content-Length", str(len(content)))
-        self.send_header("Content-Disposition", f'inline; filename="{safe_name}"')
-        self.send_header("Cache-Control", "no-store")
-        self.send_header("X-Content-Type-Options", "nosniff")
-        self.end_headers()
-        self.wfile.write(content)
+        self._send_body(
+            HTTPStatus.OK,
+            content,
+            content_type="application/pdf",
+            content_disposition=f'inline; filename="{safe_name}"',
+        )
+
+    def _send_body(
+        self,
+        status: HTTPStatus,
+        body: bytes,
+        *,
+        content_type: str,
+        content_disposition: str | None = None,
+    ) -> None:
+        try:
+            self.send_response(status)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(body)))
+            if content_disposition:
+                self.send_header("Content-Disposition", content_disposition)
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.end_headers()
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionAbortedError, ConnectionResetError):
+            # Browser polling aborts superseded requests; this is not an API failure.
+            self.close_connection = True
 
 
 def create_server(
@@ -164,6 +227,7 @@ def create_server(
     partner_acknowledgement: bool = False,
     stage_one_drk_check: bool = False,
     review_recipient: str | None = None,
+    workflow_execution: WorkflowExecutionService | None = None,
 ) -> IntakeApiServer:
     load_dotenv()
     if host not in {"127.0.0.1", "localhost", "::1"}:
@@ -174,13 +238,12 @@ def create_server(
     effective_backend = (
         workflow_database_backend or os.getenv("WORKFLOW_DATABASE_BACKEND") or "sqlite"
     ).strip().casefold()
-    effective_sqlite_path = None
-    if effective_backend == "sqlite":
-        effective_sqlite_path = Path(
-            workflow_sqlite_path
-            or os.getenv("WORKFLOW_SQLITE_PATH")
-            or effective_data_root / "workflow-monitor.sqlite"
-        )
+    # Supabase runs still need a durable local fallback for non-allowlisted PDFs.
+    effective_sqlite_path = Path(
+        workflow_sqlite_path
+        or os.getenv("WORKFLOW_SQLITE_PATH")
+        or effective_data_root / "workflow-monitor.sqlite"
+    )
     server = IntakeApiServer((host, port), IntakeApiHandler)
     server.default_limit = min(max(max_messages, 1), 25)
     server.monitor = monitor or LiveInboxMonitor(
@@ -199,13 +262,15 @@ def create_server(
             review_recipient=review_recipient or os.getenv("REVIEW_RECIPIENT_EMAIL"),
         )
     )
+    workflow_store = create_workflow_store(
+        backend=effective_backend,
+        sqlite_path=effective_sqlite_path,
+    )
+    server.workflow_execution = workflow_execution or WorkflowExecutionService(workflow_store)
     server.feed = feed or IntakeInboxFeed(
         lambda: OutlookGraphClient(OutlookGraphConfig.from_environment()),
         cache_ttl_seconds=cache_ttl_seconds,
-        workflow_store=create_workflow_store(
-            backend=effective_backend,
-            sqlite_path=effective_sqlite_path,
-        ),
+        workflow_store=workflow_store,
     )
     return server
 
@@ -299,6 +364,16 @@ def _parse_limit(value: str) -> int:
         raise ValueError("limit must be an integer") from error
     if not 1 <= limit <= 25:
         raise ValueError("limit must be between 1 and 25")
+    return limit
+
+
+def _parse_workflow_limit(value: str) -> int:
+    try:
+        limit = int(value)
+    except ValueError as error:
+        raise ValueError("limit must be an integer") from error
+    if not 1 <= limit <= 500:
+        raise ValueError("limit must be between 1 and 500")
     return limit
 
 

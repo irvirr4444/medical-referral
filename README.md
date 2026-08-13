@@ -279,11 +279,13 @@ deliberately required before any Master Sheet item can be created. Do not apply
 against WCW's live board without approval because item-creation automations fan out
 to related boards.
 
-For the email-based human review path, configure Microsoft Graph `Mail.Read` plus
-`Mail.Send` and backend Supabase credentials. `REVIEW_RECIPIENT_EMAIL` is only an
-optional override because review replies normally go to the original sender:
+For the email-based human review path, configure Microsoft Graph application
+`Mail.Read` plus `Mail.Send` and backend Supabase credentials.
+`REVIEW_RECIPIENT_EMAIL` is required and must be an internal intake-team address;
+the detailed referral summary never falls back to the original sender:
 
 ```powershell
+python run_pipeline.py stage-one-doctor --live
 python run_pipeline.py outlook --send-review --max-messages 25
 python run_pipeline.py retries
 python run_pipeline.py failures
@@ -300,9 +302,10 @@ On Render, prefer the continuous background worker in `render.yaml` /
 `run_worker.py` so SQLite state and PDF artifacts live on a persistent disk.
 
 The review summary is rendered from the canonical extraction and sent to the
-original sender as a reply on the source Outlook thread. Unreplied threads are
-eligible for intake; transient Anthropic, Outlook, and Monday failures are queued
-as `pending_retry` and drained by `retries`. The sender can reply naturally, such as `Confirm`.
+configured internal intake-team reviewer in the source Outlook conversation.
+Unreplied threads are eligible for intake; transient Anthropic, Outlook, and Monday
+failures are queued as `pending_retry` and drained by `retries`. The reviewer records
+the outreach result with `Confirmed`, `No answer`, or `Information missing`.
 Ambiguous wording is classified with OpenAI, while deterministic sender, thread,
 message-time, seven-required-field, and artifact checks remain mandatory. The
 default approval command only classifies replies; `--dry-run` validates without

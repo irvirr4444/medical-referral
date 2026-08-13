@@ -636,12 +636,12 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def build_review_store(path: str | Path):
+def build_review_store(path: str | Path, *, allow_supabase: bool = True):
     """Use Supabase when configured; retain SQLite for offline tests and tools."""
     from referral_pipeline.review.supabase_store import SupabaseReviewStore
 
     backend = os.getenv("REFERRAL_REVIEW_STORE", "").strip().casefold()
-    if backend == "sqlite":
+    if backend == "sqlite" or not allow_supabase:
         return ReviewStore(path)
     supabase = SupabaseReviewStore.from_environment()
     if backend == "supabase" and supabase is None:

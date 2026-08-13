@@ -14,7 +14,6 @@ import {
   drkDraftWithAssignedProvider,
   mondayRecordForPatient,
   mondayRecordWithAssignedProvider,
-  referralSourceNotification,
 } from './fixtures/caseManagerAssignments'
 import {
   eodSchedulingCheckForPatient,
@@ -50,6 +49,8 @@ import {
 import { mergeLiveInboxFeed, isLiveInboxRow } from './liveInbox/feed'
 import { LiveInboxStatus } from './liveInbox/LiveInboxStatus'
 import { useLiveInbox } from './liveInbox/useLiveInbox'
+import { mergeWorkflowFeed, isLiveWorkflowRow } from './liveWorkflow/feed'
+import { useWorkflowExecution } from './liveWorkflow/useWorkflowExecution'
 import type { FlowOpsPageId } from '../../data/flowOps'
 import type { PatientStepStatus } from './ops/types'
 import type { AutomationMicrostep } from './types'
@@ -135,6 +136,7 @@ export function StagePatientSteps({
   const [confirmedAssignments, setConfirmedAssignments] = useState<
     Record<string, boolean>
   >({})
+  const [workflowActionError, setWorkflowActionError] = useState<string | null>(null)
   const [latestAssignmentNotification, setLatestAssignmentNotification] =
     useState<{ patientId: string; occurredAt: string } | null>(null)
   const [assignmentNotificationUnread, setAssignmentNotificationUnread] =
@@ -178,6 +180,9 @@ export function StagePatientSteps({
     useState<Record<string, boolean>>({})
   const statusMenuRef = useRef<HTMLDivElement>(null)
   const liveInbox = useLiveInbox(stageId === 'intake')
+  const liveWorkflow = useWorkflowExecution(
+    stageId === 'assignment' || stageId === 'handoff',
+  )
 
   useEffect(() => {
     setSelectedStepId(microsteps[0]?.id ?? '')
@@ -187,6 +192,7 @@ export function StagePatientSteps({
     setPartnerConfirmed({})
     setSelectedCaseManagers({})
     setConfirmedAssignments({})
+    setWorkflowActionError(null)
     setLatestAssignmentNotification(null)
     setAssignmentNotificationUnread(false)
     setShowUnreadAssignmentMessage(false)
@@ -241,19 +247,34 @@ export function StagePatientSteps({
     const demoDays = selectedStepId
       ? feedForStep(stageId, selectedStepId, { patientQuery, statuses })
       : []
-    if (stageId !== 'intake') return demoDays
-    return mergeLiveInboxFeed({
-      demoDays,
-      referrals: liveInbox.referrals,
-      drkDuplicateCheckEnabled:
-        liveInbox.monitor?.safety.drk_duplicate_check,
-      patientQuery,
-      statuses,
-      selectedStepId,
-    })
+    if (stageId === 'intake') {
+      return mergeLiveInboxFeed({
+        demoDays,
+        referrals: liveInbox.referrals,
+        drkDuplicateCheckEnabled:
+          liveInbox.monitor?.safety.drk_duplicate_check,
+        patientQuery,
+        statuses,
+        selectedStepId,
+      })
+    }
+    if (stageId === 'assignment' || stageId === 'handoff') {
+      return mergeWorkflowFeed({
+        demoDays,
+        assignments: liveWorkflow.assignments,
+        handoffs: liveWorkflow.handoffs,
+        stageId,
+        selectedStepId,
+        patientQuery,
+        statuses,
+      })
+    }
+    return demoDays
   }, [
     liveInbox.monitor?.safety.drk_duplicate_check,
     liveInbox.referrals,
+    liveWorkflow.assignments,
+    liveWorkflow.handoffs,
     patientQuery,
     selectedStepId,
     stageId,
@@ -635,7 +656,9 @@ export function StagePatientSteps({
     <div className="stage-ops-steps" aria-label="Patient steps">
       <aside className="stage-ops-steps__rail">
         <div className="stage-ops-steps__rail-copy">
-          <h2>{microsteps.length} steps</h2>
+          <h2>
+            {microsteps.length} {microsteps.length === 1 ? 'step' : 'steps'}
+          </h2>
           <p className="muted">Select a step to see patient updates.</p>
         </div>
         <MicrostepList
@@ -904,34 +927,41 @@ export function StagePatientSteps({
                           }
                         : undefined)
                     const assignmentSuggestion =
-                      selectedStepId === 'determine-owner'
+                      selectedStepId === 'determine-owner' && !isLiveWorkflowRow(row)
                         ? suggestedCaseManager
                         : undefined
+                    const liveAssignment = isLiveWorkflowRow(row)
+                      ? row.assignment
+                      : undefined
+                    const liveHandoff = isLiveWorkflowRow(row)
+                      ? row.handoff
+                      : undefined
+                    const caseManagerOptions = liveAssignment
+                      ? liveWorkflow.caseManagers
+                      : CASE_MANAGER_OPTIONS
                     const assignmentConfirmed =
+                      liveAssignment?.status === 'completed' ||
                       Boolean(confirmedAssignments[row.patientId])
                     const selectedCaseManagerEmail =
                       selectedCaseManagers[row.patientId] ??
-                      suggestedCaseManager.email
+                      liveAssignment?.assigned_case_manager?.email ??
+                      liveAssignment?.recommended_assignee ??
+                      (liveAssignment ? '' : suggestedCaseManager.email)
                     const selectedCaseManager =
-                      CASE_MANAGER_OPTIONS.find(
+                      caseManagerOptions.find(
                         (manager) =>
                           manager.email === selectedCaseManagerEmail,
-                      ) ?? suggestedCaseManager
+                      ) ?? (liveAssignment ? undefined : suggestedCaseManager)
                     const notification =
-                      selectedStepId === 'assign-owner'
+                      selectedCaseManager &&
+                      ((selectedStepId === 'assign-owner' && !liveAssignment) ||
+                        (stageId === 'handoff' &&
+                          selectedStepId === 'notify-referral-source' &&
+                          !liveHandoff))
                         ? caseManagerNotification(
                             row.patientId,
                             row.patientName,
                             selectedCaseManager,
-                          )
-                        : undefined
-                    const referralNotification =
-                      stageId === 'handoff' &&
-                      selectedStepId === 'notify-referral-source'
-                        ? referralSourceNotification(
-                            row.patientId,
-                            row.patientName,
-                            canonical,
                           )
                         : undefined
                     const recordsHandoff =
@@ -947,7 +977,8 @@ export function StagePatientSteps({
                     const mondayRecord = (() => {
                       if (
                         stageId === 'handoff' &&
-                        selectedStepId === 'create-monday-record'
+                        selectedStepId === 'create-monday-record' &&
+                        !liveHandoff
                       ) {
                         return mondayRecordForPatient(
                           row.patientId,
@@ -1008,7 +1039,8 @@ export function StagePatientSteps({
                     const drkDraft = (() => {
                       if (
                         stageId === 'handoff' &&
-                        selectedStepId === 'create-update-drk'
+                        selectedStepId === 'create-update-drk' &&
+                        !liveHandoff
                       ) {
                         return drkDraftForPatient(
                           row.patientId,
@@ -1077,13 +1109,13 @@ export function StagePatientSteps({
                                 : 'DRK chart draft needs review'
                               : mondayRecord
                               ? 'Monday.com record created'
-                              : referralNotification
-                              ? `Referral source notified · ${referralNotification.ccName} CCd`
+                              : stageId === 'handoff' && notification
+                              ? `${notification.managerName} notified`
                               : selectedStepId === 'assign-owner'
-                              ? `${selectedCaseManager.name} notified`
+                              ? `${selectedCaseManager?.name ?? 'Case manager'} notified`
                               : selectedStepId === 'determine-owner'
                                 ? assignmentConfirmed
-                                  ? `${selectedCaseManager.name} confirmed as Case Manager`
+                                  ? `${selectedCaseManager?.name ?? 'Case manager'} confirmed as Case Manager`
                                   : 'Case Manager needs to be confirmed'
                               : selectedStepId === 'check-scheduling-status' &&
                                   eodSchedulingCheck
@@ -1236,11 +1268,12 @@ export function StagePatientSteps({
                               : undefined
                           }
                           assignmentSuggestion={assignmentSuggestion}
-                          caseManagerOptions={CASE_MANAGER_OPTIONS}
+                          assignmentManualSelection={Boolean(liveAssignment)}
+                          caseManagerOptions={caseManagerOptions}
                           selectedCaseManagerEmail={selectedCaseManagerEmail}
                           isAssignmentConfirmed={assignmentConfirmed}
                           onCaseManagerChange={
-                            assignmentSuggestion
+                            assignmentSuggestion || liveAssignment
                               ? (email) =>
                                   setSelectedCaseManagers((current) => ({
                                     ...current,
@@ -1249,8 +1282,25 @@ export function StagePatientSteps({
                               : undefined
                           }
                           onConfirmAssignment={
-                            assignmentSuggestion
+                            assignmentSuggestion || liveAssignment
                               ? () => {
+                                  if (liveAssignment) {
+                                    if (!selectedCaseManagerEmail) return
+                                    setWorkflowActionError(null)
+                                    void liveWorkflow
+                                      .confirm(
+                                        liveAssignment.case_id,
+                                        selectedCaseManagerEmail,
+                                      )
+                                      .catch((error) =>
+                                        setWorkflowActionError(
+                                          error instanceof Error
+                                            ? error.message
+                                            : 'Assignment could not be confirmed.',
+                                        ),
+                                      )
+                                    return
+                                  }
                                   setConfirmedAssignments((current) => ({
                                     ...current,
                                     [row.patientId]: true,
@@ -1263,8 +1313,8 @@ export function StagePatientSteps({
                                 }
                               : undefined
                           }
+                          actionError={liveAssignment ? workflowActionError : null}
                           caseManagerNotification={notification}
-                          referralNotification={referralNotification}
                           mondayRecord={mondayRecord}
                           drkDraft={drkDraft}
                           providerRecommendation={recommendedProvider}

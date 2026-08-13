@@ -269,10 +269,12 @@ def _run_intake_cycle(
     argv.extend(("--output-dir", str(run_dir), "--state-db", str(data_root / "state.sqlite")))
     if workflow_database_backend is not None:
         argv.extend(("--workflow-database-backend", workflow_database_backend))
-    if workflow_sqlite_path is not None:
-        argv.extend(("--workflow-sqlite-path", str(workflow_sqlite_path)))
-    elif workflow_database_backend != "supabase":
-        argv.extend(("--workflow-sqlite-path", str(data_root / "workflow-monitor.sqlite")))
+    argv.extend(
+        (
+            "--workflow-sqlite-path",
+            str(workflow_sqlite_path or data_root / "workflow-monitor.sqlite"),
+        )
+    )
     started = time.perf_counter()
     try:
         exit_code = run_main(argv)

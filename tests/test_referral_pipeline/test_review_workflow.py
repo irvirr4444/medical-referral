@@ -181,7 +181,7 @@ def test_partner_contact_reply_completes_stage_one_without_destination_execution
                 subject="Re: referral follow-up",
                 received_at="2099-08-12T10:00:00+00:00",
                 conversation_id="conversation-1",
-                text="Confirm",
+                text="No answer, left voicemail",
             )
         ]
     )
@@ -193,13 +193,25 @@ def test_partner_contact_reply_completes_stage_one_without_destination_execution
     ).poll()
 
     assert result["partner_contact_confirmations"] == ["review_partner_contact"]
+    assert result["partner_contact_outcomes"] == [
+        {"review_id": "review_partner_contact", "outcome": "not_reached"}
+    ]
     assert result["accepted_confirmations"] == []
     assert result["executed"] == []
-    assert workflow_store.workflow_case(case.case_id).status == "completed"
-    assert any(
-        event.event_type == "partner_contact_confirmed"
+    updated_case = workflow_store.workflow_case(case.case_id)
+    assert updated_case is not None
+    assert updated_case.current_stage == 2
+    assert updated_case.status == "needs_attention"
+    work_items = workflow_store.list_work_items(case_id=case.case_id, stage=2)
+    assert len(work_items) == 1
+    assert work_items[0].owner_role == "intake_team"
+    assert work_items[0].status == "blocked"
+    event = next(
+        event
         for event in workflow_store.list_events(case.case_id)
+        if event.event_type == "partner_contact_confirmed"
     )
+    assert event.details["contact_outcome"] == "not_reached"
 
 
 def test_execute_creates_monday_once_and_leaves_drk_pending(tmp_path, monkeypatch) -> None:

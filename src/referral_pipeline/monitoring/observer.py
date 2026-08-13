@@ -28,7 +28,13 @@ def record_lifecycle_event(
     event_key: str,
     details: dict[str, Any] | None = None,
     patient_link: PatientLink | None = None,
+    allow_remote_persistence: bool = True,
 ) -> None:
+    if (
+        not allow_remote_persistence
+        and os.getenv("WORKFLOW_DATABASE_BACKEND", "").strip().casefold() == "supabase"
+    ):
+        return
     try:
         store = configured_store()
         if store is None:

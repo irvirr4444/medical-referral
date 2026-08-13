@@ -47,7 +47,7 @@ class IntakeInboxFeed:
                 and now - self._cached_at < self._cache_ttl_seconds
             )
             if cache_valid:
-                return _with_limited_referrals(self._cached_payload, safe_limit)
+                return self._with_current_workflow(self._cached_payload, safe_limit)
 
             attachments = self._client_factory().list_inbox_pdf_metadata(
                 max_messages=safe_limit,
@@ -80,6 +80,23 @@ class IntakeInboxFeed:
             self._cached_payload = payload
             self._references = references
             return payload
+
+    def _with_current_workflow(
+        self,
+        payload: dict[str, Any],
+        limit: int,
+    ) -> dict[str, Any]:
+        """Reuse cached Outlook metadata while refreshing fast workflow state."""
+        referrals = []
+        for cached in list(payload.get("referrals") or [])[:limit]:
+            referral_id = str(cached.get("id") or "")
+            metadata = {
+                key: value
+                for key, value in cached.items()
+                if key not in {"status", "case_id", "patient_label", "steps"}
+            }
+            referrals.append({**metadata, **self._workflow_projection(referral_id)})
+        return {**payload, "referrals": referrals}
 
     def read_pdf(self, referral_id: str) -> tuple[str, bytes]:
         with self._lock:
@@ -122,7 +139,7 @@ class IntakeInboxFeed:
             return {"status": "pending_extraction", "case_id": None, "steps": {}}
         events = self._workflow_store.list_events(case.case_id, limit=100)
         return {
-            "status": case.status,
+            "status": "completed" if case.current_stage > 1 else case.status,
             "case_id": case.case_id,
             "patient_label": case.patient_label,
             "steps": _step_projection(events),
@@ -158,6 +175,11 @@ def _step_projection(events: list[Any]) -> dict[str, dict[str, Any]]:
             "Referral partner acknowledgement sent",
             "done",
         ),
+        "stage_one_retry_scheduled": (
+            "extract-and-verify",
+            "Stage 1 dependency retry scheduled",
+            "current",
+        ),
         "stage_one_failed": ("extract-and-verify", "Stage 1 needs attention", "blocked"),
     }
     steps: dict[str, dict[str, Any]] = {}
@@ -166,11 +188,75 @@ def _step_projection(events: list[Any]) -> dict[str, dict[str, Any]]:
         if projected is None:
             continue
         step_id, summary, status = projected
+        details = dict(event.details or {})
+        if event.event_type in {"monday_duplicate_checked", "drk_duplicate_checked"}:
+            summary, details = _duplicate_check_presentation(event.event_type, details)
+        elif event.event_type == "partner_contact_confirmed":
+            summary, details = _partner_contact_presentation(details)
+        elif event.event_type == "partner_contact_confirmation_requested":
+            details = {
+                "assigned_to": details.get("recipient"),
+            }
         steps[step_id] = {
             "step_id": step_id,
             "status": status,
             "summary": summary,
             "occurred_at": event.occurred_at.isoformat(),
-            "details": event.details,
+            "details": details,
         }
     return steps
+
+
+def _partner_contact_presentation(
+    details: dict[str, Any],
+) -> tuple[str, dict[str, Any]]:
+    outcome = str(details.get("contact_outcome") or "reached")
+    presentations = {
+        "reached": ("Referral partner reached", "Reached"),
+        "not_reached": ("Referral partner not reached", "Not reached"),
+        "information_still_missing": (
+            "Referral information still missing",
+            "Information still missing",
+        ),
+    }
+    summary, label = presentations.get(
+        outcome,
+        ("Referral partner follow-up recorded", "Follow-up recorded"),
+    )
+    return summary, {
+        "confirmed_by": details.get("confirmed_by"),
+        "contact_outcome": label,
+    }
+
+
+def _duplicate_check_presentation(
+    event_type: str,
+    details: dict[str, Any],
+) -> tuple[str, dict[str, Any]]:
+    code = str(details.get("status") or "unknown")
+    is_monday = event_type == "monday_duplicate_checked"
+    system = "Monday.com" if is_monday else "DRK"
+    labels = {
+        "no_candidates_found": "No matching patient found",
+        "clear_to_create": "No matching chart found",
+        "duplicate_found": "Possible existing record found",
+        "manual_review_required": "Manual identity review required",
+        "skipped_missing_identity": "Check could not run because identity is incomplete",
+        "disabled": "Check disabled",
+    }
+    label = labels.get(code, "Check completed")
+    if code in {"no_candidates_found", "clear_to_create"}:
+        summary = f"No matching {system} {'patient' if is_monday else 'chart'} found"
+    elif code == "duplicate_found":
+        summary = f"Possible existing {system} {'patient' if is_monday else 'chart'} found"
+    else:
+        summary = f"{system} identity check needs review" if code != "disabled" else f"{system} check disabled"
+
+    presented = {**details, "status_code": code, "status": label}
+    reason = str(details.get("reason") or "")
+    if reason:
+        presented["reason_code"] = reason
+        presented["reason"] = {
+            "stable_zero_search_results": "Search completed with no matching records",
+        }.get(reason, "See technical details for the recorded check result")
+    return summary, presented
