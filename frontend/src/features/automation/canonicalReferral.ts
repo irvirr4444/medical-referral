@@ -42,6 +42,12 @@ export interface CanonicalPhone {
   type: string | null
 }
 
+export interface CanonicalEmergencyContact {
+  name: CanonicalName
+  relationship: string | null
+  phone: string | null
+}
+
 export interface CanonicalPatient {
   name: CanonicalName
   date_of_birth: string | null
@@ -54,7 +60,7 @@ export interface CanonicalPatient {
   phones: CanonicalPhone[]
   email: string | null
   address: CanonicalAddress
-  emergency_contact: unknown | null
+  emergency_contact: CanonicalEmergencyContact | null
 }
 
 export interface CanonicalOrganization {
@@ -78,6 +84,13 @@ export interface CanonicalHomeHealthOrHospice {
   palliative_care: boolean | null
 }
 
+export interface CanonicalAdmission {
+  admission_date: string | null
+  facility: CanonicalOrganization
+  place_of_service: string | null
+  medicare_admission: boolean | null
+}
+
 export interface CanonicalDiagnosis {
   code: string | null
   description: string | null
@@ -86,12 +99,32 @@ export interface CanonicalDiagnosis {
   status: string | null
 }
 
+export interface CanonicalMedication {
+  name: string | null
+  strength: string | null
+  dose_form: string | null
+  directions: string | null
+  status: string | null
+  prescribed_date: string | null
+  prescriber: string | null
+  days_supply: number | null
+  quantity: string | null
+  refills: number | null
+}
+
+export interface CanonicalAllergy {
+  name: string | null
+  reaction: string | null
+  treatment: string | null
+  status: string | null
+}
+
 export interface CanonicalClinical {
   summary: string | null
   wound_order_included: boolean | null
   diagnoses: CanonicalDiagnosis[]
-  medications: unknown[]
-  allergies: unknown[]
+  medications: CanonicalMedication[]
+  allergies: CanonicalAllergy[]
   diagnoses_section_present: boolean | null
   medications_section_present: boolean | null
   allergies_section_present: boolean | null
@@ -115,6 +148,12 @@ export interface CanonicalInsurance {
   subscriber_relationship: string | null
 }
 
+export interface CanonicalRequestedService {
+  service: string | null
+  frequency: string | null
+  instructions: string | null
+}
+
 export interface CanonicalFieldQuality {
   status: FieldStatus
   confidence: Confidence
@@ -130,10 +169,10 @@ export interface CanonicalReferral {
   patient: CanonicalPatient
   referral_source: CanonicalReferralSource
   home_health_or_hospice: CanonicalHomeHealthOrHospice
-  admission: unknown
+  admission: CanonicalAdmission
   clinical: CanonicalClinical
   insurances: CanonicalInsurance[]
-  requested_services: unknown[]
+  requested_services: CanonicalRequestedService[]
   field_quality: Record<string, CanonicalFieldQuality>
   warnings: string[]
 }

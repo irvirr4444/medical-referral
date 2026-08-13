@@ -10,6 +10,7 @@ export interface EodSchedulingCheckRecord {
   appointmentDate: string
   scheduledComplete: string
   overdue: boolean
+  cmFollowUpSent?: boolean
   escalatedToManagement?: boolean
 }
 
@@ -71,6 +72,105 @@ const EOD_SCHEDULING_CHECKS: Record<string, EodSchedulingCheckRecord> = {
     appointmentDate: 'August 14, 2026',
     scheduledComplete: 'No',
     overdue: true,
+  },
+  'marcus-feldman': {
+    providerName: 'Daniel Rowady',
+    providerSelectedAt: 'August 11, 2026 at 1:00 PM',
+    hoursSinceProviderSelected: 28,
+    scheduledStatus: 'Not Scheduled',
+    appointmentDate: '',
+    scheduledComplete: 'No',
+    overdue: true,
+  },
+  'david-ruiz': {
+    providerName: 'Aaron Currie',
+    providerSelectedAt: 'August 10, 2026 at 4:00 PM',
+    hoursSinceProviderSelected: 41,
+    scheduledStatus: 'Not Scheduled',
+    appointmentDate: '',
+    scheduledComplete: 'No',
+    overdue: true,
+  },
+  'patricia-johnson': {
+    providerName: 'Aaron Currie',
+    providerSelectedAt: 'August 10, 2026 at 2:00 PM',
+    hoursSinceProviderSelected: 40,
+    scheduledStatus: 'Scheduled',
+    appointmentDate: 'August 13, 2026',
+    scheduledComplete: 'Yes',
+    overdue: false,
+    cmFollowUpSent: true,
+  },
+  'irene-cho': {
+    providerName: 'Daniel Rowady',
+    providerSelectedAt: 'August 11, 2026 at 9:00 AM',
+    hoursSinceProviderSelected: 32,
+    scheduledStatus: 'Scheduled',
+    appointmentDate: 'August 12, 2026',
+    scheduledComplete: 'Yes',
+    overdue: false,
+    cmFollowUpSent: true,
+  },
+  'betty-hayes': {
+    providerName: 'Charles Cho',
+    providerSelectedAt: 'August 9, 2026 at 8:00 AM',
+    hoursSinceProviderSelected: 62,
+    scheduledStatus: 'Not Scheduled',
+    appointmentDate: '',
+    scheduledComplete: 'No',
+    overdue: true,
+    escalatedToManagement: true,
+  },
+  'walter-grant': {
+    providerName: 'Aaron Currie',
+    providerSelectedAt: 'August 8, 2026 at 10:00 AM',
+    hoursSinceProviderSelected: 80,
+    scheduledStatus: 'Not Scheduled',
+    appointmentDate: 'August 14, 2026',
+    scheduledComplete: 'No',
+    overdue: true,
+    escalatedToManagement: true,
+  },
+  'arthur-kim': {
+    providerName: 'Daniel Rowady',
+    providerSelectedAt: 'August 9, 2026 at 3:00 PM',
+    hoursSinceProviderSelected: 52,
+    scheduledStatus: 'Scheduled',
+    appointmentDate: 'August 13, 2026',
+    scheduledComplete: 'Yes',
+    overdue: false,
+    cmFollowUpSent: true,
+    escalatedToManagement: true,
+  },
+  'gloria-bennett': {
+    providerName: 'Charles Cho',
+    providerSelectedAt: 'August 9, 2026 at 6:00 PM',
+    hoursSinceProviderSelected: 58,
+    scheduledStatus: 'Not Scheduled',
+    appointmentDate: '',
+    scheduledComplete: 'No',
+    overdue: true,
+    escalatedToManagement: true,
+  },
+  'dorothy-lane': {
+    providerName: 'Aaron Currie',
+    providerSelectedAt: 'August 9, 2026 at 1:00 PM',
+    hoursSinceProviderSelected: 67,
+    scheduledStatus: 'Not Scheduled',
+    appointmentDate: 'August 15, 2026',
+    scheduledComplete: 'No',
+    overdue: true,
+    escalatedToManagement: true,
+  },
+  'margaret-ellis': {
+    providerName: 'Daniel Rowady',
+    providerSelectedAt: 'August 8, 2026 at 7:00 PM',
+    hoursSinceProviderSelected: 71,
+    scheduledStatus: 'Not Scheduled',
+    appointmentDate: '',
+    scheduledComplete: 'No',
+    overdue: true,
+    escalatedToManagement: true,
   },
   'anita-gomez': {
     providerName: 'Daniel Rowady',
@@ -171,6 +271,46 @@ export function eodIsUnscheduled(record: EodSchedulingCheckRecord): boolean {
   return record.overdue
 }
 
+export type EodSchedulingBucket =
+  | 'scheduled'
+  | 'unscheduled-over-48'
+  | 'unscheduled-under-48'
+
+export function eodSchedulingBucket(
+  record: EodSchedulingCheckRecord,
+): EodSchedulingBucket {
+  if (record.scheduledStatus === 'Scheduled' && !record.overdue) {
+    return 'scheduled'
+  }
+  if (record.hoursSinceProviderSelected >= EOD_ESCALATE_HOURS) {
+    return 'unscheduled-over-48'
+  }
+  return 'unscheduled-under-48'
+}
+
+export function eodSchedulingStatusLabel(
+  record: EodSchedulingCheckRecord,
+): string {
+  switch (eodSchedulingBucket(record)) {
+    case 'scheduled':
+      return 'Scheduled'
+    case 'unscheduled-over-48':
+      return 'Not scheduled after 48h'
+    case 'unscheduled-under-48':
+      return 'Not scheduled less than 48h'
+  }
+}
+
+export function eodSchedulingHoursMeta(
+  record: EodSchedulingCheckRecord,
+): string {
+  const hours = `${record.hoursSinceProviderSelected} hours · provider selected ${record.providerSelectedAt}`
+  if (record.appointmentDate) {
+    return `${hours} · appointment ${record.appointmentDate}`
+  }
+  return hours
+}
+
 export function eodCmAutoNotifyDue(record: EodSchedulingCheckRecord): boolean {
   return (
     record.overdue &&
@@ -195,7 +335,11 @@ export function eodFollowUpEligible(
   record: EodSchedulingCheckRecord,
   manualCmFollowUp = false,
 ): boolean {
-  return eodCmAutoNotifyDue(record) || manualCmFollowUp
+  return (
+    manualCmFollowUp ||
+    Boolean(record.cmFollowUpSent) ||
+    eodCmAutoNotifyDue(record)
+  )
 }
 
 export function eodCmFollowUpSummary(
@@ -212,6 +356,10 @@ export function eodCmFollowUpMessage(
   record: EodSchedulingCheckRecord,
   patientName: string,
 ): string {
+  if (eodSchedulingBucket(record) === 'scheduled') {
+    const when = record.appointmentDate ? ` for ${record.appointmentDate}` : ''
+    return `${patientName} is now scheduled${when} with ${record.providerName}. Case manager confirmed after the Teams follow-up.`
+  }
   return `${patientName} is still not scheduled ${record.hoursSinceProviderSelected} hours after ${record.providerName} was selected. Can you confirm scheduling status and next steps?`
 }
 
@@ -219,21 +367,27 @@ export function eodEscalationEligible(
   record: EodSchedulingCheckRecord,
   escalatedToManagement = false,
 ): boolean {
-  return (
-    record.overdue &&
-    (escalatedToManagement || Boolean(record.escalatedToManagement))
-  )
+  return escalatedToManagement || Boolean(record.escalatedToManagement)
 }
 
 export function eodEscalationSummary(record: EodSchedulingCheckRecord): string {
+  if (eodSchedulingBucket(record) === 'scheduled') {
+    return 'Escalated to management · now scheduled'
+  }
   return record.escalatedToManagement
     ? 'Escalated to management · still unresolved'
     : 'Escalated to management'
 }
 
 export function eodManagementEscalationMessage(
-  _record: EodSchedulingCheckRecord,
-  _patientName: string,
+  record: EodSchedulingCheckRecord,
+  patientName: string,
 ): string {
-  return 'Case manager follow-up on Teams did not resolve scheduling. Added to the management escalation email and tracking spreadsheet.'
+  if (eodSchedulingBucket(record) === 'scheduled') {
+    const when = record.appointmentDate
+      ? ` Appointment is ${record.appointmentDate}.`
+      : ''
+    return `${patientName} was escalated after Teams follow-up.${when} Close out on the management tracking spreadsheet.`
+  }
+  return `${patientName} is still not scheduled ${record.hoursSinceProviderSelected} hours after ${record.providerName} was selected. Case manager follow-up on Teams did not resolve scheduling. Added to the management escalation email and tracking spreadsheet.`
 }

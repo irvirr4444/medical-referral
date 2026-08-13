@@ -491,6 +491,114 @@ export const PATIENT_STEP_BREAKDOWNS: Record<
         at: 'August 12, 2026 at 5:03 PM',
       },
     ),
+    'marcus-feldman': progression(
+      'end-of-day',
+      [{ summary: 'Not scheduled · 28 hours', at: 'August 12, 2026 at 4:47 PM' }],
+      {
+        summary: 'Cole Winfield notified on Teams automatically',
+        status: 'done',
+        at: 'August 12, 2026 at 4:48 PM',
+      },
+    ),
+    'david-ruiz': progression(
+      'end-of-day',
+      [{ summary: 'Not scheduled · 41 hours', at: 'August 12, 2026 at 5:09 PM' }],
+      {
+        summary: 'Carla Bustillo notified on Teams automatically',
+        status: 'done',
+        at: 'August 12, 2026 at 5:10 PM',
+      },
+    ),
+    'patricia-johnson': allDone('end-of-day', [
+      { summary: 'Scheduled · Monday fields agree', at: 'August 11, 2026 at 5:20 PM' },
+      { summary: 'Cole Winfield notified on Teams automatically', at: 'August 11, 2026 at 5:19 PM' },
+      { summary: 'No escalation required', at: 'August 11, 2026 at 5:20 PM' },
+    ]),
+    'irene-cho': allDone('end-of-day', [
+      { summary: 'Scheduled · Monday fields agree', at: 'August 12, 2026 at 5:16 PM' },
+      { summary: 'Michelle Lagahit notified on Teams automatically', at: 'August 12, 2026 at 5:15 PM' },
+      { summary: 'No escalation required', at: 'August 12, 2026 at 5:16 PM' },
+    ]),
+    'betty-hayes': progression(
+      'end-of-day',
+      [
+        { summary: 'Not scheduled · 62 hours', at: 'August 11, 2026 at 6:18 PM' },
+        {
+          summary: 'Nicole Chorvat notified on Teams automatically',
+          at: 'August 11, 2026 at 6:19 PM',
+        },
+      ],
+      {
+        summary: 'Escalated to management · still unresolved',
+        status: 'blocked',
+        at: 'August 11, 2026 at 6:20 PM',
+      },
+    ),
+    'walter-grant': progression(
+      'end-of-day',
+      [
+        { summary: 'Not scheduled · 80 hours', at: 'August 11, 2026 at 5:08 PM' },
+        {
+          summary: 'Nicole Chorvat notified on Teams automatically',
+          at: 'August 11, 2026 at 5:09 PM',
+        },
+      ],
+      {
+        summary: 'Escalated to management · still unresolved',
+        status: 'blocked',
+        at: 'August 11, 2026 at 5:10 PM',
+      },
+    ),
+    'arthur-kim': allDone('end-of-day', [
+      { summary: 'Scheduled · Monday fields agree', at: 'August 11, 2026 at 4:42 PM' },
+      { summary: 'Braxton Rickert notified on Teams automatically', at: 'August 11, 2026 at 4:38 PM' },
+      { summary: 'Escalated to management · now scheduled', at: 'August 11, 2026 at 4:40 PM' },
+    ]),
+    'gloria-bennett': progression(
+      'end-of-day',
+      [
+        { summary: 'Not scheduled · 58 hours', at: 'August 11, 2026 at 5:40 PM' },
+        {
+          summary: 'Donessa Ruiz notified on Teams automatically',
+          at: 'August 11, 2026 at 5:41 PM',
+        },
+      ],
+      {
+        summary: 'Escalated to management · still unresolved',
+        status: 'blocked',
+        at: 'August 11, 2026 at 5:42 PM',
+      },
+    ),
+    'dorothy-lane': progression(
+      'end-of-day',
+      [
+        { summary: 'Not scheduled · 67 hours', at: 'August 11, 2026 at 3:28 PM' },
+        {
+          summary: 'Carla Bustillo notified on Teams automatically',
+          at: 'August 11, 2026 at 3:29 PM',
+        },
+      ],
+      {
+        summary: 'Escalated to management · still unresolved',
+        status: 'blocked',
+        at: 'August 11, 2026 at 3:30 PM',
+      },
+    ),
+    'margaret-ellis': progression(
+      'end-of-day',
+      [
+        { summary: 'Not scheduled · 71 hours', at: 'August 11, 2026 at 7:12 PM' },
+        {
+          summary: 'Cole Winfield notified on Teams automatically',
+          at: 'August 11, 2026 at 7:13 PM',
+        },
+      ],
+      {
+        summary: 'Escalated to management · still unresolved',
+        status: 'blocked',
+        at: 'August 11, 2026 at 7:14 PM',
+      },
+    ),
   },
   weekly: {
     'gloria-bennett': allDone('weekly', [
@@ -523,6 +631,42 @@ export const PATIENT_STEP_BREAKDOWNS: Record<
         at: 'August 8, 2026 at 6:04 PM',
       },
     ),
+    'maria-alvarez': progression(
+      'weekly',
+      [
+        { summary: 'Visit status checked', at: 'August 10, 2026 at 5:40 PM' },
+        { summary: 'Wound not healed', at: 'August 10, 2026 at 5:40 PM' },
+      ],
+      {
+        summary: 'Patient expired',
+        status: 'waiting',
+        at: 'August 10, 2026 at 5:41 PM',
+      },
+    ),
+    'thomas-reed': progression(
+      'weekly',
+      [
+        { summary: 'Visit status checked', at: 'August 9, 2026 at 5:20 PM' },
+        { summary: 'Wound not healed', at: 'August 9, 2026 at 5:20 PM' },
+      ],
+      {
+        summary: 'Expired · pending DC approval',
+        status: 'done',
+        at: 'August 9, 2026 at 5:21 PM',
+      },
+    ),
+    'marcus-feldman': progression(
+      'weekly',
+      [
+        { summary: 'Visit status checked', at: 'August 10, 2026 at 4:55 PM' },
+        { summary: 'Wound not healed', at: 'August 10, 2026 at 4:55 PM' },
+      ],
+      {
+        summary: 'Expired · pending DC approval',
+        status: 'done',
+        at: 'August 10, 2026 at 4:56 PM',
+      },
+    ),
     'nancy-liu': progression(
       'weekly',
       [{ summary: 'Visit status checked', at: 'August 10, 2026 at 6:05 PM' }],
@@ -530,6 +674,33 @@ export const PATIENT_STEP_BREAKDOWNS: Record<
         summary: 'Wound healed',
         status: 'waiting',
         at: 'August 10, 2026 at 6:06 PM',
+      },
+    ),
+    'irene-cho': progression(
+      'weekly',
+      [{ summary: 'Visit status checked', at: 'August 10, 2026 at 5:12 PM' }],
+      {
+        summary: 'Wound healed',
+        status: 'waiting',
+        at: 'August 10, 2026 at 5:13 PM',
+      },
+    ),
+    'betty-hayes': progression(
+      'weekly',
+      [{ summary: 'Visit status checked', at: 'August 9, 2026 at 4:48 PM' }],
+      {
+        summary: 'Healed · QA discharge path',
+        status: 'done',
+        at: 'August 9, 2026 at 4:49 PM',
+      },
+    ),
+    'david-ruiz': progression(
+      'weekly',
+      [{ summary: 'Visit status checked', at: 'August 10, 2026 at 3:30 PM' }],
+      {
+        summary: 'Healed · QA discharge path',
+        status: 'done',
+        at: 'August 10, 2026 at 3:31 PM',
       },
     ),
     'patricia-johnson': progression('weekly', [], {
@@ -568,9 +739,48 @@ export const PATIENT_STEP_BREAKDOWNS: Record<
         { summary: 'Patient not expired', at: 'August 9, 2026 at 6:07 PM' },
       ],
       {
-        summary: 'On hold · Facility hold',
-        status: 'waiting',
+        summary: 'Moved to holds team · Facility hold',
+        status: 'done',
         at: 'August 9, 2026 at 6:08 PM',
+      },
+    ),
+    'george-chen': progression(
+      'weekly',
+      [
+        { summary: 'Visit status checked', at: 'August 10, 2026 at 5:05 PM' },
+        { summary: 'Wound not healed', at: 'August 10, 2026 at 5:05 PM' },
+        { summary: 'Patient not expired', at: 'August 10, 2026 at 5:05 PM' },
+      ],
+      {
+        summary: 'On hold · Vacation',
+        status: 'waiting',
+        at: 'August 10, 2026 at 5:06 PM',
+      },
+    ),
+    'rodriguez-anita': progression(
+      'weekly',
+      [
+        { summary: 'Visit status checked', at: 'August 9, 2026 at 4:20 PM' },
+        { summary: 'Wound not healed', at: 'August 9, 2026 at 4:20 PM' },
+        { summary: 'Patient not expired', at: 'August 9, 2026 at 4:20 PM' },
+      ],
+      {
+        summary: 'On hold · Patient request',
+        status: 'waiting',
+        at: 'August 9, 2026 at 4:21 PM',
+      },
+    ),
+    'sardina-frank': progression(
+      'weekly',
+      [
+        { summary: 'Visit status checked', at: 'August 8, 2026 at 5:45 PM' },
+        { summary: 'Wound not healed', at: 'August 8, 2026 at 5:45 PM' },
+        { summary: 'Patient not expired', at: 'August 8, 2026 at 5:45 PM' },
+      ],
+      {
+        summary: 'Moved to holds team · Family request',
+        status: 'done',
+        at: 'August 8, 2026 at 5:46 PM',
       },
     ),
   },

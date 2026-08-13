@@ -266,4 +266,44 @@ export interface DemoState {
   providerRecordsMessageUnread: boolean
   schedulingHandoffUnread: boolean
   schedulingHandoffMessageUnread: boolean
+  latestAssignmentHandoff: {
+    patientId: string
+    patientName: string
+    occurredAt: string
+  } | null
+  assignmentNotifyUnread: boolean
+  handoffNavUnread: boolean
+  handoffNotifyUnread: boolean
+  handoffMondayUnread: boolean
+  handoffDrkUnread: boolean
+  providerNavUnread: boolean
+  providerSelectUnread: boolean
+  providerAvailabilityUnread: boolean
+  eodFollowUpUnread: boolean
+  eodEscalationUnread: boolean
+  latestEodFollowUpPatientId: string | null
+  latestEodEscalationPatientId: string | null
+  intakeFieldEdits: Record<string, Record<string, string>>
+  intakeSectionRows: Record<
+    string,
+    Record<
+      string,
+      Array<{
+        label: string
+        value: string
+        fieldPath?: string
+        rowId?: string
+        meta?: string
+      }>
+    >
+  >
+  intakeVerified: Record<string, boolean>
+  latestIntakeReview: {
+    patientId: string
+    patientName: string
+    occurredAt: string
+  } | null
+  intakeMondayUnread: boolean
+  intakeDrkUnread: boolean
+  intakePartnerUnread: boolean
 }

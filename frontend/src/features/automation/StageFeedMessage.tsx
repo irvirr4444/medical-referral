@@ -1,6 +1,12 @@
 import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
-import { ArtifactSections } from './ArtifactSections'
+import { ArtifactFieldInput, ArtifactSections } from './ArtifactSections'
+import type { ArtifactField } from './types'
+import {
+  intakeEditKey,
+  isMultilineIntakeField,
+  overlayIntakeFieldValues,
+} from './overlayIntakeDetail'
 import { IntakePdfPreview } from './IntakePdfPreview'
 import { statusMeaning } from './StagePatientStepDetail'
 import { parseOpsDate, type detailForPatientStep } from './ops'
@@ -22,6 +28,8 @@ import {
   eodEscalationConfirmLabel,
   eodEscalationDue,
   eodManagementEscalationMessage,
+  eodSchedulingHoursMeta,
+  eodSchedulingStatusLabel,
 } from './fixtures/eodSchedulingCheck'
 import type { WeeklyVisitCheckRecord } from './fixtures/weeklyVisitCheck'
 import {
@@ -340,9 +348,11 @@ function ReferralHandoffPanel({
 function EodPartiesSection({
   record,
   patientName,
+  showScheduling = false,
 }: {
   record: EodSchedulingCheckRecord
   patientName?: string
+  showScheduling?: boolean
 }) {
   return (
     <section className="stage-ops-step-feed__eod-check-parties">
@@ -351,6 +361,18 @@ function EodPartiesSection({
           <p className="stage-ops-step-feed__partner-label">Patient</p>
           <p className="stage-ops-step-feed__referral-handoff-name">
             {patientName}
+          </p>
+        </div>
+      ) : null}
+
+      {showScheduling ? (
+        <div className="stage-ops-step-feed__referral-handoff-row">
+          <p className="stage-ops-step-feed__partner-label">Scheduling</p>
+          <p
+            className="stage-ops-step-feed__referral-handoff-name"
+            aria-label="Patient scheduling status"
+          >
+            {eodSchedulingStatusLabel(record)}
           </p>
         </div>
       ) : null}
@@ -371,8 +393,8 @@ function EodPartiesSection({
         </div>
       </div>
       <p className="stage-ops-step-feed__referral-handoff-meta">
-        {patientName
-          ? `Not scheduled · ${record.hoursSinceProviderSelected} hours · provider selected ${record.providerSelectedAt}`
+        {showScheduling
+          ? eodSchedulingHoursMeta(record)
           : `Selected ${record.providerSelectedAt}`}
       </p>
     </section>
@@ -524,6 +546,12 @@ function EodCmFollowUpPanel({
           : `${record.caseManagerName} notified on Teams automatically at 24 hours`}
       </p>
 
+      <EodPartiesSection
+        record={record}
+        patientName={patientName}
+        showScheduling
+      />
+
       <div
         className="stage-ops-step-feed__eod-followup-message"
         aria-label="Teams follow-up message"
@@ -559,7 +587,11 @@ function EodEscalationPanel({
         aria-label="Management escalation email"
       >
         <p className="stage-ops-step-feed__partner-label">Email</p>
-        <EodPartiesSection record={record} patientName={patientName} />
+        <EodPartiesSection
+          record={record}
+          patientName={patientName}
+          showScheduling
+        />
         <p className="stage-ops-step-feed__notification-message">{message}</p>
       </div>
     </div>
@@ -796,6 +828,7 @@ export function StageFeedMessage({
   summary,
   patientName,
   status,
+  statusLabel,
   occurredAt,
   detail,
   showPdf = false,
@@ -847,10 +880,17 @@ export function StageFeedMessage({
   onWeeklyHoldsAction,
   onWeeklyConfirmAppointmentRescheduled,
   isUnread = false,
+  intakeEditable = false,
+  isIntakeConfirmed = false,
+  onIntakeFieldChange,
+  onIntakeSectionRowsReplace,
+  onConfirmIntakeReview,
+  onReopenIntakeReview,
 }: {
   summary: string
   patientName: string
   status: string
+  statusLabel?: string
   occurredAt?: string
   detail: StepDetail | null
   showPdf?: boolean
@@ -909,10 +949,32 @@ export function StageFeedMessage({
   onWeeklyHoldsAction?: () => void
   onWeeklyConfirmAppointmentRescheduled?: () => void
   isUnread?: boolean
+  intakeEditable?: boolean
+  isIntakeConfirmed?: boolean
+  onIntakeFieldChange?: (key: string, value: string) => void
+  onIntakeSectionRowsReplace?: (
+    sectionId: string,
+    rows: Array<{
+      label: string
+      value: string
+      fieldPath?: string
+      rowId?: string
+      meta?: string
+    }>,
+  ) => void
+  onConfirmIntakeReview?: () => void
+  onReopenIntakeReview?: () => void
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
+  const [intakeEditing, setIntakeEditing] = useState(false)
+  const [intakeDrafts, setIntakeDrafts] = useState<Record<string, string>>({})
+  const [intakeSectionDrafts, setIntakeSectionDrafts] = useState<
+    Record<string, ArtifactField[]>
+  >({})
+  const fieldsEditable =
+    intakeEditable && !isIntakeConfirmed && intakeEditing
   const when = occurredAt ? parseOpsDate(occurredAt) : null
-  const meaning = statusMeaning(status)
+  const meaning = statusLabel ?? statusMeaning(status)
   const decision = detail?.example?.feedDecision
   const contactConfirmation = detail?.example?.feedContactConfirmation
   const contactedBack =
@@ -923,9 +985,32 @@ export function StageFeedMessage({
         .filter((field) => !isHiddenProofField(field.label))
         .slice(0, 3)
   const samplePdf = showPdf ? detail?.example?.samplePdf : undefined
-  const allSections = (detail?.example?.artifactSections ?? []).filter(
-    (section) => section.fields.length > 0 && section.id !== 'gate',
+  const committedSections = (detail?.example?.artifactSections ?? []).filter(
+    (section) =>
+      section.id !== 'gate' &&
+      (section.fields.length > 0 || section.repeatable),
   )
+  const sectionsWithListDrafts = fieldsEditable
+    ? committedSections.map((section) =>
+        intakeSectionDrafts[section.id]
+          ? { ...section, fields: intakeSectionDrafts[section.id] }
+          : section,
+      )
+    : committedSections
+  const allSections = fieldsEditable
+    ? overlayIntakeFieldValues(sectionsWithListDrafts, intakeDrafts)
+    : sectionsWithListDrafts
+
+  const flushIntakeDrafts = () => {
+    Object.entries(intakeDrafts).forEach(([key, value]) => {
+      onIntakeFieldChange?.(key, value)
+    })
+    Object.entries(intakeSectionDrafts).forEach(([sectionId, rows]) => {
+      onIntakeSectionRowsReplace?.(sectionId, rows)
+    })
+    setIntakeDrafts({})
+    setIntakeSectionDrafts({})
+  }
   const requiredFields =
     allSections.find((section) => section.id === 'required-fields')?.fields ??
     []
@@ -1016,33 +1101,94 @@ export function StageFeedMessage({
                 {requiredFields.map((field) => {
                   const missing = missingSet.has(field.label)
                   const unclear = unclearSet.has(field.label)
-                  const isLong = !/^(Patient name|Date of birth|Contact number|Patient address)$/i.test(
-                    field.label,
-                  )
+                  const isLong = isMultilineIntakeField(field.label)
+                  const tone = missing ? 'is-bad' : unclear ? 'is-warn' : 'is-ok'
                   return (
                     <div
-                      key={`${field.label}-${field.value}`}
+                      key={intakeEditKey('required-fields', field)}
                       className={`stage-ops-step-feed__decision-item${
                         isLong ? ' is-wide' : ''
-                      }`}
+                      } ${tone}`}
                     >
                       <dt>{field.label}</dt>
                       <dd
-                        className={
-                          missing ? 'is-bad' : unclear ? 'is-warn' : 'is-ok'
-                        }
+                        className={tone}
                         title={
                           unclear
                             ? 'Extracted value conflicts with other evidence — needs review'
                             : undefined
                         }
                       >
-                        {field.value}
+                        {fieldsEditable ? (
+                          <ArtifactFieldInput
+                            label={field.label}
+                            value={field.value}
+                            multiline={isLong}
+                            onChange={(value) =>
+                              setIntakeDrafts((current) => ({
+                                ...current,
+                                [intakeEditKey('required-fields', field)]: value,
+                              }))
+                            }
+                          />
+                        ) : (
+                          field.value
+                        )}
                       </dd>
                     </div>
                   )
                 })}
               </dl>
+            ) : null}
+
+            {intakeEditable && onConfirmIntakeReview ? (
+              <div className="stage-ops-step-feed__intake-confirm">
+                <button
+                  type="button"
+                  className={`stage-ops-step-feed__confirm${
+                    isIntakeConfirmed ? ' is-confirmed' : ' is-actionable'
+                  }`}
+                  onClick={() => {
+                    if (intakeEditing) {
+                      flushIntakeDrafts()
+                      setIntakeEditing(false)
+                    }
+                    onConfirmIntakeReview()
+                  }}
+                  disabled={isIntakeConfirmed}
+                >
+                  {isIntakeConfirmed
+                    ? 'Confirmed'
+                    : 'Confirm all information is correct'}
+                </button>
+                {isIntakeConfirmed ? (
+                  <button
+                    type="button"
+                    className="stage-ops-step-feed__confirm is-actionable"
+                    onClick={() => {
+                      onReopenIntakeReview?.()
+                      setIntakeEditing(true)
+                    }}
+                  >
+                    Add or edit patient information
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="stage-ops-step-feed__confirm is-actionable"
+                    onClick={() => {
+                      if (intakeEditing) {
+                        flushIntakeDrafts()
+                        setIntakeEditing(false)
+                        return
+                      }
+                      setIntakeEditing(true)
+                    }}
+                  >
+                    {intakeEditing ? 'Save changes' : 'Edit'}
+                  </button>
+                )}
+              </div>
             ) : null}
 
             {sections.length ? (
@@ -1065,6 +1211,19 @@ export function StageFeedMessage({
                     sections={sections}
                     artifactId={artifactId}
                     density="feed"
+                    editable={fieldsEditable}
+                    onFieldChange={(key, value) =>
+                      setIntakeDrafts((current) => ({
+                        ...current,
+                        [key]: value,
+                      }))
+                    }
+                    onSectionRowsChange={(sectionId, rows) =>
+                      setIntakeSectionDrafts((current) => ({
+                        ...current,
+                        [sectionId]: rows,
+                      }))
+                    }
                   />
                 ) : null}
               </div>

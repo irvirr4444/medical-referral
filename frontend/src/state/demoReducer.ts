@@ -102,6 +102,55 @@ export type DemoAction =
     }
   | { type: 'MARK_PROVIDER_RECORDS_READ' }
   | { type: 'MARK_SCHEDULING_HANDOFF_READ' }
+  | {
+      type: 'CONFIRM_ASSIGNMENT_HANDOFF'
+      patientId: string
+      patientName: string
+      occurredAt: string
+    }
+  | {
+      type: 'MARK_HANDOFF_STEP_READ'
+      stepId:
+        | 'notify-referral-source'
+        | 'create-monday-record'
+        | 'create-update-drk'
+    }
+  | { type: 'MARK_ASSIGNMENT_NOTIFY_READ' }
+  | { type: 'MARK_PROVIDER_SELECT_READ' }
+  | { type: 'MARK_PROVIDER_AVAILABILITY_READ' }
+  | { type: 'CONFIRM_EOD_FOLLOW_UP'; patientId: string }
+  | { type: 'MARK_EOD_FOLLOW_UP_READ' }
+  | { type: 'CONFIRM_EOD_ESCALATION'; patientId: string }
+  | { type: 'MARK_EOD_ESCALATION_READ' }
+  | {
+      type: 'EDIT_INTAKE_FIELD'
+      patientId: string
+      key: string
+      value: string
+    }
+  | {
+      type: 'REPLACE_INTAKE_SECTION_ROWS'
+      patientId: string
+      sectionId: string
+      rows: Array<{
+        label: string
+        value: string
+        fieldPath?: string
+        rowId?: string
+        meta?: string
+      }>
+    }
+  | {
+      type: 'CONFIRM_INTAKE_REVIEW'
+      patientId: string
+      patientName: string
+      occurredAt: string
+    }
+  | {
+      type: 'MARK_INTAKE_STEP_READ'
+      stepId: 'check-monday' | 'check-drk' | 'confirm-referral-contacted'
+    }
+  | { type: 'REOPEN_INTAKE_REVIEW'; patientId: string }
 
 function upsertSchedulingHandoff(
   handoffs: SchedulingHandoff[],
@@ -376,6 +425,26 @@ export function createInitialState(): DemoState {
     providerRecordsMessageUnread: false,
     schedulingHandoffUnread: false,
     schedulingHandoffMessageUnread: false,
+    latestAssignmentHandoff: null,
+    assignmentNotifyUnread: false,
+    handoffNavUnread: false,
+    handoffNotifyUnread: false,
+    handoffMondayUnread: false,
+    handoffDrkUnread: false,
+    providerNavUnread: false,
+    providerSelectUnread: false,
+    providerAvailabilityUnread: false,
+    eodFollowUpUnread: false,
+    eodEscalationUnread: false,
+    latestEodFollowUpPatientId: null,
+    latestEodEscalationPatientId: null,
+    intakeFieldEdits: {},
+    intakeSectionRows: {},
+    intakeVerified: {},
+    latestIntakeReview: null,
+    intakeMondayUnread: false,
+    intakeDrkUnread: false,
+    intakePartnerUnread: false,
   }
 }
 
@@ -437,6 +506,10 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
         selectedReferralId: null,
         schedulingHandoffUnread:
           action.page === 'scheduling' ? false : state.schedulingHandoffUnread,
+        handoffNavUnread:
+          action.page === 'handoff' ? false : state.handoffNavUnread,
+        providerNavUnread:
+          action.page === 'provider' ? false : state.providerNavUnread,
       }
 
     case 'SET_SCENARIO_FILTER':
@@ -515,6 +588,7 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
             outcome: 'waiting',
           },
         },
+        providerAvailabilityUnread: true,
       }
     }
 
@@ -549,6 +623,7 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
             outcome: 'waiting',
           },
         },
+        providerAvailabilityUnread: true,
       }
     }
 
@@ -615,6 +690,161 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
         ...state,
         schedulingHandoffMessageUnread: false,
       }
+
+    case 'CONFIRM_ASSIGNMENT_HANDOFF':
+      return {
+        ...state,
+        latestAssignmentHandoff: {
+          patientId: action.patientId,
+          patientName: action.patientName,
+          occurredAt: action.occurredAt,
+        },
+        assignmentNotifyUnread: true,
+        handoffNavUnread: true,
+        handoffNotifyUnread: true,
+        handoffMondayUnread: true,
+        handoffDrkUnread: true,
+        providerNavUnread: true,
+        providerSelectUnread: true,
+      }
+
+    case 'MARK_ASSIGNMENT_NOTIFY_READ':
+      if (!state.assignmentNotifyUnread) return state
+      return { ...state, assignmentNotifyUnread: false }
+
+    case 'MARK_HANDOFF_STEP_READ': {
+      if (action.stepId === 'notify-referral-source') {
+        if (!state.handoffNotifyUnread) return state
+        return { ...state, handoffNotifyUnread: false }
+      }
+      if (action.stepId === 'create-monday-record') {
+        if (!state.handoffMondayUnread) return state
+        return { ...state, handoffMondayUnread: false }
+      }
+      if (!state.handoffDrkUnread) return state
+      return { ...state, handoffDrkUnread: false }
+    }
+
+    case 'MARK_PROVIDER_SELECT_READ':
+      if (!state.providerSelectUnread) return state
+      return { ...state, providerSelectUnread: false }
+
+    case 'MARK_PROVIDER_AVAILABILITY_READ':
+      if (!state.providerAvailabilityUnread) return state
+      return { ...state, providerAvailabilityUnread: false }
+
+    case 'CONFIRM_EOD_FOLLOW_UP':
+      return {
+        ...state,
+        latestEodFollowUpPatientId: action.patientId,
+        eodFollowUpUnread: true,
+      }
+
+    case 'MARK_EOD_FOLLOW_UP_READ':
+      if (!state.eodFollowUpUnread) return state
+      return { ...state, eodFollowUpUnread: false }
+
+    case 'CONFIRM_EOD_ESCALATION':
+      return {
+        ...state,
+        latestEodEscalationPatientId: action.patientId,
+        eodEscalationUnread: true,
+      }
+
+    case 'MARK_EOD_ESCALATION_READ':
+      if (!state.eodEscalationUnread) return state
+      return { ...state, eodEscalationUnread: false }
+
+    case 'EDIT_INTAKE_FIELD': {
+      if (state.intakeVerified[action.patientId]) return state
+      const current = state.intakeFieldEdits[action.patientId] ?? {}
+      if (current[action.key] === action.value) return state
+      return {
+        ...state,
+        intakeFieldEdits: {
+          ...state.intakeFieldEdits,
+          [action.patientId]: {
+            ...current,
+            [action.key]: action.value,
+          },
+        },
+      }
+    }
+
+    case 'REPLACE_INTAKE_SECTION_ROWS': {
+      if (state.intakeVerified[action.patientId]) return state
+      const current = state.intakeSectionRows[action.patientId] ?? {}
+      const previous = current[action.sectionId]
+      if (
+        previous &&
+        previous.length === action.rows.length &&
+        previous.every(
+          (row, index) =>
+            row.label === action.rows[index]?.label &&
+            row.value === action.rows[index]?.value &&
+            row.rowId === action.rows[index]?.rowId,
+        )
+      ) {
+        return state
+      }
+      return {
+        ...state,
+        intakeSectionRows: {
+          ...state.intakeSectionRows,
+          [action.patientId]: {
+            ...current,
+            [action.sectionId]: action.rows,
+          },
+        },
+      }
+    }
+
+    case 'CONFIRM_INTAKE_REVIEW': {
+      if (state.intakeVerified[action.patientId]) return state
+      const alreadyAnnounced =
+        state.latestIntakeReview?.patientId === action.patientId
+      return {
+        ...state,
+        intakeVerified: {
+          ...state.intakeVerified,
+          [action.patientId]: true,
+        },
+        latestIntakeReview: {
+          patientId: action.patientId,
+          patientName: action.patientName,
+          occurredAt: action.occurredAt,
+        },
+        intakeMondayUnread: alreadyAnnounced
+          ? state.intakeMondayUnread
+          : true,
+        intakeDrkUnread: alreadyAnnounced ? state.intakeDrkUnread : true,
+        intakePartnerUnread: alreadyAnnounced
+          ? state.intakePartnerUnread
+          : true,
+      }
+    }
+
+    case 'REOPEN_INTAKE_REVIEW':
+      if (!state.intakeVerified[action.patientId]) return state
+      return {
+        ...state,
+        intakeVerified: {
+          ...state.intakeVerified,
+          [action.patientId]: false,
+        },
+      }
+
+    case 'MARK_INTAKE_STEP_READ':
+      if (action.stepId === 'check-monday') {
+        if (!state.intakeMondayUnread) return state
+        return { ...state, intakeMondayUnread: false }
+      }
+      if (action.stepId === 'check-drk') {
+        if (!state.intakeDrkUnread) return state
+        return { ...state, intakeDrkUnread: false }
+      }
+      if (!state.intakePartnerUnread) return state
+      return { ...state, intakePartnerUnread: false }
 
     case 'UPDATE_IMPACT_ASSUMPTIONS':
       return {

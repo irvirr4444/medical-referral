@@ -15,11 +15,11 @@ export const WEEKLY_STAGE: AutomationStageDefinition = {
   microsteps: [
     step({
       id: 'patient-seen',
-      name: 'Is the patient seen?',
+      name: 'Seen patients',
       description:
         'Confirm this week’s visit outcome. Seen patients stay on schedule; not-seen patients are marked and rescheduled, or escalated after three consecutive misses.',
       system: 'Monday.com / DRK / Microsoft Teams',
-      next: 'Is the wound healed?',
+      next: 'Healed patients',
       input: 'Active linked patients and visit-status columns',
       output: 'Seen receipt, weekly reschedule, or noncompliance discharge review queue',
       validation:
@@ -28,11 +28,11 @@ export const WEEKLY_STAGE: AutomationStageDefinition = {
     }),
     step({
       id: 'wound-healed',
-      name: 'Is the wound healed?',
+      name: 'Healed patients',
       description:
         'Route healed patients onto the provider → QA → discharge path. Human approval remains required.',
       system: 'QA / email / Monday.com',
-      next: 'Is the patient expired?',
+      next: 'Expired patients',
       input: 'Patients with healed visit status',
       output: 'QA discharge path opened',
       validation:
@@ -41,11 +41,11 @@ export const WEEKLY_STAGE: AutomationStageDefinition = {
     }),
     step({
       id: 'patient-expired',
-      name: 'Is the patient expired?',
+      name: 'Expired patients',
       description:
         'Remove expired patients from the weekly schedule and queue discharge approval.',
       system: 'Case manager / Monday.com / email',
-      next: 'Is the patient on hold?',
+      next: 'On hold patients',
       input: 'Patients with expired visit status',
       output: 'Removed from schedule pending DC approval',
       validation:
@@ -54,7 +54,7 @@ export const WEEKLY_STAGE: AutomationStageDefinition = {
     }),
     step({
       id: 'patient-on-hold',
-      name: 'Is the patient on hold?',
+      name: 'On hold patients',
       description:
         'Move patients on hold (hospital, vacation, or other) to the holds team and holds list until they are ready to return.',
       system: 'Holds list / Monday.com',

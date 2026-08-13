@@ -52,11 +52,52 @@ const WEEKLY_VISIT_CHECKS: Record<
     consecutiveNotSeen: 0,
     closureActionTaken: false,
   },
+  'maria-alvarez': {
+    visitOutcome: 'expired',
+    visitStatusLabel: 'Expired',
+    lastVisitAt: 'August 10, 2026 at 5:40 PM',
+    consecutiveNotSeen: 0,
+    closureActionTaken: false,
+  },
+  'thomas-reed': {
+    visitOutcome: 'expired',
+    visitStatusLabel: 'Expired',
+    lastVisitAt: 'August 9, 2026 at 5:20 PM',
+    consecutiveNotSeen: 0,
+    closureActionTaken: true,
+  },
+  'marcus-feldman': {
+    visitOutcome: 'expired',
+    visitStatusLabel: 'Expired',
+    lastVisitAt: 'August 10, 2026 at 4:55 PM',
+    consecutiveNotSeen: 0,
+    closureActionTaken: true,
+  },
   'nancy-liu': {
     visitOutcome: 'healed',
     visitStatusLabel: 'Healed',
     lastVisitAt: 'August 10, 2026 at 6:05 PM',
     consecutiveNotSeen: 0,
+  },
+  'irene-cho': {
+    visitOutcome: 'healed',
+    visitStatusLabel: 'Healed',
+    lastVisitAt: 'August 10, 2026 at 5:12 PM',
+    consecutiveNotSeen: 0,
+  },
+  'betty-hayes': {
+    visitOutcome: 'healed',
+    visitStatusLabel: 'Healed',
+    lastVisitAt: 'August 9, 2026 at 4:48 PM',
+    consecutiveNotSeen: 0,
+    closureActionTaken: true,
+  },
+  'david-ruiz': {
+    visitOutcome: 'healed',
+    visitStatusLabel: 'Healed',
+    lastVisitAt: 'August 10, 2026 at 3:30 PM',
+    consecutiveNotSeen: 0,
+    closureActionTaken: true,
   },
   'patricia-johnson': {
     visitOutcome: 'not_seen',
@@ -90,7 +131,31 @@ const WEEKLY_VISIT_CHECKS: Record<
     lastVisitAt: 'August 9, 2026 at 6:07 PM',
     consecutiveNotSeen: 0,
     holdReason: 'Facility hold',
+    movedToHolds: true,
+  },
+  'george-chen': {
+    visitOutcome: 'on_hold',
+    visitStatusLabel: 'On Hold',
+    lastVisitAt: 'August 10, 2026 at 5:05 PM',
+    consecutiveNotSeen: 0,
+    holdReason: 'Vacation',
     movedToHolds: false,
+  },
+  'rodriguez-anita': {
+    visitOutcome: 'on_hold',
+    visitStatusLabel: 'On Hold',
+    lastVisitAt: 'August 9, 2026 at 4:20 PM',
+    consecutiveNotSeen: 0,
+    holdReason: 'Patient request',
+    movedToHolds: false,
+  },
+  'sardina-frank': {
+    visitOutcome: 'on_hold',
+    visitStatusLabel: 'On Hold',
+    lastVisitAt: 'August 8, 2026 at 5:45 PM',
+    consecutiveNotSeen: 0,
+    holdReason: 'Family request',
+    movedToHolds: true,
   },
 }
 
@@ -203,11 +268,21 @@ export function weeklyMissedVisitMessage(
   return `Not seen this week (${record.consecutiveNotSeen} consecutive). Marked NOT seen and weekly reschedule requested.`
 }
 
+export function weeklyHoldsActionComplete(
+  record: WeeklyVisitCheckRecord,
+  actionTaken = false,
+): boolean {
+  return (
+    actionTaken ||
+    Boolean(record.movedToHolds || record.closureActionTaken)
+  )
+}
+
 export function weeklyHoldsClosuresSummary(
   record: WeeklyVisitCheckRecord,
   actionTaken = false,
 ): string {
-  const done = actionTaken || Boolean(record.movedToHolds || record.closureActionTaken)
+  const done = weeklyHoldsActionComplete(record, actionTaken)
   if (record.visitOutcome === 'on_hold') {
     return done
       ? `Moved to holds team · ${record.holdReason ?? 'on hold'}`
