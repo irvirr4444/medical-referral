@@ -29,25 +29,49 @@ const SCHEDULING_WALKTHROUGH: LifecycleWalkthrough = {
     patientName: 'Maria Alvarez',
   },
   steps: {
-    'send-referral-provider': {
-      input: 'Approved referral and confirmed provider',
-      output: 'Referral sent to provider with delivery recorded',
+    'load-scheduling-context': {
+      input: 'Maria Alvarez; provider confirmed; Riverside address',
+      output: 'Patient, provider, location, and contact details ready',
       duration: 'Planned',
       status: 'planned',
     },
-    'capture-provider-response': {
-      input: 'Referral delivery and one-hour response window',
-      output: 'Provider accepted; three open windows within 48 hours',
+    'read-availability': {
+      input: 'Confirmed provider and Riverside service area',
+      output: 'Three open provider windows within 48 hours',
       duration: 'Planned',
       status: 'planned',
     },
-    'confirm-record-appointment': {
-      input: 'Open windows, route, and travel buffers',
-      output: 'Thu 10:20 AM selected and prepared for Monday and DRK',
+    'generate-windows': {
+      input: 'Open windows, Braxton route, and travel buffers',
+      output: 'Thu 10:20 AM; Thu 2:45 PM; Fri 9:15 AM',
       duration: 'Planned',
       status: 'planned',
     },
-    'verify-scheduling': {
+    'present-windows': {
+      input: 'Three route-compatible appointment options',
+      output: 'Options sent to Braxton for confirmation',
+      duration: 'Planned',
+      status: 'planned',
+    },
+    'monitor-response': {
+      input: 'Scheduling request with a one-hour deadline',
+      output: 'Thu 10:20 AM accepted after 18 minutes',
+      duration: 'Planned',
+      status: 'planned',
+    },
+    'classify-response': {
+      input: 'Correlated acceptance for Thu 10:20 AM',
+      output: 'Appointment ready for authorized recording',
+      duration: 'Planned',
+      status: 'planned',
+    },
+    'write-appointment': {
+      input: 'Human-confirmed date, time, patient, and provider',
+      output: 'Target Monday and DRK appointment updates',
+      duration: 'Planned',
+      status: 'planned',
+    },
+    'reconcile-appointment': {
       input: 'Expected appointment and destination responses',
       output: 'Appointment verified or mismatch sent for review',
       duration: 'Planned',
@@ -63,32 +87,26 @@ const END_OF_DAY_WALKTHROUGH: LifecycleWalkthrough = {
     source: 'Illustrative Monday and DRK monitoring snapshots',
     startedAt: 'August 10, 2026 at 5:00 PM',
     summary:
-      'Shows how an unscheduled referral is followed up and escalated at day\'s end.',
+      'Shows how one overdue unscheduled referral moves from Monday review to Teams follow-up and management escalation.',
     patientName: 'Evelyn Brooks',
   },
   steps: {
-    'find-unscheduled': {
-      input: 'Active referrals due by August 10',
-      output: 'Ana assigned; appointment date missing',
+    'check-scheduling-status': {
+      input: 'Evelyn Brooks due at the 5:00 PM cutoff',
+      output: 'Unscheduled · appointment date and scheduled status blank on Monday.com',
       duration: '4.8 seconds',
       status: 'attention',
     },
-    'notify-owner': {
-      input: 'Evelyn, Ana, and the missing appointment details',
-      output: 'Follow-up sent to Ana and the intake lead',
+    'follow-up-case-manager': {
+      input: 'Unscheduled referral and assigned case manager',
+      output: 'Lead sent a Teams follow-up asking why the patient is not scheduled',
       duration: 'Under 1 second',
-      status: 'attention',
+      status: 'waiting',
     },
-    'escalate-unresolved': {
-      input: 'Unresolved blocker and Ana follow-up history',
-      output: 'Case escalated to Nicole with supporting details',
+    'escalate-unresolved-cases': {
+      input: 'No resolution after the Teams follow-up',
+      output: 'Patient queued for Nicole and upper-management email plus spreadsheet',
       duration: 'Under 1 second',
-      status: 'attention',
-    },
-    'verify-resolution': {
-      input: 'Unresolved scheduling status',
-      output: 'Weekly-cycle entry held until an appointment is confirmed',
-      duration: 'Next monitoring cycle',
       status: 'waiting',
     },
   },
@@ -96,36 +114,37 @@ const END_OF_DAY_WALKTHROUGH: LifecycleWalkthrough = {
 
 const WEEKLY_WALKTHROUGH: LifecycleWalkthrough = {
   run: {
-    id: 'gloria-weekly',
-    label: 'Gloria Bennett - weekly visit walkthrough',
+    id: 'walter-weekly',
+    label: 'Walter Grant - weekly visit walkthrough',
     source: 'Illustrative Monday and DRK visit snapshots',
     startedAt: 'August 10, 2026 at 6:00 PM',
     summary:
-      'Shows how a third explicit Not Seen visit creates a human discharge-review request.',
-    patientName: 'Gloria Bennett',
+      'Shows how three consecutive Not Seen visits create a human discharge-review request without automatic discharge.',
+    patientName: 'Walter Grant',
   },
   steps: {
-    'record-visit-outcome': {
-      input: 'Gloria\'s Monday item and DRK patient ID',
-      output: 'DRK progress note recorded as Not Seen',
+    'patient-seen': {
+      input: 'Walter Grant due in this weekly monitoring cycle',
+      output: 'Not Seen · consecutive miss count updated to 3 · queued for DC review',
       duration: '4.6 seconds',
       status: 'attention',
     },
-    'apply-weekly-rules': {
-      input: 'Previous count 2; new explicit Not Seen event',
-      output: 'Not Seen count 3; human discharge review required',
+    'wound-healed': {
+      input: 'No healed status for this patient',
+      output: 'No healed discharge path',
       duration: 'Under 1 second',
-      status: 'attention',
+      status: 'waiting',
     },
-    'assign-follow-up': {
-      input: 'Three Not Seen visits and the review reason',
-      output: 'Discharge-review task prepared for management',
+    'patient-expired': {
+      input: 'No expired status for this patient',
+      output: 'No expired discharge path',
       duration: 'Under 1 second',
-      status: 'attention',
+      status: 'waiting',
     },
-    'verify-weekly-result': {
-      input: 'Prepared review task and approved recipients',
-      output: 'WCW systems updated; review sent; no automatic discharge',
+    'patient-on-hold': {
+      input: 'No hold status for this patient',
+      output:
+        'No hold action; patient remains in the seen/not-seen path with no automatic discharge',
       duration: 'Under 1 second',
       status: 'waiting',
     },

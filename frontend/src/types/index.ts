@@ -192,6 +192,43 @@ export interface ImpactProjection {
   reductionPercent: number
 }
 
+export type ProviderAvailabilityOutcome =
+  | 'waiting'
+  | 'confirmed'
+  | 'timeout'
+  | 'placement_completed'
+
+export type ProviderTerritoryResolution = 'assigned' | 'discharged'
+
+export type SchedulingHandoffRoute = 'provider_confirmed' | 'manual_placement'
+
+export interface ProviderAvailabilityRequest {
+  requestedAt: string
+  deadlineAt: string
+  outcome: ProviderAvailabilityOutcome
+  resolvedAt?: string
+}
+
+export interface SchedulingHandoffProvider {
+  id: string
+  name: string
+  npi?: string
+  city?: string
+  phone?: string
+  email?: string
+}
+
+export interface SchedulingHandoff {
+  patientId: string
+  patientName: string
+  provider: SchedulingHandoffProvider
+  route: SchedulingHandoffRoute
+  requestedAt: string
+  deadlineAt: string
+  readyAt: string
+  samplePdf: string
+}
+
 export interface DemoState {
   referrals: ReferralRecord[]
   automationStep: AutomationStep
@@ -219,4 +256,14 @@ export interface DemoState {
   journeyFocusCaseId: string | null
   /** Active patient on the journey spine roster. */
   selectedJourneyPatientId: string
+  providerSelectedIds: Record<string, string>
+  providerConfirmed: Record<string, boolean>
+  providerTerritoryResolutions: Record<string, ProviderTerritoryResolution>
+  providerAvailability: Record<string, ProviderAvailabilityRequest>
+  latestProviderAvailabilityPatientId: string | null
+  schedulingHandoffs: SchedulingHandoff[]
+  providerRecordsUnread: boolean
+  providerRecordsMessageUnread: boolean
+  schedulingHandoffUnread: boolean
+  schedulingHandoffMessageUnread: boolean
 }

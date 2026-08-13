@@ -37,11 +37,11 @@ const SCHEDULING_CASES: HistoryCase[] = [
     status: 'completed',
     values: {
       context: 'Provider confirmed; Gardena address; Cole assigned',
-      delivery: 'Referral sent to Dr. Nguyen',
-      providerResponse: 'Provider responded after 18 minutes',
-      availability: 'Fri 11:00 AM; Sat 8:40 AM',
-      options: 'Fri 11:00 AM ranked first',
-      confirmation: 'Cole confirmed Fri 11:00 AM',
+      windows: 'Fri 11:00 AM; Sat 8:40 AM',
+      ranked: 'Fri 11:00 AM ranked first',
+      proposal: 'Two options sent to Cole',
+      response: 'Fri 11:00 AM accepted after 18 minutes',
+      classification: 'Confirmed appointment',
       write: 'Monday and DRK appointment updates prepared',
       reconcile: 'Friday appointment verified',
     },
@@ -53,11 +53,11 @@ const SCHEDULING_CASES: HistoryCase[] = [
     status: 'waiting',
     values: {
       context: 'Provider confirmed; Coastal LA; Carla assigned',
-      delivery: 'Referral sent to selected provider',
-      providerResponse: 'No provider response after one hour',
-      availability: 'Availability not confirmed',
-      options: 'No appointment options generated',
-      confirmation: 'Scheduling blocker assigned to Carla',
+      windows: 'Fri 11:00 AM; Sat 8:40 AM',
+      ranked: 'Two route-compatible windows',
+      proposal: 'Options sent to Carla',
+      response: 'No correlated response after one hour',
+      classification: 'Scheduling exception for Carla',
       write: 'No destination write allowed',
       reconcile: 'Exception remains open for human placement',
     },
@@ -71,14 +71,9 @@ const END_OF_DAY_CASES: HistoryCase[] = [
     occurredAt: 'August 9, 2026 at 5:00 PM',
     status: 'completed',
     values: {
-      health: '5:00 PM cutoff; both readers healthy',
-      due: 'Maria due for scheduling review',
-      owner: 'Ana assigned; appointment date Aug 13',
-      followup: 'No follow-up needed; patient already scheduled',
-      tracking: 'Scheduling confirmed',
-      escalation: 'No escalation required',
-      verification: 'Scheduled Yes; complete Yes; date Aug 13',
-      weekly: 'Patient entered the weekly visit cycle',
+      status: 'Scheduled Yes; complete Yes; appointment date Aug 13',
+      followUp: 'Not required · patient already scheduled',
+      escalation: 'Not required',
     },
   },
   {
@@ -87,14 +82,9 @@ const END_OF_DAY_CASES: HistoryCase[] = [
     occurredAt: 'August 8, 2026 at 5:00 PM',
     status: 'attention',
     values: {
-      health: '5:00 PM cutoff; both readers healthy',
-      due: 'Linda due for scheduling review',
-      owner: 'Carla assigned; scheduled status blank',
-      followup: 'Follow-up sent to Carla and intake lead',
-      tracking: 'Blocker remains unresolved',
-      escalation: 'Escalated to Nicole with scheduling details',
-      verification: 'Appointment date present; scheduled status blank',
-      weekly: 'Weekly-cycle entry held until scheduling is verified',
+      status: 'Appointment date present; scheduled status blank',
+      followUp: 'Lead followed up with CM on Teams',
+      escalation: 'Escalated to Nicole via email and spreadsheet',
     },
   },
 ]
@@ -106,14 +96,10 @@ const WEEKLY_CASES: HistoryCase[] = [
     occurredAt: 'August 9, 2026 at 6:04 PM',
     status: 'completed',
     values: {
-      schedule: 'Weekly schedule loaded; Helen due for review',
-      progress: 'DRK progress note records Seen',
-      outcome: 'Visit marked Seen',
-      condition: 'No healing, expiration, or hold condition',
-      counter: 'Not Seen count reset to 0',
-      review: 'No review required',
-      action: 'Continue the weekly visit cycle',
-      notification: 'Monday updated; no team alert required',
+      seen: 'Patient seen',
+      healed: 'Wound not healed',
+      expired: 'Patient not expired',
+      hold: 'Not on hold',
     },
   },
   {
@@ -122,14 +108,10 @@ const WEEKLY_CASES: HistoryCase[] = [
     occurredAt: 'August 8, 2026 at 6:07 PM',
     status: 'attention',
     values: {
-      schedule: 'Weekly schedule loaded; Arthur due for review',
-      progress: 'DRK records hospitalization',
-      outcome: 'No completed weekly visit',
-      condition: 'Hospitalization hold recorded',
-      counter: 'Not Seen count unchanged',
-      review: 'Hold tracking required; no discharge action',
-      action: 'Hold-team follow-up prepared',
-      notification: 'Hold state updated and team notified',
+      seen: 'Visit status checked · on hold',
+      healed: 'Wound not healed',
+      expired: 'Patient not expired',
+      hold: 'Moved to holds team · Hospitalization',
     },
   },
 ]
@@ -137,12 +119,20 @@ const WEEKLY_CASES: HistoryCase[] = [
 function schedulingMoment(historyCase: HistoryCase, stepId: string): HistoryMoment {
   const value = historyCase.values
   switch (stepId) {
-    case 'send-referral-provider':
-      return { input: value.context, output: value.delivery }
-    case 'capture-provider-response':
-      return { input: value.delivery, output: `${value.providerResponse}; ${value.availability}` }
-    case 'confirm-record-appointment':
-      return { input: value.options, output: `${value.confirmation}; ${value.write}` }
+    case 'load-scheduling-context':
+      return { input: historyCase.patientName, output: value.context }
+    case 'read-availability':
+      return { input: value.context, output: value.windows }
+    case 'generate-windows':
+      return { input: value.windows, output: value.ranked }
+    case 'present-windows':
+      return { input: value.ranked, output: value.proposal }
+    case 'monitor-response':
+      return { input: value.proposal, output: value.response }
+    case 'classify-response':
+      return { input: value.response, output: value.classification }
+    case 'write-appointment':
+      return { input: value.classification, output: value.write }
     default:
       return { input: value.write, output: value.reconcile }
   }
@@ -151,28 +141,36 @@ function schedulingMoment(historyCase: HistoryCase, stepId: string): HistoryMome
 function endOfDayMoment(historyCase: HistoryCase, stepId: string): HistoryMoment {
   const value = historyCase.values
   switch (stepId) {
-    case 'find-unscheduled':
-      return { input: value.due, output: value.owner }
-    case 'notify-owner':
-      return { input: value.owner, output: value.followup }
-    case 'escalate-unresolved':
-      return { input: value.tracking, output: value.escalation }
+    case 'check-scheduling-status':
+      return {
+        input: 'Due referrals at the end-of-day cutoff',
+        output: value.status,
+      }
+    case 'follow-up-case-manager':
+      return { input: value.status, output: value.followUp }
+    case 'escalate-unresolved-cases':
+      return { input: value.followUp, output: value.escalation }
     default:
-      return { input: value.verification, output: value.weekly }
+      return { input: value.followUp, output: value.escalation }
   }
 }
 
 function weeklyMoment(historyCase: HistoryCase, stepId: string): HistoryMoment {
   const value = historyCase.values
   switch (stepId) {
-    case 'record-visit-outcome':
-      return { input: value.progress, output: value.outcome }
-    case 'apply-weekly-rules':
-      return { input: value.counter, output: value.review }
-    case 'assign-follow-up':
-      return { input: value.review, output: value.action }
+    case 'patient-seen':
+      return {
+        input: 'Active linked patient in this weekly cycle',
+        output: value.seen,
+      }
+    case 'wound-healed':
+      return { input: value.seen, output: value.healed }
+    case 'patient-expired':
+      return { input: value.healed, output: value.expired }
+    case 'patient-on-hold':
+      return { input: value.expired, output: value.hold }
     default:
-      return { input: value.action, output: value.notification }
+      return { input: value.expired, output: value.hold }
   }
 }
 

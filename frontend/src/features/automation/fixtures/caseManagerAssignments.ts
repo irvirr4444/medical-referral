@@ -3,6 +3,7 @@ import {
   patientAddressLine,
   type CanonicalReferral,
 } from '../canonicalReferral'
+import { providerPatientLocationDisplay } from './providerAssignments'
 
 export interface CaseManagerOption {
   name: string
@@ -29,6 +30,12 @@ export interface ReferralSourceNotification {
   body: string
 }
 
+export interface AssignedProviderRecord {
+  name: string
+  npi?: string
+  city?: string
+}
+
 export interface MondayRecord {
   itemId: string
   board: string
@@ -43,6 +50,9 @@ export interface MondayRecord {
     case_manager: CaseManagerOption
     sent_by: string
     referral_status: string
+    assigned_provider?: string
+    provider_npi?: string
+    provider_city?: string
   }
 }
 
@@ -103,6 +113,31 @@ const SUGGESTIONS: Record<string, CaseManagerSuggestion> = {
     email: 'cwinfield@westcoastwound.com',
     reason: 'Demo routing match for the Gardena / South Bay service area',
   },
+  'gloria-bennett': {
+    name: 'Donessa Ruiz',
+    email: 'druiz@westcoastwound.com',
+    reason: 'Demo routing match for the Riverside service area',
+  },
+  'dorothy-lane': {
+    name: 'Carla Bustillo',
+    email: 'cbustillo@westcoastwound.com',
+    reason: 'Demo routing match for the Coastal Los Angeles service area',
+  },
+  'margaret-ellis': {
+    name: 'Cole Winfield',
+    email: 'cwinfield@westcoastwound.com',
+    reason: 'Demo routing match for the Gardena / South Bay service area',
+  },
+  'walter-grant': {
+    name: 'Nicole Chorvat',
+    email: 'nchorvat@westcoastwound.com',
+    reason: 'Demo routing match for the South Bay service area',
+  },
+  'arthur-kim': {
+    name: 'Braxton Rickert',
+    email: 'brickert@westcoastwound.com',
+    reason: 'Demo routing match for hold-tracking follow-up',
+  },
   'thomas-reed': {
     name: 'Donessa Ruiz',
     email: 'druiz@westcoastwound.com',
@@ -127,6 +162,11 @@ const SUGGESTIONS: Record<string, CaseManagerSuggestion> = {
     name: 'Carla Bustillo',
     email: 'cbustillo@westcoastwound.com',
     reason: 'Demo routing match for the South Bay service area',
+  },
+  'george-chen': {
+    name: 'Carla Bustillo',
+    email: 'cbustillo@westcoastwound.com',
+    reason: 'Demo routing match for the Coastal Los Angeles service area',
   },
   'linda-nguyen': {
     name: 'Nicole Chorvat',
@@ -272,6 +312,50 @@ const PATIENT_DETAILS: Record<
   },
 }
 
+export interface ReferralPatientSummary {
+  name: string
+  dateOfBirth: string
+  location: string
+  phone: string
+}
+
+export function referralPatientSummary(
+  patientId: string,
+  patientName: string,
+  canonical?: CanonicalReferral,
+): ReferralPatientSummary {
+  const fallbackLocation = providerPatientLocationDisplay(patientId)
+  const locationFromDisplay =
+    fallbackLocation !== 'Location unavailable' ? fallbackLocation : undefined
+
+  if (canonical) {
+    return {
+      name: patientName,
+      dateOfBirth: canonical.patient.date_of_birth ?? 'Not documented',
+      location:
+        locationFromDisplay ??
+        (patientAddressLine(canonical.patient) || 'Not documented'),
+      phone: canonical.patient.phones[0]?.number ?? 'Not documented',
+    }
+  }
+
+  const details = PATIENT_DETAILS[patientId] ?? {
+    dob: 'Not documented',
+    phone: 'Not documented',
+    address: 'Not documented',
+    agency: 'Not documented',
+    clinical: 'Review referral in the secure platform',
+    insurance: 'Not documented',
+  }
+
+  return {
+    name: patientName,
+    dateOfBirth: details.dob,
+    location: locationFromDisplay ?? details.address,
+    phone: details.phone,
+  }
+}
+
 export function caseManagerNotification(
   patientId: string,
   patientName: string,
@@ -405,37 +489,6 @@ export function mondayRecordForPatient(
 
 const DRK_BLOCKED_PATIENTS = new Set(['james-carter', 'irene-cho'])
 
-function realDrkBlockers(patientId: string): string[] {
-  const shared = ['Insurance payer requires an exact DRK catalog match']
-  const byPatient: Record<string, string[]> = {
-    'zadran-khojagul': [
-      'SSN is missing',
-      'Facility and home health agency require exact DRK catalog matches',
-    ],
-    'eliut-cruz-pagan': [
-      'SSN is missing',
-      'Place of service and home health agency require exact DRK catalog matches',
-    ],
-    'fay-william': [
-      'SSN is missing',
-      'Facility and home health agency require exact DRK catalog matches',
-    ],
-    'rodriguez-anita': [
-      'SSN and gender are missing',
-      'Secondary insurance is incomplete',
-      'Facility requires an exact DRK catalog match',
-    ],
-    'sardina-frank': [
-      'Place of service and facility require exact DRK catalog matches',
-    ],
-    'gonzalez-eric': [
-      'SSN, gender, and address state are missing',
-      'Place of service and facility require exact DRK catalog matches',
-    ],
-  }
-  return [...(byPatient[patientId] ?? []), ...shared]
-}
-
 export function drkDraftForPatient(
   patientId: string,
   patientName: string,
@@ -556,8 +609,8 @@ export function drkDraftForPatient(
           value: primaryInsurance?.policy_number ?? 'Not documented',
         },
       ],
-      readyForFill: false,
-      blockers: realDrkBlockers(patientId),
+      readyForFill: true,
+      blockers: [],
       warnings: canonical.warnings,
     }
   }
@@ -622,5 +675,57 @@ export function drkDraftForPatient(
     warnings: [
       'Provider remains pending until the Provider Selection stage.',
     ],
+  }
+}
+
+export function mondayRecordWithAssignedProvider(
+  record: MondayRecord,
+  provider: AssignedProviderRecord,
+  referralStatus = 'Provider confirmed',
+): MondayRecord {
+  return {
+    ...record,
+    data: {
+      ...record.data,
+      assigned_provider: provider.name,
+      provider_npi: provider.npi ?? 'Not documented',
+      provider_city: provider.city ?? 'Not documented',
+      referral_status: referralStatus,
+    },
+  }
+}
+
+function upsertLabeledValue(
+  fields: Array<{ label: string; value: string }>,
+  label: string,
+  value: string,
+) {
+  const next = fields.filter((field) => field.label !== label)
+  next.push({ label, value })
+  return next
+}
+
+export function drkDraftWithAssignedProvider(
+  draft: DrkDraftRecord,
+  provider: AssignedProviderRecord,
+): DrkDraftRecord {
+  return {
+    ...draft,
+    admission: upsertLabeledValue(
+      draft.admission,
+      'Provider query',
+      provider.name,
+    ),
+    referral: [
+      ...draft.referral.filter(
+        (field) =>
+          field.label !== 'Assigned provider' && field.label !== 'Provider NPI',
+      ),
+      { label: 'Assigned provider', value: provider.name },
+      { label: 'Provider NPI', value: provider.npi ?? 'Not documented' },
+    ],
+    warnings: draft.warnings.filter(
+      (warning) => !/provider remains pending/i.test(warning),
+    ),
   }
 }

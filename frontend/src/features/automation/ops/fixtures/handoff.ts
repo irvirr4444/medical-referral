@@ -29,9 +29,8 @@ export const HANDOFF_OPS_FIXTURE: StageOpsFixture = {
       patient.patientId,
       patient.patientName,
       patient.receivedAt,
-      'DRK draft generated · catalog matches require review',
-      'open',
-      'Needs review',
+      'DRK chart created from approved intake data',
+      'resolved',
     ),
   ]),
 }

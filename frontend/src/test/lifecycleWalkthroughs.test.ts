@@ -26,7 +26,7 @@ describe('lifecycle stage walkthroughs', () => {
   it('uses a clear representative case for each lifecycle stage', () => {
     expect(runForStage('scheduling').label).toMatch(/Maria Alvarez/)
     expect(runForStage('end-of-day').label).toMatch(/Evelyn Brooks/)
-    expect(runForStage('weekly').label).toMatch(/Gloria Bennett/)
+    expect(runForStage('weekly').label).toMatch(/Walter Grant/)
   })
 
   it('keeps scheduling visibly planned and monitoring human-controlled', () => {
