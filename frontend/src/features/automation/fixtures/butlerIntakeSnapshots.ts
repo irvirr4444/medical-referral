@@ -5,6 +5,20 @@ import {
   patientDisplayName,
   requiredFieldValue,
 } from '../canonicalReferral'
+import {
+  admissionFields,
+  allergyFields,
+  allergyFlagFields,
+  diagnosisFields,
+  emergencyContactFields,
+  insuranceFields,
+  medicationFields,
+  noteFields,
+  organizationFields,
+  phoneFields,
+  serviceFields,
+  warningFields,
+} from '../intakeRecords'
 import type {
   ArtifactSection,
   MicrostepExecutionSnapshot,
@@ -102,15 +116,74 @@ function buildExtractionSections(record: CanonicalReferral): ArtifactSection[] {
       title: 'Demographics',
       defaultExpanded: true,
       fields: [
-        { label: 'Name', value: patientDisplayName(patient), fieldPath: 'patient.name' },
-        { label: 'DOB', value: patient.date_of_birth ?? '—', fieldPath: 'patient.date_of_birth' },
-        { label: 'Sex', value: patient.sex_or_gender ?? '—' },
-        { label: 'Source patient ID', value: patient.source_patient_id ?? '—', fieldPath: 'patient.source_patient_id' },
-        { label: 'MRN', value: patient.mrn ?? 'Not documented (not inferred from source ID)' },
-        { label: 'Phone', value: patient.phones[0]?.number ?? '—', fieldPath: 'patient.phones' },
-        { label: 'Email', value: patient.email ?? '—' },
-        { label: 'Address', value: patientAddressLine(patient), fieldPath: 'patient.address' },
+        {
+          label: 'Name',
+          value: patientDisplayName(patient),
+          fieldPath: 'patient.name',
+          required: true,
+        },
+        {
+          label: 'DOB',
+          value: patient.date_of_birth ?? '—',
+          fieldPath: 'patient.date_of_birth',
+          required: true,
+        },
+        {
+          label: 'Age',
+          value: patient.age == null ? '—' : String(patient.age),
+          fieldPath: 'patient.age',
+        },
+        {
+          label: 'Sex',
+          value: patient.sex_or_gender ?? '—',
+          fieldPath: 'patient.sex_or_gender',
+        },
+        {
+          label: 'SSN',
+          value: patient.ssn ?? '—',
+          fieldPath: 'patient.ssn',
+        },
+        {
+          label: 'Source patient ID',
+          value: patient.source_patient_id ?? '—',
+          fieldPath: 'patient.source_patient_id',
+        },
+        {
+          label: 'Source patient ID label',
+          value: patient.source_patient_id_label ?? '—',
+          fieldPath: 'patient.source_patient_id_label',
+        },
+        {
+          label: 'MRN',
+          value: patient.mrn ?? 'Not documented (not inferred from source ID)',
+          fieldPath: 'patient.mrn',
+        },
+        {
+          label: 'Email',
+          value: patient.email ?? '—',
+          fieldPath: 'patient.email',
+        },
+        {
+          label: 'Address',
+          value: patientAddressLine(patient),
+          fieldPath: 'patient.address',
+          required: true,
+        },
       ],
+    },
+    {
+      id: 'phones',
+      title: 'Phones',
+      defaultExpanded: false,
+      repeatable: true,
+      addKind: 'phone',
+      fields: patient.phones.flatMap((item, index) => phoneFields(item, index)),
+    },
+    {
+      id: 'emergency-contact',
+      title: 'Emergency contact',
+      defaultExpanded: false,
+      fields: emergencyContactFields(patient.emergency_contact),
     },
     {
       id: 'referral-source',
@@ -122,50 +195,151 @@ function buildExtractionSections(record: CanonicalReferral): ArtifactSection[] {
           fieldPath: 'referral_source.provider_name',
         },
         {
-          label: 'Organization phone',
-          value: record.referral_source.organization.phone ?? '—',
+          label: 'Order date',
+          value: record.referral_source.referral_or_order_date ?? '—',
+          fieldPath: 'referral_source.referral_or_order_date',
+        },
+        ...organizationFields(
+          record.referral_source.organization,
+          'referral_source.organization',
+        ),
+      ],
+    },
+    {
+      id: 'home-health',
+      title: 'Home health or hospice',
+      fields: [
+        ...organizationFields(
+          record.home_health_or_hospice.organization,
+          'home_health_or_hospice.organization',
+          { nameRequired: true },
+        ),
+        {
+          label: 'Hospice',
+          value:
+            record.home_health_or_hospice.hospice == null
+              ? '—'
+              : record.home_health_or_hospice.hospice
+                ? 'Yes'
+                : 'No',
+          fieldPath: 'home_health_or_hospice.hospice',
+          choice: 'yesno',
         },
         {
-          label: 'Facility',
-          value: record.referral_source.organization.name ?? 'Not documented',
+          label: 'Palliative care',
+          value:
+            record.home_health_or_hospice.palliative_care == null
+              ? '—'
+              : record.home_health_or_hospice.palliative_care
+                ? 'Yes'
+                : 'No',
+          fieldPath: 'home_health_or_hospice.palliative_care',
+          choice: 'yesno',
         },
       ],
+    },
+    {
+      id: 'admission',
+      title: 'Admission',
+      defaultExpanded: false,
+      fields: admissionFields(record.admission),
     },
     {
       id: 'clinical',
       title: 'Clinical',
       defaultExpanded: false,
       fields: [
-        { label: 'Summary', value: record.clinical.summary ?? '—', fieldPath: 'clinical.summary' },
         {
-          label: 'Diagnoses',
-          value: `${record.clinical.diagnoses.length} ICD-10 codes extracted`,
-          fieldPath: 'clinical.diagnoses',
+          label: 'Summary',
+          value: record.clinical.summary ?? '—',
+          fieldPath: 'clinical.summary',
+          required: true,
         },
         {
-          label: 'No known allergies',
-          value: record.clinical.no_known_allergies_explicit ? 'Explicitly documented' : '—',
+          label: 'Wound order included',
+          value:
+            record.clinical.wound_order_included == null
+              ? '—'
+              : record.clinical.wound_order_included
+                ? 'Yes'
+                : 'No',
+          fieldPath: 'clinical.wound_order_included',
+          choice: 'yesno',
         },
       ],
+    },
+    {
+      id: 'diagnoses',
+      title: 'Diagnoses',
+      defaultExpanded: false,
+      repeatable: true,
+      addKind: 'diagnosis',
+      fields: record.clinical.diagnoses.flatMap((item, index) =>
+        diagnosisFields(item, index),
+      ),
+    },
+    {
+      id: 'medications',
+      title: 'Medications',
+      defaultExpanded: false,
+      repeatable: true,
+      addKind: 'medication',
+      fields: record.clinical.medications.flatMap((item, index) =>
+        medicationFields(item, index),
+      ),
+    },
+    {
+      id: 'allergies',
+      title: 'Allergies',
+      defaultExpanded: false,
+      repeatable: true,
+      addKind: 'allergy',
+      fields: [
+        ...allergyFlagFields(record),
+        ...record.clinical.allergies.flatMap((item, index) =>
+          allergyFields(item, index),
+        ),
+      ],
+    },
+    {
+      id: 'notes',
+      title: 'Clinical notes',
+      defaultExpanded: false,
+      repeatable: true,
+      addKind: 'note',
+      fields: record.clinical.notes.flatMap((note, index) =>
+        noteFields(note, index),
+      ),
     },
     {
       id: 'insurance',
       title: 'Insurance policies',
       defaultExpanded: false,
-      fields: record.insurances.map((item, index) => ({
-        label: item.insurance_type ?? `Policy ${index + 1}`,
-        value: [item.payer_name, item.policy_number].filter(Boolean).join(' · '),
-        fieldPath: `insurances.${index}`,
-      })),
+      repeatable: true,
+      addKind: 'insurance',
+      fields: record.insurances.flatMap((item, index) =>
+        insuranceFields(item, index),
+      ),
+    },
+    {
+      id: 'services',
+      title: 'Requested services',
+      defaultExpanded: false,
+      repeatable: true,
+      addKind: 'service',
+      fields: record.requested_services.flatMap((item, index) =>
+        serviceFields(item, index),
+      ),
     },
     {
       id: 'quality',
       title: 'Warnings',
       defaultExpanded: false,
-      fields: record.warnings.map((warning, index) => ({
-        label: `Warning ${index + 1}`,
-        value: warning,
-      })),
+      repeatable: true,
+      addKind: 'warning',
+      fields: record.warnings.flatMap((warning, index) =>
+        warningFields(warning, index),
+      ),
     },
   ]
 }
@@ -312,11 +486,18 @@ export function buildIntakeSnapshots(
           id: 'processing-guard',
           title: 'Processing guardrail',
           defaultExpanded: false,
+          repeatable: true,
+          addKind: 'guard',
           fields: [
-            { label: 'SHA-256 fingerprint', value: sha },
+            {
+              label: 'SHA-256 fingerprint',
+              value: sha,
+              rowId: 'processing-guard.sha',
+            },
             {
               label: 'Duplicate completion check',
               value: 'Not previously completed',
+              rowId: 'processing-guard.duplicate',
             },
           ],
         },

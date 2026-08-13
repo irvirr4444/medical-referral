@@ -120,6 +120,64 @@ describe('stage operations fixtures', () => {
         (section) => section.id === 'required-fields',
       ),
     ).toBe(true)
+    expect(
+      extract.example?.artifactSections?.map((section) => section.id),
+    ).toEqual(
+      expect.arrayContaining([
+        'phones',
+        'emergency-contact',
+        'home-health',
+        'admission',
+        'clinical',
+        'diagnoses',
+        'medications',
+        'allergies',
+        'notes',
+        'insurance',
+        'services',
+        'quality',
+        'processing-guard',
+      ]),
+    )
+    expect(
+      extract.example?.artifactSections?.find(
+        (section) => section.id === 'diagnoses',
+      ),
+    ).toEqual(
+      expect.objectContaining({
+        repeatable: true,
+        addKind: 'diagnosis',
+      }),
+    )
+    expect(
+      extract.example?.artifactSections?.find(
+        (section) => section.id === 'clinical',
+      )?.fields.map((field) => field.label),
+    ).toEqual(['Summary', 'Wound order included'])
+    expect(
+      extract.example?.artifactSections
+        ?.find((section) => section.id === 'allergies')
+        ?.fields.filter((field) => field.label === 'Name')
+        .map((field) => field.value),
+    ).toEqual(['Sulfamethoxazole-Trimethoprim'])
+
+    const butlerExtract = detailForPatientStep(
+      'intake',
+      'butler-alva',
+      'extract-and-verify',
+    )
+    expect(
+      butlerExtract.example?.artifactSections
+        ?.find((section) => section.id === 'allergies')
+        ?.fields,
+    ).toEqual([
+      expect.objectContaining({
+        label: 'No known allergies',
+        value: 'Yes',
+        rowId: 'allergies.nka',
+        fixed: true,
+      }),
+    ])
 
     const eric = detailForPatientStep(
       'intake',

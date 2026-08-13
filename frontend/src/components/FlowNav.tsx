@@ -15,7 +15,20 @@ export function FlowNav() {
         {APP_NAV_ITEMS.map((item) => {
           const active = state.activePage === item.id
           const needsAttention =
-            item.id === 'scheduling' && state.schedulingHandoffUnread
+            (item.id === 'assignment' && state.assignmentNotifyUnread) ||
+            (item.id === 'scheduling' && state.schedulingHandoffUnread) ||
+            (item.id === 'handoff' &&
+              (state.handoffNavUnread ||
+                state.handoffNotifyUnread ||
+                state.handoffMondayUnread ||
+                state.handoffDrkUnread)) ||
+            (item.id === 'provider' &&
+              (state.providerNavUnread ||
+                state.providerSelectUnread ||
+                state.providerAvailabilityUnread ||
+                state.providerRecordsUnread)) ||
+            (item.id === 'end-of-day' &&
+              (state.eodFollowUpUnread || state.eodEscalationUnread))
           return (
             <button
               key={item.id}

@@ -173,6 +173,366 @@ describe('automation inspection console', () => {
     ).toBeInTheDocument()
   })
 
+  it('lets an operator edit extracted referral fields then lock them on confirm', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(
+      screen.getByRole('button', { name: /Inspect Referral intake/i }),
+    )
+
+    const stepsPanel = screen.getByLabelText(/Patient steps/i)
+    await user.click(
+      within(stepsPanel).getByRole('button', {
+        name: /Extract and verify referral details/i,
+      }),
+    )
+
+    const article = within(stepsPanel).getByRole('article', {
+      name: /Gonzalez, Eric/i,
+    })
+    expect(
+      within(article).queryByRole('textbox', {
+        name: /Home health or hospice agency/i,
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      within(article).getByRole('button', {
+        name: /Confirm all information is correct/i,
+      }),
+    ).toBeEnabled()
+    expect(
+      within(article).getByRole('button', { name: /^Edit$/i }),
+    ).toBeEnabled()
+    expect(within(article).getByText('5/7')).toBeInTheDocument()
+    expect(
+      within(article).getByText(/^Missing$/i).closest('div'),
+    ).toHaveTextContent(/Home health or hospice agency/i)
+
+    await user.click(within(article).getByRole('button', { name: /^Edit$/i }))
+    expect(
+      within(article).getByRole('button', { name: /^Save changes$/i }),
+    ).toBeEnabled()
+    expect(
+      within(article).getByRole('button', {
+        name: /Confirm all information is correct/i,
+      }),
+    ).toBeEnabled()
+    const agency = within(article).getByRole('textbox', {
+      name: /Home health or hospice agency/i,
+    })
+    expect(agency).toBeEnabled()
+
+    await user.clear(agency)
+    await user.type(agency, 'VNA of Southern California')
+
+    expect(within(article).getByText('5/7')).toBeInTheDocument()
+    expect(
+      within(article).getByText(/^Missing$/i).closest('div'),
+    ).toHaveTextContent(/Home health or hospice agency/i)
+
+    await user.click(
+      within(article).getByRole('button', { name: /Show extracted details/i }),
+    )
+    await user.click(
+      within(article).getByRole('button', { name: /Demographics/i }),
+    )
+    const email = within(article).getByRole('textbox', { name: /^Email$/i })
+    expect(email).toBeEnabled()
+
+    await user.click(
+      within(article).getByRole('button', { name: /^Save changes$/i }),
+    )
+    expect(
+      within(article).queryByRole('textbox', {
+        name: /Home health or hospice agency/i,
+      }),
+    ).not.toBeInTheDocument()
+    expect(within(article).getByText('VNA of Southern California')).toBeInTheDocument()
+    expect(within(article).getByText('6/7')).toBeInTheDocument()
+    expect(
+      within(article).getByText(/^Missing$/i).closest('div'),
+    ).toHaveTextContent(/^MissingNone$/i)
+    expect(
+      within(article).getByRole('button', { name: /^Edit$/i }),
+    ).toBeEnabled()
+
+    await user.click(
+      within(article).getByRole('button', {
+        name: /Confirm all information is correct/i,
+      }),
+    )
+
+    expect(
+      within(article).queryByRole('textbox', {
+        name: /Home health or hospice agency/i,
+      }),
+    ).not.toBeInTheDocument()
+    expect(within(article).getByText('VNA of Southern California')).toBeInTheDocument()
+    const confirmed = within(article).getByRole('button', {
+      name: /^Confirmed$/i,
+    })
+    expect(confirmed).toBeDisabled()
+    expect(
+      within(article).getByRole('button', {
+        name: /Add or edit patient information/i,
+      }),
+    ).toBeEnabled()
+    expect(
+      within(article).queryByRole('button', { name: /^Edit$/i }),
+    ).not.toBeInTheDocument()
+    await user.click(confirmed)
+    expect(within(article).getByText('VNA of Southern California')).toBeInTheDocument()
+
+    expect(
+      within(stepsPanel).getByRole('button', {
+        name: /Check Monday for existing patient, new update/i,
+      }),
+    ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByRole('button', {
+        name: /Check DRK for existing chart, new update/i,
+      }),
+    ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByRole('button', {
+        name: /Referral partner contacted, new update/i,
+      }),
+    ).toBeInTheDocument()
+
+    await user.click(
+      within(stepsPanel).getByRole('button', {
+        name: /Check Monday for existing patient/i,
+      }),
+    )
+    expect(
+      within(stepsPanel).queryByRole('button', {
+        name: /Check Monday for existing patient, new update/i,
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByRole('button', {
+        name: /Check DRK for existing chart, new update/i,
+      }),
+    ).toBeInTheDocument()
+    expect(within(stepsPanel).getByText(/^Unread$/i)).toBeInTheDocument()
+    const mondayArticle = within(stepsPanel).getByRole('article', {
+      name: /Gonzalez, Eric/i,
+    })
+    expect(within(mondayArticle).getByText(/^Unread$/i)).toBeInTheDocument()
+    expect(
+      within(mondayArticle).getByText(/No matching Monday\.com candidate found/i),
+    ).toBeInTheDocument()
+
+    await user.click(
+      within(stepsPanel).getByRole('button', {
+        name: /Check DRK for existing chart/i,
+      }),
+    )
+    expect(
+      within(stepsPanel).queryByRole('button', {
+        name: /Check DRK for existing chart, new update/i,
+      }),
+    ).not.toBeInTheDocument()
+    expect(within(stepsPanel).getByText(/^Unread$/i)).toBeInTheDocument()
+    const drkArticle = within(stepsPanel).getByRole('article', {
+      name: /Gonzalez, Eric/i,
+    })
+    expect(
+      within(drkArticle).getByText(/No exact DRK chart match found/i),
+    ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByRole('button', {
+        name: /Referral partner contacted, new update/i,
+      }),
+    ).toBeInTheDocument()
+
+    await user.click(
+      within(stepsPanel).getByRole('button', {
+        name: /Referral partner contacted/i,
+      }),
+    )
+    expect(
+      within(stepsPanel).queryByRole('button', {
+        name: /Referral partner contacted, new update/i,
+      }),
+    ).not.toBeInTheDocument()
+    const partnerArticle = within(stepsPanel).getByRole('article', {
+      name: /Gonzalez, Eric/i,
+    })
+    expect(within(partnerArticle).getByText(/^Unread$/i)).toBeInTheDocument()
+    expect(
+      within(partnerArticle).getByText(/Awaiting partner confirmation/i),
+    ).toBeInTheDocument()
+  })
+
+  it('lets an operator add and remove intake list rows, then persist them on save', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(
+      screen.getByRole('button', { name: /Inspect Referral intake/i }),
+    )
+
+    const stepsPanel = screen.getByLabelText(/Patient steps/i)
+    await user.click(
+      within(stepsPanel).getByRole('button', {
+        name: /Extract and verify referral details/i,
+      }),
+    )
+
+    const article = within(stepsPanel).getByRole('article', {
+      name: /Gonzalez, Eric/i,
+    })
+    expect(within(article).getByText('5/7')).toBeInTheDocument()
+
+    await user.click(within(article).getByRole('button', { name: /^Edit$/i }))
+    await user.click(
+      within(article).getByRole('button', { name: /Show extracted details/i }),
+    )
+
+    await user.click(
+      within(article).getByRole('button', { name: /Insurance policies/i }),
+    )
+    expect(
+      within(article).getByRole('button', { name: /Insurance policies1 item/i }),
+    ).toBeInTheDocument()
+    await user.click(
+      within(article).getByRole('button', { name: /Add insurance policy/i }),
+    )
+    await user.type(
+      within(article).getByRole('textbox', {
+        name: 'Insurance policies 2 Payer',
+      }),
+      'Blue Shield PPO',
+    )
+    await user.type(
+      within(article).getByRole('textbox', {
+        name: 'Insurance policies 2 Policy number',
+      }),
+      '998877',
+    )
+
+    await user.click(
+      within(article).getByRole('button', { name: /^Diagnoses/i }),
+    )
+    await user.click(
+      within(article).getByRole('button', { name: /Add diagnosis/i }),
+    )
+    await user.type(
+      within(article).getByRole('textbox', { name: 'Diagnoses 29 Code' }),
+      'I10',
+    )
+    await user.type(
+      within(article).getByRole('textbox', {
+        name: 'Diagnoses 29 Description',
+      }),
+      'Essential hypertension',
+    )
+
+    await user.click(
+      within(article).getByRole('button', { name: /^Allergies/i }),
+    )
+    await user.click(
+      within(article).getByRole('button', { name: /Add allergy/i }),
+    )
+    await user.type(
+      within(article).getByRole('textbox', { name: 'Allergies 2 Name' }),
+      'Penicillin',
+    )
+
+    await user.click(
+      within(article).getByRole('button', { name: /^Warnings/i }),
+    )
+    expect(
+      within(article).getByRole('button', { name: /Warnings15 items/i }),
+    ).toBeInTheDocument()
+    await user.click(
+      within(article).getByRole('button', { name: 'Remove Warnings 1' }),
+    )
+    expect(
+      within(article).getByRole('button', { name: /Warnings14 items/i }),
+    ).toBeInTheDocument()
+    await user.click(
+      within(article).getByRole('button', { name: /Add warning/i }),
+    )
+    await user.type(
+      within(article).getByRole('textbox', { name: /^Warning 16$/i }),
+      'Needs interpreter for follow-up',
+    )
+
+    await user.click(
+      within(article).getByRole('button', { name: /Processing guardrail/i }),
+    )
+    await user.click(
+      within(article).getByRole('button', { name: /Add field/i }),
+    )
+    await user.type(
+      within(article).getByRole('textbox', { name: /^Processing guardrail$/i }),
+      'Reviewed by intake',
+    )
+
+    expect(within(article).getByText('5/7')).toBeInTheDocument()
+    expect(
+      within(article).getByText(/^Missing$/i).closest('div'),
+    ).toHaveTextContent(/Home health or hospice agency/i)
+
+    await user.click(
+      within(article).getByRole('button', { name: /^Save changes$/i }),
+    )
+
+    expect(within(article).getByText('5/7')).toBeInTheDocument()
+    expect(within(article).getAllByText('Blue Shield PPO').length).toBeGreaterThan(0)
+    expect(within(article).getByText('998877')).toBeInTheDocument()
+    expect(within(article).getAllByText('I10').length).toBeGreaterThan(0)
+    expect(within(article).getByText('Essential hypertension')).toBeInTheDocument()
+    expect(within(article).getAllByText('Penicillin').length).toBeGreaterThan(0)
+    expect(
+      within(article).getByText('Needs interpreter for follow-up'),
+    ).toBeInTheDocument()
+    expect(
+      within(article).queryByText(/Patient address conflict/i),
+    ).not.toBeInTheDocument()
+    expect(within(article).getByText('Reviewed by intake')).toBeInTheDocument()
+    expect(
+      within(article).getByRole('button', { name: /Insurance policies2 items/i }),
+    ).toBeInTheDocument()
+    expect(
+      within(article).getByRole('button', { name: /Warnings15 items/i }),
+    ).toBeInTheDocument()
+    expect(
+      within(article).queryByRole('button', { name: /Add insurance policy/i }),
+    ).not.toBeInTheDocument()
+
+    await user.click(
+      within(article).getByRole('button', {
+        name: /Confirm all information is correct/i,
+      }),
+    )
+    expect(
+      within(article).getByRole('button', { name: /^Confirmed$/i }),
+    ).toBeDisabled()
+    expect(within(article).getAllByText('Blue Shield PPO').length).toBeGreaterThan(0)
+
+    await user.click(
+      within(article).getByRole('button', {
+        name: /Add or edit patient information/i,
+      }),
+    )
+    expect(
+      within(article).getByRole('textbox', {
+        name: 'Insurance policies 2 Payer',
+      }),
+    ).toHaveValue('Blue Shield PPO')
+    expect(
+      within(article).getByRole('textbox', { name: 'Diagnoses 29 Code' }),
+    ).toHaveValue('I10')
+    expect(
+      within(article).getByRole('textbox', { name: 'Allergies 2 Name' }),
+    ).toHaveValue('Penicillin')
+    expect(
+      within(article).getByRole('textbox', { name: /^Warning 16$/i }),
+    ).toHaveValue('Needs interpreter for follow-up')
+  })
+
   it('lets an operator change and confirm the suggested case manager', async () => {
     const user = userEvent.setup()
     render(<App />)
@@ -203,10 +563,116 @@ describe('automation inspection console', () => {
     ).toBeInTheDocument()
 
     expect(
+      screen.getByRole('button', { name: /2\. Assignment, new update/i }),
+    ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByRole('button', {
+        name: /Notify Case Manager, new update/i,
+      }),
+    ).toBeInTheDocument()
+    await user.click(
+      within(stepsPanel).getByRole('button', { name: /Notify Case Manager/i }),
+    )
+    expect(
+      screen.queryByRole('button', { name: /2\. Assignment, new update/i }),
+    ).not.toBeInTheDocument()
+    expect(
       within(stepsPanel).queryByRole('button', {
         name: /Notify Case Manager/i,
       }),
     ).not.toBeInTheDocument()
+    expect(within(stepsPanel).getByText(/^Unread$/i)).toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByText(/^Nadine Pelicano notified$/i),
+    ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).getAllByText(/ndelpelicano@westcoastwound\.com/i)
+        .length,
+    ).toBeGreaterThan(0)
+    expect(
+      within(stepsPanel).getAllByLabelText(
+        /Patient data shared with case manager/i,
+      ).length,
+    ).toBeGreaterThan(0)
+
+    await user.click(
+      within(stepsPanel).getByRole('button', { name: /Assign Case Manager/i }),
+    )
+    await user.click(
+      within(stepsPanel).getByRole('button', { name: /Notify Case Manager/i }),
+    )
+    expect(within(stepsPanel).queryByText(/^Unread$/i)).not.toBeInTheDocument()
+
+    expect(
+      screen.getByRole('button', { name: /3\. Handoff, new update/i }),
+    ).toBeInTheDocument()
+    await user.click(
+      screen.getByRole('button', { name: /3\. Handoff, new update/i }),
+    )
+    const handoffPanel = screen.getByLabelText(/Patient steps/i)
+    expect(
+      within(handoffPanel).getByRole('button', {
+        name: /Notify referral source, new update/i,
+      }),
+    ).toBeInTheDocument()
+    expect(
+      within(handoffPanel).getByRole('button', {
+        name: /Create Monday\.com Record, new update/i,
+      }),
+    ).toBeInTheDocument()
+    expect(
+      within(handoffPanel).getByRole('button', {
+        name: /Create DRK Chart, new update/i,
+      }),
+    ).toBeInTheDocument()
+    expect(within(handoffPanel).getByText(/^Unread$/i)).toBeInTheDocument()
+
+    await user.click(
+      within(handoffPanel).getByRole('button', {
+        name: /Create Monday\.com Record, new update/i,
+      }),
+    )
+    expect(within(handoffPanel).getByText(/^Unread$/i)).toBeInTheDocument()
+    expect(
+      within(handoffPanel).getByRole('button', {
+        name: /Create DRK Chart, new update/i,
+      }),
+    ).toBeInTheDocument()
+    expect(
+      within(handoffPanel).queryByRole('button', {
+        name: /Create Monday\.com Record, new update/i,
+      }),
+    ).not.toBeInTheDocument()
+
+    expect(
+      screen.getByRole('button', {
+        name: /4\. Provider selection, new update/i,
+      }),
+    ).toBeInTheDocument()
+    await user.click(
+      screen.getByRole('button', {
+        name: /4\. Provider selection, new update/i,
+      }),
+    )
+    const providerPanel = screen.getByLabelText(/Patient steps/i)
+    expect(
+      within(providerPanel).getByRole('button', {
+        name: /Select Provider, new update/i,
+      }),
+    ).toBeInTheDocument()
+    expect(within(providerPanel).getByText(/^Unread$/i)).toBeInTheDocument()
+
+    await user.click(
+      within(providerPanel).getByRole('button', {
+        name: /Select Provider, new update/i,
+      }),
+    )
+    expect(
+      within(providerPanel).queryByRole('button', {
+        name: /Select Provider, new update/i,
+      }),
+    ).not.toBeInTheDocument()
+    expect(within(providerPanel).getByText(/^Unread$/i)).toBeInTheDocument()
   })
 
   it('shows case-manager notifications as email messages', async () => {
@@ -294,6 +760,11 @@ describe('automation inspection console', () => {
     )
     expect(within(stepsPanel).getByText(/^Selected$/i)).toBeInTheDocument()
     expect(
+      screen.getByRole('button', {
+        name: /4\. Provider selection, new update/i,
+      }),
+    ).toBeInTheDocument()
+    expect(
       within(stepsPanel).getByRole('button', {
         name: /Confirm Provider Availability, new update/i,
       }),
@@ -304,6 +775,11 @@ describe('automation inspection console', () => {
         name: /Confirm Provider Availability/i,
       }),
     )
+    expect(
+      screen.queryByRole('button', {
+        name: /4\. Provider selection, new update/i,
+      }),
+    ).not.toBeInTheDocument()
     expect(
       within(stepsPanel).queryByRole('button', {
         name: /Confirm Provider Availability, new update/i,
@@ -586,7 +1062,73 @@ describe('automation inspection console', () => {
     )
     const stepsPanel = screen.getByLabelText(/Patient steps/i)
 
-    expect(within(stepsPanel).queryByText(/Anita Gomez/i)).not.toBeInTheDocument()
+    await user.click(within(stepsPanel).getByLabelText(/Filter by status/i))
+    expect(
+      within(stepsPanel).getByRole('option', { name: /^Scheduled$/i }),
+    ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByRole('option', {
+        name: /^Not scheduled after 48h$/i,
+      }),
+    ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByRole('option', {
+        name: /^Not scheduled less than 48h$/i,
+      }),
+    ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).queryByRole('option', { name: /^Needs confirmation$/i }),
+    ).not.toBeInTheDocument()
+    await user.click(within(stepsPanel).getByRole('option', { name: /^All statuses$/i }))
+
+    expect(within(stepsPanel).getByText(/Anita Gomez/i)).toBeInTheDocument()
+
+    await user.click(within(stepsPanel).getByLabelText(/Filter by status/i))
+    await user.click(
+      within(stepsPanel).getByRole('option', { name: /^Scheduled$/i }),
+    )
+    expect(within(stepsPanel).getByText(/Anita Gomez/i)).toBeInTheDocument()
+    expect(
+      within(stepsPanel).queryByText(/Not scheduled · 36 hours/i),
+    ).not.toBeInTheDocument()
+
+    await user.click(within(stepsPanel).getByLabelText(/Filter by status/i))
+    await user.click(
+      within(stepsPanel).getByRole('option', {
+        name: /^Not scheduled after 48h$/i,
+      }),
+    )
+    expect(
+      within(stepsPanel).queryByText(/Anita Gomez/i),
+    ).not.toBeInTheDocument()
+    expect(
+      within(stepsPanel).queryByText(/Not scheduled · 18 hours/i),
+    ).not.toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByText(/Not scheduled · 51 hours/i),
+    ).toBeInTheDocument()
+
+    await user.click(within(stepsPanel).getByLabelText(/Filter by status/i))
+    await user.click(
+      within(stepsPanel).getByRole('option', {
+        name: /^Not scheduled less than 48h$/i,
+      }),
+    )
+    expect(
+      within(stepsPanel).queryByText(/Not scheduled · 51 hours/i),
+    ).not.toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByText(/Not scheduled · 18 hours/i),
+    ).toBeInTheDocument()
+
+    await user.click(within(stepsPanel).getByLabelText(/Filter by status/i))
+    await user.click(within(stepsPanel).getByRole('option', { name: /^All statuses$/i }))
+
+    const anitaRow = within(stepsPanel).getByRole('article', {
+      name: /Anita Gomez/i,
+    })
+    expect(within(anitaRow).getByText(/^Scheduled$/)).toBeInTheDocument()
+    expect(within(anitaRow).queryByText(/^Finished$/)).not.toBeInTheDocument()
 
     const mariaRow = within(stepsPanel)
       .getAllByRole('article')
@@ -594,6 +1136,10 @@ describe('automation inspection console', () => {
         within(article).queryByText(/Not scheduled · 36 hours/i),
       )!
     expect(mariaRow).toBeTruthy()
+    expect(
+      within(mariaRow).getByText(/^Not scheduled less than 48h$/),
+    ).toBeInTheDocument()
+    expect(within(mariaRow).queryByText(/^Finished$/)).not.toBeInTheDocument()
     expect(
       within(mariaRow).getByText(/Donessa Ruiz notified on Teams automatically/i),
     ).toBeInTheDocument()
@@ -610,6 +1156,9 @@ describe('automation inspection console', () => {
         within(article).queryByText(/Not scheduled · 18 hours/i),
       )!
     expect(thomasRow).toBeTruthy()
+    expect(
+      within(thomasRow).getByText(/^Not scheduled less than 48h$/),
+    ).toBeInTheDocument()
     expect(
       within(thomasRow).getByText(
         /Case manager will be notified automatically at 24 hours/i,
@@ -648,6 +1197,10 @@ describe('automation inspection console', () => {
       )!
     expect(frankRow).toBeTruthy()
     expect(
+      within(frankRow).getByText(/^Not scheduled after 48h$/),
+    ).toBeInTheDocument()
+    expect(within(frankRow).queryByText(/^Finished$/)).not.toBeInTheDocument()
+    expect(
       within(frankRow).getByLabelText(/Unscheduled referral review/i),
     ).toBeInTheDocument()
     expect(
@@ -685,6 +1238,12 @@ describe('automation inspection console', () => {
       }),
     )
 
+    expect(
+      screen.getByRole('button', {
+        name: /6\. End-of-day check, new update/i,
+      }),
+    ).toBeInTheDocument()
+
     const followUpStep = within(stepsPanel)
       .getAllByRole('button')
       .find(
@@ -697,6 +1256,12 @@ describe('automation inspection console', () => {
     ).toBeInTheDocument()
 
     await user.click(followUpStep)
+
+    expect(
+      screen.queryByRole('button', {
+        name: /6\. End-of-day check, new update/i,
+      }),
+    ).not.toBeInTheDocument()
 
     const thomasStep2 = within(stepsPanel).getByRole('article', {
       name: /Donessa Ruiz notified on Teams · Thomas Reed/i,
@@ -711,6 +1276,10 @@ describe('automation inspection console', () => {
     expect(
       within(followUpPanel).queryByText(/automatically at 24 hours/i),
     ).not.toBeInTheDocument()
+    expect(
+      within(followUpPanel).getByLabelText(/^Patient scheduling status$/i),
+    ).toHaveTextContent(/^Not scheduled less than 48h$/)
+    expect(within(followUpPanel).getByText(/^Thomas Reed$/i)).toBeInTheDocument()
   })
 
   it('marks step 3 unread after escalation on step 1', async () => {
@@ -731,6 +1300,12 @@ describe('automation inspection console', () => {
       within(mariaRow).getByRole('button', { name: /Escalate to Nicole/i }),
     )
 
+    expect(
+      screen.getByRole('button', {
+        name: /6\. End-of-day check, new update/i,
+      }),
+    ).toBeInTheDocument()
+
     const escalateStep = within(stepsPanel)
       .getAllByRole('button')
       .find(
@@ -743,6 +1318,12 @@ describe('automation inspection console', () => {
     ).toBeInTheDocument()
 
     await user.click(escalateStep)
+
+    expect(
+      screen.queryByRole('button', {
+        name: /6\. End-of-day check, new update/i,
+      }),
+    ).not.toBeInTheDocument()
 
     const mariaStep3 = within(stepsPanel).getByRole('article', {
       name: /Escalated to Nicole · Maria Alvarez/i,
@@ -757,6 +1338,9 @@ describe('automation inspection console', () => {
     expect(
       within(mariaStep3).getByText(/Donessa Ruiz/i),
     ).toBeInTheDocument()
+    expect(
+      within(mariaStep3).getByLabelText(/^Patient scheduling status$/i),
+    ).toHaveTextContent(/^Not scheduled less than 48h$/)
   })
 
   it('shows Teams follow-up panel on end-of-day step 2', async () => {
@@ -781,6 +1365,36 @@ describe('automation inspection console', () => {
       within(stepsPanel).queryByText(/Not scheduled · 18 hours/i),
     ).not.toBeInTheDocument()
 
+    expect(
+      within(stepsPanel).getByRole('article', { name: /Marcus Feldman/i }),
+    ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByRole('article', { name: /David Ruiz/i }),
+    ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByRole('article', { name: /Irene Cho/i }),
+    ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByRole('article', { name: /Gloria Bennett/i }),
+    ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByRole('article', { name: /Betty Hayes/i }),
+    ).toBeInTheDocument()
+
+    const patriciaRow = within(stepsPanel).getByRole('article', {
+      name: /Cole Winfield notified on Teams automatically · Patricia Johnson/i,
+    })
+    expect(
+      within(patriciaRow).getByLabelText(/^Patient scheduling status$/i),
+    ).toHaveTextContent(/^Scheduled$/)
+
+    const marcusRow = within(stepsPanel).getByRole('article', {
+      name: /Cole Winfield notified on Teams automatically · Marcus Feldman/i,
+    })
+    expect(
+      within(marcusRow).getByLabelText(/^Patient scheduling status$/i),
+    ).toHaveTextContent(/^Not scheduled less than 48h$/)
+
     const georgeRow = within(stepsPanel).getByRole('article', {
       name: /Carla Bustillo notified on Teams automatically · George Chen/i,
     })
@@ -792,11 +1406,18 @@ describe('automation inspection console', () => {
     expect(
       within(georgeRow).getByLabelText(/Case manager follow-up/i),
     ).toBeInTheDocument()
+    const followUpPanel = within(georgeRow).getByLabelText(
+      /Case manager follow-up/i,
+    )
     expect(
-      within(georgeRow).getByText(
+      within(followUpPanel).getByText(
         /notified on Teams automatically at 24 hours/i,
       ),
     ).toBeInTheDocument()
+    expect(
+      within(followUpPanel).getByLabelText(/^Patient scheduling status$/i),
+    ).toHaveTextContent(/^Not scheduled after 48h$/)
+    expect(within(followUpPanel).getByText(/^George Chen$/i)).toBeInTheDocument()
     expect(
       within(georgeRow).queryByRole('button', { name: /Follow-up sent on Teams/i }),
     ).not.toBeInTheDocument()
@@ -836,8 +1457,33 @@ describe('automation inspection console', () => {
     expect(within(emailSection).getByText(/^Aaron Currie$/i)).toBeInTheDocument()
     expect(within(emailSection).getByText(/^Nicole Chorvat$/i)).toBeInTheDocument()
     expect(
-      within(emailSection).getByText(/Not scheduled · 73 hours/i),
+      within(emailSection).getByLabelText(/^Patient scheduling status$/i),
+    ).toHaveTextContent(/^Not scheduled after 48h$/)
+    expect(
+      within(emailSection).getByText(/73 hours · provider selected/i),
     ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByRole('article', { name: /Betty Hayes/i }),
+    ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByRole('article', { name: /Walter Grant/i }),
+    ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByRole('article', { name: /Gloria Bennett/i }),
+    ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByRole('article', { name: /Dorothy Lane/i }),
+    ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByRole('article', { name: /Margaret Ellis/i }),
+    ).toBeInTheDocument()
+
+    const arthurRow = within(stepsPanel).getByRole('article', {
+      name: /Escalated to Nicole · Arthur Kim/i,
+    })
+    expect(
+      within(arthurRow).getByLabelText(/^Patient scheduling status$/i),
+    ).toHaveTextContent(/^Scheduled$/)
     expect(
       within(lindaRow).queryByText(/notified on Teams automatically at 24 hours/i),
     ).not.toBeInTheDocument()
@@ -857,6 +1503,30 @@ describe('automation inspection console', () => {
       screen.getByRole('button', { name: /7\. Weekly visit cycle/i }),
     )
     const stepsPanel = screen.getByLabelText(/Patient steps/i)
+
+    expect(
+      within(stepsPanel).getByRole('button', { name: /^Seen patients$/i }),
+    ).toHaveAttribute('aria-current', 'step')
+    expect(
+      within(stepsPanel).getByRole('button', { name: /^Healed patients$/i }),
+    ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByRole('button', { name: /^Expired patients$/i }),
+    ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByRole('button', { name: /^On hold patients$/i }),
+    ).toBeInTheDocument()
+
+    await user.click(within(stepsPanel).getByLabelText(/Filter by status/i))
+    expect(
+      within(stepsPanel).getByRole('option', { name: /^Seen$/i }),
+    ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByRole('option', { name: /^Not seen$/i }),
+    ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).queryByRole('option', { name: /^Needs confirmation$/i }),
+    ).not.toBeInTheDocument()
 
     const gloriaRow = within(stepsPanel)
       .getAllByRole('article')
@@ -957,9 +1627,18 @@ describe('automation inspection console', () => {
       .find(
         (button) =>
           button.classList.contains('microstep-list__button') &&
-          /Is the wound healed/i.test(button.textContent ?? ''),
+          /Healed patients/i.test(button.textContent ?? ''),
       )!
     await user.click(healedStep)
+
+    await user.click(within(stepsPanel).getByLabelText(/Filter by status/i))
+    expect(
+      within(stepsPanel).getByRole('option', { name: /^Healed$/i }),
+    ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByRole('option', { name: /^Not healed$/i }),
+    ).toBeInTheDocument()
+    await user.click(within(stepsPanel).getByRole('option', { name: /^Not healed$/i }))
 
     expect(
       within(stepsPanel).queryByText(/^Patient seen$/i),
@@ -971,16 +1650,48 @@ describe('automation inspection console', () => {
     expect(
       within(nancyRow).getByRole('button', { name: /Send to QA discharge/i }),
     ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByRole('article', {
+        name: /Wound healed · Irene Cho/i,
+      }),
+    ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).queryByRole('article', {
+        name: /Healed · QA discharge path · Betty Hayes/i,
+      }),
+    ).not.toBeInTheDocument()
+
+    await user.click(within(stepsPanel).getByLabelText(/Filter by status/i))
+    await user.click(within(stepsPanel).getByRole('option', { name: /^Healed$/i }))
+    expect(
+      within(stepsPanel).getByRole('article', {
+        name: /Healed · QA discharge path · Betty Hayes/i,
+      }),
+    ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByRole('article', {
+        name: /Healed · QA discharge path · David Ruiz/i,
+      }),
+    ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).queryByRole('article', {
+        name: /Wound healed · Nancy Liu/i,
+      }),
+    ).not.toBeInTheDocument()
 
     const expiredStep = within(stepsPanel)
       .getAllByRole('button')
       .find(
         (button) =>
           button.classList.contains('microstep-list__button') &&
-          /Is the patient expired/i.test(button.textContent ?? ''),
+          /Expired patients/i.test(button.textContent ?? ''),
       )!
     await user.click(expiredStep)
 
+    await user.click(within(stepsPanel).getByLabelText(/Filter by status/i))
+    await user.click(
+      within(stepsPanel).getByRole('option', { name: /^Not expired$/i }),
+    )
     const jamesRow = within(stepsPanel).getByRole('article', {
       name: /Patient expired · James Carter/i,
     })
@@ -989,35 +1700,79 @@ describe('automation inspection console', () => {
         name: /Remove from schedule · DC/i,
       }),
     ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByRole('article', {
+        name: /Patient expired · Maria Alvarez/i,
+      }),
+    ).toBeInTheDocument()
+
+    await user.click(within(stepsPanel).getByLabelText(/Filter by status/i))
+    await user.click(within(stepsPanel).getByRole('option', { name: /^Expired$/i }))
+    expect(
+      within(stepsPanel).getByRole('article', {
+        name: /Expired · pending DC approval · Thomas Reed/i,
+      }),
+    ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByRole('article', {
+        name: /Expired · pending DC approval · Marcus Feldman/i,
+      }),
+    ).toBeInTheDocument()
 
     const holdStep = within(stepsPanel)
       .getAllByRole('button')
       .find(
         (button) =>
           button.classList.contains('microstep-list__button') &&
-          /Is the patient on hold/i.test(button.textContent ?? ''),
+          /On hold patients/i.test(button.textContent ?? ''),
       )!
     await user.click(holdStep)
 
+    await user.click(within(stepsPanel).getByLabelText(/Filter by status/i))
+    await user.click(within(stepsPanel).getByRole('option', { name: /^Not hold$/i }))
     const arthurRow = within(stepsPanel).getByRole('article', {
       name: /On hold · Hospitalization · Arthur Kim/i,
     })
     expect(
       within(arthurRow).getByRole('button', { name: /Move to holds team/i }),
     ).toBeInTheDocument()
-
-    await user.click(
-      within(arthurRow).getByRole('button', { name: /Move to holds team/i }),
-    )
     expect(
-      within(arthurRow).getAllByText(/Moved to holds team · Hospitalization/i)
-        .length,
-    ).toBeGreaterThan(0)
-    expect(
-      within(arthurRow).getByText(/Moved to the holds team and holds list/i),
+      within(stepsPanel).getByRole('article', {
+        name: /On hold · Vacation · George Chen/i,
+      }),
     ).toBeInTheDocument()
     expect(
-      within(arthurRow).queryByText(/Automation is holding/i),
-    ).not.toBeInTheDocument()
+      within(stepsPanel).getByRole('article', {
+        name: /On hold · Patient request · Anita Rodriguez/i,
+      }),
+    ).toBeInTheDocument()
+
+    await user.click(within(stepsPanel).getByLabelText(/Filter by status/i))
+    await user.click(within(stepsPanel).getByRole('option', { name: /^Hold$/i }))
+    expect(
+      within(stepsPanel).getByRole('article', {
+        name: /Moved to holds team · Facility hold · Linda Nguyen/i,
+      }),
+    ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByRole('article', {
+        name: /Moved to holds team · Family request · Frank Sardina/i,
+      }),
+    ).toBeInTheDocument()
+
+    await user.click(within(stepsPanel).getByLabelText(/Filter by status/i))
+    await user.click(within(stepsPanel).getByRole('option', { name: /^All statuses$/i }))
+    const arthurPending = within(stepsPanel).getByRole('article', {
+      name: /On hold · Hospitalization · Arthur Kim/i,
+    })
+    await user.click(
+      within(arthurPending).getByRole('button', { name: /Move to holds team/i }),
+    )
+    const arthurDone = within(stepsPanel).getByRole('article', {
+      name: /Moved to holds team · Hospitalization · Arthur Kim/i,
+    })
+    expect(
+      within(arthurDone).getByText(/Moved to the holds team and holds list/i),
+    ).toBeInTheDocument()
   })
 })
