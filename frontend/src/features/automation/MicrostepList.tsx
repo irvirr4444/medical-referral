@@ -7,11 +7,13 @@ export function MicrostepList({
   selectedStepId,
   onSelect,
   attentionStepIds = [],
+  stepStatuses,
 }: {
   steps: AutomationMicrostep[]
   selectedStepId: string
   onSelect: (stepId: string) => void
   attentionStepIds?: string[]
+  stepStatuses?: Record<string, string>
 }) {
   return (
     <nav className="microstep-list" aria-label="Automation steps">
@@ -19,14 +21,21 @@ export function MicrostepList({
         {steps.map((step, index) => {
           const selected = step.id === selectedStepId
           const needsAttention = attentionStepIds.includes(step.id)
+          const stepStatus = stepStatuses?.[step.id]
           return (
             <li key={step.id}>
               <button
                 type="button"
-                className={`microstep-list__button${selected ? ' is-selected' : ''}`}
+                className={`microstep-list__button${selected ? ' is-selected' : ''}${
+                  stepStatus ? ` is-${stepStatus}` : ''
+                }`}
                 aria-current={selected ? 'step' : undefined}
                 aria-label={
-                  needsAttention ? `${step.name}, new update` : undefined
+                  needsAttention
+                    ? `${step.name}, new update`
+                    : stepStatus === 'waiting' || stepStatus === 'blocked'
+                      ? `${step.name}, ${stepStatus}`
+                      : undefined
                 }
                 onClick={() => onSelect(step.id)}
               >

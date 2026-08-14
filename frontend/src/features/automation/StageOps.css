@@ -526,6 +526,38 @@
   border-color: rgba(14, 124, 134, 0.5);
 }
 
+.stage-ops-steps__patient-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  min-height: 2.35rem;
+  padding: 0.2rem 0.3rem 0.2rem 0.75rem;
+  border: 1px solid rgba(14, 124, 134, 0.35);
+  border-radius: 999px;
+  background: rgba(14, 124, 134, 0.08);
+  color: var(--navy);
+  font-size: 0.86rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.stage-ops-steps__patient-chip-clear {
+  display: grid;
+  place-items: center;
+  width: 1.55rem;
+  height: 1.55rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--navy);
+  cursor: pointer;
+}
+
+.stage-ops-steps__patient-chip-clear:hover,
+.stage-ops-steps__patient-chip-clear:focus-visible {
+  background: rgba(14, 124, 134, 0.16);
+}
+
 .stage-ops-steps__patient-search input {
   width: 100%;
   border: 0;
@@ -960,6 +992,25 @@
   content: '·';
   margin-right: 0.55rem;
   color: rgba(18, 35, 63, 0.35);
+}
+
+.stage-ops-step-feed__patient.is-link {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--teal);
+  font: inherit;
+  font-size: 0.86rem;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 0.14em;
+  cursor: pointer;
+}
+
+.stage-ops-step-feed__patient.is-link:hover,
+.stage-ops-step-feed__patient.is-link:focus-visible {
+  color: var(--navy);
 }
 
 .stage-ops-step-feed__unread-label {
@@ -2874,7 +2925,8 @@
 
   .stage-ops-steps__status-menu,
   .stage-ops-steps__status-trigger,
-  .stage-ops-steps__patient-search {
+  .stage-ops-steps__patient-search,
+  .stage-ops-steps__patient-chip {
     width: 100%;
   }
 

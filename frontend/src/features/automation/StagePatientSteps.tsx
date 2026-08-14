@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronDown, Search } from 'lucide-react'
+import { ChevronDown, Search, X } from 'lucide-react'
 import { useEscapeDismiss } from '../../hooks/useEscapeDismiss'
 import { useDemo } from '../../state/useDemo'
 import { MicrostepList } from './MicrostepList'
 import { StageFeedMessage } from './StageFeedMessage'
 import { overlayIntakeDetail } from './overlayIntakeDetail'
-import { detailForPatientStep, feedForStep, parseOpsDate, patientsForStage } from './ops'
+import { detailForPatientStep, feedForStep, parseOpsDate, patientsForStage, stepsForPatient } from './ops'
 import type { StepFeedDay, StepFeedRow } from './ops/types'
 import {
   CASE_MANAGER_OPTIONS,
@@ -238,6 +238,9 @@ function intakeFollowUpSummary(
   )
 }
 
+const PARTNER_HANDOFF_SUMMARY =
+  'Intake approved · referral partner contacted · ready to assign an owner'
+
 function opsTimestamp(date = new Date()) {
   return new Intl.DateTimeFormat('en-US', {
     month: 'long',
@@ -312,6 +315,8 @@ export function StagePatientSteps({
     useState(false)
   const [showUnreadAssignmentHandoff, setShowUnreadAssignmentHandoff] =
     useState(false)
+  const [showUnreadAssignmentOwner, setShowUnreadAssignmentOwner] =
+    useState(false)
   const [showUnreadProviderSelect, setShowUnreadProviderSelect] =
     useState(false)
   const [showUnreadIntakeDuplicate, setShowUnreadIntakeDuplicate] =
@@ -355,6 +360,7 @@ export function StagePatientSteps({
     setShowUnreadHandoffMessage(false)
     setShowUnreadProviderRecordsMessage(false)
     setShowUnreadAssignmentHandoff(false)
+    setShowUnreadAssignmentOwner(false)
     setShowUnreadProviderSelect(false)
     setShowUnreadIntakeDuplicate(false)
     setEodEscalated({})
@@ -472,10 +478,13 @@ export function StagePatientSteps({
   const latestSchedulingHandoff = state.schedulingHandoffs[0] ?? null
   const latestAssignmentHandoff = state.latestAssignmentHandoff
   const latestIntakeReview = state.latestIntakeReview
+  const latestPartnerContact = state.latestPartnerContact
 
   const displayDays = useMemo(() => {
     const latest =
-      selectedStepId === 'assign-owner' ||
+      selectedStepId === 'determine-owner'
+        ? latestPartnerContact
+        : selectedStepId === 'assign-owner' ||
       selectedStepId === 'select-provider' ||
       isAssignmentHandoffStep(selectedStepId)
         ? latestAssignmentHandoff
@@ -513,7 +522,9 @@ export function StagePatientSteps({
           ...latestRow,
           occurredAt: latest.occurredAt,
           status:
-            selectedStepId === 'update-monday-drk'
+            selectedStepId === 'determine-owner'
+              ? ('waiting' as const)
+              : selectedStepId === 'update-monday-drk'
               ? ('done' as const)
               : selectedStepId === 'send-referral-provider'
                 ? referralStatus
@@ -523,7 +534,9 @@ export function StagePatientSteps({
                     ? ('done' as const)
                     : latestRow.status,
           summary:
-            selectedStepId === 'update-monday-drk'
+            selectedStepId === 'determine-owner'
+              ? PARTNER_HANDOFF_SUMMARY
+              : selectedStepId === 'update-monday-drk'
               ? recordsSummary
               : selectedStepId === 'send-referral-provider'
                 ? referralSummary
@@ -531,6 +544,15 @@ export function StagePatientSteps({
                   ? intakeFollowUpSummary(latest.patientId, selectedStepId)
                   : latestRow.summary,
         }
+      : selectedStepId === 'determine-owner' && latestPartnerContact
+        ? {
+            patientId: latestPartnerContact.patientId,
+            patientName: latestPartnerContact.patientName,
+            stepId: 'determine-owner',
+            status: 'waiting' as const,
+            summary: PARTNER_HANDOFF_SUMMARY,
+            occurredAt: latestPartnerContact.occurredAt,
+          }
       : selectedStepId === 'update-monday-drk' && latestSchedulingHandoff
         ? {
             patientId: latestSchedulingHandoff.patientId,
@@ -622,6 +644,7 @@ export function StagePatientSteps({
     days,
     latestAssignmentHandoff,
     latestIntakeReview,
+    latestPartnerContact,
     latestProviderAvailability,
     latestSchedulingHandoff,
     selectedStepId,
@@ -796,6 +819,25 @@ export function StagePatientSteps({
     weeklyHoldsActionTaken,
   ])
 
+  const scopedPatient = state.opsScopedPatient
+  const scopedDisplayDays = useMemo(() => {
+    const scopedId = scopedPatient?.patientId
+    if (!scopedId) return filteredDisplayDays
+    return filteredDisplayDays
+      .map((day) => ({
+        ...day,
+        rows: day.rows.filter((row) => row.patientId === scopedId),
+      }))
+      .filter((day) => day.rows.length > 0)
+  }, [filteredDisplayDays, scopedPatient?.patientId])
+
+  const scopedStepStatuses = useMemo(() => {
+    if (!scopedPatient) return undefined
+    const rows = stepsForPatient(stageId, scopedPatient.patientId)
+    if (!rows.length) return undefined
+    return Object.fromEntries(rows.map((row) => [row.stepId, row.status]))
+  }, [scopedPatient, stageId])
+
   useEffect(() => {
     if (
       stageId !== 'assignment' ||
@@ -870,6 +912,17 @@ export function StagePatientSteps({
 
   useEffect(() => {
     if (
+      stageId !== 'assignment' ||
+      selectedStepId !== 'determine-owner' ||
+      !state.assignmentOwnerUnread
+    ) {
+      return
+    }
+    setShowUnreadAssignmentOwner(true)
+  }, [selectedStepId, stageId, state.assignmentOwnerUnread])
+
+  useEffect(() => {
+    if (
       stageId !== 'intake' ||
       !isIntakeFollowUpStep(selectedStepId) ||
       !intakeFollowUpUnreadForStep(state, selectedStepId)
@@ -920,6 +973,16 @@ export function StagePatientSteps({
   ])
 
   const selectStep = (stepId: string) => {
+    if (selectedStepId === 'determine-owner' && stepId !== 'determine-owner') {
+      setShowUnreadAssignmentOwner(false)
+    }
+    if (stepId === 'determine-owner') {
+      const unread = state.assignmentOwnerUnread
+      setShowUnreadAssignmentOwner(unread)
+      if (unread) {
+        dispatch({ type: 'MARK_ASSIGNMENT_OWNER_READ' })
+      }
+    }
     if (selectedStepId === 'assign-owner' && stepId !== 'assign-owner') {
       setShowUnreadAssignmentMessage(false)
     }
@@ -1058,7 +1121,12 @@ export function StagePatientSteps({
           steps={microsteps}
           selectedStepId={selectedStepId}
           onSelect={selectStep}
-          attentionStepIds={[
+          stepStatuses={scopedStepStatuses}
+          attentionStepIds={
+            scopedPatient
+              ? []
+              : [
+            ...(state.assignmentOwnerUnread ? ['determine-owner'] : []),
             ...(state.assignmentNotifyUnread ? ['assign-owner'] : []),
             ...(state.providerAvailabilityUnread
               ? ['confirm-provider-availability']
@@ -1075,7 +1143,8 @@ export function StagePatientSteps({
             ...(state.intakePartnerUnread
               ? ['confirm-referral-contacted']
               : []),
-          ]}
+              ]
+          }
         />
       </aside>
 
@@ -1161,26 +1230,40 @@ export function StagePatientSteps({
               ) : null}
             </div>
 
-            <label className="stage-ops-steps__patient-search">
-              <Search size={15} aria-hidden="true" />
-              <input
-                type="search"
-                value={patientQuery}
-                onChange={(event) => setPatientQuery(event.target.value)}
-                placeholder="Search patients"
-                aria-label="Search patients"
-              />
-            </label>
+            {scopedPatient ? (
+              <span className="stage-ops-steps__patient-chip">
+                {scopedPatient.patientName}
+                <button
+                  type="button"
+                  className="stage-ops-steps__patient-chip-clear"
+                  aria-label="Clear patient"
+                  onClick={() => dispatch({ type: 'CLEAR_OPS_PATIENT' })}
+                >
+                  <X size={14} aria-hidden="true" />
+                </button>
+              </span>
+            ) : (
+              <label className="stage-ops-steps__patient-search">
+                <Search size={15} aria-hidden="true" />
+                <input
+                  type="search"
+                  value={patientQuery}
+                  onChange={(event) => setPatientQuery(event.target.value)}
+                  placeholder="Search patients"
+                  aria-label="Search patients"
+                />
+              </label>
+            )}
           </div>
         </div>
 
-        {filteredDisplayDays.length ? (
+        {scopedDisplayDays.length ? (
           <ol
             className="stage-ops-step-feed"
             aria-label="Step updates"
             key={selectedStepId}
           >
-            {filteredDisplayDays.map((day) => (
+            {scopedDisplayDays.map((day) => (
               <li key={day.key} className="stage-ops-step-feed__day">
                 <h4 className="stage-ops-step-feed__day-header">
                   <time
@@ -1521,7 +1604,10 @@ export function StagePatientSteps({
                               : selectedStepId === 'determine-owner'
                                 ? assignmentConfirmed
                                   ? `${selectedCaseManager?.name ?? 'Case manager'} confirmed as Case Manager`
-                                  : 'Case Manager needs to be confirmed'
+                                  : row.patientId ===
+                                      latestPartnerContact?.patientId
+                                    ? PARTNER_HANDOFF_SUMMARY
+                                    : 'Case Manager needs to be confirmed'
                               : selectedStepId === 'check-scheduling-status' &&
                                   eodSchedulingCheck
                                 ? eodSchedulingCheckDisplaySummary(
@@ -1579,6 +1665,14 @@ export function StagePatientSteps({
                                 : row.summary
                           }
                           patientName={row.patientName}
+                          onScopePatient={() => {
+                            setPatientQuery('')
+                            dispatch({
+                              type: 'SCOPE_OPS_PATIENT',
+                              patientId: row.patientId,
+                              patientName: row.patientName,
+                            })
+                          }}
                           status={
                             liveInboxReferral
                               ? row.status
@@ -1674,11 +1768,18 @@ export function StagePatientSteps({
                           onConfirmPartner={
                             selectedStepId === 'confirm-referral-contacted' &&
                             !liveInboxReferral
-                              ? () =>
+                              ? () => {
                                   setPartnerConfirmed((current) => ({
                                     ...current,
                                     [row.patientId]: true,
                                   }))
+                                  dispatch({
+                                    type: 'CONFIRM_PARTNER_CONTACTED',
+                                    patientId: row.patientId,
+                                    patientName: row.patientName,
+                                    occurredAt: opsTimestamp(),
+                                  })
+                                }
                               : undefined
                           }
                           assignmentSuggestion={assignmentSuggestion}
@@ -2025,7 +2126,10 @@ export function StagePatientSteps({
                                 latestAssignmentHandoff?.patientId) ||
                             (showUnreadIntakeDuplicate &&
                               isIntakeFollowUpStep(selectedStepId) &&
-                              row.patientId === latestIntakeReview?.patientId)
+                              row.patientId === latestIntakeReview?.patientId) ||
+                            (showUnreadAssignmentOwner &&
+                              selectedStepId === 'determine-owner' &&
+                              row.patientId === latestPartnerContact?.patientId)
                           }
                           liveInboxReferral={liveInboxReferral}
                           liveInboxStep={liveInboxStep}
@@ -2039,7 +2143,9 @@ export function StagePatientSteps({
           </ol>
         ) : (
           <p className="muted stage-ops-steps__empty">
-            No patients match this step with the current filters.
+            {scopedPatient
+              ? `${scopedPatient.patientName} is not on this step yet.`
+              : 'No patients match this step with the current filters.'}
           </p>
         )}
       </div>

@@ -64,6 +64,8 @@ export type DemoAction =
   | { type: 'SET_SCENARIO_FILTER'; filter: ScenarioBucket | 'all' }
   | { type: 'RESOLVE_SCENARIO_CASE'; id: string }
   | { type: 'SELECT_JOURNEY_PATIENT'; patientId: string }
+  | { type: 'SCOPE_OPS_PATIENT'; patientId: string; patientName: string }
+  | { type: 'CLEAR_OPS_PATIENT' }
   | { type: 'FOCUS_JOURNEY_STEP'; caseId: string }
   | { type: 'ADVANCE_JOURNEY' }
   | { type: 'RESTART_JOURNEY' }
@@ -151,6 +153,13 @@ export type DemoAction =
       stepId: 'check-monday' | 'check-drk' | 'confirm-referral-contacted'
     }
   | { type: 'REOPEN_INTAKE_REVIEW'; patientId: string }
+  | {
+      type: 'CONFIRM_PARTNER_CONTACTED'
+      patientId: string
+      patientName: string
+      occurredAt: string
+    }
+  | { type: 'MARK_ASSIGNMENT_OWNER_READ' }
 
 function upsertSchedulingHandoff(
   handoffs: SchedulingHandoff[],
@@ -415,6 +424,7 @@ export function createInitialState(): DemoState {
     scenarioMinutesReturned: sumCompletedJourneyCaseMinutes(workflowScenarios),
     journeyFocusCaseId: focusCaseId,
     selectedJourneyPatientId,
+    opsScopedPatient: null,
     providerSelectedIds: {},
     providerConfirmed: {},
     providerTerritoryResolutions: {},
@@ -445,6 +455,8 @@ export function createInitialState(): DemoState {
     intakeMondayUnread: false,
     intakeDrkUnread: false,
     intakePartnerUnread: false,
+    latestPartnerContact: null,
+    assignmentOwnerUnread: false,
   }
 }
 
@@ -520,6 +532,18 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
 
     case 'SELECT_JOURNEY_PATIENT':
       return focusPatientCurrentStep(state, action.patientId)
+
+    case 'SCOPE_OPS_PATIENT':
+      return {
+        ...state,
+        opsScopedPatient: {
+          patientId: action.patientId,
+          patientName: action.patientName,
+        },
+      }
+
+    case 'CLEAR_OPS_PATIENT':
+      return { ...state, opsScopedPatient: null }
 
     case 'FOCUS_JOURNEY_STEP':
       return focusJourneyStep(state, action.caseId)
@@ -833,6 +857,21 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
           [action.patientId]: false,
         },
       }
+
+    case 'CONFIRM_PARTNER_CONTACTED':
+      return {
+        ...state,
+        latestPartnerContact: {
+          patientId: action.patientId,
+          patientName: action.patientName,
+          occurredAt: action.occurredAt,
+        },
+        assignmentOwnerUnread: true,
+      }
+
+    case 'MARK_ASSIGNMENT_OWNER_READ':
+      if (!state.assignmentOwnerUnread) return state
+      return { ...state, assignmentOwnerUnread: false }
 
     case 'MARK_INTAKE_STEP_READ':
       if (action.stepId === 'check-monday') {
