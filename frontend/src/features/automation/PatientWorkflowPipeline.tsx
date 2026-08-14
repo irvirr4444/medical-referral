@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import type { FlowOpsPageId } from '../../data/flowOps'
+import { useDemo } from '../../state/useDemo'
+import { timerForPatientStep } from './confirmationTimers'
 import { MicrostepList } from './MicrostepList'
 import {
   detailForPatientStep,
@@ -30,6 +32,7 @@ function activeStep(steps: PipelineStep[]) {
 }
 
 export function PatientWorkflowPipeline({ patientKey }: { patientKey: string }) {
+  const { state } = useDemo()
   const resolved = resolvePatientKey(patientKey)
   const journey = resolved
     ? patientJourneyById(resolved.patientId, resolved.patientName)
@@ -67,6 +70,16 @@ export function PatientWorkflowPipeline({ patientKey }: { patientKey: string }) 
     activeStep(viewedSteps)?.stepId ??
     microsteps[0]?.id ??
     ''
+  const patientStepIdsByStatus = (status: 'overdue' | 'warning') =>
+    Object.values(state.actionTimers)
+      .filter(
+        (timer) =>
+          timer.status === status &&
+          timer.patientId === journey.patientId &&
+          timer.stageId === viewedStageId,
+      )
+      .map((timer) => timer.stepId)
+
   const selectedMicrostep = microsteps.find((step) => step.id === selectedStepId)
   const selectedStep = viewedSteps.find((step) => step.stepId === selectedStepId)
   const when = selectedStep?.occurredAt
@@ -121,6 +134,8 @@ export function PatientWorkflowPipeline({ patientKey }: { patientKey: string }) 
                 }))
               }
               stepStatuses={stepStatuses}
+              overdueStepIds={patientStepIdsByStatus('overdue')}
+              warningStepIds={patientStepIdsByStatus('warning')}
             />
           </aside>
 
@@ -154,6 +169,11 @@ export function PatientWorkflowPipeline({ patientKey }: { patientKey: string }) 
                         occurredAt={selectedStep.occurredAt}
                         detail={detailForPatientStep(
                           viewedStageId,
+                          journey.patientId,
+                          selectedStep.stepId,
+                        )}
+                        actionTimer={timerForPatientStep(
+                          state.actionTimers,
                           journey.patientId,
                           selectedStep.stepId,
                         )}

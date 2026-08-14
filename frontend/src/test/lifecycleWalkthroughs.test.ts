@@ -29,14 +29,17 @@ describe('lifecycle stage walkthroughs', () => {
     expect(runForStage('weekly').label).toMatch(/Walter Grant/)
   })
 
-  it('keeps scheduling visibly planned and monitoring human-controlled', () => {
+  it('keeps send-referral planned while schedule-patient is working', () => {
     const scheduling = automationStage('scheduling')
     const schedulingRun = runForStage('scheduling')
-    expect(
-      scheduling.microsteps.every(
-        (step) => exampleForRun(schedulingRun, step, scheduling.id).status === 'planned',
-      ),
-    ).toBe(true)
+    const byId = Object.fromEntries(
+      scheduling.microsteps.map((step) => [
+        step.id,
+        exampleForRun(schedulingRun, step, scheduling.id).status,
+      ]),
+    )
+    expect(byId['send-referral-provider']).toBe('planned')
+    expect(byId['schedule-patient']).toBe('completed')
 
     const weekly = automationStage('weekly')
     const weeklyRun = runForStage('weekly')

@@ -29,6 +29,10 @@ import {
   eodFollowUpEligible,
 } from './fixtures/eodSchedulingCheck'
 import {
+  schedulingFeedSummary,
+} from './fixtures/patientSchedules'
+import type { PatientSchedulingRecord } from '../../types'
+import {
   weeklyVisitCheckForPatient,
   weeklyVisitCheckSummary,
   weeklyPatientSeenEligible,
@@ -41,7 +45,14 @@ import {
   weeklyDischargeReviewDue,
   weeklyMissedVisitPending,
 } from './fixtures/weeklyVisitCheck'
+import {
+  compareAttention,
+  overdueStepIds,
+  timerForPatientStep,
+  warningStepIds,
+} from './confirmationTimers'
 import { intakeDemoPatient, referralPdfForPatient } from './fixtures/intakeDemoPatients'
+import { unreadStepCounts } from './unreadSteps'
 import {
   PROVIDER_OPTIONS,
   providerPatientLocationDisplay,
@@ -61,19 +72,27 @@ import './StageOps.css'
 type StatusFilterOption = {
   id: string
   meaning: string
-  tone?: PatientStepStatus
+  tone?: string
+}
+
+const NEEDS_ATTENTION_FILTER: StatusFilterOption = {
+  id: 'needs-attention',
+  meaning: 'Needs immediate attention',
+  tone: 'overdue',
 }
 
 const STATUS_FILTERS: StatusFilterOption[] = [
   { id: 'waiting', meaning: 'Needs confirmation' },
-  { id: 'blocked', meaning: 'Stuck' },
   { id: 'current', meaning: 'In progress' },
   { id: 'done', meaning: 'Finished' },
 ]
 
-const DEFAULT_STATUSES: PatientStepStatus[] = STATUS_FILTERS.map(
-  (item) => item.id as PatientStepStatus,
-)
+const DEFAULT_STATUSES: PatientStepStatus[] = [
+  'done',
+  'current',
+  'waiting',
+  'blocked',
+]
 
 type StatusFilterValue = 'all' | string
 
@@ -136,22 +155,77 @@ function weeklyStatusFilters(stepId: string): StatusFilterOption[] | null {
 }
 
 function stepStatusFilters(stepId: string): StatusFilterOption[] {
-  return (
+  const base =
     weeklyStatusFilters(stepId) ??
-    (stepId === 'check-scheduling-status' ? EOD_SCHEDULING_FILTERS : STATUS_FILTERS)
-  )
+    (stepId === 'check-scheduling-status'
+      ? EOD_SCHEDULING_FILTERS
+      : STATUS_FILTERS)
+  return [NEEDS_ATTENTION_FILTER, ...base]
 }
 
 function statusFilterTone(option: StatusFilterOption): string {
   return option.tone ?? option.id
 }
 
-function eodSchedulingStatusOption(patientId: string): StatusFilterOption {
-  const bucket = eodSchedulingBucket(eodSchedulingCheckForPatient(patientId))
+function eodForPatient(
+  patientId: string,
+  schedules: Record<string, PatientSchedulingRecord>,
+) {
+  return eodSchedulingCheckForPatient(patientId, schedules[patientId])
+}
+
+function eodSchedulingStatusOption(
+  patientId: string,
+  schedules: Record<string, PatientSchedulingRecord> = {},
+): StatusFilterOption {
+  const bucket = eodSchedulingBucket(eodForPatient(patientId, schedules))
   return (
     EOD_SCHEDULING_FILTERS.find((item) => item.id === bucket) ??
     EOD_SCHEDULING_FILTERS[0]
   )
+}
+
+function scheduleFeedStatus(
+  record: PatientSchedulingRecord,
+): PatientStepStatus {
+  if (record.status === 'scheduled') return 'done'
+  if (record.status === 'blocked') return 'blocked'
+  return 'waiting'
+}
+
+function overlayScheduleDays(
+  days: StepFeedDay[],
+  schedules: Record<string, PatientSchedulingRecord>,
+): StepFeedDay[] {
+  const mapped = days.map((day) => ({
+    ...day,
+    rows: day.rows.map((row) => {
+      const live = schedules[row.patientId]
+      if (!live) return row
+      return {
+        ...row,
+        status: scheduleFeedStatus(live),
+        summary: schedulingFeedSummary(live),
+        occurredAt: live.scheduledAt ?? row.occurredAt,
+      }
+    }),
+  }))
+  const seen = new Set(
+    mapped.flatMap((day) => day.rows.map((row) => row.patientId)),
+  )
+  const extras = Object.values(schedules)
+    .filter((record) => !seen.has(record.patientId))
+    .map(
+      (record): StepFeedRow => ({
+        patientId: record.patientId,
+        patientName: record.patientName,
+        stepId: 'schedule-patient',
+        status: scheduleFeedStatus(record),
+        summary: schedulingFeedSummary(record),
+        occurredAt: record.scheduledAt ?? '',
+      }),
+    )
+  return extras.length ? prependEodFeedRows(mapped, extras) : mapped
 }
 
 function usesCustomStatusFilter(stepId: string): boolean {
@@ -291,7 +365,20 @@ export function StagePatientSteps({
   microsteps: AutomationMicrostep[]
 }) {
   const { state, dispatch } = useDemo()
-  const [selectedStepId, setSelectedStepId] = useState(microsteps[0]?.id ?? '')
+  const [selectedStepId, setSelectedStepId] = useState(() => {
+    return (
+      microsteps.find((step) =>
+        Object.values(state.actionTimers).some(
+          (timer) =>
+            timer.stageId === stageId &&
+            timer.stepId === step.id &&
+            (timer.status === 'overdue' || timer.status === 'warning'),
+        ),
+      )?.id ??
+      microsteps[0]?.id ??
+      ''
+    )
+  })
   const [patientQuery, setPatientQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilterValue>('all')
   const [statusMenuOpen, setStatusMenuOpen] = useState(false)
@@ -347,7 +434,23 @@ export function StagePatientSteps({
   )
 
   useEffect(() => {
-    setSelectedStepId(microsteps[0]?.id ?? '')
+    const overdueOrWarningStep =
+      microsteps.find((step) =>
+        Object.values(state.actionTimers).some(
+          (timer) =>
+            timer.stageId === stageId &&
+            timer.stepId === step.id &&
+            (timer.status === 'overdue' || timer.status === 'warning'),
+        ),
+      )?.id ?? microsteps[0]?.id ?? ''
+    setSelectedStepId(overdueOrWarningStep)
+    if (overdueOrWarningStep) {
+      dispatch({
+        type: 'SET_OPS_SELECTED_STEP',
+        stageId,
+        stepId: overdueOrWarningStep,
+      })
+    }
     setPatientQuery('')
     setStatusFilter('all')
     setStatusMenuOpen(false)
@@ -371,6 +474,8 @@ export function StagePatientSteps({
     setWeeklyDischargeReview({})
     setWeeklyHoldsActionTaken({})
     setWeeklyAppointmentRescheduled({})
+    // Only re-home when the stage changes — not on every timer tick.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stageId, microsteps[0]?.id])
 
   useEffect(() => {
@@ -400,9 +505,13 @@ export function StagePatientSteps({
       : 'all'
 
   const statuses =
-    usesCustomStatusFilter(selectedStepId) || activeStatusFilter === 'all'
+    usesCustomStatusFilter(selectedStepId) ||
+    activeStatusFilter === 'all' ||
+    activeStatusFilter === 'needs-attention'
       ? DEFAULT_STATUSES
-      : [activeStatusFilter as PatientStepStatus]
+      : activeStatusFilter === 'waiting'
+        ? (['waiting', 'blocked'] as PatientStepStatus[])
+        : [activeStatusFilter as PatientStepStatus]
 
   const selectedStatusOption =
     activeStatusFilter === 'all'
@@ -650,14 +759,22 @@ export function StagePatientSteps({
     selectedStepId,
   ])
 
+  const scheduleAwareDays = useMemo(
+    () =>
+      selectedStepId === 'schedule-patient'
+        ? overlayScheduleDays(displayDays, state.patientSchedules)
+        : displayDays,
+    [displayDays, selectedStepId, state.patientSchedules],
+  )
+
   const filteredDisplayDays = useMemo(() => {
     if (selectedStepId === 'check-scheduling-status') {
-      return displayDays
+      return scheduleAwareDays
         .map((day) => ({
           ...day,
           rows: day.rows.filter((row) => {
             const bucket = eodSchedulingBucket(
-              eodSchedulingCheckForPatient(row.patientId),
+              eodForPatient(row.patientId, state.patientSchedules),
             )
             if (activeStatusFilter === 'all') return true
             return bucket === activeStatusFilter
@@ -666,12 +783,12 @@ export function StagePatientSteps({
         .filter((day) => day.rows.length > 0)
     }
     if (selectedStepId === 'follow-up-case-manager') {
-      const filtered = displayDays
+      const filtered = scheduleAwareDays
         .map((day) => ({
           ...day,
           rows: day.rows.filter((row) =>
             eodFollowUpEligible(
-              eodSchedulingCheckForPatient(row.patientId),
+              eodForPatient(row.patientId, state.patientSchedules),
               Boolean(eodManualCmFollowUp[row.patientId]),
             ),
           ),
@@ -685,12 +802,12 @@ export function StagePatientSteps({
             (entry) => entry.patientId === patientId,
           )
           if (!patient) return null
-          const record = eodSchedulingCheckForPatient(patientId)
+          const record = eodForPatient(patientId, state.patientSchedules)
           return {
             patientId,
             patientName: patient.patientName,
             stepId: 'follow-up-case-manager',
-            status: 'done' as const,
+            status: 'done',
             summary: eodCmFollowUpSummary(record, true),
             occurredAt: opsTimestamp(),
           }
@@ -700,11 +817,11 @@ export function StagePatientSteps({
       return prependEodFeedRows(filtered, manualRows)
     }
     if (selectedStepId === 'escalate-unresolved-cases') {
-      const filtered = displayDays
+      const filtered = scheduleAwareDays
         .map((day) => ({
           ...day,
           rows: day.rows.filter((row) => {
-            const record = eodSchedulingCheckForPatient(row.patientId)
+            const record = eodForPatient(row.patientId, state.patientSchedules)
             return eodEscalationEligible(
               record,
               Boolean(
@@ -722,12 +839,12 @@ export function StagePatientSteps({
             (entry) => entry.patientId === patientId,
           )
           if (!patient) return null
-          const record = eodSchedulingCheckForPatient(patientId)
+          const record = eodForPatient(patientId, state.patientSchedules)
           return {
             patientId,
             patientName: patient.patientName,
             stepId: 'escalate-unresolved-cases',
-            status: 'done' as const,
+            status: 'done',
             summary: eodEscalationConfirmLabel(record),
             occurredAt: opsTimestamp(),
           }
@@ -737,7 +854,7 @@ export function StagePatientSteps({
       return prependEodFeedRows(filtered, escalatedRows)
     }
     if (selectedStepId === 'patient-seen') {
-      return displayDays
+      return scheduleAwareDays
         .map((day) => ({
           ...day,
           rows: day.rows.filter((row) => {
@@ -755,7 +872,7 @@ export function StagePatientSteps({
         .filter((day) => day.rows.length > 0)
     }
     if (selectedStepId === 'wound-healed') {
-      return displayDays
+      return scheduleAwareDays
         .map((day) => ({
           ...day,
           rows: day.rows.filter((row) => {
@@ -773,7 +890,7 @@ export function StagePatientSteps({
         .filter((day) => day.rows.length > 0)
     }
     if (selectedStepId === 'patient-expired') {
-      return displayDays
+      return scheduleAwareDays
         .map((day) => ({
           ...day,
           rows: day.rows.filter((row) => {
@@ -791,7 +908,7 @@ export function StagePatientSteps({
         .filter((day) => day.rows.length > 0)
     }
     if (selectedStepId === 'patient-on-hold') {
-      return displayDays
+      return scheduleAwareDays
         .map((day) => ({
           ...day,
           rows: day.rows.filter((row) => {
@@ -808,28 +925,90 @@ export function StagePatientSteps({
         }))
         .filter((day) => day.rows.length > 0)
     }
-    return displayDays
+    return scheduleAwareDays
   }, [
-    displayDays,
+    scheduleAwareDays,
     eodEscalated,
     eodManualCmFollowUp,
     selectedStepId,
     stageId,
     activeStatusFilter,
     weeklyHoldsActionTaken,
+    state.patientSchedules,
   ])
 
   const scopedPatient = state.opsScopedPatient
+  const stepUnreadCounts = unreadStepCounts(state)
+  const attentionFilteredDays = useMemo(() => {
+    if (activeStatusFilter !== 'needs-attention') return filteredDisplayDays
+    return filteredDisplayDays
+      .map((day) => ({
+        ...day,
+        rows: day.rows.filter((row) => {
+          const status = timerForPatientStep(
+            state.actionTimers,
+            row.patientId,
+            selectedStepId,
+          )?.status
+          return status === 'overdue' || status === 'warning'
+        }),
+      }))
+      .filter((day) => day.rows.length > 0)
+  }, [
+    filteredDisplayDays,
+    activeStatusFilter,
+    state.actionTimers,
+    selectedStepId,
+  ])
+
   const scopedDisplayDays = useMemo(() => {
     const scopedId = scopedPatient?.patientId
-    if (!scopedId) return filteredDisplayDays
-    return filteredDisplayDays
+    if (!scopedId) return attentionFilteredDays
+    return attentionFilteredDays
       .map((day) => ({
         ...day,
         rows: day.rows.filter((row) => row.patientId === scopedId),
       }))
       .filter((day) => day.rows.length > 0)
-  }, [filteredDisplayDays, scopedPatient?.patientId])
+  }, [attentionFilteredDays, scopedPatient?.patientId])
+
+  /** Overdue and due-soon confirmations lead the feed; cleared items drop out. */
+  const attentionDisplayDays = useMemo(() => {
+    const urgent: StepFeedRow[] = []
+    const rest: StepFeedDay[] = []
+    for (const day of scopedDisplayDays) {
+      const keep: StepFeedRow[] = []
+      for (const row of day.rows) {
+        const status = timerForPatientStep(
+          state.actionTimers,
+          row.patientId,
+          selectedStepId,
+        )?.status
+        if (status === 'overdue' || status === 'warning') urgent.push(row)
+        else keep.push(row)
+      }
+      if (keep.length) rest.push({ ...day, rows: keep })
+    }
+    if (!urgent.length) return scopedDisplayDays
+
+    urgent.sort((a, b) =>
+      compareAttention(
+        timerForPatientStep(state.actionTimers, a.patientId, selectedStepId),
+        timerForPatientStep(state.actionTimers, b.patientId, selectedStepId),
+      ),
+    )
+
+    return [
+      {
+        key: 'needs-attention',
+        label: 'Needs immediate attention',
+        month: '—',
+        day: '—',
+        rows: urgent,
+      },
+      ...rest,
+    ]
+  }, [scopedDisplayDays, state.actionTimers, selectedStepId])
 
   const scopedStepStatuses = useMemo(() => {
     if (!scopedPatient) return undefined
@@ -1096,6 +1275,7 @@ export function StagePatientSteps({
       }
     }
     setSelectedStepId(stepId)
+    dispatch({ type: 'SET_OPS_SELECTED_STEP', stageId, stepId })
   }
 
   const pickStatus = (value: StatusFilterValue) => {
@@ -1122,28 +1302,20 @@ export function StagePatientSteps({
           selectedStepId={selectedStepId}
           onSelect={selectStep}
           stepStatuses={scopedStepStatuses}
+          overdueStepIds={overdueStepIds(state.actionTimers, stageId)}
+          overdueCounts={Object.values(state.actionTimers).reduce<
+            Record<string, number>
+          >((counts, timer) => {
+            if (timer.stageId !== stageId || timer.status !== 'overdue') {
+              return counts
+            }
+            counts[timer.stepId] = (counts[timer.stepId] ?? 0) + 1
+            return counts
+          }, {})}
+          warningStepIds={warningStepIds(state.actionTimers, stageId)}
+          unreadCounts={scopedPatient ? {} : stepUnreadCounts}
           attentionStepIds={
-            scopedPatient
-              ? []
-              : [
-            ...(state.assignmentOwnerUnread ? ['determine-owner'] : []),
-            ...(state.assignmentNotifyUnread ? ['assign-owner'] : []),
-            ...(state.providerAvailabilityUnread
-              ? ['confirm-provider-availability']
-              : []),
-            ...(state.providerRecordsUnread ? ['update-monday-drk'] : []),
-            ...(state.eodFollowUpUnread ? ['follow-up-case-manager'] : []),
-            ...(state.eodEscalationUnread ? ['escalate-unresolved-cases'] : []),
-            ...(state.handoffNotifyUnread ? ['notify-referral-source'] : []),
-            ...(state.handoffMondayUnread ? ['create-monday-record'] : []),
-            ...(state.handoffDrkUnread ? ['create-update-drk'] : []),
-            ...(state.providerSelectUnread ? ['select-provider'] : []),
-            ...(state.intakeMondayUnread ? ['check-monday'] : []),
-            ...(state.intakeDrkUnread ? ['check-drk'] : []),
-            ...(state.intakePartnerUnread
-              ? ['confirm-referral-contacted']
-              : []),
-              ]
+            scopedPatient ? [] : Object.keys(stepUnreadCounts)
           }
         />
       </aside>
@@ -1257,17 +1429,26 @@ export function StagePatientSteps({
           </div>
         </div>
 
-        {scopedDisplayDays.length ? (
+        {attentionDisplayDays.length ? (
           <ol
             className="stage-ops-step-feed"
             aria-label="Step updates"
             key={selectedStepId}
           >
-            {scopedDisplayDays.map((day) => (
-              <li key={day.key} className="stage-ops-step-feed__day">
+            {attentionDisplayDays.map((day) => (
+              <li
+                key={day.key}
+                className={`stage-ops-step-feed__day${
+                  day.key === 'needs-attention' ? ' is-attention' : ''
+                }`}
+              >
                 <h4 className="stage-ops-step-feed__day-header">
                   <time
-                    dateTime={day.key === 'undated' ? undefined : day.key}
+                    dateTime={
+                      day.key === 'undated' || day.key === 'needs-attention'
+                        ? undefined
+                        : day.key
+                    }
                   >
                     {day.label}
                   </time>
@@ -1414,6 +1595,10 @@ export function StagePatientSteps({
                             samplePdf: referralPdfForPatient(row.patientId),
                           }
                         : undefined)
+                    const patientSchedule =
+                      selectedStepId === 'schedule-patient'
+                        ? state.patientSchedules[row.patientId]
+                        : undefined
                     const assignmentSuggestion =
                       selectedStepId === 'determine-owner' && !isLiveWorkflowRow(row)
                         ? suggestedCaseManager
@@ -1429,6 +1614,7 @@ export function StagePatientSteps({
                       : CASE_MANAGER_OPTIONS
                     const assignmentConfirmed =
                       liveAssignment?.status === 'completed' ||
+                      row.status === 'done' ||
                       Boolean(confirmedAssignments[row.patientId])
                     const selectedCaseManagerEmail =
                       selectedCaseManagers[row.patientId] ??
@@ -1493,7 +1679,7 @@ export function StagePatientSteps({
                       selectedStepId === 'check-scheduling-status' ||
                       selectedStepId === 'follow-up-case-manager' ||
                       selectedStepId === 'escalate-unresolved-cases'
-                        ? eodSchedulingCheckForPatient(row.patientId)
+                        ? eodForPatient(row.patientId, state.patientSchedules)
                         : undefined
                     const eodEscalatedForPatient = Boolean(
                       eodEscalated[row.patientId] ||
@@ -1683,7 +1869,10 @@ export function StagePatientSteps({
                               : selectedStepId === 'check-scheduling-status' ||
                                   selectedStepId === 'follow-up-case-manager' ||
                                   selectedStepId === 'escalate-unresolved-cases'
-                                ? (eodSchedulingStatusOption(row.patientId)
+                                ? (eodSchedulingStatusOption(
+                                    row.patientId,
+                                    state.patientSchedules,
+                                  )
                                     .tone ?? 'done')
                               : selectedStepId === 'patient-seen' &&
                                   weeklyVisitCheck
@@ -1727,7 +1916,10 @@ export function StagePatientSteps({
                             selectedStepId === 'check-scheduling-status' ||
                             selectedStepId === 'follow-up-case-manager' ||
                             selectedStepId === 'escalate-unresolved-cases'
-                              ? eodSchedulingStatusOption(row.patientId).meaning
+                              ? eodSchedulingStatusOption(
+                                  row.patientId,
+                                  state.patientSchedules,
+                                ).meaning
                               : weeklyStatusLabel(
                                   selectedStepId,
                                   selectedStepId === 'patient-seen' &&
@@ -1946,6 +2138,38 @@ export function StagePatientSteps({
                           }
                           providerAvailability={providerAvailability}
                           schedulingHandoff={schedulingHandoff}
+                          patientSchedule={patientSchedule}
+                          onSelectSchedulingSlot={
+                            patientSchedule?.status === 'waiting'
+                              ? (slotId) =>
+                                  dispatch({
+                                    type: 'SELECT_SCHEDULING_SLOT',
+                                    patientId: row.patientId,
+                                    slotId,
+                                  })
+                              : undefined
+                          }
+                          onCompletePatientSchedule={
+                            patientSchedule?.status === 'waiting'
+                              ? () =>
+                                  dispatch({
+                                    type: 'COMPLETE_PATIENT_SCHEDULE',
+                                    patientId: row.patientId,
+                                    scheduledAt: opsTimestamp(),
+                                  })
+                              : undefined
+                          }
+                          onRecordSchedulingBlocker={
+                            patientSchedule?.status === 'waiting'
+                              ? (reason) =>
+                                  dispatch({
+                                    type: 'RECORD_SCHEDULING_BLOCKER',
+                                    patientId: row.patientId,
+                                    reason,
+                                    occurredAt: opsTimestamp(),
+                                  })
+                              : undefined
+                          }
                           eodSchedulingCheck={eodSchedulingCheck}
                           eodFollowUp={selectedStepId === 'follow-up-case-manager'}
                           eodEscalation={
@@ -2006,11 +2230,23 @@ export function StagePatientSteps({
                             weeklyMissedVisitPending(weeklyVisitCheck) &&
                             !weeklyRescheduleForPatient &&
                             !weeklyAppointmentRescheduledForPatient
-                              ? () =>
+                              ? () => {
                                   setWeeklyRescheduleConfirmed((current) => ({
                                     ...current,
                                     [row.patientId]: true,
                                   }))
+                                  dispatch({
+                                    type: 'RESOLVE_ACTION_TIMER',
+                                    patientId: row.patientId,
+                                    actionId: 'weekly-mark-not-seen',
+                                  })
+                                  dispatch({
+                                    type: 'START_ACTION_TIMER',
+                                    patientId: row.patientId,
+                                    patientName: row.patientName,
+                                    actionId: 'weekly-confirm-rescheduled',
+                                  })
+                                }
                               : undefined
                           }
                           onWeeklyConfirmAppointmentRescheduled={
@@ -2019,11 +2255,17 @@ export function StagePatientSteps({
                             weeklyRescheduleForPatient &&
                             !weeklyDischargeForPatient &&
                             !weeklyAppointmentRescheduledForPatient
-                              ? () =>
+                              ? () => {
                                   setWeeklyAppointmentRescheduled((current) => ({
                                     ...current,
                                     [row.patientId]: true,
                                   }))
+                                  dispatch({
+                                    type: 'RESOLVE_ACTION_TIMER',
+                                    patientId: row.patientId,
+                                    actionId: 'weekly-confirm-rescheduled',
+                                  })
+                                }
                               : undefined
                           }
                           onWeeklyEscalateDischargeReview={
@@ -2031,11 +2273,17 @@ export function StagePatientSteps({
                             selectedStepId === 'patient-seen' &&
                             weeklyDischargeReviewDue(weeklyVisitCheck) &&
                             !weeklyDischargeForPatient
-                              ? () =>
+                              ? () => {
                                   setWeeklyDischargeReview((current) => ({
                                     ...current,
                                     [row.patientId]: true,
                                   }))
+                                  dispatch({
+                                    type: 'RESOLVE_ACTION_TIMER',
+                                    patientId: row.patientId,
+                                    actionId: 'weekly-escalate-dc',
+                                  })
+                                }
                               : undefined
                           }
                           onWeeklyHoldsAction={
@@ -2044,11 +2292,22 @@ export function StagePatientSteps({
                               selectedStepId === 'patient-expired' ||
                               selectedStepId === 'patient-on-hold') &&
                             !weeklyHoldsActionForPatient
-                              ? () =>
+                              ? () => {
                                   setWeeklyHoldsActionTaken((current) => ({
                                     ...current,
                                     [row.patientId]: true,
                                   }))
+                                  dispatch({
+                                    type: 'RESOLVE_ACTION_TIMER',
+                                    patientId: row.patientId,
+                                    actionId:
+                                      selectedStepId === 'wound-healed'
+                                        ? 'weekly-qa-discharge'
+                                        : selectedStepId === 'patient-expired'
+                                          ? 'weekly-remove-dc'
+                                          : 'weekly-move-holds',
+                                  })
+                                }
                               : undefined
                           }
                           referralPacketPdf={
@@ -2133,6 +2392,11 @@ export function StagePatientSteps({
                           }
                           liveInboxReferral={liveInboxReferral}
                           liveInboxStep={liveInboxStep}
+                          actionTimer={timerForPatientStep(
+                            state.actionTimers,
+                            row.patientId,
+                            selectedStepId,
+                          )}
                         />
                       </li>
                     )

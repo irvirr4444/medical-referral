@@ -9,7 +9,7 @@ type PatientStepDetail = ReturnType<typeof detailForPatientStep>
 
 const STATUS_MEANINGS: Array<{ id: PatientStepStatus; meaning: string }> = [
   { id: 'waiting', meaning: 'Needs confirmation' },
-  { id: 'blocked', meaning: 'Stuck' },
+  { id: 'blocked', meaning: 'Needs confirmation' },
   { id: 'current', meaning: 'In progress' },
   { id: 'done', meaning: 'Finished' },
 ]

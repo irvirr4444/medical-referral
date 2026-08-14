@@ -198,7 +198,10 @@ export function patientProfile(
       (provider) => provider.id === state.providerSelectedIds[patientId],
     ) ?? null
   const suggestedProvider = providerSuggestion(patientId)
-  const eod = eodSchedulingCheckForPatient(patientId)
+  const eod = eodSchedulingCheckForPatient(
+    patientId,
+    state.patientSchedules[patientId],
+  )
   const weekly = weeklyVisitCheckForPatient(patientId)
   const schedulingHandoff = state.schedulingHandoffs.find(
     (item) => item.patientId === patientId,
@@ -259,9 +262,12 @@ export function patientProfile(
   const sendStep = stepsForPatient('scheduling', patientId).find(
     (step) => step.stepId === 'send-referral-provider',
   )
+  const liveSchedule = state.patientSchedules[patientId]
   const referralSent = !schedulingReached
     ? BLANK
-    : sendStep?.status === 'done' || schedulingHandoff
+    : sendStep?.status === 'done' ||
+        schedulingHandoff ||
+        liveSchedule?.referralSent
       ? 'Yes'
       : 'No'
 

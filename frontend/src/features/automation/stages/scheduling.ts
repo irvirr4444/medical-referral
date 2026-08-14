@@ -11,7 +11,7 @@ export const SCHEDULING_STAGE: AutomationStageDefinition = {
     'A provider is selected and availability is confirmed or placed by the case manager.',
   successDefinition:
     'The patient has an appointment date, or the scheduling blocker is explicit.',
-  implementationStatus: 'planned',
+  implementationStatus: 'partial',
   microsteps: [
     step({
       id: 'send-referral-provider',
@@ -35,7 +35,7 @@ export const SCHEDULING_STAGE: AutomationStageDefinition = {
       input: 'Provider availability and patient scheduling constraints',
       output: 'Confirmed appointment date and time',
       validation: 'The selected appointment must come from current provider availability.',
-      implementationStatus: 'planned',
+      implementationStatus: 'working',
     }),
   ],
 }

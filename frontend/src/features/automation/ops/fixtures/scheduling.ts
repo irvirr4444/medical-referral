@@ -13,10 +13,9 @@ export const SCHEDULING_OPS_FIXTURE: StageOpsFixture = {
     ev('scheduling', 'appointment-confirmed', 'nancy-liu', 'Nancy Liu', 'August 10, 2026 at 9:10 AM', 'Fri 11:00 AM accepted', 'resolved'),
     ev('scheduling', 'appointment-written', 'nancy-liu', 'Nancy Liu', 'August 10, 2026 at 9:11 AM', 'Monday and DRK appointment updated', 'resolved'),
 
-    ev('scheduling', 'ready-schedule', 'james-carter', 'James Carter', 'August 10, 2026 at 9:00 AM', 'Ready to schedule', 'open', 'Waiting 8h'),
-    ev('scheduling', 'windows-proposed', 'james-carter', 'James Carter', 'August 10, 2026 at 9:01 AM', 'Referral sent to selected provider', 'resolved'),
-    ev('scheduling', 'awaiting-response', 'james-carter', 'James Carter', 'August 10, 2026 at 9:02 AM', 'Provider response window started', 'resolved'),
-    ev('scheduling', 'scheduling-exception', 'james-carter', 'James Carter', 'August 10, 2026 at 10:05 AM', 'No provider reply after one hour - Carla notified', 'open', 'Waiting 7h'),
+    ev('scheduling', 'ready-schedule', 'james-carter', 'James Carter', 'August 10, 2026 at 9:00 AM', 'Ready to schedule after manual placement', 'open', 'Waiting 8h'),
+    ev('scheduling', 'windows-proposed', 'james-carter', 'James Carter', 'August 10, 2026 at 9:01 AM', 'Today 4:45 PM · Tomorrow 11:00 AM · Saturday 8:15 AM', 'resolved'),
+    ev('scheduling', 'awaiting-response', 'james-carter', 'James Carter', 'August 10, 2026 at 10:05 AM', 'Awaiting appointment · 3 open slots', 'open', 'Waiting 7h'),
 
     ev('scheduling', 'ready-schedule', 'patricia-johnson', 'Patricia Johnson', 'August 9, 2026 at 2:00 PM', 'Ready to schedule', 'resolved'),
     ev('scheduling', 'windows-proposed', 'patricia-johnson', 'Patricia Johnson', 'August 9, 2026 at 2:01 PM', 'Fri 11:00 AM ranked first', 'resolved'),
@@ -34,5 +33,9 @@ export const SCHEDULING_OPS_FIXTURE: StageOpsFixture = {
     ev('scheduling', 'ready-schedule', 'helen-park', 'Helen Park', 'August 8, 2026 at 5:00 PM', 'Ready to schedule', 'resolved'),
     ev('scheduling', 'appointment-confirmed', 'helen-park', 'Helen Park', 'August 8, 2026 at 5:40 PM', 'Sat 9:00 AM confirmed', 'resolved'),
     ev('scheduling', 'appointment-written', 'helen-park', 'Helen Park', 'August 8, 2026 at 5:41 PM', 'Appointment written', 'resolved'),
+
+    ev('scheduling', 'ready-schedule', 'david-ruiz', 'David Ruiz', 'August 10, 2026 at 4:12 PM', 'Referral sent · route at capacity', 'open', 'Waiting 1d'),
+    ev('scheduling', 'windows-proposed', 'david-ruiz', 'David Ruiz', 'August 11, 2026 at 9:18 AM', 'Next open Monday 9:00 AM · outside 24–48h', 'resolved'),
+    ev('scheduling', 'scheduling-exception', 'david-ruiz', 'David Ruiz', 'August 11, 2026 at 9:20 AM', 'No open slots within 24–48 hours', 'open', 'Waiting 1d'),
   ],
 }

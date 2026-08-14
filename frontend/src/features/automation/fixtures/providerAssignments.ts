@@ -36,6 +36,9 @@ const SUGGESTED_PROVIDER_NAMES: Record<string, string> = {
   'thomas-reed': 'Charles Cho',
   'maria-alvarez': 'Daniel Rowady',
   'nancy-liu': 'Aaron Currie',
+  'james-carter': 'Daniel Rowady',
+  'linda-nguyen': 'Aaron Currie',
+  'david-ruiz': 'Aaron Currie',
 }
 
 interface ProviderPatientLocation {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createInitialState } from '../state/demoReducer'
+import { createInitialState, demoReducer } from '../state/demoReducer'
 import {
   patientProfile,
   resolvePatientKey,
@@ -30,6 +30,25 @@ describe('patientProfile', () => {
     const profile = patientProfile('maria-alvarez', createInitialState())
     expect(profile?.currentStageId).toBe('scheduling')
     expect(profile?.mondayOps.referralSent).not.toBe('—')
+    expect(profile?.mondayOps.appointment).toBe('—')
     expect(profile?.extractedSections.length).toBe(0)
+  })
+
+  it('writes the live appointment onto the profile after scheduling', () => {
+    let state = createInitialState()
+    state = demoReducer(state, {
+      type: 'SELECT_SCHEDULING_SLOT',
+      patientId: 'maria-alvarez',
+      slotId: 'maria-today-1530',
+    })
+    state = demoReducer(state, {
+      type: 'COMPLETE_PATIENT_SCHEDULE',
+      patientId: 'maria-alvarez',
+      scheduledAt: 'August 14, 2026 at 3:40 PM',
+    })
+    const profile = patientProfile('maria-alvarez', state)
+    expect(profile?.mondayOps.appointment).toBe('August 14, 2026')
+    expect(profile?.mondayOps.scheduled).toBe('Scheduled')
+    expect(profile?.mondayOps.scheduledComplete).toBe('Yes')
   })
 })
