@@ -28,6 +28,13 @@ export function DemoProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => () => clearTimers(), [clearTimers])
 
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      dispatch({ type: 'TICK_ACTION_TIMERS', now: Date.now() })
+    }, 1000)
+    return () => window.clearInterval(id)
+  }, [])
+
   const runAutomation = useCallback(() => {
     if (state.automationRunning || state.automationComplete) return
     clearTimers()

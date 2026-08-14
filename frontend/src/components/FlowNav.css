@@ -51,6 +51,13 @@
   gap: 0.4rem;
 }
 
+.flow-nav__badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex: 0 0 auto;
+}
+
 .flow-nav__attention-dot {
   width: 0.5rem;
   height: 0.5rem;
@@ -77,6 +84,96 @@
   .flow-nav__attention-dot {
     animation: none;
   }
+}
+
+.flow-nav__overdue-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.05rem;
+  height: 1.05rem;
+  flex: 0 0 auto;
+  padding: 0 0.28rem;
+  border-radius: 999px;
+  background: #b91c1c;
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.flow-nav__unread-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.05rem;
+  height: 1.05rem;
+  flex: 0 0 auto;
+  padding: 0 0.28rem;
+  border-radius: 999px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.flow-nav__link.is-overdue {
+  color: #b91c1c;
+}
+
+.flow-nav__link.is-unread {
+  color: #1d4ed8;
+}
+
+.overdue-confirmations-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+  border: 1px solid rgba(185, 28, 28, 0.4);
+  border-left: 4px solid #b91c1c;
+  border-radius: 8px;
+  background: rgba(254, 242, 242, 0.96);
+  color: #991b1b;
+  font-size: 0.86rem;
+  text-align: left;
+  padding: 0.55rem 0.85rem;
+  margin: 0 0 0.45rem;
+  cursor: pointer;
+}
+
+.overdue-confirmations-banner__badge {
+  flex: 0 0 auto;
+  padding: 0.14rem 0.5rem;
+  border-radius: 999px;
+  background: #b91c1c;
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.overdue-confirmations-banner__copy {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.overdue-confirmations-banner__meta {
+  flex: 0 0 auto;
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.overdue-confirmations-banner:hover,
+.overdue-confirmations-banner:focus-visible {
+  background: rgba(254, 226, 226, 0.98);
 }
 
 @media (max-width: 800px) {

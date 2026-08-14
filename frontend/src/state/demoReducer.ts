@@ -24,15 +24,29 @@ import {
 } from '../data/patientJourney'
 import { createInitialWorkflowScenarios } from '../data/workflowScenarios'
 import { referralPdfForPatient } from '../features/automation/fixtures/intakeDemoPatients'
+import {
+  seedPatientSchedules,
+  selectedSlot,
+  upsertScheduleFromHandoff,
+} from '../features/automation/fixtures/patientSchedules'
+import {
+  resolveActionTimer,
+  seedActionTimers,
+  startActionTimer,
+  tickActionTimers,
+  timerPatientName,
+} from '../features/automation/confirmationTimers'
 import type { ScenarioBucket } from '../data/scenarioTypes'
 import type {
   AutomationStep,
   AuditEvent,
+  ConfirmationActionId,
   DemoState,
   ImpactAssumptions,
   ProviderTerritoryResolution,
   QueueFilter,
   ReferralRecord,
+  SchedulingBlockerReason,
   SchedulingHandoff,
   SchedulingHandoffProvider,
   WorkflowStage,
@@ -66,6 +80,7 @@ export type DemoAction =
   | { type: 'SELECT_JOURNEY_PATIENT'; patientId: string }
   | { type: 'SCOPE_OPS_PATIENT'; patientId: string; patientName: string }
   | { type: 'CLEAR_OPS_PATIENT' }
+  | { type: 'SET_OPS_SELECTED_STEP'; stageId: string; stepId: string }
   | { type: 'FOCUS_JOURNEY_STEP'; caseId: string }
   | { type: 'ADVANCE_JOURNEY' }
   | { type: 'RESTART_JOURNEY' }
@@ -104,6 +119,22 @@ export type DemoAction =
     }
   | { type: 'MARK_PROVIDER_RECORDS_READ' }
   | { type: 'MARK_SCHEDULING_HANDOFF_READ' }
+  | {
+      type: 'SELECT_SCHEDULING_SLOT'
+      patientId: string
+      slotId: string
+    }
+  | {
+      type: 'COMPLETE_PATIENT_SCHEDULE'
+      patientId: string
+      scheduledAt: string
+    }
+  | {
+      type: 'RECORD_SCHEDULING_BLOCKER'
+      patientId: string
+      reason: SchedulingBlockerReason
+      occurredAt: string
+    }
   | {
       type: 'CONFIRM_ASSIGNMENT_HANDOFF'
       patientId: string
@@ -160,6 +191,20 @@ export type DemoAction =
       occurredAt: string
     }
   | { type: 'MARK_ASSIGNMENT_OWNER_READ' }
+  | {
+      type: 'START_ACTION_TIMER'
+      patientId: string
+      patientName: string
+      actionId: ConfirmationActionId
+      now?: number
+    }
+  | { type: 'TICK_ACTION_TIMERS'; now: number }
+  | {
+      type: 'RESOLVE_ACTION_TIMER'
+      patientId: string
+      actionId: ConfirmationActionId
+      now?: number
+    }
 
 function upsertSchedulingHandoff(
   handoffs: SchedulingHandoff[],
@@ -201,10 +246,35 @@ function withSchedulingHandoff(
       readyAt: action.readyAt,
       samplePdf: referralPdfForPatient(action.patientId),
     }),
+    patientSchedules: upsertScheduleFromHandoff(state.patientSchedules, {
+      patientId: action.patientId,
+      patientName: action.patientName,
+      provider: action.provider,
+      route: action.route,
+    }),
     providerRecordsUnread: true,
     providerRecordsMessageUnread: true,
     schedulingHandoffUnread: false,
     schedulingHandoffMessageUnread: false,
+    actionTimers: startActionTimer(
+      resolveActionTimer(
+        resolveActionTimer(
+          state.actionTimers,
+          action.patientId,
+          'provider-availability',
+          Date.now(),
+        ),
+        action.patientId,
+        'manual-placement',
+        Date.now(),
+      ),
+      {
+        patientId: action.patientId,
+        patientName: action.patientName,
+        actionId: 'schedule-patient',
+        now: Date.now(),
+      },
+    ),
   }
 }
 
@@ -425,12 +495,14 @@ export function createInitialState(): DemoState {
     journeyFocusCaseId: focusCaseId,
     selectedJourneyPatientId,
     opsScopedPatient: null,
+    opsSelectedStepByStage: {},
     providerSelectedIds: {},
     providerConfirmed: {},
     providerTerritoryResolutions: {},
     providerAvailability: {},
     latestProviderAvailabilityPatientId: null,
     schedulingHandoffs: [],
+    patientSchedules: seedPatientSchedules(),
     providerRecordsUnread: false,
     providerRecordsMessageUnread: false,
     schedulingHandoffUnread: false,
@@ -457,6 +529,7 @@ export function createInitialState(): DemoState {
     intakePartnerUnread: false,
     latestPartnerContact: null,
     assignmentOwnerUnread: false,
+    actionTimers: seedActionTimers(),
   }
 }
 
@@ -545,6 +618,18 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
     case 'CLEAR_OPS_PATIENT':
       return { ...state, opsScopedPatient: null }
 
+    case 'SET_OPS_SELECTED_STEP':
+      if (state.opsSelectedStepByStage[action.stageId] === action.stepId) {
+        return state
+      }
+      return {
+        ...state,
+        opsSelectedStepByStage: {
+          ...state.opsSelectedStepByStage,
+          [action.stageId]: action.stepId,
+        },
+      }
+
     case 'FOCUS_JOURNEY_STEP':
       return focusJourneyStep(state, action.caseId)
 
@@ -613,6 +698,29 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
           },
         },
         providerAvailabilityUnread: true,
+        actionTimers: startActionTimer(
+          resolveActionTimer(
+            resolveActionTimer(
+              state.actionTimers,
+              action.patientId,
+              'confirm-provider',
+              Date.now(),
+            ),
+            action.patientId,
+            'use-fallback-provider',
+            Date.now(),
+          ),
+          {
+            patientId: action.patientId,
+            patientName: timerPatientName(
+              state.actionTimers,
+              action.patientId,
+              action.patientId,
+            ),
+            actionId: 'provider-availability',
+            now: Date.now(),
+          },
+        ),
       }
     }
 
@@ -625,6 +733,17 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
             ...state.providerTerritoryResolutions,
             [action.patientId]: 'discharged',
           },
+          actionTimers: resolveActionTimer(
+            resolveActionTimer(
+              state.actionTimers,
+              action.patientId,
+              'confirm-provider',
+              Date.now(),
+            ),
+            action.patientId,
+            'use-fallback-provider',
+            Date.now(),
+          ),
         }
       }
       if (!action.requestedAt || !action.deadlineAt) return state
@@ -648,6 +767,29 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
           },
         },
         providerAvailabilityUnread: true,
+        actionTimers: startActionTimer(
+          resolveActionTimer(
+            resolveActionTimer(
+              state.actionTimers,
+              action.patientId,
+              'confirm-provider',
+              Date.now(),
+            ),
+            action.patientId,
+            'use-fallback-provider',
+            Date.now(),
+          ),
+          {
+            patientId: action.patientId,
+            patientName: timerPatientName(
+              state.actionTimers,
+              action.patientId,
+              action.patientId,
+            ),
+            actionId: 'provider-availability',
+            now: Date.now(),
+          },
+        ),
       }
     }
 
@@ -678,6 +820,24 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
             resolvedAt: action.resolvedAt,
           },
         },
+        actionTimers: startActionTimer(
+          resolveActionTimer(
+            state.actionTimers,
+            action.patientId,
+            'provider-availability',
+            Date.now(),
+          ),
+          {
+            patientId: action.patientId,
+            patientName: timerPatientName(
+              state.actionTimers,
+              action.patientId,
+              action.patientId,
+            ),
+            actionId: 'manual-placement',
+            now: Date.now(),
+          },
+        ),
       }
     }
 
@@ -715,6 +875,83 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
         schedulingHandoffMessageUnread: false,
       }
 
+    case 'SELECT_SCHEDULING_SLOT': {
+      const record = state.patientSchedules[action.patientId]
+      const slot = record?.slots.find((item) => item.id === action.slotId)
+      if (
+        !record ||
+        record.status !== 'waiting' ||
+        !slot ||
+        slot.status !== 'open' ||
+        record.selectedSlotId === action.slotId
+      ) {
+        return state
+      }
+      return {
+        ...state,
+        patientSchedules: {
+          ...state.patientSchedules,
+          [action.patientId]: { ...record, selectedSlotId: action.slotId },
+        },
+      }
+    }
+
+    case 'COMPLETE_PATIENT_SCHEDULE': {
+      const record = state.patientSchedules[action.patientId]
+      const slot = record ? selectedSlot(record) : null
+      if (
+        !record ||
+        record.status !== 'waiting' ||
+        !slot ||
+        slot.status !== 'open'
+      ) {
+        return state
+      }
+      return {
+        ...state,
+        patientSchedules: {
+          ...state.patientSchedules,
+          [action.patientId]: {
+            ...record,
+            status: 'scheduled',
+            appointmentDate: slot.appointmentDate,
+            appointmentTime: slot.appointmentTime,
+            scheduledAt: action.scheduledAt,
+          },
+        },
+        actionTimers: resolveActionTimer(
+          state.actionTimers,
+          action.patientId,
+          'schedule-patient',
+          Date.now(),
+        ),
+      }
+    }
+
+    case 'RECORD_SCHEDULING_BLOCKER': {
+      const record = state.patientSchedules[action.patientId]
+      if (!record || record.status !== 'waiting') return state
+      return {
+        ...state,
+        patientSchedules: {
+          ...state.patientSchedules,
+          [action.patientId]: {
+            ...record,
+            status: 'blocked',
+            selectedSlotId: null,
+            blockerReason: action.reason,
+            scheduledAt: action.occurredAt,
+          },
+        },
+        actionTimers: resolveActionTimer(
+          state.actionTimers,
+          action.patientId,
+          'schedule-patient',
+          Date.now(),
+        ),
+      }
+    }
+
     case 'CONFIRM_ASSIGNMENT_HANDOFF':
       return {
         ...state,
@@ -730,6 +967,20 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
         handoffDrkUnread: true,
         providerNavUnread: true,
         providerSelectUnread: true,
+        actionTimers: startActionTimer(
+          resolveActionTimer(
+            state.actionTimers,
+            action.patientId,
+            'confirm-assignment',
+            Date.now(),
+          ),
+          {
+            patientId: action.patientId,
+            patientName: action.patientName,
+            actionId: 'confirm-provider',
+            now: Date.now(),
+          },
+        ),
       }
 
     case 'MARK_ASSIGNMENT_NOTIFY_READ':
@@ -762,6 +1013,12 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
         ...state,
         latestEodFollowUpPatientId: action.patientId,
         eodFollowUpUnread: true,
+        actionTimers: resolveActionTimer(
+          state.actionTimers,
+          action.patientId,
+          'eod-follow-up-cm',
+          Date.now(),
+        ),
       }
 
     case 'MARK_EOD_FOLLOW_UP_READ':
@@ -773,6 +1030,17 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
         ...state,
         latestEodEscalationPatientId: action.patientId,
         eodEscalationUnread: true,
+        actionTimers: resolveActionTimer(
+          resolveActionTimer(
+            state.actionTimers,
+            action.patientId,
+            'eod-escalate',
+            Date.now(),
+          ),
+          action.patientId,
+          'eod-follow-up-cm',
+          Date.now(),
+        ),
       }
 
     case 'MARK_EOD_ESCALATION_READ':
@@ -845,6 +1113,12 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
         intakePartnerUnread: alreadyAnnounced
           ? state.intakePartnerUnread
           : true,
+        actionTimers: resolveActionTimer(
+          state.actionTimers,
+          action.patientId,
+          'confirm-intake-review',
+          Date.now(),
+        ),
       }
     }
 
@@ -856,6 +1130,16 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
           ...state.intakeVerified,
           [action.patientId]: false,
         },
+        actionTimers: startActionTimer(state.actionTimers, {
+          patientId: action.patientId,
+          patientName: timerPatientName(
+            state.actionTimers,
+            action.patientId,
+            action.patientId,
+          ),
+          actionId: 'confirm-intake-review',
+          now: Date.now(),
+        }),
       }
 
     case 'CONFIRM_PARTNER_CONTACTED':
@@ -867,6 +1151,20 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
           occurredAt: action.occurredAt,
         },
         assignmentOwnerUnread: true,
+        actionTimers: startActionTimer(
+          resolveActionTimer(
+            state.actionTimers,
+            action.patientId,
+            'confirm-partner-contacted',
+            Date.now(),
+          ),
+          {
+            patientId: action.patientId,
+            patientName: action.patientName,
+            actionId: 'confirm-assignment',
+            now: Date.now(),
+          },
+        ),
       }
 
     case 'MARK_ASSIGNMENT_OWNER_READ':
@@ -1176,6 +1474,34 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
           : state.lifecycleMessage,
       }
     }
+
+    case 'START_ACTION_TIMER':
+      return {
+        ...state,
+        actionTimers: startActionTimer(state.actionTimers, {
+          patientId: action.patientId,
+          patientName: action.patientName,
+          actionId: action.actionId,
+          now: action.now ?? Date.now(),
+        }),
+      }
+
+    case 'TICK_ACTION_TIMERS': {
+      const nextTimers = tickActionTimers(state.actionTimers, action.now)
+      if (!nextTimers) return state
+      return { ...state, actionTimers: nextTimers }
+    }
+
+    case 'RESOLVE_ACTION_TIMER':
+      return {
+        ...state,
+        actionTimers: resolveActionTimer(
+          state.actionTimers,
+          action.patientId,
+          action.actionId,
+          action.now ?? Date.now(),
+        ),
+      }
 
     default:
       return state

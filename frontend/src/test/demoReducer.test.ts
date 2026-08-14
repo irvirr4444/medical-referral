@@ -447,4 +447,126 @@ describe('demoReducer', () => {
     state = demoReducer(state, { type: 'CLEAR_OPS_PATIENT' })
     expect(state.opsScopedPatient).toBeNull()
   })
+
+  it('starts, warns, overdues, and resolves confirmation timers', () => {
+    const eligibleAt = 1_000_000
+    let state = createInitialState()
+    state = demoReducer(state, {
+      type: 'START_ACTION_TIMER',
+      patientId: 'test-patient',
+      patientName: 'Test Patient',
+      actionId: 'confirm-intake-review',
+      now: eligibleAt,
+    })
+    const id = 'test-patient:confirm-intake-review'
+    expect(state.actionTimers[id]?.status).toBe('pending')
+    expect(state.actionTimers[id]?.deadlineAt).toBe(eligibleAt + 15_000)
+
+    const pendingAgain = demoReducer(state, {
+      type: 'START_ACTION_TIMER',
+      patientId: 'test-patient',
+      patientName: 'Test Patient',
+      actionId: 'confirm-intake-review',
+      now: eligibleAt + 1_000,
+    })
+    expect(pendingAgain.actionTimers[id]?.eligibleAt).toBe(eligibleAt)
+
+    state = demoReducer(state, {
+      type: 'TICK_ACTION_TIMERS',
+      now: eligibleAt + 11_250,
+    })
+    expect(state.actionTimers[id]?.status).toBe('warning')
+
+    state = demoReducer(state, {
+      type: 'TICK_ACTION_TIMERS',
+      now: eligibleAt + 15_000,
+    })
+    expect(state.actionTimers[id]?.status).toBe('overdue')
+
+    state = demoReducer(state, {
+      type: 'RESOLVE_ACTION_TIMER',
+      patientId: 'test-patient',
+      actionId: 'confirm-intake-review',
+      now: eligibleAt + 16_000,
+    })
+    expect(state.actionTimers[id]?.status).toBe('resolved')
+    expect(state.actionTimers[id]?.resolvedAt).toBe(eligibleAt + 16_000)
+
+    state = demoReducer(state, { type: 'RESET' })
+    expect(state.actionTimers[id]).toBeUndefined()
+    expect(state.actionTimers['butler-alva:confirm-partner-contacted']?.status).toBe(
+      'overdue',
+    )
+  })
+
+  it('selects a slot, schedules the patient, and stays idempotent', () => {
+    let state = createInitialState()
+    const maria = state.patientSchedules['maria-alvarez']!
+    expect(maria.status).toBe('waiting')
+    expect(maria.slots.some((slot) => slot.status === 'unavailable')).toBe(true)
+
+    const unavailable = maria.slots.find((slot) => slot.status === 'unavailable')!
+    state = demoReducer(state, {
+      type: 'SELECT_SCHEDULING_SLOT',
+      patientId: 'maria-alvarez',
+      slotId: unavailable.id,
+    })
+    expect(state.patientSchedules['maria-alvarez']?.selectedSlotId).toBeNull()
+
+    state = demoReducer(state, {
+      type: 'SELECT_SCHEDULING_SLOT',
+      patientId: 'maria-alvarez',
+      slotId: 'maria-today-1530',
+    })
+    expect(state.patientSchedules['maria-alvarez']?.selectedSlotId).toBe(
+      'maria-today-1530',
+    )
+
+    state = demoReducer(state, {
+      type: 'COMPLETE_PATIENT_SCHEDULE',
+      patientId: 'maria-alvarez',
+      scheduledAt: 'August 14, 2026 at 3:40 PM',
+    })
+    const scheduled = state.patientSchedules['maria-alvarez']
+    expect(scheduled?.status).toBe('scheduled')
+    expect(scheduled?.appointmentDate).toBe('August 14, 2026')
+    expect(scheduled?.appointmentTime).toBe('3:30 PM')
+    expect(state.actionTimers['maria-alvarez:schedule-patient']?.status).toBe(
+      'resolved',
+    )
+
+    const after = demoReducer(state, {
+      type: 'COMPLETE_PATIENT_SCHEDULE',
+      patientId: 'maria-alvarez',
+      scheduledAt: 'August 14, 2026 at 4:00 PM',
+    })
+    expect(after).toBe(state)
+
+    const blockedAttempt = demoReducer(state, {
+      type: 'RECORD_SCHEDULING_BLOCKER',
+      patientId: 'maria-alvarez',
+      reason: 'patient_declined',
+      occurredAt: 'August 14, 2026 at 4:00 PM',
+    })
+    expect(blockedAttempt).toBe(state)
+  })
+
+  it('records a scheduling blocker without marking the patient scheduled', () => {
+    let state = createInitialState()
+    state = demoReducer(state, {
+      type: 'RECORD_SCHEDULING_BLOCKER',
+      patientId: 'thomas-reed',
+      reason: 'patient_declined',
+      occurredAt: 'August 14, 2026 at 4:12 PM',
+    })
+    expect(state.patientSchedules['thomas-reed']?.status).toBe('blocked')
+    expect(state.patientSchedules['thomas-reed']?.blockerReason).toBe(
+      'patient_declined',
+    )
+    expect(state.patientSchedules['thomas-reed']?.appointmentDate).toBeUndefined()
+    expect(state.patientSchedules['maria-alvarez']?.status).toBe('waiting')
+    expect(state.actionTimers['thomas-reed:schedule-patient']?.status).toBe(
+      'resolved',
+    )
+  })
 })

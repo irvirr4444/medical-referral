@@ -1,4 +1,9 @@
 import { WORKFLOW_MODAL_TABS } from '../data/constants'
+import {
+  overdueStageIds,
+  overdueTimers,
+} from '../features/automation/confirmationTimers'
+import { unreadCountForStage } from '../features/automation/unreadSteps'
 import { navigateAppPath, patientKeyFromPath } from '../features/automation/patientRoute'
 import { useDemo } from '../state/useDemo'
 import './FlowNav.css'
@@ -9,36 +14,44 @@ export type AppPageId = (typeof APP_NAV_ITEMS)[number]['id']
 
 export function FlowNav() {
   const { state, dispatch } = useDemo()
+  const overdue = overdueTimers(state.actionTimers)
+  const overdueStages = overdueStageIds(state.actionTimers)
 
   return (
     <nav className="flow-nav" aria-label="Primary">
       <div className="flow-nav__inner">
         {APP_NAV_ITEMS.map((item) => {
           const active = state.activePage === item.id
-          const needsAttention =
-            (item.id === 'assignment' &&
-              (state.assignmentNotifyUnread || state.assignmentOwnerUnread)) ||
-            (item.id === 'scheduling' && state.schedulingHandoffUnread) ||
-            (item.id === 'handoff' &&
-              (state.handoffNavUnread ||
-                state.handoffNotifyUnread ||
-                state.handoffMondayUnread ||
-                state.handoffDrkUnread)) ||
-            (item.id === 'provider' &&
-              (state.providerNavUnread ||
-                state.providerSelectUnread ||
-                state.providerAvailabilityUnread ||
-                state.providerRecordsUnread)) ||
-            (item.id === 'end-of-day' &&
-              (state.eodFollowUpUnread || state.eodEscalationUnread))
+          // Red is scoped to the open step so clearing the worklist in front of
+          // you clears the badge; blue stays stage-wide so a new update waiting
+          // on a later step still surfaces.
+          const selectedStep = active
+            ? state.opsSelectedStepByStage[item.id]
+            : undefined
+          const overdueCount = overdue.filter(
+            (timer) =>
+              timer.stageId === item.id &&
+              (!selectedStep || timer.stepId === selectedStep),
+          ).length
+          const isOverdue = active ? overdueCount > 0 : overdueStages.has(item.id)
+          const unreadCount = unreadCountForStage(state, item.id)
+          const needsAttention = unreadCount > 0
+          const parts = [
+            isOverdue ? `${overdueCount} overdue` : null,
+            needsAttention
+              ? `${unreadCount} new update${unreadCount === 1 ? '' : 's'}`
+              : null,
+          ].filter(Boolean)
           return (
             <button
               key={item.id}
               type="button"
-              className={`flow-nav__link ${active ? 'is-active' : ''}`}
+              className={`flow-nav__link ${active ? 'is-active' : ''}${
+                isOverdue ? ' is-overdue' : ''
+              }${needsAttention ? ' is-unread' : ''}`}
               aria-current={active ? 'page' : undefined}
               aria-label={
-                needsAttention ? `${item.label}, new update` : undefined
+                parts.length ? `${item.label}, ${parts.join(', ')}` : undefined
               }
               onClick={() => {
                 if (patientKeyFromPath(window.location.pathname)) {
@@ -50,11 +63,25 @@ export function FlowNav() {
             >
               <span className="flow-nav__label-row">
                 {item.label}
-                {needsAttention ? (
-                  <span
-                    className="flow-nav__attention-dot"
-                    aria-hidden="true"
-                  />
+                {isOverdue || needsAttention ? (
+                  <span className="flow-nav__badges">
+                    {isOverdue ? (
+                      <span
+                        className="flow-nav__overdue-count"
+                        aria-hidden="true"
+                      >
+                        {overdueCount}
+                      </span>
+                    ) : null}
+                    {needsAttention ? (
+                      <span
+                        className="flow-nav__unread-count"
+                        aria-hidden="true"
+                      >
+                        {unreadCount}
+                      </span>
+                    ) : null}
+                  </span>
                 ) : null}
               </span>
             </button>

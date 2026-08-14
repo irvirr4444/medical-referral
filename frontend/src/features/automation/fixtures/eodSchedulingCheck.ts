@@ -1,5 +1,6 @@
 import { caseManagerSuggestion } from './caseManagerAssignments'
 import { providerSuggestion } from './providerAssignments'
+import type { PatientSchedulingRecord } from '../../../types'
 
 export interface EodSchedulingCheckRecord {
   providerName: string
@@ -17,7 +18,12 @@ export interface EodSchedulingCheckRecord {
 export const EOD_CM_NOTIFY_HOURS = 24
 export const EOD_ESCALATE_HOURS = 48
 
-const EOD_SCHEDULING_CHECKS: Record<string, EodSchedulingCheckRecord> = {
+// Case manager comes from the assignment fixture at read time, so the seeds
+// below intentionally leave it out.
+const EOD_SCHEDULING_CHECKS: Record<
+  string,
+  Omit<EodSchedulingCheckRecord, 'caseManagerName'>
+> = {
   'maria-alvarez': {
     providerName: 'Daniel Rowady',
     providerSelectedAt: 'August 11, 2026 at 5:01 AM',
@@ -210,26 +216,56 @@ const EOD_SCHEDULING_CHECKS: Record<string, EodSchedulingCheckRecord> = {
   },
 }
 
+export function applyLiveScheduleToEod(
+  record: EodSchedulingCheckRecord,
+  schedule?: PatientSchedulingRecord | null,
+): EodSchedulingCheckRecord {
+  if (!schedule) return record
+  if (schedule.status === 'scheduled' && schedule.appointmentDate) {
+    return {
+      ...record,
+      providerName: schedule.provider.name,
+      scheduledStatus: 'Scheduled',
+      appointmentDate: schedule.appointmentDate,
+      scheduledComplete: 'Yes',
+      overdue: false,
+    }
+  }
+  if (schedule.status === 'blocked') {
+    return {
+      ...record,
+      providerName: schedule.provider.name,
+      scheduledStatus: 'Not Scheduled',
+      appointmentDate: '',
+      scheduledComplete: 'No',
+      overdue: true,
+    }
+  }
+  return {
+    ...record,
+    providerName: schedule.provider.name,
+  }
+}
+
 export function eodSchedulingCheckForPatient(
   patientId: string,
+  liveSchedule?: PatientSchedulingRecord | null,
 ): EodSchedulingCheckRecord {
   const caseManagerName = caseManagerSuggestion(patientId).name
   const record = EOD_SCHEDULING_CHECKS[patientId]
-  if (record) {
-    return { ...record, caseManagerName }
-  }
-
-  const provider = providerSuggestion(patientId)
-  return {
-    providerName: provider.name,
-    providerSelectedAt: 'Not documented',
-    hoursSinceProviderSelected: 0,
-    caseManagerName,
-    scheduledStatus: 'Not Scheduled',
-    appointmentDate: '',
-    scheduledComplete: 'No',
-    overdue: false,
-  }
+  const base = record
+    ? { ...record, caseManagerName }
+    : {
+        providerName: providerSuggestion(patientId).name,
+        providerSelectedAt: 'Not documented',
+        hoursSinceProviderSelected: 0,
+        caseManagerName,
+        scheduledStatus: 'Not Scheduled',
+        appointmentDate: '',
+        scheduledComplete: 'No',
+        overdue: false,
+      }
+  return applyLiveScheduleToEod(base, liveSchedule)
 }
 
 export function eodSchedulingCheckSummary(

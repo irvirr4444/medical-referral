@@ -49,7 +49,7 @@ type DoneStep = {
 type TailStep = {
   summary: string
   at?: string
-  status?: Extract<PatientStepStatus, 'current' | 'waiting' | 'blocked'>
+  status?: Extract<PatientStepStatus, 'done' | 'current' | 'waiting' | 'blocked'>
   detail?: PatientStepProgress['detail']
 }
 
@@ -258,28 +258,16 @@ export const PATIENT_STEP_BREAKDOWNS: Record<
     ]),
   ),
   assignment: {
-    'marcus-feldman': progression(
-      'assignment',
-      [
-        { summary: 'AI suggests Cole Winfield · Gardena territory', at: 'August 10, 2026 at 9:31 AM' },
-      ],
-      {
-        summary: 'Case manager notification sent',
-        status: 'done',
-        at: 'August 10, 2026 at 9:32 AM',
-      },
-    ),
-    'david-ruiz': progression(
-      'assignment',
-      [
-        { summary: 'AI found two possible owners · Coastal LA border', at: 'August 10, 2026 at 11:01 AM' },
-      ],
-      {
-        summary: 'Case manager notification sent',
-        status: 'done',
-        at: 'August 10, 2026 at 11:02 AM',
-      },
-    ),
+    'marcus-feldman': progression('assignment', [], {
+      summary: 'AI suggests Cole Winfield · Gardena territory',
+      status: 'waiting',
+      at: 'August 10, 2026 at 9:31 AM',
+    }),
+    'david-ruiz': progression('assignment', [], {
+      summary: 'AI found two possible owners · Coastal LA border',
+      status: 'waiting',
+      at: 'August 10, 2026 at 11:01 AM',
+    }),
     'patricia-johnson': allDone('assignment', [
       { summary: 'Cole Winfield confirmed as case manager', at: 'August 9, 2026 at 12:21 PM' },
     ]),
@@ -314,7 +302,7 @@ export const PATIENT_STEP_BREAKDOWNS: Record<
       [
         { summary: '3 eligible providers found for the service area', at: 'August 10, 2026 at 8:51 AM' },
       ],
-      { summary: 'AI recommendation ready · awaiting case-manager selection', status: 'waiting', at: 'August 10, 2026 at 8:52 AM' },
+      { summary: 'Availability request sent · awaiting provider reply', status: 'waiting', at: 'August 10, 2026 at 8:52 AM' },
     ),
     'irene-cho': progression(
       'provider',
@@ -327,17 +315,11 @@ export const PATIENT_STEP_BREAKDOWNS: Record<
         at: 'August 10, 2026 at 9:22 AM',
       },
     ),
-    'betty-hayes': progression(
-      'provider',
-      [
-        { summary: '1 eligible provider found after expanded search', at: 'August 9, 2026 at 2:01 PM' },
-      ],
-      {
-        summary: 'Provider availability requires Nicole review',
-        status: 'blocked',
-        at: 'August 9, 2026 at 2:02 PM',
-      },
-    ),
+    'betty-hayes': progression('provider', [], {
+      summary: 'No provider in territory · fallback found after expanded search',
+      status: 'waiting',
+      at: 'August 9, 2026 at 2:01 PM',
+    }),
     'patricia-johnson': allDone('provider', [
       { summary: 'Provider selected', at: 'August 9, 2026 at 1:05 PM' },
       { summary: 'Provider availability confirmed', at: 'August 9, 2026 at 1:06 PM' },
@@ -348,13 +330,11 @@ export const PATIENT_STEP_BREAKDOWNS: Record<
       { summary: 'Provider availability confirmed', at: 'August 10, 2026 at 3:41 PM' },
       { summary: 'Monday.com and DRK updated with assigned provider', at: 'August 10, 2026 at 3:42 PM' },
     ]),
-    'maria-alvarez': progression(
-      'provider',
-      [
-        { summary: '5 eligible providers found for Riverside', at: 'August 10, 2026 at 10:21 AM' },
-      ],
-      { summary: 'AI recommendation ready · awaiting case-manager selection', status: 'waiting' },
-    ),
+    'maria-alvarez': progression('provider', [], {
+      summary: 'AI recommendation ready · awaiting case-manager selection',
+      status: 'waiting',
+      at: 'August 10, 2026 at 10:21 AM',
+    }),
     'nancy-liu': allDone('provider', [
       { summary: 'Provider selected', at: 'August 8, 2026 at 4:30 PM' },
       { summary: 'Provider availability confirmed', at: 'August 8, 2026 at 4:31 PM' },
@@ -367,11 +347,11 @@ export const PATIENT_STEP_BREAKDOWNS: Record<
       [
         { summary: 'Referral sent to provider', at: 'August 10, 2026 at 10:05 AM' },
       ],
-      { summary: 'Awaiting appointment placement within provider availability', status: 'waiting', at: 'August 10, 2026 at 10:07 AM' },
+      { summary: 'Awaiting appointment · 3 open slots', status: 'waiting', at: 'August 10, 2026 at 10:07 AM' },
     ),
     'nancy-liu': allDone('scheduling', [
       { summary: 'Referral sent to provider', at: 'August 10, 2026 at 8:31 AM' },
-      { summary: 'Patient scheduled within 24–48 hours', at: 'August 10, 2026 at 9:11 AM' },
+      { summary: 'Scheduled · August 11, 2026 at 11:00 AM', at: 'August 10, 2026 at 9:11 AM' },
     ]),
     'james-carter': progression(
       'scheduling',
@@ -379,14 +359,14 @@ export const PATIENT_STEP_BREAKDOWNS: Record<
         { summary: 'Referral sent to provider', at: 'August 10, 2026 at 9:02 AM' },
       ],
       {
-        summary: 'Case manager must place patient using known provider availability',
-        status: 'blocked',
+        summary: 'Awaiting appointment · 3 open slots',
+        status: 'waiting',
         at: 'August 10, 2026 at 10:05 AM',
       },
     ),
     'patricia-johnson': allDone('scheduling', [
       { summary: 'Referral sent to provider', at: 'August 9, 2026 at 2:01 PM' },
-      { summary: 'Patient scheduled within 24–48 hours', at: 'August 9, 2026 at 3:19 PM' },
+      { summary: 'Scheduled · August 13, 2026 at 11:00 AM', at: 'August 9, 2026 at 3:19 PM' },
     ]),
     'thomas-reed': progression(
       'scheduling',
@@ -408,8 +388,19 @@ export const PATIENT_STEP_BREAKDOWNS: Record<
     ),
     'helen-park': allDone('scheduling', [
       { summary: 'Referral sent to provider', at: 'August 8, 2026 at 5:00 PM' },
-      { summary: 'Patient scheduled within 24–48 hours', at: 'August 8, 2026 at 5:41 PM' },
+      { summary: 'Scheduled · August 12, 2026 at 9:00 AM', at: 'August 8, 2026 at 5:41 PM' },
     ]),
+    'david-ruiz': progression(
+      'scheduling',
+      [
+        { summary: 'Referral sent to provider', at: 'August 10, 2026 at 4:12 PM' },
+      ],
+      {
+        summary: 'No open slots within 24–48 hours',
+        status: 'blocked',
+        at: 'August 11, 2026 at 9:20 AM',
+      },
+    ),
   },
   'end-of-day': {
     'anita-gomez': allDone('end-of-day', [
@@ -455,15 +446,11 @@ export const PATIENT_STEP_BREAKDOWNS: Record<
         at: 'August 12, 2026 at 5:02 PM',
       },
     ),
-    'frank-owens': progression(
-      'end-of-day',
-      [{ summary: 'Not scheduled · 51 hours', at: 'August 12, 2026 at 5:01 PM' }],
-      {
-        summary: 'Braxton Rickert notified on Teams automatically',
-        status: 'done',
-        at: 'August 12, 2026 at 5:02 PM',
-      },
-    ),
+    'frank-owens': progression('end-of-day', [], {
+      summary: 'Not scheduled · 51 hours',
+      status: 'waiting',
+      at: 'August 12, 2026 at 5:01 PM',
+    }),
     'george-chen': progression(
       'end-of-day',
       [{ summary: 'Not scheduled · 54 hours', at: 'August 12, 2026 at 5:01 PM' }],

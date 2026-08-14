@@ -1,7 +1,14 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { ArtifactFieldInput, ArtifactSections } from './ArtifactSections'
 import type { ArtifactField } from './types'
+import {
+  actionLabel,
+  overdueLabel,
+  remainingLabel,
+  slaLabel,
+} from './confirmationTimers'
+import type { ActionTimer } from '../../types'
 import {
   intakeEditKey,
   isMultilineIntakeField,
@@ -42,10 +49,100 @@ import {
   weeklyOutcomePanelLabel,
 } from './fixtures/weeklyVisitCheck'
 import type { ProviderOption } from './fixtures/providerAssignments'
-import type { SchedulingHandoff } from '../../types'
+import type {
+  PatientSchedulingRecord,
+  SchedulingBlockerReason,
+  SchedulingHandoff,
+  SchedulingSlot,
+} from '../../types'
+import {
+  SCHEDULING_BLOCKER_LABEL,
+  openSlotCount,
+  schedulingBlockerLabel,
+  selectedSlot,
+} from './fixtures/patientSchedules'
 import './StageOps.css'
 
 type StepDetail = ReturnType<typeof detailForPatientStep>
+
+function useNow(intervalMs = 1000) {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), intervalMs)
+    return () => window.clearInterval(id)
+  }, [intervalMs])
+  return now
+}
+
+export function actionTimerAriaSuffix(timer?: ActionTimer | null) {
+  if (!timer || timer.status === 'resolved') return ''
+  if (timer.status === 'overdue') return ' · Immediate attention · overdue'
+  if (timer.status === 'warning') return ' · Due soon'
+  return ''
+}
+
+function ActionSlaAlert({
+  timer,
+  patientName,
+}: {
+  timer: ActionTimer
+  patientName: string
+}) {
+  const now = useNow()
+  if (timer.status === 'resolved') return null
+
+  const action = actionLabel(timer.actionId)
+  const sla = slaLabel(timer.actionId)
+
+  if (timer.status === 'overdue') {
+    return (
+      <div
+        className="stage-ops-step-feed__sla is-overdue"
+        aria-label={`Immediate attention: ${action} for ${patientName} is overdue`}
+      >
+        <p className="stage-ops-step-feed__sla-flag">
+          <span className="stage-ops-step-feed__sla-badge">
+            Immediate attention
+          </span>
+          <span className="stage-ops-step-feed__sla-clock">
+            {overdueLabel(timer, now)} overdue
+          </span>
+        </p>
+        <p className="stage-ops-step-feed__sla-action">
+          {action} · {patientName}
+        </p>
+        <p className="stage-ops-step-feed__sla-meta">
+          {sla} SLA missed · confirm now to clear the alert
+        </p>
+      </div>
+    )
+  }
+
+  const dueSoon = timer.status === 'warning'
+  return (
+    <div className={`stage-ops-step-feed__sla is-${timer.status}`}>
+      <p className="stage-ops-step-feed__sla-flag">
+        {dueSoon ? (
+          <span className="stage-ops-step-feed__sla-badge is-warning">
+            Due soon
+          </span>
+        ) : null}
+        <span className="stage-ops-step-feed__sla-clock">
+          {remainingLabel(timer, now)} left
+        </span>
+      </p>
+      <p className="stage-ops-step-feed__sla-meta">
+        {action} · {sla} SLA
+      </p>
+    </div>
+  )
+}
+
+function TimerRemainingValue({ timer }: { timer: ActionTimer }) {
+  const now = useNow()
+  if (timer.status === 'overdue') return <>Overdue</>
+  return <>{remainingLabel(timer, now)}</>
+}
 
 function isHiddenProofField(label: string) {
   return (
@@ -341,6 +438,206 @@ function ReferralHandoffPanel({
           <IntakePdfPreview samplePdf={samplePdf} />
         </div>
       ) : null}
+    </div>
+  )
+}
+
+const BLOCKER_REASONS: SchedulingBlockerReason[] = [
+  'patient_declined',
+  'patient_unavailable',
+  'slots_exhausted',
+]
+
+function groupSlots(slots: SchedulingSlot[]) {
+  const groups: { dateLabel: string; slots: SchedulingSlot[] }[] = []
+  for (const item of slots) {
+    const last = groups[groups.length - 1]
+    if (last && last.dateLabel === item.dateLabel) last.slots.push(item)
+    else groups.push({ dateLabel: item.dateLabel, slots: [item] })
+  }
+  return groups
+}
+
+function SchedulingPanel({
+  record,
+  onSelectSlot,
+  onSchedule,
+  onRecordBlocker,
+}: {
+  record: PatientSchedulingRecord
+  onSelectSlot?: (slotId: string) => void
+  onSchedule?: () => void
+  onRecordBlocker?: (reason: SchedulingBlockerReason) => void
+}) {
+  const [showReasons, setShowReasons] = useState(false)
+  const chosen = selectedSlot(record)
+  const openCount = openSlotCount(record)
+  const providerMeta = [
+    record.provider.city,
+    record.provider.npi ? `NPI ${record.provider.npi}` : undefined,
+    record.provider.phone,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+  const routeLabel =
+    record.route === 'manual_placement' ? 'Placed manually' : 'Provider confirmed'
+  const canSchedule = Boolean(onSchedule && chosen && chosen.status === 'open')
+
+  return (
+    <div
+      className={`stage-ops-step-feed__schedule is-${record.status}`}
+      role="region"
+      aria-label="Schedule patient"
+    >
+      <ol className="stage-ops-step-feed__schedule-strip">
+        <li className={record.referralSent ? 'is-done' : 'is-pending'}>
+          {record.referralSent ? 'Referral sent' : 'Referral ready'}
+        </li>
+        <li className="is-done">{routeLabel}</li>
+        <li
+          className={
+            record.status === 'scheduled'
+              ? 'is-done'
+              : record.status === 'blocked'
+                ? 'is-blocked'
+                : 'is-current'
+          }
+        >
+          {record.status === 'scheduled'
+            ? 'Patient scheduled'
+            : record.status === 'blocked'
+              ? 'Scheduling blocked'
+              : 'Schedule within 24–48h'}
+        </li>
+      </ol>
+
+      <section className="stage-ops-step-feed__schedule-provider">
+        <p className="stage-ops-step-feed__partner-label">Provider</p>
+        <strong>{record.provider.name}</strong>
+        {providerMeta ? <p>{providerMeta}</p> : null}
+        <p className="stage-ops-step-feed__schedule-sync">
+          Availability synced {record.syncedAt}
+        </p>
+      </section>
+
+      {record.status === 'scheduled' ? (
+        <div className="stage-ops-step-feed__schedule-receipt">
+          <p className="stage-ops-step-feed__schedule-receipt-kicker">
+            Patient scheduled
+          </p>
+          <strong>
+            {record.appointmentDate}
+            {record.appointmentTime ? ` at ${record.appointmentTime}` : ''}
+          </strong>
+          <p>
+            {record.provider.name}
+            {record.provider.city ? ` · ${record.provider.city}` : ''}
+          </p>
+          <p>Monday.com appointment date updated · entered end-of-day monitoring</p>
+        </div>
+      ) : record.status === 'blocked' ? (
+        <div className="stage-ops-step-feed__schedule-receipt is-blocked">
+          <p className="stage-ops-step-feed__schedule-receipt-kicker">
+            Needs a new window
+          </p>
+          <strong>{schedulingBlockerLabel(record.blockerReason)}</strong>
+          <p>Patient stays unscheduled for end-of-day follow-up</p>
+        </div>
+      ) : (
+        <>
+          <section
+            className="stage-ops-step-feed__schedule-slots"
+            aria-label="Provider availability"
+          >
+            <p className="stage-ops-step-feed__partner-label">
+              {openCount} open slot{openCount === 1 ? '' : 's'}
+            </p>
+            {groupSlots(record.slots).map((group) => (
+              <div
+                key={group.dateLabel}
+                className="stage-ops-step-feed__schedule-day"
+              >
+                <p className="stage-ops-step-feed__schedule-day-label">
+                  {group.dateLabel}
+                </p>
+                <div className="stage-ops-step-feed__schedule-slot-row">
+                  {group.slots.map((item) => {
+                    const selected = record.selectedSlotId === item.id
+                    const unavailable = item.status !== 'open'
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className={`stage-ops-step-feed__schedule-slot${
+                          selected ? ' is-selected' : ''
+                        }${unavailable ? ' is-unavailable' : ''}`}
+                        disabled={unavailable || !onSelectSlot}
+                        aria-pressed={selected}
+                        aria-label={
+                          unavailable
+                            ? `${group.dateLabel} ${item.timeLabel}, unavailable${
+                                item.unavailableReason
+                                  ? `, ${item.unavailableReason}`
+                                  : ''
+                              }`
+                            : `${group.dateLabel} ${item.timeLabel}`
+                        }
+                        onClick={() => onSelectSlot?.(item.id)}
+                      >
+                        <span>{item.timeLabel}</span>
+                        {unavailable && item.unavailableReason ? (
+                          <small>{item.unavailableReason}</small>
+                        ) : null}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+          </section>
+
+          <div className="stage-ops-step-feed__schedule-actions">
+            <button
+              type="button"
+              className={`stage-ops-step-feed__confirm${
+                canSchedule ? ' is-actionable' : ''
+              }`}
+              onClick={onSchedule}
+              disabled={!canSchedule}
+            >
+              Schedule patient
+            </button>
+            {onRecordBlocker ? (
+              <button
+                type="button"
+                className="stage-ops-step-feed__availability-timeout"
+                onClick={() => setShowReasons((open) => !open)}
+                aria-expanded={showReasons}
+              >
+                No suitable time
+              </button>
+            ) : null}
+          </div>
+
+          {showReasons && onRecordBlocker ? (
+            <div
+              className="stage-ops-step-feed__schedule-reasons"
+              aria-label="Scheduling blocker"
+            >
+              {BLOCKER_REASONS.map((reason) => (
+                <button
+                  key={reason}
+                  type="button"
+                  className="stage-ops-step-feed__schedule-reason"
+                  onClick={() => onRecordBlocker(reason)}
+                >
+                  {SCHEDULING_BLOCKER_LABEL[reason]}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </>
+      )}
     </div>
   )
 }
@@ -860,6 +1157,10 @@ export function StageFeedMessage({
   onProviderAvailabilityTimeout,
   onManualPlacementCompleted,
   schedulingHandoff,
+  patientSchedule,
+  onSelectSchedulingSlot,
+  onCompletePatientSchedule,
+  onRecordSchedulingBlocker,
   referralPacketPdf,
   eodSchedulingCheck,
   eodFollowUp = false,
@@ -887,6 +1188,7 @@ export function StageFeedMessage({
   onConfirmIntakeReview,
   onReopenIntakeReview,
   onScopePatient,
+  actionTimer,
 }: {
   summary: string
   patientName: string
@@ -930,6 +1232,10 @@ export function StageFeedMessage({
   onProviderAvailabilityTimeout?: () => void
   onManualPlacementCompleted?: () => void
   schedulingHandoff?: SchedulingHandoff
+  patientSchedule?: PatientSchedulingRecord
+  onSelectSchedulingSlot?: (slotId: string) => void
+  onCompletePatientSchedule?: () => void
+  onRecordSchedulingBlocker?: (reason: SchedulingBlockerReason) => void
   referralPacketPdf?: string
   eodSchedulingCheck?: EodSchedulingCheckRecord
   eodFollowUp?: boolean
@@ -966,6 +1272,7 @@ export function StageFeedMessage({
   onConfirmIntakeReview?: () => void
   onReopenIntakeReview?: () => void
   onScopePatient?: () => void
+  actionTimer?: ActionTimer
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [intakeEditing, setIntakeEditing] = useState(false)
@@ -1038,8 +1345,12 @@ export function StageFeedMessage({
     <article
       className={`stage-ops-step-feed__message is-${status} is-open${
         isUnread ? ' is-unread' : ''
+      }${actionTimer?.status === 'overdue' ? ' is-overdue' : ''}${
+        actionTimer?.status === 'warning' ? ' is-warning' : ''
       }`}
-      aria-label={`${summary} · ${patientName} · ${meaning}`}
+      aria-label={`${summary} · ${patientName} · ${meaning}${actionTimerAriaSuffix(
+        actionTimer,
+      )}`}
     >
       <header className="stage-ops-step-feed__row">
         <time className="stage-ops-step-feed__time" dateTime={occurredAt}>
@@ -1069,6 +1380,9 @@ export function StageFeedMessage({
       </header>
 
       <div className="stage-ops-step-feed__body">
+        {actionTimer ? (
+          <ActionSlaAlert timer={actionTimer} patientName={patientName} />
+        ) : null}
         {decision ? (
           <div className="stage-ops-step-feed__decision" aria-label="Key decision">
             <dl className="stage-ops-step-feed__decision-grid">
@@ -1477,7 +1791,9 @@ export function StageFeedMessage({
                   <dd>
                     <strong>
                       {providerAvailability.outcome === 'waiting'
-                        ? '47 minutes'
+                        ? actionTimer && actionTimer.status !== 'resolved'
+                          ? <TimerRemainingValue timer={actionTimer} />
+                          : '—'
                         : providerAvailability.responseDuration}
                     </strong>
                   </dd>
@@ -1569,6 +1885,13 @@ export function StageFeedMessage({
             onConfirmAppointmentRescheduled={
               onWeeklyConfirmAppointmentRescheduled
             }
+          />
+        ) : patientSchedule ? (
+          <SchedulingPanel
+            record={patientSchedule}
+            onSelectSlot={onSelectSchedulingSlot}
+            onSchedule={onCompletePatientSchedule}
+            onRecordBlocker={onRecordSchedulingBlocker}
           />
         ) : schedulingHandoff ? (
           <ReferralHandoffPanel

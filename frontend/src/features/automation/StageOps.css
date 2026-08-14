@@ -383,6 +383,11 @@
   background: #fff6f1;
 }
 
+.stage-ops-steps__status-trigger.is-overdue {
+  border-left-color: #b91c1c;
+  background: #fef2f2;
+}
+
 .stage-ops-steps__status-trigger.is-current {
   border-left-color: #0e7c86;
   background: #f3faf9;
@@ -410,6 +415,10 @@
 
 .stage-ops-steps__status-trigger.is-blocked .stage-ops-steps__status-trigger-label {
   color: #c2410c;
+}
+
+.stage-ops-steps__status-trigger.is-overdue .stage-ops-steps__status-trigger-label {
+  color: #b91c1c;
 }
 
 .stage-ops-steps__status-trigger.is-current .stage-ops-steps__status-trigger-label {
@@ -474,6 +483,11 @@
   color: #c2410c;
 }
 
+.stage-ops-steps__status-option.is-overdue {
+  border-left-color: #b91c1c;
+  color: #b91c1c;
+}
+
 .stage-ops-steps__status-option.is-current {
   border-left-color: #0e7c86;
   color: #0e7c86;
@@ -497,6 +511,11 @@
 .stage-ops-steps__status-option.is-blocked:hover,
 .stage-ops-steps__status-option.is-blocked.is-selected {
   background: #fff4ed;
+}
+
+.stage-ops-steps__status-option.is-overdue:hover,
+.stage-ops-steps__status-option.is-overdue.is-selected {
+  background: #fef2f2;
 }
 
 .stage-ops-steps__status-option.is-current:hover,
@@ -941,6 +960,17 @@
   background: rgba(37, 99, 235, 0.035);
 }
 
+.stage-ops-step-feed__message.is-open.is-warning {
+  border-left: 3px solid #b45309;
+  background: rgba(255, 247, 237, 0.7);
+}
+
+.stage-ops-step-feed__message.is-open.is-overdue {
+  border-left: 4px solid #b91c1c;
+  background: rgba(254, 242, 242, 0.9);
+  box-shadow: inset 0 0 0 1px rgba(185, 28, 28, 0.16);
+}
+
 .stage-ops-step-feed__row {
   width: 100%;
   display: grid;
@@ -1062,6 +1092,86 @@
 
 .stage-ops-step-feed__body:empty {
   display: none;
+}
+
+.stage-ops-step-feed__day.is-attention .stage-ops-step-feed__day-header {
+  color: #b91c1c;
+}
+
+.stage-ops-step-feed__day.is-attention .stage-ops-step-feed__day-header time {
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.stage-ops-step-feed__sla {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid rgba(18, 35, 63, 0.1);
+  border-radius: 8px;
+  color: var(--gray);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.stage-ops-step-feed__sla p {
+  margin: 0;
+}
+
+.stage-ops-step-feed__sla-flag {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.stage-ops-step-feed__sla-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  background: #b91c1c;
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.stage-ops-step-feed__sla-badge.is-warning {
+  background: #b45309;
+}
+
+.stage-ops-step-feed__sla-clock {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.stage-ops-step-feed__sla-action {
+  font-weight: 700;
+}
+
+.stage-ops-step-feed__sla-meta {
+  color: var(--gray);
+  font-size: 0.74rem;
+}
+
+.stage-ops-step-feed__sla.is-warning {
+  border-color: rgba(180, 83, 9, 0.3);
+  background: rgba(255, 247, 237, 0.95);
+  color: #9a6708;
+}
+
+.stage-ops-step-feed__sla.is-overdue {
+  border-color: rgba(185, 28, 28, 0.4);
+  background: rgba(254, 242, 242, 0.98);
+  color: #991b1b;
+}
+
+.stage-ops-step-feed__sla.is-overdue .stage-ops-step-feed__sla-meta {
+  color: #b91c1c;
 }
 
 .stage-ops-step-feed__meta-row {
@@ -1904,6 +2014,205 @@
 
 .stage-ops-step-feed__availability-timeout.is-danger:hover {
   background: #b91c1c;
+}
+
+.stage-ops-step-feed__schedule {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.stage-ops-step-feed__schedule-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stage-ops-step-feed__schedule-strip li {
+  padding: 0.22rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(18, 35, 63, 0.06);
+  color: var(--gray);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.stage-ops-step-feed__schedule-strip li.is-done {
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.stage-ops-step-feed__schedule-strip li.is-current {
+  background: rgba(18, 35, 63, 0.9);
+  color: #fff;
+}
+
+.stage-ops-step-feed__schedule-strip li.is-blocked {
+  background: var(--clay-soft);
+  color: var(--clay);
+}
+
+.stage-ops-step-feed__schedule-provider {
+  display: grid;
+  gap: 0.12rem;
+}
+
+.stage-ops-step-feed__schedule-provider strong {
+  color: var(--navy);
+  font-size: 1rem;
+}
+
+.stage-ops-step-feed__schedule-provider p {
+  margin: 0;
+  color: var(--gray);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.stage-ops-step-feed__schedule-sync {
+  font-weight: 600;
+}
+
+.stage-ops-step-feed__schedule-slots {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.stage-ops-step-feed__schedule-day {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.stage-ops-step-feed__schedule-day-label {
+  margin: 0;
+  color: var(--navy);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.stage-ops-step-feed__schedule-slot-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.stage-ops-step-feed__schedule-slot {
+  display: grid;
+  justify-items: start;
+  gap: 0.1rem;
+  min-width: 7.25rem;
+  min-height: 2.7rem;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid rgba(18, 35, 63, 0.18);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--navy);
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.stage-ops-step-feed__schedule-slot small {
+  color: var(--gray);
+  font-size: 0.66rem;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.stage-ops-step-feed__schedule-slot:hover:not(:disabled) {
+  border-color: var(--navy);
+  background: #f7f9f8;
+}
+
+.stage-ops-step-feed__schedule-slot.is-selected {
+  border-color: var(--navy);
+  background: var(--navy);
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(18, 35, 63, 0.18);
+}
+
+.stage-ops-step-feed__schedule-slot.is-selected small {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.stage-ops-step-feed__schedule-slot.is-unavailable,
+.stage-ops-step-feed__schedule-slot:disabled {
+  border-style: dashed;
+  background: #f4f5f6;
+  color: #8a93a3;
+  cursor: not-allowed;
+}
+
+.stage-ops-step-feed__schedule-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.stage-ops-step-feed__schedule-reasons {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.stage-ops-step-feed__schedule-reason {
+  min-height: 2.1rem;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid rgba(18, 35, 63, 0.14);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--navy);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 650;
+  text-align: left;
+  cursor: pointer;
+}
+
+.stage-ops-step-feed__schedule-reason:hover {
+  background: rgba(18, 35, 63, 0.04);
+}
+
+.stage-ops-step-feed__schedule-receipt {
+  display: grid;
+  gap: 0.12rem;
+  padding: 0.7rem 0.8rem;
+  border-left: 3px solid var(--green);
+  background: var(--green-soft);
+  color: #355143;
+  border-radius: 0 9px 9px 0;
+}
+
+.stage-ops-step-feed__schedule-receipt.is-blocked {
+  border-left-color: var(--clay);
+  background: var(--clay-soft);
+  color: #7a2e28;
+}
+
+.stage-ops-step-feed__schedule-receipt-kicker {
+  margin: 0;
+  font-size: 0.66rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.stage-ops-step-feed__schedule-receipt strong {
+  font-size: 0.98rem;
+}
+
+.stage-ops-step-feed__schedule-receipt p {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.35;
 }
 
 .stage-ops-step-feed__confirm {
