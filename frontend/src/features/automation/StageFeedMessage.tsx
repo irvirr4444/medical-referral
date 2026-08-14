@@ -886,6 +886,7 @@ export function StageFeedMessage({
   onIntakeSectionRowsReplace,
   onConfirmIntakeReview,
   onReopenIntakeReview,
+  onScopePatient,
 }: {
   summary: string
   patientName: string
@@ -964,6 +965,7 @@ export function StageFeedMessage({
   ) => void
   onConfirmIntakeReview?: () => void
   onReopenIntakeReview?: () => void
+  onScopePatient?: () => void
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [intakeEditing, setIntakeEditing] = useState(false)
@@ -1045,7 +1047,18 @@ export function StageFeedMessage({
         </time>
         <div className="stage-ops-step-feed__copy">
           <strong className="stage-ops-step-feed__summary">{summary}</strong>
-          <span className="stage-ops-step-feed__patient">{patientName}</span>
+          {onScopePatient ? (
+            <button
+              type="button"
+              className="stage-ops-step-feed__patient is-link"
+              aria-label={`Show ${patientName}`}
+              onClick={onScopePatient}
+            >
+              {patientName}
+            </button>
+          ) : (
+            <span className="stage-ops-step-feed__patient">{patientName}</span>
+          )}
           {isUnread ? (
             <span className="stage-ops-step-feed__unread-label">Unread</span>
           ) : null}
@@ -1707,7 +1720,7 @@ export function StageFeedMessage({
                   onClick={onConfirmPartner}
                   disabled={!onConfirmPartner}
                 >
-                  Mark partner contacted
+                  Confirm partner is contacted
                 </button>
               ) : null}
             </div>

@@ -42,6 +42,7 @@ FIELD_COLUMNS: dict[str, str] = {
     "visit_status": "status5__1",
     "qa_hold_reason": "label99",
     "discharge_reason": "color_mm1mssvv",
+    "sent_by": "people0",
 }
 
 DEFAULT_RESULT_FIELDS = (

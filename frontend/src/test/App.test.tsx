@@ -1,6 +1,6 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import App from '../App'
 
 describe('automation inspection console', () => {
@@ -673,6 +673,56 @@ describe('automation inspection console', () => {
       }),
     ).not.toBeInTheDocument()
     expect(within(providerPanel).getByText(/^Unread$/i)).toBeInTheDocument()
+  })
+
+  it('carries a partner contact confirmation into the Assignment stage', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: /1\. Referral intake/i }))
+    const intakePanel = screen.getByLabelText(/Patient steps/i)
+    await user.click(
+      within(intakePanel).getByRole('button', {
+        name: /Referral partner contacted/i,
+      }),
+    )
+    const butlerMessage = within(intakePanel).getByRole('article', {
+      name: /BUTLER, ALVA/i,
+    })
+    await user.click(
+      within(butlerMessage).getByRole('button', { name: /contacted/i }),
+    )
+
+    await user.click(
+      screen.getByRole('button', { name: /2\. Assignment, new update/i }),
+    )
+    const assignmentPanel = screen.getByLabelText(/Patient steps/i)
+    expect(
+      within(assignmentPanel).getByRole('button', {
+        name: /Assign Case Manager, new update/i,
+      }),
+    ).toBeInTheDocument()
+    expect(
+      within(assignmentPanel).getByText(
+        /Intake approved · referral partner contacted · ready to assign an owner/i,
+      ),
+    ).toBeInTheDocument()
+    expect(within(assignmentPanel).getByText(/^Unread$/i)).toBeInTheDocument()
+
+    await user.click(
+      within(assignmentPanel).getByRole('button', {
+        name: /Assign Case Manager, new update/i,
+      }),
+    )
+    expect(
+      within(assignmentPanel).queryByRole('button', {
+        name: /Assign Case Manager, new update/i,
+      }),
+    ).not.toBeInTheDocument()
+    expect(within(assignmentPanel).getByText(/^Unread$/i)).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /2\. Assignment, new update/i }),
+    ).not.toBeInTheDocument()
   })
 
   it('shows referral-source notifications as email messages', async () => {
@@ -1425,6 +1475,90 @@ describe('automation inspection console', () => {
     ).not.toBeInTheDocument()
   })
 
+  it('scopes the worklist to one patient from the name link', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(
+      screen.getByRole('button', { name: /6\. End-of-day check/i }),
+    )
+    const stepsPanel = screen.getByLabelText(/Patient steps/i)
+    const followUpStep = within(stepsPanel)
+      .getAllByRole('button')
+      .find(
+        (button) =>
+          button.classList.contains('microstep-list__button') &&
+          /Follow Up with Case Manager/i.test(button.textContent ?? ''),
+      )!
+    await user.click(followUpStep)
+
+    const frankRow = within(stepsPanel).getByRole('article', {
+      name: /Braxton Rickert notified on Teams automatically · Frank Owens/i,
+    })
+    await user.click(
+      within(frankRow).getByRole('button', { name: /Show Frank Owens/i }),
+    )
+
+    expect(
+      within(stepsPanel).getByRole('button', { name: /Clear patient/i }),
+    ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).queryByLabelText(/Search patients/i),
+    ).not.toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByRole('article', { name: /Frank Owens/i }),
+    ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).queryByRole('article', { name: /George Chen/i }),
+    ).not.toBeInTheDocument()
+
+    await user.click(
+      within(stepsPanel).getByRole('button', {
+        name: /Escalate Unresolved Cases/i,
+      }),
+    )
+    expect(
+      within(stepsPanel).getByText(/Frank Owens is not on this step yet/i),
+    ).toBeInTheDocument()
+
+    await user.click(
+      within(stepsPanel).getByRole('button', {
+        name: /Check Scheduling Status/i,
+      }),
+    )
+    expect(
+      within(stepsPanel).getByRole('article', { name: /Frank Owens/i }),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole('button', { name: /1\. Referral intake/i }),
+    )
+    const intakePanel = screen.getByLabelText(/Patient steps/i)
+    expect(
+      within(intakePanel).getByRole('button', { name: /Clear patient/i }),
+    ).toBeInTheDocument()
+    expect(
+      within(intakePanel).getByText(/Frank Owens is not on this step yet/i),
+    ).toBeInTheDocument()
+
+    await user.click(
+      within(intakePanel).getByRole('button', { name: /Clear patient/i }),
+    )
+    expect(
+      within(intakePanel).queryByRole('button', { name: /Clear patient/i }),
+    ).not.toBeInTheDocument()
+    expect(
+      within(intakePanel).getByLabelText(/Search patients/i),
+    ).toBeInTheDocument()
+    expect(
+      within(intakePanel).getByRole('button', { name: /Show BUTLER, ALVA/i }),
+    ).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/')
+    expect(
+      screen.queryByRole('heading', { name: /^Frank Owens$/i }),
+    ).not.toBeInTheDocument()
+  })
+
   it('shows management escalation panel on end-of-day step 3', async () => {
     const user = userEvent.setup()
     render(<App />)
@@ -1773,5 +1907,331 @@ describe('automation inspection console', () => {
     expect(
       within(arthurDone).getByText(/Moved to the holds team and holds list/i),
     ).toBeInTheDocument()
+  })
+})
+
+describe('patient profile route', () => {
+  afterEach(() => {
+    window.history.pushState({}, '', '/')
+    vi.restoreAllMocks()
+  })
+
+  function jsonResponse(status: number, body: unknown) {
+    return Promise.resolve({
+      ok: status >= 200 && status < 300,
+      status,
+      json: async () => body,
+    } as Response)
+  }
+
+  function mockPatientApi(
+    handler: (url: string) => { status: number; body: unknown },
+  ) {
+    return vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      const url = String(input)
+      const { status, body } = handler(url)
+      return jsonResponse(status, body)
+    })
+  }
+
+  const butlerMonday = {
+    item_id: 'm1',
+    group: 'Working pipeline',
+    name: 'BUTLER, ALVA',
+    dob: '10/04/1940',
+    phone: '813-555-0100',
+    address: '123 Main St, Tampa, FL',
+    pos: 'SNF',
+    case_manager: 'Nicole Chorvat',
+    sent_to_cm: 'Yes',
+    referral_sent: 'Yes',
+    provider: 'Jane Provider',
+    due_date: '',
+    appointment: '08/20/2026',
+    scheduled: 'Scheduled',
+    scheduled_complete: 'Yes',
+    visit: 'Scheduled',
+    sent_by: 'Case Management <casemanagement@tampa-general.org>',
+    agency_contact: 'Tampa General',
+    stage: 'In intake',
+  }
+
+  const butlerDrk = {
+    patient_id: '77',
+    name: 'Alva Butler',
+    first_name: 'Alva',
+    last_name: 'Butler',
+    dob: '1940-10-04T00:00:00',
+    phone: '(813) 555-0100',
+    email: '',
+    address: 'Tampa',
+    city: 'Tampa',
+    mrn: 'MRN-77',
+    status: 'Active',
+    facility: 'Tampa General',
+    home_health: '',
+    provider: 'Other Provider',
+    visit: 'Seen',
+    appointment: '08/20/2026',
+    observed_at: '',
+    sections: [
+      {
+        id: 'demographics',
+        title: 'Demographics',
+        defaultExpanded: true,
+        fields: [{ label: 'Name', value: 'Alva Butler' }],
+      },
+      {
+        id: 'diagnoses',
+        title: 'Diagnoses',
+        defaultExpanded: true,
+        repeatable: true,
+        fields: [
+          { label: 'Code', value: 'L89.153', rowId: 'diagnoses.0' },
+          { label: 'Description', value: 'Pressure ulcer', rowId: 'diagnoses.0' },
+        ],
+      },
+      {
+        id: 'admission',
+        title: 'Admission',
+        defaultExpanded: true,
+        fields: [{ label: 'Facility', value: 'Tampa General' }],
+      },
+      {
+        id: 'medications',
+        title: 'Medications',
+        defaultExpanded: false,
+        repeatable: true,
+        fields: [{ label: 'Name', value: 'Mupirocin Topical Ointment 2 %', rowId: 'medications.0' }],
+      },
+      {
+        id: 'notes',
+        title: 'Clinical notes',
+        defaultExpanded: false,
+        repeatable: true,
+        fields: [{ label: 'Note', value: 'Called patient', rowId: 'notes.0' }],
+      },
+      {
+        id: 'insurance',
+        title: 'Insurance policies',
+        defaultExpanded: true,
+        repeatable: true,
+        fields: [{ label: 'Payer', value: 'Medicare', rowId: 'insurance.0' }],
+      },
+      {
+        id: 'encounters',
+        title: 'Encounters',
+        defaultExpanded: true,
+        repeatable: true,
+        fields: [{ label: 'Provider', value: 'Arnaldo Gomez Lotti', rowId: 'encounters.0' }],
+      },
+      {
+        id: 'documents',
+        title: 'Documents',
+        defaultExpanded: false,
+        repeatable: true,
+        fields: [{ label: 'File', value: 'Wound photo', rowId: 'documents.0' }],
+      },
+      {
+        id: 'billing',
+        title: 'Billing',
+        defaultExpanded: false,
+        fields: [{ label: 'Collections status', value: 'None' }],
+      },
+      {
+        id: 'pipeline',
+        title: 'Pipeline',
+        defaultExpanded: true,
+        fields: [{ label: 'Stage', value: 'QA' }],
+      },
+    ],
+  }
+
+  it('opens the profile at /patient/:id without a search bar', async () => {
+    mockPatientApi((url) => {
+      if (url.includes('source=monday')) {
+        return {
+          status: 200,
+          body: {
+            monday: butlerMonday,
+            drk: null,
+            match: null,
+            errors: [],
+          },
+        }
+      }
+      return {
+        status: 200,
+        body: {
+          monday: butlerMonday,
+          drk: butlerDrk,
+          match: {
+            status: 'mismatch',
+            fields: [
+              {
+                field: 'provider',
+                monday: 'Jane Provider',
+                drk: 'Other Provider',
+                status: 'mismatch',
+              },
+            ],
+          },
+          errors: [],
+        },
+      }
+    })
+    window.history.pushState({}, '', '/patient/butler-alva')
+    render(<App />)
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { name: /BUTLER, ALVA/i }),
+      ).toBeInTheDocument()
+    })
+    expect(screen.queryByLabelText(/Search patients/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('navigation', { name: /Primary/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Overview$/i })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /^Monday$/i })).not.toBeInTheDocument()
+    expect(screen.queryByText(/^Blocker$/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Confirm step/i })).not.toBeInTheDocument()
+    expect(screen.queryByText(/Extracted details/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/^Records$/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/^Timeline$/i)).not.toBeInTheDocument()
+    expect(screen.getByLabelText(/People/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Open attachment/i })).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText(/Sent by /i)).toBeInTheDocument()
+    })
+    await waitFor(() => {
+      expect(screen.getByText(/Chart details/i)).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Diagnoses/i })).toBeInTheDocument()
+    })
+  })
+
+  it('opens the same profile from /:patientId', async () => {
+    mockPatientApi(() => ({
+      status: 200,
+      body: {
+        monday: { ...butlerMonday, name: 'Frank Owens' },
+        drk: null,
+        match: null,
+        errors: [],
+      },
+    }))
+    window.history.pushState({}, '', '/frank-owens')
+    render(<App />)
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { name: /Frank Owens/i }),
+      ).toBeInTheDocument()
+    })
+    expect(screen.getByLabelText(/Monday ops/i)).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByLabelText(/DRK chart/i)).toBeInTheDocument()
+    })
+  })
+
+  it('shows live Monday and DRK together at /alva-butler', async () => {
+    mockPatientApi((url) => {
+      if (url.includes('source=monday')) {
+        return {
+          status: 200,
+          body: { monday: butlerMonday, drk: null, match: null, errors: [] },
+        }
+      }
+      return {
+        status: 200,
+        body: {
+          monday: butlerMonday,
+          drk: butlerDrk,
+          match: {
+            status: 'mismatch',
+            fields: [
+              {
+                field: 'provider',
+                monday: 'Jane Provider',
+                drk: 'Other Provider',
+                status: 'mismatch',
+              },
+            ],
+          },
+          errors: [],
+        },
+      }
+    })
+    window.history.pushState({}, '', '/alva-butler')
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Monday ops/i)).toBeInTheDocument()
+    })
+    expect(screen.getByLabelText(/Monday ops/i)).toHaveTextContent(/Scheduled/)
+    expect(screen.getByLabelText(/People/i)).toHaveTextContent(/Jane Provider/)
+    expect(screen.getByLabelText(/DRK chart/i)).toHaveTextContent(/MRN-77/)
+    expect(screen.getByText(/Chart details/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Diagnoses/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Medications/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Clinical notes/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Insurance policies/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Encounters/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Documents/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Billing/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Pipeline/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Open attachment/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('navigation', { name: /Primary/i })).not.toBeInTheDocument()
+
+    const workflow = screen.getByRole('region', { name: /Demo workflow/i })
+    expect(workflow).toHaveTextContent(/Referral intake/)
+    expect(workflow).toHaveTextContent(/Extract and verify/)
+    expect(
+      within(workflow).getByRole('navigation', { name: /Automation steps/i }),
+    ).toBeInTheDocument()
+    expect(
+      within(workflow).getByRole('list', { name: /Step updates/i }),
+    ).toBeInTheDocument()
+    expect(
+      within(workflow).getByRole('article', {
+        name: /Awaiting partner confirmation · BUTLER, ALVA · Needs confirmation/i,
+      }),
+    ).toBeInTheDocument()
+
+    const user = userEvent.setup()
+    await user.click(
+      within(workflow).getByRole('button', {
+        name: /Extract and verify referral details/i,
+      }),
+    )
+    const stepDetail = within(workflow).getByRole('article', {
+      name: /Details extracted · 6 of 7 fields complete/i,
+    })
+    expect(stepDetail).toHaveTextContent(/BUTLER, ALVA/i)
+    expect(stepDetail).toHaveTextContent(/Threshold/i)
+    expect(
+      within(workflow).queryByRole('button', { name: /Open attachment/i }),
+    ).not.toBeInTheDocument()
+    expect(
+      within(workflow).queryByLabelText(/Search patients/i),
+    ).not.toBeInTheDocument()
+
+    await user.click(within(workflow).getByRole('button', { name: /3 Handoff/i }))
+    expect(workflow).toHaveTextContent(/No demo updates for this step yet/i)
+    expect(workflow).toHaveTextContent(/Referral intake · Referral partner contacted/)
+  })
+
+  it('shows not found for an unknown patient URL', async () => {
+    mockPatientApi(() => ({
+      status: 404,
+      body: { monday: null, drk: null, match: null, error: 'not_found' },
+    }))
+    window.history.pushState({}, '', '/patient/not-a-real-patient')
+    render(<App />)
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { name: /Patient not found/i }),
+      ).toBeInTheDocument()
+    })
+    expect(screen.queryByRole('region', { name: /Demo workflow/i })).not.toBeInTheDocument()
   })
 })

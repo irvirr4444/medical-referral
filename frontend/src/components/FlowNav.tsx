@@ -1,4 +1,5 @@
 import { WORKFLOW_MODAL_TABS } from '../data/constants'
+import { navigateAppPath, patientKeyFromPath } from '../features/automation/patientRoute'
 import { useDemo } from '../state/useDemo'
 import './FlowNav.css'
 
@@ -15,7 +16,8 @@ export function FlowNav() {
         {APP_NAV_ITEMS.map((item) => {
           const active = state.activePage === item.id
           const needsAttention =
-            (item.id === 'assignment' && state.assignmentNotifyUnread) ||
+            (item.id === 'assignment' &&
+              (state.assignmentNotifyUnread || state.assignmentOwnerUnread)) ||
             (item.id === 'scheduling' && state.schedulingHandoffUnread) ||
             (item.id === 'handoff' &&
               (state.handoffNavUnread ||
@@ -39,6 +41,9 @@ export function FlowNav() {
                 needsAttention ? `${item.label}, new update` : undefined
               }
               onClick={() => {
+                if (patientKeyFromPath(window.location.pathname)) {
+                  navigateAppPath('/')
+                }
                 dispatch({ type: 'SET_ACTIVE_PAGE', page: item.id })
                 window.scrollTo({ top: 0, behavior: 'smooth' })
               }}

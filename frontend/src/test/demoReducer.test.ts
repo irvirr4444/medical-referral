@@ -423,8 +423,28 @@ describe('demoReducer', () => {
       sectionId: 'insurance',
       rows: [{ label: 'Other', value: 'Preferred payer', rowId: 'x' }],
     })
-    expect(afterReopen.intakeSectionRows['gonzalez-eric'].insurance).toEqual([
+    expect(
+      afterReopen.intakeSectionRows['gonzalez-eric'].insurance,
+    ).toEqual([
       { label: 'Other', value: 'Preferred payer', rowId: 'x' },
     ])
+  })
+
+  it('scopes and clears the operations worklist patient', () => {
+    let state = createInitialState()
+    expect(state.opsScopedPatient).toBeNull()
+    state = demoReducer(state, {
+      type: 'SCOPE_OPS_PATIENT',
+      patientId: 'frank-owens',
+      patientName: 'Frank Owens',
+    })
+    expect(state.opsScopedPatient).toEqual({
+      patientId: 'frank-owens',
+      patientName: 'Frank Owens',
+    })
+    state = demoReducer(state, { type: 'SET_ACTIVE_PAGE', page: 'intake' })
+    expect(state.opsScopedPatient?.patientId).toBe('frank-owens')
+    state = demoReducer(state, { type: 'CLEAR_OPS_PATIENT' })
+    expect(state.opsScopedPatient).toBeNull()
   })
 })

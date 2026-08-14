@@ -256,6 +256,8 @@ export interface DemoState {
   journeyFocusCaseId: string | null
   /** Active patient on the journey spine roster. */
   selectedJourneyPatientId: string
+  /** Worklist scoped to one patient across stage tabs. */
+  opsScopedPatient: { patientId: string; patientName: string } | null
   providerSelectedIds: Record<string, string>
   providerConfirmed: Record<string, boolean>
   providerTerritoryResolutions: Record<string, ProviderTerritoryResolution>
@@ -306,4 +308,10 @@ export interface DemoState {
   intakeMondayUnread: boolean
   intakeDrkUnread: boolean
   intakePartnerUnread: boolean
+  latestPartnerContact: {
+    patientId: string
+    patientName: string
+    occurredAt: string
+  } | null
+  assignmentOwnerUnread: boolean
 }

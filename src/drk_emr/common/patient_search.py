@@ -1,6 +1,8 @@
-"""Dashboard patient search helpers for DRK duplicate gating.
+"""Dashboard patient search helpers for DRK duplicate gating and profile lookup.
 
-This module lists candidates and never auto-opens the first match.
+Duplicate check lists candidates and never auto-opens a match.
+Profile lookup may open a unique visible row to resolve patientId when the
+SearchPatients JSON is missing — the same click path as `drk_emr.read_patient`.
 """
 
 from __future__ import annotations
@@ -16,7 +18,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
 
-from drk_emr.common.browser import DASHBOARD_PATH, clear_network_requests, safe_log
+from drk_emr.common.browser import DASHBOARD_PATH, clear_network_requests, extract_patient_id_from_url, safe_log
 
 
 SUMMARY_RE = re.compile(r"(?P<count>\d+)\s+results?", re.IGNORECASE)
@@ -166,6 +168,140 @@ def candidates_from_search_requests(driver: Any, *, query: str) -> list[SearchCa
     return unique
 
 
+def candidates_from_in_page_fetch(driver: Any, *, query: str) -> list[SearchCandidate]:
+    """Same-origin SearchPatients fetch when selenium-wire missed the XHR."""
+    if not hasattr(driver, "execute_async_script"):
+        return []
+    try:
+        if hasattr(driver, "set_script_timeout"):
+            driver.set_script_timeout(20)
+        payload = driver.execute_async_script(_SEARCH_FETCH_SCRIPT, query)
+    except Exception:
+        return []
+    patients = payload.get("patients") if isinstance(payload, dict) else None
+    if not isinstance(patients, list):
+        return []
+    matches: list[SearchCandidate] = []
+    seen: set[str] = set()
+    for row in patients:
+        if not isinstance(row, dict):
+            continue
+        candidate = _candidate_from_api_row(row)
+        if candidate is None or candidate.patient_id in seen:
+            continue
+        seen.add(candidate.patient_id)
+        matches.append(candidate)
+    return matches
+
+
+_SEARCH_FETCH_SCRIPT = """
+const query = arguments[0];
+const done = arguments[arguments.length - 1];
+const path = '/Dashboard/SearchPatients?query=' + encodeURIComponent(query);
+fetch(path, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+  .then((response) => response.json())
+  .then((body) => done(body))
+  .catch((error) => done({ error: String(error) }));
+"""
+
+
+def open_unique_search_result(driver: Any) -> SearchCandidate | None:
+    """Click the only visible search row and read patientId from the chart URL."""
+    rows = _visible_result_rows(driver)
+    if len(rows) != 1:
+        return None
+    display_name, dob, mrn, phone, email, facility, status = _row_identity(rows[0])
+    wait = WebDriverWait(driver, 25)
+    top_result = wait.until(
+        ec.element_to_be_clickable(
+            (
+                By.CSS_SELECTOR,
+                "#dashPatientSearch .psearch-results-wrap table.tbl tbody tr.is-active td.name-cell, "
+                "#dashPatientSearch .psearch-results-wrap table.tbl tbody tr td.name-cell",
+            )
+        )
+    )
+    top_result.click()
+    wait.until(lambda current: extract_patient_id_from_url(current.current_url) is not None)
+    patient_id = extract_patient_id_from_url(driver.current_url)
+    if not patient_id:
+        return None
+    return SearchCandidate(
+        patient_id=patient_id,
+        display_name=display_name,
+        date_of_birth=dob,
+        mrn=mrn,
+        phone=phone,
+        email=email,
+        facility_name=facility,
+        status_display=status,
+        source="search_open",
+    )
+
+
+def _row_identity(row: Any) -> tuple[str | None, str | None, str | None, str | None, str | None, str | None, str | None]:
+    def cell(*selectors: str) -> str | None:
+        for selector in selectors:
+            try:
+                nodes = row.find_elements(By.CSS_SELECTOR, selector)
+            except Exception:
+                continue
+            for node in nodes:
+                text = (getattr(node, "text", None) or "").strip()
+                if text:
+                    return text.splitlines()[0].strip() or None
+        return None
+
+    name = cell("td.name-cell")
+    dob = cell("td.dob-cell", "td.dob")
+    mrn = cell("td.mrn-cell", "td.mrn")
+    phone = cell("td.phone-cell", "td.phone")
+    email = cell("td.email-cell", "td.email")
+    facility = cell("td.facility-cell", "td.facility")
+    status = None
+    try:
+        badges = row.find_elements(By.CSS_SELECTOR, "td.name-cell .status, td.name-cell .badge")
+        for badge in badges:
+            text = (badge.text or "").strip()
+            if text:
+                status = text
+                break
+    except Exception:
+        status = None
+    return name, dob, mrn, phone, email, facility, status
+
+
+def finalize_search_candidates(
+    *,
+    candidates: list[SearchCandidate],
+    result_count: int | None,
+    row_count: int,
+    stable: bool,
+    open_unique: bool = False,
+    open_unique_fn: Any | None = None,
+) -> tuple[list[SearchCandidate], str | None]:
+    error = None
+    resolved = list(candidates)
+    if not stable:
+        return resolved, "search_results_unstable"
+    if result_count is None:
+        return resolved, "missing_search_summary"
+    if result_count == 0 and row_count == 0:
+        return [], None
+    if result_count > 0 and not resolved and row_count == 0:
+        return resolved, "search_count_without_candidates"
+    if result_count > 0 and not resolved and row_count > 0:
+        if open_unique and row_count == 1 and open_unique_fn is not None:
+            try:
+                opened = open_unique_fn()
+            except Exception:
+                opened = None
+            if opened is not None:
+                return [opened], None
+        return resolved, "unable_to_resolve_candidate_ids"
+    return resolved, error
+
+
 def wait_for_stable_search_results(
     driver: Any,
     *,
@@ -204,6 +340,7 @@ def search_patients_on_dashboard(
     patient_name: str,
     *,
     timeout_seconds: float = 12.0,
+    open_unique: bool = False,
 ) -> PatientSearchSnapshot:
     """Type a name into dashboard search and return a stable candidate snapshot."""
     query = " ".join((patient_name or "").split())
@@ -238,19 +375,16 @@ def search_patients_on_dashboard(
         timeout_seconds=timeout_seconds,
     )
     candidates = candidates_from_search_requests(driver, query=query)
-
-    # Fail closed if the UI claims results but we could not resolve candidates.
-    error = None
-    if not stable:
-        error = "search_results_unstable"
-    elif count is None:
-        error = "missing_search_summary"
-    elif count == 0 and row_count == 0:
-        candidates = []
-    elif count > 0 and not candidates and row_count == 0:
-        error = "search_count_without_candidates"
-    elif count > 0 and not candidates and row_count > 0:
-        error = "unable_to_resolve_candidate_ids"
+    if not candidates:
+        candidates = candidates_from_in_page_fetch(driver, query=query)
+    candidates, error = finalize_search_candidates(
+        candidates=candidates,
+        result_count=count,
+        row_count=row_count,
+        stable=stable,
+        open_unique=open_unique,
+        open_unique_fn=(lambda: open_unique_search_result(driver)) if open_unique else None,
+    )
 
     safe_log(
         f"DRK patient search query={query!r} summary={summary!r} "
