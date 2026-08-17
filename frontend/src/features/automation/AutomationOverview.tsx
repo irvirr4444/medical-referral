@@ -1,7 +1,7 @@
+import { useEffect, useState } from 'react'
 import { ArrowRight, Target } from 'lucide-react'
 import { ActivityFeed } from '../../components/ActivityFeed'
 import { OverviewImpactBoard } from '../../components/OverviewImpactBoard'
-import { OPERATING_DATE } from '../../data/constants'
 import { OVERVIEW_ATTENTION_BUCKETS } from '../../data/overviewAttention'
 import { useDemo } from '../../state/useDemo'
 import { AUTOMATION_STAGES } from './stages'
@@ -9,6 +9,23 @@ import './AutomationOverview.css'
 
 export function AutomationOverview() {
   const { dispatch } = useDemo()
+  const [now, setNow] = useState(() => new Date())
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), 30_000)
+    return () => window.clearInterval(id)
+  }, [])
+
+  const dateLabel = now.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  })
+  const clockLabel = now.toLocaleTimeString([], {
+    hour: 'numeric',
+    minute: '2-digit',
+  })
 
   const openStage = (stageId: string) => {
     dispatch({ type: 'SET_ACTIVE_PAGE', page: stageId })
@@ -23,7 +40,9 @@ export function AutomationOverview() {
     >
       <header className="overview-masthead">
         <div className="overview-masthead__copy">
-          <p className="mono-label">{OPERATING_DATE}</p>
+          <p className="mono-label">
+            {dateLabel} · {clockLabel}
+          </p>
           <h1 id="automation-overview-title">Today&apos;s Overview</h1>
           <p className="overview-masthead__sub">
             Referral Intake & Scheduling
