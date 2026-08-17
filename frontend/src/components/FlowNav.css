@@ -63,3 +63,52 @@
   outline: 2px solid rgba(74, 92, 56, 0.55);
   outline-offset: 2px;
 }
+
+.overdue-confirmations-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+  border: 1px solid rgba(154, 69, 56, 0.4);
+  border-left: 4px solid var(--status-blocked);
+  border-radius: var(--radius);
+  background: var(--status-blocked-soft);
+  color: var(--status-blocked);
+  font-size: 0.86rem;
+  text-align: left;
+  padding: 0.55rem 0.85rem;
+  margin: 0;
+  cursor: pointer;
+}
+
+.overdue-confirmations-banner__badge {
+  flex: 0 0 auto;
+  padding: 0.14rem 0.5rem;
+  border-radius: var(--radius-sm);
+  background: var(--status-blocked);
+  color: var(--cream);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.overdue-confirmations-banner__copy {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.overdue-confirmations-banner__meta {
+  flex: 0 0 auto;
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.overdue-confirmations-banner:hover,
+.overdue-confirmations-banner:focus-visible {
+  filter: brightness(0.98);
+}

@@ -23,14 +23,32 @@ import {
   sumCompletedJourneyCaseMinutes,
 } from '../data/patientJourney'
 import { createInitialWorkflowScenarios } from '../data/workflowScenarios'
+import { referralPdfForPatient } from '../features/automation/fixtures/intakeDemoPatients'
+import {
+  seedPatientSchedules,
+  selectedSlot,
+  upsertScheduleFromHandoff,
+} from '../features/automation/fixtures/patientSchedules'
+import {
+  resolveActionTimer,
+  seedActionTimers,
+  startActionTimer,
+  tickActionTimers,
+  timerPatientName,
+} from '../features/automation/confirmationTimers'
 import type { ScenarioBucket } from '../data/scenarioTypes'
 import type {
   AutomationStep,
   AuditEvent,
+  ConfirmationActionId,
   DemoState,
   ImpactAssumptions,
+  ProviderTerritoryResolution,
   QueueFilter,
   ReferralRecord,
+  SchedulingBlockerReason,
+  SchedulingHandoff,
+  SchedulingHandoffProvider,
   WorkflowStage,
 } from '../types'
 
@@ -60,9 +78,205 @@ export type DemoAction =
   | { type: 'SET_SCENARIO_FILTER'; filter: ScenarioBucket | 'all' }
   | { type: 'RESOLVE_SCENARIO_CASE'; id: string }
   | { type: 'SELECT_JOURNEY_PATIENT'; patientId: string }
+  | { type: 'SCOPE_OPS_PATIENT'; patientId: string; patientName: string }
+  | { type: 'CLEAR_OPS_PATIENT' }
+  | { type: 'SET_OPS_SELECTED_STEP'; stageId: string; stepId: string }
   | { type: 'FOCUS_JOURNEY_STEP'; caseId: string }
   | { type: 'ADVANCE_JOURNEY' }
   | { type: 'RESTART_JOURNEY' }
+  | { type: 'SELECT_PROVIDER'; patientId: string; providerId: string }
+  | {
+      type: 'CONFIRM_PROVIDER_SELECTION'
+      patientId: string
+      requestedAt: string
+      deadlineAt: string
+    }
+  | {
+      type: 'RESOLVE_PROVIDER_TERRITORY'
+      patientId: string
+      resolution: ProviderTerritoryResolution
+      requestedAt?: string
+      deadlineAt?: string
+    }
+  | {
+      type: 'CONFIRM_PROVIDER_AVAILABILITY'
+      patientId: string
+      patientName: string
+      provider: SchedulingHandoffProvider
+      resolvedAt: string
+    }
+  | {
+      type: 'TIMEOUT_PROVIDER_AVAILABILITY'
+      patientId: string
+      resolvedAt: string
+    }
+  | {
+      type: 'COMPLETE_MANUAL_PLACEMENT'
+      patientId: string
+      patientName: string
+      provider: SchedulingHandoffProvider
+      readyAt: string
+    }
+  | { type: 'MARK_PROVIDER_RECORDS_READ' }
+  | { type: 'MARK_SCHEDULING_HANDOFF_READ' }
+  | {
+      type: 'SELECT_SCHEDULING_SLOT'
+      patientId: string
+      slotId: string
+    }
+  | {
+      type: 'COMPLETE_PATIENT_SCHEDULE'
+      patientId: string
+      scheduledAt: string
+    }
+  | {
+      type: 'RECORD_SCHEDULING_BLOCKER'
+      patientId: string
+      reason: SchedulingBlockerReason
+      occurredAt: string
+    }
+  | {
+      type: 'CONFIRM_ASSIGNMENT_HANDOFF'
+      patientId: string
+      patientName: string
+      occurredAt: string
+    }
+  | {
+      type: 'MARK_HANDOFF_STEP_READ'
+      stepId:
+        | 'notify-referral-source'
+        | 'create-monday-record'
+        | 'create-update-drk'
+    }
+  | { type: 'MARK_ASSIGNMENT_NOTIFY_READ' }
+  | { type: 'MARK_PROVIDER_SELECT_READ' }
+  | { type: 'MARK_PROVIDER_AVAILABILITY_READ' }
+  | { type: 'CONFIRM_EOD_FOLLOW_UP'; patientId: string }
+  | { type: 'MARK_EOD_FOLLOW_UP_READ' }
+  | { type: 'CONFIRM_EOD_ESCALATION'; patientId: string }
+  | { type: 'MARK_EOD_ESCALATION_READ' }
+  | {
+      type: 'EDIT_INTAKE_FIELD'
+      patientId: string
+      key: string
+      value: string
+    }
+  | {
+      type: 'REPLACE_INTAKE_SECTION_ROWS'
+      patientId: string
+      sectionId: string
+      rows: Array<{
+        label: string
+        value: string
+        fieldPath?: string
+        rowId?: string
+        meta?: string
+      }>
+    }
+  | {
+      type: 'CONFIRM_INTAKE_REVIEW'
+      patientId: string
+      patientName: string
+      occurredAt: string
+    }
+  | {
+      type: 'MARK_INTAKE_STEP_READ'
+      stepId: 'check-monday' | 'check-drk' | 'confirm-referral-contacted'
+    }
+  | { type: 'REOPEN_INTAKE_REVIEW'; patientId: string }
+  | {
+      type: 'CONFIRM_PARTNER_CONTACTED'
+      patientId: string
+      patientName: string
+      occurredAt: string
+    }
+  | { type: 'MARK_ASSIGNMENT_OWNER_READ' }
+  | {
+      type: 'START_ACTION_TIMER'
+      patientId: string
+      patientName: string
+      actionId: ConfirmationActionId
+      now?: number
+    }
+  | { type: 'TICK_ACTION_TIMERS'; now: number }
+  | {
+      type: 'RESOLVE_ACTION_TIMER'
+      patientId: string
+      actionId: ConfirmationActionId
+      now?: number
+    }
+
+function upsertSchedulingHandoff(
+  handoffs: SchedulingHandoff[],
+  next: SchedulingHandoff,
+): SchedulingHandoff[] {
+  return [next, ...handoffs.filter((item) => item.patientId !== next.patientId)]
+}
+
+function withSchedulingHandoff(
+  state: DemoState,
+  request: DemoState['providerAvailability'][string],
+  action: {
+    patientId: string
+    patientName: string
+    provider: SchedulingHandoffProvider
+    route: SchedulingHandoff['route']
+    readyAt: string
+    outcome: 'confirmed' | 'placement_completed'
+    resolvedAt: string
+  },
+): DemoState {
+  return {
+    ...state,
+    providerAvailability: {
+      ...state.providerAvailability,
+      [action.patientId]: {
+        ...request,
+        outcome: action.outcome,
+        resolvedAt: action.resolvedAt,
+      },
+    },
+    schedulingHandoffs: upsertSchedulingHandoff(state.schedulingHandoffs, {
+      patientId: action.patientId,
+      patientName: action.patientName,
+      provider: action.provider,
+      route: action.route,
+      requestedAt: request.requestedAt,
+      deadlineAt: request.deadlineAt,
+      readyAt: action.readyAt,
+      samplePdf: referralPdfForPatient(action.patientId),
+    }),
+    patientSchedules: upsertScheduleFromHandoff(state.patientSchedules, {
+      patientId: action.patientId,
+      patientName: action.patientName,
+      provider: action.provider,
+      route: action.route,
+    }),
+    providerRecordsUnread: true,
+    providerRecordsMessageUnread: true,
+    schedulingHandoffUnread: false,
+    schedulingHandoffMessageUnread: false,
+    actionTimers: startActionTimer(
+      resolveActionTimer(
+        resolveActionTimer(
+          state.actionTimers,
+          action.patientId,
+          'provider-availability',
+          Date.now(),
+        ),
+        action.patientId,
+        'manual-placement',
+        Date.now(),
+      ),
+      {
+        patientId: action.patientId,
+        patientName: action.patientName,
+        actionId: 'schedule-patient',
+        now: Date.now(),
+      },
+    ),
+  }
+}
 
 function resolveScenarioCase(state: DemoState, caseId: string): DemoState {
   let gained = 0
@@ -280,6 +494,42 @@ export function createInitialState(): DemoState {
     scenarioMinutesReturned: sumCompletedJourneyCaseMinutes(workflowScenarios),
     journeyFocusCaseId: focusCaseId,
     selectedJourneyPatientId,
+    opsScopedPatient: null,
+    opsSelectedStepByStage: {},
+    providerSelectedIds: {},
+    providerConfirmed: {},
+    providerTerritoryResolutions: {},
+    providerAvailability: {},
+    latestProviderAvailabilityPatientId: null,
+    schedulingHandoffs: [],
+    patientSchedules: seedPatientSchedules(),
+    providerRecordsUnread: false,
+    providerRecordsMessageUnread: false,
+    schedulingHandoffUnread: false,
+    schedulingHandoffMessageUnread: false,
+    latestAssignmentHandoff: null,
+    assignmentNotifyUnread: false,
+    handoffNavUnread: false,
+    handoffNotifyUnread: false,
+    handoffMondayUnread: false,
+    handoffDrkUnread: false,
+    providerNavUnread: false,
+    providerSelectUnread: false,
+    providerAvailabilityUnread: false,
+    eodFollowUpUnread: false,
+    eodEscalationUnread: false,
+    latestEodFollowUpPatientId: null,
+    latestEodEscalationPatientId: null,
+    intakeFieldEdits: {},
+    intakeSectionRows: {},
+    intakeVerified: {},
+    latestIntakeReview: null,
+    intakeMondayUnread: false,
+    intakeDrkUnread: false,
+    intakePartnerUnread: false,
+    latestPartnerContact: null,
+    assignmentOwnerUnread: false,
+    actionTimers: seedActionTimers(),
   }
 }
 
@@ -339,6 +589,12 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
         activePage: action.page,
         scenarioFilter: 'all',
         selectedReferralId: null,
+        schedulingHandoffUnread:
+          action.page === 'scheduling' ? false : state.schedulingHandoffUnread,
+        handoffNavUnread:
+          action.page === 'handoff' ? false : state.handoffNavUnread,
+        providerNavUnread:
+          action.page === 'provider' ? false : state.providerNavUnread,
       }
 
     case 'SET_SCENARIO_FILTER':
@@ -349,6 +605,30 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
 
     case 'SELECT_JOURNEY_PATIENT':
       return focusPatientCurrentStep(state, action.patientId)
+
+    case 'SCOPE_OPS_PATIENT':
+      return {
+        ...state,
+        opsScopedPatient: {
+          patientId: action.patientId,
+          patientName: action.patientName,
+        },
+      }
+
+    case 'CLEAR_OPS_PATIENT':
+      return { ...state, opsScopedPatient: null }
+
+    case 'SET_OPS_SELECTED_STEP':
+      if (state.opsSelectedStepByStage[action.stageId] === action.stepId) {
+        return state
+      }
+      return {
+        ...state,
+        opsSelectedStepByStage: {
+          ...state.opsSelectedStepByStage,
+          [action.stageId]: action.stepId,
+        },
+      }
 
     case 'FOCUS_JOURNEY_STEP':
       return focusJourneyStep(state, action.caseId)
@@ -383,6 +663,525 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
         patientId,
       )
     }
+
+    case 'SELECT_PROVIDER':
+      if (state.providerConfirmed[action.patientId]) return state
+      if (state.providerTerritoryResolutions[action.patientId] === 'discharged') {
+        return state
+      }
+      return {
+        ...state,
+        providerSelectedIds: {
+          ...state.providerSelectedIds,
+          [action.patientId]: action.providerId,
+        },
+      }
+
+    case 'CONFIRM_PROVIDER_SELECTION': {
+      if (state.providerConfirmed[action.patientId]) return state
+      if (state.providerTerritoryResolutions[action.patientId] === 'discharged') {
+        return state
+      }
+      return {
+        ...state,
+        providerConfirmed: {
+          ...state.providerConfirmed,
+          [action.patientId]: true,
+        },
+        latestProviderAvailabilityPatientId: action.patientId,
+        providerAvailability: {
+          ...state.providerAvailability,
+          [action.patientId]: {
+            requestedAt: action.requestedAt,
+            deadlineAt: action.deadlineAt,
+            outcome: 'waiting',
+          },
+        },
+        providerAvailabilityUnread: true,
+        actionTimers: startActionTimer(
+          resolveActionTimer(
+            resolveActionTimer(
+              state.actionTimers,
+              action.patientId,
+              'confirm-provider',
+              Date.now(),
+            ),
+            action.patientId,
+            'use-fallback-provider',
+            Date.now(),
+          ),
+          {
+            patientId: action.patientId,
+            patientName: timerPatientName(
+              state.actionTimers,
+              action.patientId,
+              action.patientId,
+            ),
+            actionId: 'provider-availability',
+            now: Date.now(),
+          },
+        ),
+      }
+    }
+
+    case 'RESOLVE_PROVIDER_TERRITORY': {
+      if (state.providerTerritoryResolutions[action.patientId]) return state
+      if (action.resolution === 'discharged') {
+        return {
+          ...state,
+          providerTerritoryResolutions: {
+            ...state.providerTerritoryResolutions,
+            [action.patientId]: 'discharged',
+          },
+          actionTimers: resolveActionTimer(
+            resolveActionTimer(
+              state.actionTimers,
+              action.patientId,
+              'confirm-provider',
+              Date.now(),
+            ),
+            action.patientId,
+            'use-fallback-provider',
+            Date.now(),
+          ),
+        }
+      }
+      if (!action.requestedAt || !action.deadlineAt) return state
+      return {
+        ...state,
+        providerTerritoryResolutions: {
+          ...state.providerTerritoryResolutions,
+          [action.patientId]: 'assigned',
+        },
+        providerConfirmed: {
+          ...state.providerConfirmed,
+          [action.patientId]: true,
+        },
+        latestProviderAvailabilityPatientId: action.patientId,
+        providerAvailability: {
+          ...state.providerAvailability,
+          [action.patientId]: {
+            requestedAt: action.requestedAt,
+            deadlineAt: action.deadlineAt,
+            outcome: 'waiting',
+          },
+        },
+        providerAvailabilityUnread: true,
+        actionTimers: startActionTimer(
+          resolveActionTimer(
+            resolveActionTimer(
+              state.actionTimers,
+              action.patientId,
+              'confirm-provider',
+              Date.now(),
+            ),
+            action.patientId,
+            'use-fallback-provider',
+            Date.now(),
+          ),
+          {
+            patientId: action.patientId,
+            patientName: timerPatientName(
+              state.actionTimers,
+              action.patientId,
+              action.patientId,
+            ),
+            actionId: 'provider-availability',
+            now: Date.now(),
+          },
+        ),
+      }
+    }
+
+    case 'CONFIRM_PROVIDER_AVAILABILITY': {
+      const request = state.providerAvailability[action.patientId]
+      if (!request || request.outcome !== 'waiting') return state
+      return withSchedulingHandoff(state, request, {
+        patientId: action.patientId,
+        patientName: action.patientName,
+        provider: action.provider,
+        route: 'provider_confirmed',
+        readyAt: action.resolvedAt,
+        outcome: 'confirmed',
+        resolvedAt: action.resolvedAt,
+      })
+    }
+
+    case 'TIMEOUT_PROVIDER_AVAILABILITY': {
+      const request = state.providerAvailability[action.patientId]
+      if (!request || request.outcome !== 'waiting') return state
+      return {
+        ...state,
+        providerAvailability: {
+          ...state.providerAvailability,
+          [action.patientId]: {
+            ...request,
+            outcome: 'timeout',
+            resolvedAt: action.resolvedAt,
+          },
+        },
+        actionTimers: startActionTimer(
+          resolveActionTimer(
+            state.actionTimers,
+            action.patientId,
+            'provider-availability',
+            Date.now(),
+          ),
+          {
+            patientId: action.patientId,
+            patientName: timerPatientName(
+              state.actionTimers,
+              action.patientId,
+              action.patientId,
+            ),
+            actionId: 'manual-placement',
+            now: Date.now(),
+          },
+        ),
+      }
+    }
+
+    case 'COMPLETE_MANUAL_PLACEMENT': {
+      const request = state.providerAvailability[action.patientId]
+      if (!request || request.outcome !== 'timeout') return state
+      return withSchedulingHandoff(state, request, {
+        patientId: action.patientId,
+        patientName: action.patientName,
+        provider: action.provider,
+        route: 'manual_placement',
+        readyAt: action.readyAt,
+        outcome: 'placement_completed',
+        resolvedAt: action.readyAt,
+      })
+    }
+
+    case 'MARK_PROVIDER_RECORDS_READ': {
+      if (!state.providerRecordsMessageUnread && !state.providerRecordsUnread) {
+        return state
+      }
+      return {
+        ...state,
+        providerRecordsUnread: false,
+        providerRecordsMessageUnread: false,
+        schedulingHandoffUnread: true,
+        schedulingHandoffMessageUnread: true,
+      }
+    }
+
+    case 'MARK_SCHEDULING_HANDOFF_READ':
+      if (!state.schedulingHandoffMessageUnread) return state
+      return {
+        ...state,
+        schedulingHandoffMessageUnread: false,
+      }
+
+    case 'SELECT_SCHEDULING_SLOT': {
+      const record = state.patientSchedules[action.patientId]
+      const slot = record?.slots.find((item) => item.id === action.slotId)
+      if (
+        !record ||
+        record.status !== 'waiting' ||
+        !slot ||
+        slot.status !== 'open' ||
+        record.selectedSlotId === action.slotId
+      ) {
+        return state
+      }
+      return {
+        ...state,
+        patientSchedules: {
+          ...state.patientSchedules,
+          [action.patientId]: { ...record, selectedSlotId: action.slotId },
+        },
+      }
+    }
+
+    case 'COMPLETE_PATIENT_SCHEDULE': {
+      const record = state.patientSchedules[action.patientId]
+      const slot = record ? selectedSlot(record) : null
+      if (
+        !record ||
+        record.status !== 'waiting' ||
+        !slot ||
+        slot.status !== 'open'
+      ) {
+        return state
+      }
+      return {
+        ...state,
+        patientSchedules: {
+          ...state.patientSchedules,
+          [action.patientId]: {
+            ...record,
+            status: 'scheduled',
+            appointmentDate: slot.appointmentDate,
+            appointmentTime: slot.appointmentTime,
+            scheduledAt: action.scheduledAt,
+          },
+        },
+        actionTimers: resolveActionTimer(
+          state.actionTimers,
+          action.patientId,
+          'schedule-patient',
+          Date.now(),
+        ),
+      }
+    }
+
+    case 'RECORD_SCHEDULING_BLOCKER': {
+      const record = state.patientSchedules[action.patientId]
+      if (!record || record.status !== 'waiting') return state
+      return {
+        ...state,
+        patientSchedules: {
+          ...state.patientSchedules,
+          [action.patientId]: {
+            ...record,
+            status: 'blocked',
+            selectedSlotId: null,
+            blockerReason: action.reason,
+            scheduledAt: action.occurredAt,
+          },
+        },
+        actionTimers: resolveActionTimer(
+          state.actionTimers,
+          action.patientId,
+          'schedule-patient',
+          Date.now(),
+        ),
+      }
+    }
+
+    case 'CONFIRM_ASSIGNMENT_HANDOFF':
+      return {
+        ...state,
+        latestAssignmentHandoff: {
+          patientId: action.patientId,
+          patientName: action.patientName,
+          occurredAt: action.occurredAt,
+        },
+        assignmentNotifyUnread: true,
+        handoffNavUnread: true,
+        handoffNotifyUnread: true,
+        handoffMondayUnread: true,
+        handoffDrkUnread: true,
+        providerNavUnread: true,
+        providerSelectUnread: true,
+        actionTimers: startActionTimer(
+          resolveActionTimer(
+            state.actionTimers,
+            action.patientId,
+            'confirm-assignment',
+            Date.now(),
+          ),
+          {
+            patientId: action.patientId,
+            patientName: action.patientName,
+            actionId: 'confirm-provider',
+            now: Date.now(),
+          },
+        ),
+      }
+
+    case 'MARK_ASSIGNMENT_NOTIFY_READ':
+      if (!state.assignmentNotifyUnread) return state
+      return { ...state, assignmentNotifyUnread: false }
+
+    case 'MARK_HANDOFF_STEP_READ': {
+      if (action.stepId === 'notify-referral-source') {
+        if (!state.handoffNotifyUnread) return state
+        return { ...state, handoffNotifyUnread: false }
+      }
+      if (action.stepId === 'create-monday-record') {
+        if (!state.handoffMondayUnread) return state
+        return { ...state, handoffMondayUnread: false }
+      }
+      if (!state.handoffDrkUnread) return state
+      return { ...state, handoffDrkUnread: false }
+    }
+
+    case 'MARK_PROVIDER_SELECT_READ':
+      if (!state.providerSelectUnread) return state
+      return { ...state, providerSelectUnread: false }
+
+    case 'MARK_PROVIDER_AVAILABILITY_READ':
+      if (!state.providerAvailabilityUnread) return state
+      return { ...state, providerAvailabilityUnread: false }
+
+    case 'CONFIRM_EOD_FOLLOW_UP':
+      return {
+        ...state,
+        latestEodFollowUpPatientId: action.patientId,
+        eodFollowUpUnread: true,
+        actionTimers: resolveActionTimer(
+          state.actionTimers,
+          action.patientId,
+          'eod-follow-up-cm',
+          Date.now(),
+        ),
+      }
+
+    case 'MARK_EOD_FOLLOW_UP_READ':
+      if (!state.eodFollowUpUnread) return state
+      return { ...state, eodFollowUpUnread: false }
+
+    case 'CONFIRM_EOD_ESCALATION':
+      return {
+        ...state,
+        latestEodEscalationPatientId: action.patientId,
+        eodEscalationUnread: true,
+        actionTimers: resolveActionTimer(
+          resolveActionTimer(
+            state.actionTimers,
+            action.patientId,
+            'eod-escalate',
+            Date.now(),
+          ),
+          action.patientId,
+          'eod-follow-up-cm',
+          Date.now(),
+        ),
+      }
+
+    case 'MARK_EOD_ESCALATION_READ':
+      if (!state.eodEscalationUnread) return state
+      return { ...state, eodEscalationUnread: false }
+
+    case 'EDIT_INTAKE_FIELD': {
+      if (state.intakeVerified[action.patientId]) return state
+      const current = state.intakeFieldEdits[action.patientId] ?? {}
+      if (current[action.key] === action.value) return state
+      return {
+        ...state,
+        intakeFieldEdits: {
+          ...state.intakeFieldEdits,
+          [action.patientId]: {
+            ...current,
+            [action.key]: action.value,
+          },
+        },
+      }
+    }
+
+    case 'REPLACE_INTAKE_SECTION_ROWS': {
+      if (state.intakeVerified[action.patientId]) return state
+      const current = state.intakeSectionRows[action.patientId] ?? {}
+      const previous = current[action.sectionId]
+      if (
+        previous &&
+        previous.length === action.rows.length &&
+        previous.every(
+          (row, index) =>
+            row.label === action.rows[index]?.label &&
+            row.value === action.rows[index]?.value &&
+            row.rowId === action.rows[index]?.rowId,
+        )
+      ) {
+        return state
+      }
+      return {
+        ...state,
+        intakeSectionRows: {
+          ...state.intakeSectionRows,
+          [action.patientId]: {
+            ...current,
+            [action.sectionId]: action.rows,
+          },
+        },
+      }
+    }
+
+    case 'CONFIRM_INTAKE_REVIEW': {
+      if (state.intakeVerified[action.patientId]) return state
+      const alreadyAnnounced =
+        state.latestIntakeReview?.patientId === action.patientId
+      return {
+        ...state,
+        intakeVerified: {
+          ...state.intakeVerified,
+          [action.patientId]: true,
+        },
+        latestIntakeReview: {
+          patientId: action.patientId,
+          patientName: action.patientName,
+          occurredAt: action.occurredAt,
+        },
+        intakeMondayUnread: alreadyAnnounced
+          ? state.intakeMondayUnread
+          : true,
+        intakeDrkUnread: alreadyAnnounced ? state.intakeDrkUnread : true,
+        intakePartnerUnread: alreadyAnnounced
+          ? state.intakePartnerUnread
+          : true,
+        actionTimers: resolveActionTimer(
+          state.actionTimers,
+          action.patientId,
+          'confirm-intake-review',
+          Date.now(),
+        ),
+      }
+    }
+
+    case 'REOPEN_INTAKE_REVIEW':
+      if (!state.intakeVerified[action.patientId]) return state
+      return {
+        ...state,
+        intakeVerified: {
+          ...state.intakeVerified,
+          [action.patientId]: false,
+        },
+        actionTimers: startActionTimer(state.actionTimers, {
+          patientId: action.patientId,
+          patientName: timerPatientName(
+            state.actionTimers,
+            action.patientId,
+            action.patientId,
+          ),
+          actionId: 'confirm-intake-review',
+          now: Date.now(),
+        }),
+      }
+
+    case 'CONFIRM_PARTNER_CONTACTED':
+      return {
+        ...state,
+        latestPartnerContact: {
+          patientId: action.patientId,
+          patientName: action.patientName,
+          occurredAt: action.occurredAt,
+        },
+        assignmentOwnerUnread: true,
+        actionTimers: startActionTimer(
+          resolveActionTimer(
+            state.actionTimers,
+            action.patientId,
+            'confirm-partner-contacted',
+            Date.now(),
+          ),
+          {
+            patientId: action.patientId,
+            patientName: action.patientName,
+            actionId: 'confirm-assignment',
+            now: Date.now(),
+          },
+        ),
+      }
+
+    case 'MARK_ASSIGNMENT_OWNER_READ':
+      if (!state.assignmentOwnerUnread) return state
+      return { ...state, assignmentOwnerUnread: false }
+
+    case 'MARK_INTAKE_STEP_READ':
+      if (action.stepId === 'check-monday') {
+        if (!state.intakeMondayUnread) return state
+        return { ...state, intakeMondayUnread: false }
+      }
+      if (action.stepId === 'check-drk') {
+        if (!state.intakeDrkUnread) return state
+        return { ...state, intakeDrkUnread: false }
+      }
+      if (!state.intakePartnerUnread) return state
+      return { ...state, intakePartnerUnread: false }
 
     case 'UPDATE_IMPACT_ASSUMPTIONS':
       return {
@@ -675,6 +1474,34 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
           : state.lifecycleMessage,
       }
     }
+
+    case 'START_ACTION_TIMER':
+      return {
+        ...state,
+        actionTimers: startActionTimer(state.actionTimers, {
+          patientId: action.patientId,
+          patientName: action.patientName,
+          actionId: action.actionId,
+          now: action.now ?? Date.now(),
+        }),
+      }
+
+    case 'TICK_ACTION_TIMERS': {
+      const nextTimers = tickActionTimers(state.actionTimers, action.now)
+      if (!nextTimers) return state
+      return { ...state, actionTimers: nextTimers }
+    }
+
+    case 'RESOLVE_ACTION_TIMER':
+      return {
+        ...state,
+        actionTimers: resolveActionTimer(
+          state.actionTimers,
+          action.patientId,
+          action.actionId,
+          action.now ?? Date.now(),
+        ),
+      }
 
     default:
       return state

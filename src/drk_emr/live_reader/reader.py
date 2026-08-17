@@ -22,7 +22,14 @@ from drk_emr.common.browser import (
     login_url_for,
     patient_dashboard_url,
 )
-from drk_emr.live_reader.capture import capture_dashboard_cards, wait_for_network_idle
+from drk_emr.live_reader.capture import (
+    DrkCaptureError,
+    attach_diagnosis_dom,
+    capture_dashboard_cards,
+    fill_missing_cards_via_fetch,
+    scrape_diagnosis_card,
+    wait_for_network_idle,
+)
 from drk_emr.live_reader.config import DrkLiveReaderConfig
 
 
@@ -107,7 +114,12 @@ class DrkPatientReader:
                 self.driver,
                 allowed_host=urlsplit(emr_root(self.config.emr_url)).netloc,
                 patient_id=normalized_id,
+                require_demographics=False,
             )
+            cards = fill_missing_cards_via_fetch(self.driver, cards, normalized_id)
+            if not cards.get("patient_information", {}).get("records"):
+                raise DrkCaptureError("DRK patient demographics response was not captured")
+            cards = attach_diagnosis_dom(cards, scrape_diagnosis_card(self.driver))
             return DrkPatientCapture(
                 patient_id=normalized_id,
                 observed_at=datetime.now(timezone.utc),

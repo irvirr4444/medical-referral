@@ -71,14 +71,9 @@ const END_OF_DAY_CASES: HistoryCase[] = [
     occurredAt: 'August 9, 2026 at 5:00 PM',
     status: 'completed',
     values: {
-      health: '5:00 PM cutoff; both readers healthy',
-      due: 'Maria due for scheduling review',
-      source: 'Scheduled Yes; complete Yes; date Aug 13',
-      classification: 'Scheduled; all three fields agree',
-      dedupe: 'No exception key required',
-      exception: 'No exception created',
-      notification: 'Excluded from the exception summary',
-      resolution: 'Scheduling state remains verified',
+      status: 'Scheduled Yes; complete Yes; appointment date Aug 13',
+      followUp: 'Not required · patient already scheduled',
+      escalation: 'Not required',
     },
   },
   {
@@ -87,14 +82,9 @@ const END_OF_DAY_CASES: HistoryCase[] = [
     occurredAt: 'August 8, 2026 at 5:00 PM',
     status: 'attention',
     values: {
-      health: '5:00 PM cutoff; both readers healthy',
-      due: 'Linda due for scheduling review',
-      source: 'Appointment date present; scheduled status blank',
-      classification: 'Indeterminate; scheduling fields conflict',
-      dedupe: 'No existing exception for Linda today',
-      exception: 'One inconsistency exception opened',
-      notification: 'Included once in the management summary',
-      resolution: 'Open until all scheduling fields agree',
+      status: 'Appointment date present; scheduled status blank',
+      followUp: 'Lead followed up with CM on Teams',
+      escalation: 'Escalated to Nicole via email and spreadsheet',
     },
   },
 ]
@@ -106,15 +96,10 @@ const WEEKLY_CASES: HistoryCase[] = [
     occurredAt: 'August 9, 2026 at 6:04 PM',
     status: 'completed',
     values: {
-      health: 'Readers healthy; weekly cursor loaded',
-      links: 'Helen linked across Monday and DRK',
-      source: 'New DRK visit recorded as Seen',
-      normalized: 'Normalized outcome: visit_seen',
-      change: 'One new visit_seen event',
-      counter: 'Not Seen count reset to 0',
-      review: 'No review required',
-      exception: 'No exception created',
-      notification: 'Seen event stored; weekly cycle continues',
+      seen: 'Patient seen',
+      healed: 'Wound not healed',
+      expired: 'Patient not expired',
+      hold: 'Not on hold',
     },
   },
   {
@@ -123,15 +108,10 @@ const WEEKLY_CASES: HistoryCase[] = [
     occurredAt: 'August 8, 2026 at 6:07 PM',
     status: 'attention',
     values: {
-      health: 'Readers healthy; weekly cursor loaded',
-      links: 'Arthur linked across Monday and DRK',
-      source: 'New hospitalization hold recorded',
-      normalized: 'Normalized state: patient_on_hold',
-      change: 'One new patient_on_hold event',
-      counter: 'Not Seen count unchanged',
-      review: 'Hold tracking required; no discharge action',
-      exception: 'One hold-tracking record opened',
-      notification: 'Hold state recorded for human follow-up',
+      seen: 'Visit status checked · on hold',
+      healed: 'Wound not healed',
+      expired: 'Patient not expired',
+      hold: 'Moved to holds team · Hospitalization',
     },
   },
 ]
@@ -161,46 +141,36 @@ function schedulingMoment(historyCase: HistoryCase, stepId: string): HistoryMome
 function endOfDayMoment(historyCase: HistoryCase, stepId: string): HistoryMoment {
   const value = historyCase.values
   switch (stepId) {
-    case 'start-eod-cycle':
-      return { input: 'Cutoff configuration and reader health', output: value.health }
-    case 'load-due-referrals':
-      return { input: 'Active referrals due by cutoff', output: value.due }
-    case 'read-eod-sources':
-      return { input: value.due, output: value.source }
-    case 'normalize-scheduling':
-      return { input: value.source, output: value.classification }
-    case 'dedupe-eod-alerts':
-      return { input: value.classification, output: value.dedupe }
-    case 'create-eod-exceptions':
-      return { input: value.dedupe, output: value.exception }
-    case 'notify-eod':
-      return { input: value.exception, output: value.notification }
+    case 'check-scheduling-status':
+      return {
+        input: 'Due referrals at the end-of-day cutoff',
+        output: value.status,
+      }
+    case 'follow-up-case-manager':
+      return { input: value.status, output: value.followUp }
+    case 'escalate-unresolved-cases':
+      return { input: value.followUp, output: value.escalation }
     default:
-      return { input: value.notification, output: value.resolution }
+      return { input: value.followUp, output: value.escalation }
   }
 }
 
 function weeklyMoment(historyCase: HistoryCase, stepId: string): HistoryMoment {
   const value = historyCase.values
   switch (stepId) {
-    case 'start-weekly-cycle':
-      return { input: 'Reader health and last successful cursor', output: value.health }
-    case 'load-active-links':
-      return { input: 'Active linked patients', output: value.links }
-    case 'read-visit-status':
-      return { input: value.links, output: value.source }
-    case 'normalize-visit-status':
-      return { input: value.source, output: value.normalized }
-    case 'detect-visit-change':
-      return { input: value.normalized, output: value.change }
-    case 'update-not-seen-counter':
-      return { input: value.change, output: value.counter }
-    case 'classify-weekly-review':
-      return { input: value.counter, output: value.review }
-    case 'create-weekly-exception':
-      return { input: value.review, output: value.exception }
+    case 'patient-seen':
+      return {
+        input: 'Active linked patient in this weekly cycle',
+        output: value.seen,
+      }
+    case 'wound-healed':
+      return { input: value.seen, output: value.healed }
+    case 'patient-expired':
+      return { input: value.healed, output: value.expired }
+    case 'patient-on-hold':
+      return { input: value.expired, output: value.hold }
     default:
-      return { input: value.exception, output: value.notification }
+      return { input: value.expired, output: value.hold }
   }
 }
 

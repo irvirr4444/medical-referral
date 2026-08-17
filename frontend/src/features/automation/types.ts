@@ -22,13 +22,34 @@ export interface ArtifactField {
   value: string
   fieldPath?: string
   meta?: string
+  rowId?: string
+  /** Gate field: name, DOB, phone, address, home health, clinical, insurance. */
+  required?: boolean
+  /** Not add/removeable; lives on a repeatable section (e.g. NKA). */
+  fixed?: boolean
+  /** Counts toward list completeness (payer, diagnosis code, allergy name). */
+  presence?: boolean
+  choice?: 'insurance-type' | 'yesno'
 }
+
+export type ArtifactAddKind =
+  | 'phone'
+  | 'diagnosis'
+  | 'medication'
+  | 'allergy'
+  | 'note'
+  | 'insurance'
+  | 'service'
+  | 'warning'
+  | 'guard'
 
 export interface ArtifactSection {
   id: string
   title: string
   fields: ArtifactField[]
   defaultExpanded?: boolean
+  repeatable?: boolean
+  addKind?: ArtifactAddKind
 }
 
 /** Skim-layer facts for extract-and-verify feed messages. */
@@ -116,7 +137,7 @@ export type AutomationRunId =
   | 'butler-alva'
   | 'maria-scheduling'
   | 'evelyn-end-of-day'
-  | 'gloria-weekly'
+  | 'walter-weekly'
 
 export interface AutomationRunFixture {
   id: AutomationRunId

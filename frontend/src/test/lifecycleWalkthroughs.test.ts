@@ -26,17 +26,20 @@ describe('lifecycle stage walkthroughs', () => {
   it('uses a clear representative case for each lifecycle stage', () => {
     expect(runForStage('scheduling').label).toMatch(/Maria Alvarez/)
     expect(runForStage('end-of-day').label).toMatch(/Evelyn Brooks/)
-    expect(runForStage('weekly').label).toMatch(/Gloria Bennett/)
+    expect(runForStage('weekly').label).toMatch(/Walter Grant/)
   })
 
-  it('keeps scheduling visibly planned and monitoring human-controlled', () => {
+  it('keeps send-referral planned while schedule-patient is working', () => {
     const scheduling = automationStage('scheduling')
     const schedulingRun = runForStage('scheduling')
-    expect(
-      scheduling.microsteps.every(
-        (step) => exampleForRun(schedulingRun, step, scheduling.id).status === 'planned',
-      ),
-    ).toBe(true)
+    const byId = Object.fromEntries(
+      scheduling.microsteps.map((step) => [
+        step.id,
+        exampleForRun(schedulingRun, step, scheduling.id).status,
+      ]),
+    )
+    expect(byId['send-referral-provider']).toBe('planned')
+    expect(byId['schedule-patient']).toBe('completed')
 
     const weekly = automationStage('weekly')
     const weeklyRun = runForStage('weekly')

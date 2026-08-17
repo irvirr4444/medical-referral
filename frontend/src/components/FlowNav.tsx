@@ -1,4 +1,5 @@
 import { User } from 'lucide-react'
+import { navigateAppPath, patientKeyFromPath } from '../features/automation/patientRoute'
 import { useDemo } from '../state/useDemo'
 import './FlowNav.css'
 
@@ -23,6 +24,9 @@ export function FlowNav() {
           type="button"
           className="flow-nav__brand"
           onClick={() => {
+            if (patientKeyFromPath(window.location.pathname)) {
+              navigateAppPath('/')
+            }
             dispatch({ type: 'SET_ACTIVE_PAGE', page: 'overview' })
             window.scrollTo({ top: 0, behavior: 'smooth' })
           }}

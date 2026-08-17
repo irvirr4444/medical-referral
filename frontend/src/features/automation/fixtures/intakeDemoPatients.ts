@@ -85,3 +85,23 @@ export const INTAKE_DEMO_BY_ID: Record<string, IntakeDemoPatient> =
 export function intakeDemoPatient(patientId: string) {
   return INTAKE_DEMO_BY_ID[patientId]
 }
+
+const PATIENT_REFERRAL_PDFS: Record<string, string> = {
+  'thomas-reed': 'EC - REFERRAL FORM.pdf',
+  'patricia-johnson': 'BUTLER, ALVA demo.pdf',
+  'maria-alvarez': 'fax20260713-16377-syrmla.pdf',
+  'helen-park': 'fax20260711-48483-ougwp2.pdf',
+  'nancy-liu': 'fax20260710-1422744-nkqbp2.pdf',
+  'irene-cho': 'fax20260713-2485963-94q8kc.pdf',
+  'betty-hayes': 'fax20260713-620-tw3x6v.pdf',
+  'james-carter': 'fax20260713-2485963-94q8kc.pdf',
+  'linda-nguyen': 'fax20260713-620-tw3x6v.pdf',
+}
+
+export function referralPdfForPatient(patientId: string): string {
+  return (
+    INTAKE_DEMO_BY_ID[patientId]?.samplePdf ??
+    PATIENT_REFERRAL_PDFS[patientId] ??
+    'BUTLER, ALVA demo.pdf'
+  )
+}

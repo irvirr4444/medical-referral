@@ -1,48 +1,356 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronDown, Search } from 'lucide-react'
+import { ChevronDown, Search, X } from 'lucide-react'
 import { useEscapeDismiss } from '../../hooks/useEscapeDismiss'
+import { useDemo } from '../../state/useDemo'
 import { MicrostepList } from './MicrostepList'
 import { StageFeedMessage } from './StageFeedMessage'
-import { detailForPatientStep, feedForStep } from './ops'
+import { overlayIntakeDetail } from './overlayIntakeDetail'
+import { detailForPatientStep, feedForStep, parseOpsDate, patientsForStage, stepsForPatient } from './ops'
+import type { StepFeedDay, StepFeedRow } from './ops/types'
 import {
   CASE_MANAGER_OPTIONS,
   caseManagerNotification,
   caseManagerSuggestion,
   drkDraftForPatient,
+  drkDraftWithAssignedProvider,
   mondayRecordForPatient,
+  mondayRecordWithAssignedProvider,
   referralSourceNotification,
 } from './fixtures/caseManagerAssignments'
-import { intakeDemoPatient } from './fixtures/intakeDemoPatients'
+import {
+  eodSchedulingCheckForPatient,
+  eodSchedulingCheckSummary,
+  eodSchedulingCheckDisplaySummary,
+  eodCmFollowUpSummary,
+  eodEscalationEligible,
+  eodEscalationSummary,
+  eodEscalationConfirmLabel,
+  eodCmNotifyPending,
+  eodSchedulingBucket,
+  eodFollowUpEligible,
+} from './fixtures/eodSchedulingCheck'
+import {
+  schedulingFeedSummary,
+} from './fixtures/patientSchedules'
+import type { PatientSchedulingRecord } from '../../types'
+import {
+  weeklyVisitCheckForPatient,
+  weeklyVisitCheckSummary,
+  weeklyPatientSeenEligible,
+  weeklyWoundHealedEligible,
+  weeklyPatientExpiredEligible,
+  weeklyPatientOnHoldEligible,
+  weeklyMissedVisitSummary,
+  weeklyHoldsClosuresSummary,
+  weeklyHoldsActionComplete,
+  weeklyDischargeReviewDue,
+  weeklyMissedVisitPending,
+} from './fixtures/weeklyVisitCheck'
+import {
+  compareAttention,
+  overdueStepIds,
+  timerForPatientStep,
+  warningStepIds,
+} from './confirmationTimers'
+import { intakeDemoPatient, referralPdfForPatient } from './fixtures/intakeDemoPatients'
+import { unreadStepCounts } from './unreadSteps'
+import {
+  PROVIDER_OPTIONS,
+  providerPatientLocationDisplay,
+  providerSuggestion,
+  providersForPatientLocation,
+} from './fixtures/providerAssignments'
 import type { FlowOpsPageId } from '../../data/flowOps'
 import type { PatientStepStatus } from './ops/types'
 import type { AutomationMicrostep } from './types'
 import './StageOps.css'
 
-const STATUS_FILTERS: Array<{
-  id: PatientStepStatus
+type StatusFilterOption = {
+  id: string
   meaning: string
-}> = [
-    { id: 'waiting', meaning: 'Needs confirmation' },
-    { id: 'blocked', meaning: 'Stuck' },
-    { id: 'current', meaning: 'In progress' },
-    { id: 'done', meaning: 'Finished' },
-  ]
+  tone?: string
+}
 
-const DEFAULT_STATUSES: PatientStepStatus[] = STATUS_FILTERS.map(
-  (item) => item.id,
-)
+const NEEDS_ATTENTION_FILTER: StatusFilterOption = {
+  id: 'needs-attention',
+  meaning: 'Needs immediate attention',
+  tone: 'overdue',
+}
 
-type StatusFilterValue = 'all' | PatientStepStatus
+const STATUS_FILTERS: StatusFilterOption[] = [
+  { id: 'waiting', meaning: 'Needs confirmation' },
+  { id: 'current', meaning: 'In progress' },
+  { id: 'done', meaning: 'Finished' },
+]
+
+const DEFAULT_STATUSES: PatientStepStatus[] = [
+  'done',
+  'current',
+  'waiting',
+  'blocked',
+]
+
+type StatusFilterValue = 'all' | string
+
+const EOD_SCHEDULING_FILTERS: StatusFilterOption[] = [
+  { id: 'scheduled', meaning: 'Scheduled', tone: 'done' },
+  {
+    id: 'unscheduled-over-48',
+    meaning: 'Not scheduled after 48h',
+    tone: 'blocked',
+  },
+  {
+    id: 'unscheduled-under-48',
+    meaning: 'Not scheduled less than 48h',
+    tone: 'waiting',
+  },
+]
 type StepDetail = ReturnType<typeof detailForPatientStep>
 
-function currentOpsTimestamp() {
+const WEEKLY_QUESTION_STEPS = [
+  'patient-seen',
+  'wound-healed',
+  'patient-expired',
+  'patient-on-hold',
+] as const
+
+function isWeeklyQuestionStep(
+  stepId: string,
+): stepId is (typeof WEEKLY_QUESTION_STEPS)[number] {
+  return WEEKLY_QUESTION_STEPS.includes(
+    stepId as (typeof WEEKLY_QUESTION_STEPS)[number],
+  )
+}
+
+function weeklyStatusFilters(stepId: string): StatusFilterOption[] | null {
+  if (stepId === 'patient-seen') {
+    return [
+      { id: 'done', meaning: 'Seen' },
+      { id: 'waiting', meaning: 'Not seen' },
+    ]
+  }
+  if (stepId === 'wound-healed') {
+    return [
+      { id: 'done', meaning: 'Healed' },
+      { id: 'waiting', meaning: 'Not healed' },
+    ]
+  }
+  if (stepId === 'patient-expired') {
+    return [
+      { id: 'done', meaning: 'Expired' },
+      { id: 'waiting', meaning: 'Not expired' },
+    ]
+  }
+  if (stepId === 'patient-on-hold') {
+    return [
+      { id: 'done', meaning: 'Hold' },
+      { id: 'waiting', meaning: 'Not hold' },
+    ]
+  }
+  return null
+}
+
+function stepStatusFilters(stepId: string): StatusFilterOption[] {
+  const base =
+    weeklyStatusFilters(stepId) ??
+    (stepId === 'check-scheduling-status'
+      ? EOD_SCHEDULING_FILTERS
+      : STATUS_FILTERS)
+  return [NEEDS_ATTENTION_FILTER, ...base]
+}
+
+function statusFilterTone(option: StatusFilterOption): string {
+  return option.tone ?? option.id
+}
+
+function eodForPatient(
+  patientId: string,
+  schedules: Record<string, PatientSchedulingRecord>,
+) {
+  return eodSchedulingCheckForPatient(patientId, schedules[patientId])
+}
+
+function eodSchedulingStatusOption(
+  patientId: string,
+  schedules: Record<string, PatientSchedulingRecord> = {},
+): StatusFilterOption {
+  const bucket = eodSchedulingBucket(eodForPatient(patientId, schedules))
+  return (
+    EOD_SCHEDULING_FILTERS.find((item) => item.id === bucket) ??
+    EOD_SCHEDULING_FILTERS[0]
+  )
+}
+
+function scheduleFeedStatus(
+  record: PatientSchedulingRecord,
+): PatientStepStatus {
+  if (record.status === 'scheduled') return 'done'
+  if (record.status === 'blocked') return 'blocked'
+  return 'waiting'
+}
+
+function overlayScheduleDays(
+  days: StepFeedDay[],
+  schedules: Record<string, PatientSchedulingRecord>,
+): StepFeedDay[] {
+  const mapped = days.map((day) => ({
+    ...day,
+    rows: day.rows.map((row) => {
+      const live = schedules[row.patientId]
+      if (!live) return row
+      return {
+        ...row,
+        status: scheduleFeedStatus(live),
+        summary: schedulingFeedSummary(live),
+        occurredAt: live.scheduledAt ?? row.occurredAt,
+      }
+    }),
+  }))
+  const seen = new Set(
+    mapped.flatMap((day) => day.rows.map((row) => row.patientId)),
+  )
+  const extras = Object.values(schedules)
+    .filter((record) => !seen.has(record.patientId))
+    .map(
+      (record): StepFeedRow => ({
+        patientId: record.patientId,
+        patientName: record.patientName,
+        stepId: 'schedule-patient',
+        status: scheduleFeedStatus(record),
+        summary: schedulingFeedSummary(record),
+        occurredAt: record.scheduledAt ?? '',
+      }),
+    )
+  return extras.length ? prependEodFeedRows(mapped, extras) : mapped
+}
+
+function usesCustomStatusFilter(stepId: string): boolean {
+  return isWeeklyQuestionStep(stepId) || stepId === 'check-scheduling-status'
+}
+
+function weeklyStatusLabel(
+  stepId: string,
+  status: PatientStepStatus | string,
+): string | null {
+  return (
+    weeklyStatusFilters(stepId)?.find((item) => item.id === status)?.meaning ??
+    null
+  )
+}
+
+const ASSIGNMENT_HANDOFF_STEP_IDS = [
+  'notify-referral-source',
+  'create-monday-record',
+  'create-update-drk',
+] as const
+
+type AssignmentHandoffStepId = (typeof ASSIGNMENT_HANDOFF_STEP_IDS)[number]
+
+function isAssignmentHandoffStep(
+  stepId: string,
+): stepId is AssignmentHandoffStepId {
+  return ASSIGNMENT_HANDOFF_STEP_IDS.includes(stepId as AssignmentHandoffStepId)
+}
+
+function assignmentHandoffUnreadForStep(
+  state: {
+    handoffNotifyUnread: boolean
+    handoffMondayUnread: boolean
+    handoffDrkUnread: boolean
+  },
+  stepId: string,
+): boolean {
+  if (stepId === 'notify-referral-source') return state.handoffNotifyUnread
+  if (stepId === 'create-monday-record') return state.handoffMondayUnread
+  if (stepId === 'create-update-drk') return state.handoffDrkUnread
+  return false
+}
+
+const INTAKE_FOLLOW_UP_STEP_IDS = [
+  'check-monday',
+  'check-drk',
+  'confirm-referral-contacted',
+] as const
+
+type IntakeFollowUpStepId = (typeof INTAKE_FOLLOW_UP_STEP_IDS)[number]
+
+function isIntakeFollowUpStep(
+  stepId: string,
+): stepId is IntakeFollowUpStepId {
+  return INTAKE_FOLLOW_UP_STEP_IDS.includes(stepId as IntakeFollowUpStepId)
+}
+
+function intakeFollowUpUnreadForStep(
+  state: {
+    intakeMondayUnread: boolean
+    intakeDrkUnread: boolean
+    intakePartnerUnread: boolean
+  },
+  stepId: string,
+): boolean {
+  if (stepId === 'check-monday') return state.intakeMondayUnread
+  if (stepId === 'check-drk') return state.intakeDrkUnread
+  if (stepId === 'confirm-referral-contacted') return state.intakePartnerUnread
+  return false
+}
+
+function intakeFollowUpSummary(
+  patientId: string,
+  stepId: IntakeFollowUpStepId,
+): string {
+  return (
+    intakeDemoPatient(patientId)?.snapshots[stepId]?.output ??
+    (stepId === 'check-monday'
+      ? 'No matching Monday.com candidate found'
+      : stepId === 'check-drk'
+        ? 'No exact DRK chart match found'
+        : 'Awaiting partner confirmation')
+  )
+}
+
+const PARTNER_HANDOFF_SUMMARY =
+  'Intake approved · referral partner contacted · ready to assign an owner'
+
+function opsTimestamp(date = new Date()) {
   return new Intl.DateTimeFormat('en-US', {
     month: 'long',
     day: 'numeric',
     year: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
-  }).format(new Date())
+  }).format(date)
+}
+
+function prependEodFeedRows(days: StepFeedDay[], rows: StepFeedRow[]): StepFeedDay[] {
+  if (!rows.length) return days
+
+  const existing = new Set(days.flatMap((day) => day.rows.map((row) => row.patientId)))
+  const injected = rows.filter((row) => !existing.has(row.patientId))
+  if (!injected.length) return days
+
+  return [
+    {
+      key: `eod-injected-${injected[0].stepId}`,
+      label: 'Today',
+      month: '—',
+      day: '—',
+      rows: injected,
+    },
+    ...days,
+  ]
+}
+
+function shiftedOpsTimestamp(timestamp: string, minutes: number) {
+  const parsed = parseOpsDate(timestamp)
+  if (!parsed) return timestamp
+  return opsTimestamp(new Date(parsed.timeMs + minutes * 60 * 1000))
+}
+
+function availabilityRequestTimes(requestedAt = new Date()) {
+  return {
+    requestedAt: opsTimestamp(requestedAt),
+    deadlineAt: opsTimestamp(new Date(requestedAt.getTime() + 60 * 60 * 1000)),
+  }
 }
 
 export function StagePatientSteps({
@@ -52,7 +360,21 @@ export function StagePatientSteps({
   stageId: FlowOpsPageId
   microsteps: AutomationMicrostep[]
 }) {
-  const [selectedStepId, setSelectedStepId] = useState(microsteps[0]?.id ?? '')
+  const { state, dispatch } = useDemo()
+  const [selectedStepId, setSelectedStepId] = useState(() => {
+    return (
+      microsteps.find((step) =>
+        Object.values(state.actionTimers).some(
+          (timer) =>
+            timer.stageId === stageId &&
+            timer.stepId === step.id &&
+            (timer.status === 'overdue' || timer.status === 'warning'),
+        ),
+      )?.id ??
+      microsteps[0]?.id ??
+      ''
+    )
+  })
   const [patientQuery, setPatientQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilterValue>('all')
   const [statusMenuOpen, setStatusMenuOpen] = useState(false)
@@ -65,25 +387,85 @@ export function StagePatientSteps({
   const [confirmedAssignments, setConfirmedAssignments] = useState<
     Record<string, boolean>
   >({})
-  const [latestAssignmentNotification, setLatestAssignmentNotification] =
-    useState<{ patientId: string; occurredAt: string } | null>(null)
-  const [assignmentNotificationUnread, setAssignmentNotificationUnread] =
-    useState(false)
   const [showUnreadAssignmentMessage, setShowUnreadAssignmentMessage] =
     useState(false)
+  const [showUnreadProviderMessage, setShowUnreadProviderMessage] =
+    useState(false)
+  const [showUnreadHandoffMessage, setShowUnreadHandoffMessage] =
+    useState(false)
+  const [showUnreadProviderRecordsMessage, setShowUnreadProviderRecordsMessage] =
+    useState(false)
+  const [showUnreadAssignmentHandoff, setShowUnreadAssignmentHandoff] =
+    useState(false)
+  const [showUnreadAssignmentOwner, setShowUnreadAssignmentOwner] =
+    useState(false)
+  const [showUnreadProviderSelect, setShowUnreadProviderSelect] =
+    useState(false)
+  const [showUnreadIntakeDuplicate, setShowUnreadIntakeDuplicate] =
+    useState(false)
+  const [eodEscalated, setEodEscalated] = useState<Record<string, boolean>>({})
+  const [eodManualCmFollowUp, setEodManualCmFollowUp] = useState<
+    Record<string, boolean>
+  >({})
+  const [showUnreadEodFollowUpMessage, setShowUnreadEodFollowUpMessage] =
+    useState(false)
+  const [showUnreadEodEscalationMessage, setShowUnreadEodEscalationMessage] =
+    useState(false)
+  const [weeklyRescheduleConfirmed, setWeeklyRescheduleConfirmed] = useState<
+    Record<string, boolean>
+  >({})
+  const [weeklyDischargeReview, setWeeklyDischargeReview] = useState<
+    Record<string, boolean>
+  >({})
+  const [weeklyHoldsActionTaken, setWeeklyHoldsActionTaken] = useState<
+    Record<string, boolean>
+  >({})
+  const [weeklyAppointmentRescheduled, setWeeklyAppointmentRescheduled] =
+    useState<Record<string, boolean>>({})
   const statusMenuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    setSelectedStepId(microsteps[0]?.id ?? '')
+    const overdueOrWarningStep =
+      microsteps.find((step) =>
+        Object.values(state.actionTimers).some(
+          (timer) =>
+            timer.stageId === stageId &&
+            timer.stepId === step.id &&
+            (timer.status === 'overdue' || timer.status === 'warning'),
+        ),
+      )?.id ?? microsteps[0]?.id ?? ''
+    setSelectedStepId(overdueOrWarningStep)
+    if (overdueOrWarningStep) {
+      dispatch({
+        type: 'SET_OPS_SELECTED_STEP',
+        stageId,
+        stepId: overdueOrWarningStep,
+      })
+    }
     setPatientQuery('')
     setStatusFilter('all')
     setStatusMenuOpen(false)
     setPartnerConfirmed({})
     setSelectedCaseManagers({})
     setConfirmedAssignments({})
-    setLatestAssignmentNotification(null)
-    setAssignmentNotificationUnread(false)
     setShowUnreadAssignmentMessage(false)
+    setShowUnreadProviderMessage(false)
+    setShowUnreadHandoffMessage(false)
+    setShowUnreadProviderRecordsMessage(false)
+    setShowUnreadAssignmentHandoff(false)
+    setShowUnreadAssignmentOwner(false)
+    setShowUnreadProviderSelect(false)
+    setShowUnreadIntakeDuplicate(false)
+    setEodEscalated({})
+    setEodManualCmFollowUp({})
+    setShowUnreadEodFollowUpMessage(false)
+    setShowUnreadEodEscalationMessage(false)
+    setWeeklyRescheduleConfirmed({})
+    setWeeklyDischargeReview({})
+    setWeeklyHoldsActionTaken({})
+    setWeeklyAppointmentRescheduled({})
+    // Only re-home when the stage changes — not on every timer tick.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stageId, microsteps[0]?.id])
 
   useEffect(() => {
@@ -105,13 +487,26 @@ export function StagePatientSteps({
   const selectedStep =
     microsteps.find((step) => step.id === selectedStepId) ?? microsteps[0]
 
+  const statusFilters = stepStatusFilters(selectedStepId)
+  const activeStatusFilter =
+    statusFilter === 'all' ||
+    statusFilters.some((item) => item.id === statusFilter)
+      ? statusFilter
+      : 'all'
+
   const statuses =
-    statusFilter === 'all' ? DEFAULT_STATUSES : [statusFilter]
+    usesCustomStatusFilter(selectedStepId) ||
+    activeStatusFilter === 'all' ||
+    activeStatusFilter === 'needs-attention'
+      ? DEFAULT_STATUSES
+      : activeStatusFilter === 'waiting'
+        ? (['waiting', 'blocked'] as PatientStepStatus[])
+        : [activeStatusFilter as PatientStepStatus]
 
   const selectedStatusOption =
-    statusFilter === 'all'
+    activeStatusFilter === 'all'
       ? null
-      : STATUS_FILTERS.find((item) => item.id === statusFilter) ?? null
+      : statusFilters.find((item) => item.id === activeStatusFilter) ?? null
 
   const days = useMemo(
     () =>
@@ -130,58 +525,712 @@ export function StagePatientSteps({
     )
   }, [days, selectedStepId])
 
-  const displayDays = useMemo(() => {
-    if (
-      selectedStepId !== 'assign-owner' ||
-      !latestAssignmentNotification
-    ) {
-      return days
+  const latestProviderAvailability = useMemo(() => {
+    const patientId = state.latestProviderAvailabilityPatientId
+    const request = patientId ? state.providerAvailability[patientId] : undefined
+    if (!patientId || !request) return null
+    return {
+      patientId,
+      occurredAt: request.requestedAt,
+      deadlineAt: request.deadlineAt,
     }
+  }, [
+    state.latestProviderAvailabilityPatientId,
+    state.providerAvailability,
+  ])
+
+  const latestSchedulingHandoff = state.schedulingHandoffs[0] ?? null
+  const latestAssignmentHandoff = state.latestAssignmentHandoff
+  const latestIntakeReview = state.latestIntakeReview
+  const latestPartnerContact = state.latestPartnerContact
+
+  const displayDays = useMemo(() => {
+    const latest =
+      selectedStepId === 'determine-owner'
+        ? latestPartnerContact
+        : selectedStepId === 'assign-owner' ||
+      selectedStepId === 'select-provider' ||
+      isAssignmentHandoffStep(selectedStepId)
+        ? latestAssignmentHandoff
+        : selectedStepId === 'confirm-provider-availability'
+          ? latestProviderAvailability
+          : selectedStepId === 'update-monday-drk' ||
+              selectedStepId === 'send-referral-provider'
+            ? latestSchedulingHandoff
+              ? {
+                  patientId: latestSchedulingHandoff.patientId,
+                  occurredAt: latestSchedulingHandoff.readyAt,
+                }
+              : null
+            : isIntakeFollowUpStep(selectedStepId)
+              ? latestIntakeReview
+              : null
+    if (!latest) return days
 
     const latestRow = days
       .flatMap((day) => day.rows)
-      .find(
-        (row) => row.patientId === latestAssignmentNotification.patientId,
-      )
-    if (!latestRow) return days
+      .find((row) => row.patientId === latest.patientId)
+    const recordsSummary = latestSchedulingHandoff
+      ? `Monday.com and DRK updated with ${latestSchedulingHandoff.provider.name}`
+      : ''
+    const referralSummary =
+      latestSchedulingHandoff?.route === 'provider_confirmed'
+        ? `Referral sent to ${latestSchedulingHandoff.provider.name}`
+        : 'Referral ready to send'
+    const referralStatus =
+      latestSchedulingHandoff?.route === 'provider_confirmed'
+        ? ('done' as const)
+        : ('waiting' as const)
+    const injectedRow = latestRow
+      ? {
+          ...latestRow,
+          occurredAt: latest.occurredAt,
+          status:
+            selectedStepId === 'determine-owner'
+              ? ('waiting' as const)
+              : selectedStepId === 'update-monday-drk'
+              ? ('done' as const)
+              : selectedStepId === 'send-referral-provider'
+                ? referralStatus
+                : selectedStepId === 'confirm-referral-contacted'
+                  ? ('waiting' as const)
+                  : isIntakeFollowUpStep(selectedStepId)
+                    ? ('done' as const)
+                    : latestRow.status,
+          summary:
+            selectedStepId === 'determine-owner'
+              ? PARTNER_HANDOFF_SUMMARY
+              : selectedStepId === 'update-monday-drk'
+              ? recordsSummary
+              : selectedStepId === 'send-referral-provider'
+                ? referralSummary
+                : isIntakeFollowUpStep(selectedStepId)
+                  ? intakeFollowUpSummary(latest.patientId, selectedStepId)
+                  : latestRow.summary,
+        }
+      : selectedStepId === 'determine-owner' && latestPartnerContact
+        ? {
+            patientId: latestPartnerContact.patientId,
+            patientName: latestPartnerContact.patientName,
+            stepId: 'determine-owner',
+            status: 'waiting' as const,
+            summary: PARTNER_HANDOFF_SUMMARY,
+            occurredAt: latestPartnerContact.occurredAt,
+          }
+      : selectedStepId === 'update-monday-drk' && latestSchedulingHandoff
+        ? {
+            patientId: latestSchedulingHandoff.patientId,
+            patientName: latestSchedulingHandoff.patientName,
+            stepId: 'update-monday-drk',
+            status: 'done' as const,
+            summary: recordsSummary,
+            occurredAt: latestSchedulingHandoff.readyAt,
+          }
+        : selectedStepId === 'send-referral-provider' && latestSchedulingHandoff
+        ? {
+            patientId: latestSchedulingHandoff.patientId,
+            patientName: latestSchedulingHandoff.patientName,
+            stepId: 'send-referral-provider',
+            status: referralStatus,
+            summary: referralSummary,
+            occurredAt: latestSchedulingHandoff.readyAt,
+          }
+        : selectedStepId === 'assign-owner' && latestAssignmentHandoff
+          ? {
+              patientId: latestAssignmentHandoff.patientId,
+              patientName: latestAssignmentHandoff.patientName,
+              stepId: 'assign-owner',
+              status: 'done' as const,
+              summary: 'Case manager notified of the new assignment',
+              occurredAt: latestAssignmentHandoff.occurredAt,
+            }
+        : selectedStepId === 'select-provider' && latestAssignmentHandoff
+          ? {
+              patientId: latestAssignmentHandoff.patientId,
+              patientName: latestAssignmentHandoff.patientName,
+              stepId: 'select-provider',
+              status: 'waiting' as const,
+              summary: 'Case manager assigned · ready to select provider',
+              occurredAt: latestAssignmentHandoff.occurredAt,
+            }
+        : isAssignmentHandoffStep(selectedStepId) && latestAssignmentHandoff
+          ? {
+              patientId: latestAssignmentHandoff.patientId,
+              patientName: latestAssignmentHandoff.patientName,
+              stepId: selectedStepId,
+              status: 'done' as const,
+              summary:
+                selectedStepId === 'notify-referral-source'
+                  ? 'Referral source notified · assigned case manager CCd'
+                  : selectedStepId === 'create-monday-record'
+                    ? 'Monday.com record created from canonical referral'
+                    : 'DRK chart created from approved intake data',
+              occurredAt: latestAssignmentHandoff.occurredAt,
+            }
+        : isIntakeFollowUpStep(selectedStepId) && latestIntakeReview
+          ? {
+              patientId: latestIntakeReview.patientId,
+              patientName: latestIntakeReview.patientName,
+              stepId: selectedStepId,
+              status:
+                selectedStepId === 'confirm-referral-contacted'
+                  ? ('waiting' as const)
+                  : ('done' as const),
+              summary: intakeFollowUpSummary(
+                latestIntakeReview.patientId,
+                selectedStepId,
+              ),
+              occurredAt: latestIntakeReview.occurredAt,
+            }
+        : null
+    if (!injectedRow) return days
 
     const remainingDays = days
       .map((day) => ({
         ...day,
         rows: day.rows.filter(
-          (row) => row.patientId !== latestAssignmentNotification.patientId,
+          (row) => row.patientId !== latest.patientId,
         ),
       }))
       .filter((day) => day.rows.length > 0)
 
     return [
       {
-        key: 'latest-assignment-notification',
+        key: `latest-${selectedStepId}`,
         label: 'Today',
         month: '—',
         day: '—',
-        rows: [
-          {
-            ...latestRow,
-            occurredAt: latestAssignmentNotification.occurredAt,
-          },
-        ],
+        rows: [injectedRow],
       },
       ...remainingDays,
     ]
-  }, [days, latestAssignmentNotification, selectedStepId])
+  }, [
+    days,
+    latestAssignmentHandoff,
+    latestIntakeReview,
+    latestPartnerContact,
+    latestProviderAvailability,
+    latestSchedulingHandoff,
+    selectedStepId,
+  ])
+
+  const scheduleAwareDays = useMemo(
+    () =>
+      selectedStepId === 'schedule-patient'
+        ? overlayScheduleDays(displayDays, state.patientSchedules)
+        : displayDays,
+    [displayDays, selectedStepId, state.patientSchedules],
+  )
+
+  const filteredDisplayDays = useMemo(() => {
+    if (selectedStepId === 'check-scheduling-status') {
+      return scheduleAwareDays
+        .map((day) => ({
+          ...day,
+          rows: day.rows.filter((row) => {
+            const bucket = eodSchedulingBucket(
+              eodForPatient(row.patientId, state.patientSchedules),
+            )
+            if (activeStatusFilter === 'all') return true
+            return bucket === activeStatusFilter
+          }),
+        }))
+        .filter((day) => day.rows.length > 0)
+    }
+    if (selectedStepId === 'follow-up-case-manager') {
+      const filtered = scheduleAwareDays
+        .map((day) => ({
+          ...day,
+          rows: day.rows.filter((row) =>
+            eodFollowUpEligible(
+              eodForPatient(row.patientId, state.patientSchedules),
+              Boolean(eodManualCmFollowUp[row.patientId]),
+            ),
+          ),
+        }))
+        .filter((day) => day.rows.length > 0)
+
+      const manualRows = Object.entries(eodManualCmFollowUp)
+        .filter(([, sent]) => sent)
+        .map(([patientId]): StepFeedRow | null => {
+          const patient = patientsForStage(stageId).find(
+            (entry) => entry.patientId === patientId,
+          )
+          if (!patient) return null
+          const record = eodForPatient(patientId, state.patientSchedules)
+          return {
+            patientId,
+            patientName: patient.patientName,
+            stepId: 'follow-up-case-manager',
+            status: 'done',
+            summary: eodCmFollowUpSummary(record, true),
+            occurredAt: opsTimestamp(),
+          }
+        })
+        .filter((row): row is StepFeedRow => row !== null)
+
+      return prependEodFeedRows(filtered, manualRows)
+    }
+    if (selectedStepId === 'escalate-unresolved-cases') {
+      const filtered = scheduleAwareDays
+        .map((day) => ({
+          ...day,
+          rows: day.rows.filter((row) => {
+            const record = eodForPatient(row.patientId, state.patientSchedules)
+            return eodEscalationEligible(
+              record,
+              Boolean(
+                eodEscalated[row.patientId] || record.escalatedToManagement,
+              ),
+            )
+          }),
+        }))
+        .filter((day) => day.rows.length > 0)
+
+      const escalatedRows = Object.entries(eodEscalated)
+        .filter(([, escalated]) => escalated)
+        .map(([patientId]): StepFeedRow | null => {
+          const patient = patientsForStage(stageId).find(
+            (entry) => entry.patientId === patientId,
+          )
+          if (!patient) return null
+          const record = eodForPatient(patientId, state.patientSchedules)
+          return {
+            patientId,
+            patientName: patient.patientName,
+            stepId: 'escalate-unresolved-cases',
+            status: 'done',
+            summary: eodEscalationConfirmLabel(record),
+            occurredAt: opsTimestamp(),
+          }
+        })
+        .filter((row): row is StepFeedRow => row !== null)
+
+      return prependEodFeedRows(filtered, escalatedRows)
+    }
+    if (selectedStepId === 'patient-seen') {
+      return scheduleAwareDays
+        .map((day) => ({
+          ...day,
+          rows: day.rows.filter((row) => {
+            const record = weeklyVisitCheckForPatient(row.patientId)
+            if (!weeklyPatientSeenEligible(record)) return false
+            if (activeStatusFilter === 'done') {
+              return record?.visitOutcome === 'seen'
+            }
+            if (activeStatusFilter === 'waiting') {
+              return record?.visitOutcome === 'not_seen'
+            }
+            return true
+          }),
+        }))
+        .filter((day) => day.rows.length > 0)
+    }
+    if (selectedStepId === 'wound-healed') {
+      return scheduleAwareDays
+        .map((day) => ({
+          ...day,
+          rows: day.rows.filter((row) => {
+            const record = weeklyVisitCheckForPatient(row.patientId)
+            if (!weeklyWoundHealedEligible(record)) return false
+            const actionDone = weeklyHoldsActionComplete(
+              record,
+              Boolean(weeklyHoldsActionTaken[row.patientId]),
+            )
+            if (activeStatusFilter === 'done') return actionDone
+            if (activeStatusFilter === 'waiting') return !actionDone
+            return true
+          }),
+        }))
+        .filter((day) => day.rows.length > 0)
+    }
+    if (selectedStepId === 'patient-expired') {
+      return scheduleAwareDays
+        .map((day) => ({
+          ...day,
+          rows: day.rows.filter((row) => {
+            const record = weeklyVisitCheckForPatient(row.patientId)
+            if (!weeklyPatientExpiredEligible(record)) return false
+            const actionDone = weeklyHoldsActionComplete(
+              record,
+              Boolean(weeklyHoldsActionTaken[row.patientId]),
+            )
+            if (activeStatusFilter === 'done') return actionDone
+            if (activeStatusFilter === 'waiting') return !actionDone
+            return true
+          }),
+        }))
+        .filter((day) => day.rows.length > 0)
+    }
+    if (selectedStepId === 'patient-on-hold') {
+      return scheduleAwareDays
+        .map((day) => ({
+          ...day,
+          rows: day.rows.filter((row) => {
+            const record = weeklyVisitCheckForPatient(row.patientId)
+            if (!weeklyPatientOnHoldEligible(record)) return false
+            const actionDone = weeklyHoldsActionComplete(
+              record,
+              Boolean(weeklyHoldsActionTaken[row.patientId]),
+            )
+            if (activeStatusFilter === 'done') return actionDone
+            if (activeStatusFilter === 'waiting') return !actionDone
+            return true
+          }),
+        }))
+        .filter((day) => day.rows.length > 0)
+    }
+    return scheduleAwareDays
+  }, [
+    scheduleAwareDays,
+    eodEscalated,
+    eodManualCmFollowUp,
+    selectedStepId,
+    stageId,
+    activeStatusFilter,
+    weeklyHoldsActionTaken,
+    state.patientSchedules,
+  ])
+
+  const scopedPatient = state.opsScopedPatient
+  const stepUnreadCounts = unreadStepCounts(state)
+  const attentionFilteredDays = useMemo(() => {
+    if (activeStatusFilter !== 'needs-attention') return filteredDisplayDays
+    return filteredDisplayDays
+      .map((day) => ({
+        ...day,
+        rows: day.rows.filter((row) => {
+          const status = timerForPatientStep(
+            state.actionTimers,
+            row.patientId,
+            selectedStepId,
+          )?.status
+          return status === 'overdue' || status === 'warning'
+        }),
+      }))
+      .filter((day) => day.rows.length > 0)
+  }, [
+    filteredDisplayDays,
+    activeStatusFilter,
+    state.actionTimers,
+    selectedStepId,
+  ])
+
+  const scopedDisplayDays = useMemo(() => {
+    const scopedId = scopedPatient?.patientId
+    if (!scopedId) return attentionFilteredDays
+    return attentionFilteredDays
+      .map((day) => ({
+        ...day,
+        rows: day.rows.filter((row) => row.patientId === scopedId),
+      }))
+      .filter((day) => day.rows.length > 0)
+  }, [attentionFilteredDays, scopedPatient?.patientId])
+
+  /** Overdue and due-soon confirmations lead the feed; cleared items drop out. */
+  const attentionDisplayDays = useMemo(() => {
+    const urgent: StepFeedRow[] = []
+    const rest: StepFeedDay[] = []
+    for (const day of scopedDisplayDays) {
+      const keep: StepFeedRow[] = []
+      for (const row of day.rows) {
+        const status = timerForPatientStep(
+          state.actionTimers,
+          row.patientId,
+          selectedStepId,
+        )?.status
+        if (status === 'overdue' || status === 'warning') urgent.push(row)
+        else keep.push(row)
+      }
+      if (keep.length) rest.push({ ...day, rows: keep })
+    }
+    if (!urgent.length) return scopedDisplayDays
+
+    urgent.sort((a, b) =>
+      compareAttention(
+        timerForPatientStep(state.actionTimers, a.patientId, selectedStepId),
+        timerForPatientStep(state.actionTimers, b.patientId, selectedStepId),
+      ),
+    )
+
+    return [
+      {
+        key: 'needs-attention',
+        label: 'Needs immediate attention',
+        month: '—',
+        day: '—',
+        rows: urgent,
+      },
+      ...rest,
+    ]
+  }, [scopedDisplayDays, state.actionTimers, selectedStepId])
+
+  const scopedStepStatuses = useMemo(() => {
+    if (!scopedPatient) return undefined
+    const rows = stepsForPatient(stageId, scopedPatient.patientId)
+    if (!rows.length) return undefined
+    return Object.fromEntries(rows.map((row) => [row.stepId, row.status]))
+  }, [scopedPatient, stageId])
+
+  useEffect(() => {
+    if (
+      stageId !== 'assignment' ||
+      selectedStepId !== 'assign-owner' ||
+      !state.assignmentNotifyUnread
+    ) {
+      return
+    }
+    setShowUnreadAssignmentMessage(true)
+  }, [selectedStepId, stageId, state.assignmentNotifyUnread])
+
+  useEffect(() => {
+    if (
+      stageId !== 'provider' ||
+      selectedStepId !== 'confirm-provider-availability' ||
+      !state.providerAvailabilityUnread
+    ) {
+      return
+    }
+    setShowUnreadProviderMessage(true)
+  }, [selectedStepId, stageId, state.providerAvailabilityUnread])
+
+  useEffect(() => {
+    if (
+      stageId !== 'end-of-day' ||
+      selectedStepId !== 'follow-up-case-manager' ||
+      !state.eodFollowUpUnread
+    ) {
+      return
+    }
+    setShowUnreadEodFollowUpMessage(true)
+  }, [selectedStepId, stageId, state.eodFollowUpUnread])
+
+  useEffect(() => {
+    if (
+      stageId !== 'end-of-day' ||
+      selectedStepId !== 'escalate-unresolved-cases' ||
+      !state.eodEscalationUnread
+    ) {
+      return
+    }
+    setShowUnreadEodEscalationMessage(true)
+  }, [selectedStepId, stageId, state.eodEscalationUnread])
+
+  useEffect(() => {
+    if (
+      stageId !== 'handoff' ||
+      !isAssignmentHandoffStep(selectedStepId) ||
+      !assignmentHandoffUnreadForStep(state, selectedStepId)
+    ) {
+      return
+    }
+    setShowUnreadAssignmentHandoff(true)
+  }, [
+    selectedStepId,
+    stageId,
+    state.handoffDrkUnread,
+    state.handoffMondayUnread,
+    state.handoffNotifyUnread,
+  ])
+
+  useEffect(() => {
+    if (
+      stageId !== 'provider' ||
+      selectedStepId !== 'select-provider' ||
+      !state.providerSelectUnread
+    ) {
+      return
+    }
+    setShowUnreadProviderSelect(true)
+  }, [selectedStepId, stageId, state.providerSelectUnread])
+
+  useEffect(() => {
+    if (
+      stageId !== 'assignment' ||
+      selectedStepId !== 'determine-owner' ||
+      !state.assignmentOwnerUnread
+    ) {
+      return
+    }
+    setShowUnreadAssignmentOwner(true)
+  }, [selectedStepId, stageId, state.assignmentOwnerUnread])
+
+  useEffect(() => {
+    if (
+      stageId !== 'intake' ||
+      !isIntakeFollowUpStep(selectedStepId) ||
+      !intakeFollowUpUnreadForStep(state, selectedStepId)
+    ) {
+      return
+    }
+    setShowUnreadIntakeDuplicate(true)
+  }, [
+    selectedStepId,
+    stageId,
+    state.intakeDrkUnread,
+    state.intakeMondayUnread,
+    state.intakePartnerUnread,
+  ])
+
+  useEffect(() => {
+    if (
+      stageId !== 'scheduling' ||
+      selectedStepId !== 'send-referral-provider' ||
+      !state.schedulingHandoffMessageUnread
+    ) {
+      return
+    }
+    setShowUnreadHandoffMessage(true)
+    dispatch({ type: 'MARK_SCHEDULING_HANDOFF_READ' })
+  }, [
+    dispatch,
+    selectedStepId,
+    stageId,
+    state.schedulingHandoffMessageUnread,
+  ])
+
+  useEffect(() => {
+    if (
+      stageId !== 'provider' ||
+      selectedStepId !== 'update-monday-drk' ||
+      !state.providerRecordsMessageUnread
+    ) {
+      return
+    }
+    setShowUnreadProviderRecordsMessage(true)
+    dispatch({ type: 'MARK_PROVIDER_RECORDS_READ' })
+  }, [
+    dispatch,
+    selectedStepId,
+    stageId,
+    state.providerRecordsMessageUnread,
+  ])
 
   const selectStep = (stepId: string) => {
+    if (selectedStepId === 'determine-owner' && stepId !== 'determine-owner') {
+      setShowUnreadAssignmentOwner(false)
+    }
+    if (stepId === 'determine-owner') {
+      const unread = state.assignmentOwnerUnread
+      setShowUnreadAssignmentOwner(unread)
+      if (unread) {
+        dispatch({ type: 'MARK_ASSIGNMENT_OWNER_READ' })
+      }
+    }
     if (selectedStepId === 'assign-owner' && stepId !== 'assign-owner') {
       setShowUnreadAssignmentMessage(false)
     }
     if (stepId === 'assign-owner') {
-      setShowUnreadAssignmentMessage(assignmentNotificationUnread)
+      const unread = state.assignmentNotifyUnread
+      setShowUnreadAssignmentMessage(unread)
+      if (unread) {
+        dispatch({ type: 'MARK_ASSIGNMENT_NOTIFY_READ' })
+      }
+    }
+    if (
+      selectedStepId === 'confirm-provider-availability' &&
+      stepId !== 'confirm-provider-availability'
+    ) {
+      setShowUnreadProviderMessage(false)
+    }
+    if (stepId === 'confirm-provider-availability') {
+      const unread = state.providerAvailabilityUnread
+      setShowUnreadProviderMessage(unread)
+      if (unread) {
+        dispatch({ type: 'MARK_PROVIDER_AVAILABILITY_READ' })
+      }
+    }
+    if (
+      selectedStepId === 'send-referral-provider' &&
+      stepId !== 'send-referral-provider'
+    ) {
+      setShowUnreadHandoffMessage(false)
+    }
+    if (stepId === 'send-referral-provider') {
+      setShowUnreadHandoffMessage(state.schedulingHandoffMessageUnread)
+      if (state.schedulingHandoffMessageUnread) {
+        dispatch({ type: 'MARK_SCHEDULING_HANDOFF_READ' })
+      }
+    }
+    if (
+      selectedStepId === 'update-monday-drk' &&
+      stepId !== 'update-monday-drk'
+    ) {
+      setShowUnreadProviderRecordsMessage(false)
+    }
+    if (stepId === 'update-monday-drk') {
+      setShowUnreadProviderRecordsMessage(state.providerRecordsMessageUnread)
+      if (state.providerRecordsUnread || state.providerRecordsMessageUnread) {
+        dispatch({ type: 'MARK_PROVIDER_RECORDS_READ' })
+      }
+    }
+    if (
+      selectedStepId === 'follow-up-case-manager' &&
+      stepId !== 'follow-up-case-manager'
+    ) {
+      setShowUnreadEodFollowUpMessage(false)
+    }
+    if (stepId === 'follow-up-case-manager') {
+      const unread = state.eodFollowUpUnread
+      setShowUnreadEodFollowUpMessage(unread)
+      if (unread) {
+        dispatch({ type: 'MARK_EOD_FOLLOW_UP_READ' })
+      }
+    }
+    if (
+      selectedStepId === 'escalate-unresolved-cases' &&
+      stepId !== 'escalate-unresolved-cases'
+    ) {
+      setShowUnreadEodEscalationMessage(false)
+    }
+    if (stepId === 'escalate-unresolved-cases') {
+      const unread = state.eodEscalationUnread
+      setShowUnreadEodEscalationMessage(unread)
+      if (unread) {
+        dispatch({ type: 'MARK_EOD_ESCALATION_READ' })
+      }
+    }
+    if (
+      isAssignmentHandoffStep(selectedStepId) &&
+      !isAssignmentHandoffStep(stepId)
+    ) {
+      setShowUnreadAssignmentHandoff(false)
+    }
+    if (isAssignmentHandoffStep(stepId)) {
+      const unread = assignmentHandoffUnreadForStep(state, stepId)
+      setShowUnreadAssignmentHandoff(unread)
+      if (unread) {
+        dispatch({ type: 'MARK_HANDOFF_STEP_READ', stepId })
+      }
+    }
+    if (
+      selectedStepId === 'select-provider' &&
+      stepId !== 'select-provider'
+    ) {
+      setShowUnreadProviderSelect(false)
+    }
+    if (stepId === 'select-provider') {
+      const unread = state.providerSelectUnread
+      setShowUnreadProviderSelect(unread)
+      if (unread) {
+        dispatch({ type: 'MARK_PROVIDER_SELECT_READ' })
+      }
+    }
+    if (
+      isIntakeFollowUpStep(selectedStepId) &&
+      !isIntakeFollowUpStep(stepId)
+    ) {
+      setShowUnreadIntakeDuplicate(false)
+    }
+    if (isIntakeFollowUpStep(stepId)) {
+      const unread = intakeFollowUpUnreadForStep(state, stepId)
+      setShowUnreadIntakeDuplicate(unread)
+      if (unread) {
+        dispatch({ type: 'MARK_INTAKE_STEP_READ', stepId })
+      }
     }
     setSelectedStepId(stepId)
-    if (stepId === 'assign-owner') {
-      setAssignmentNotificationUnread(false)
-    }
+    dispatch({ type: 'SET_OPS_SELECTED_STEP', stageId, stepId })
   }
 
   const pickStatus = (value: StatusFilterValue) => {
@@ -205,8 +1254,21 @@ export function StagePatientSteps({
           steps={microsteps}
           selectedStepId={selectedStepId}
           onSelect={selectStep}
+          stepStatuses={scopedStepStatuses}
+          overdueStepIds={overdueStepIds(state.actionTimers, stageId)}
+          overdueCounts={Object.values(state.actionTimers).reduce<
+            Record<string, number>
+          >((counts, timer) => {
+            if (timer.stageId !== stageId || timer.status !== 'overdue') {
+              return counts
+            }
+            counts[timer.stepId] = (counts[timer.stepId] ?? 0) + 1
+            return counts
+          }, {})}
+          warningStepIds={warningStepIds(state.actionTimers, stageId)}
+          unreadCounts={scopedPatient ? {} : stepUnreadCounts}
           attentionStepIds={
-            assignmentNotificationUnread ? ['assign-owner'] : []
+            scopedPatient ? [] : Object.keys(stepUnreadCounts)
           }
         />
       </aside>
@@ -234,7 +1296,7 @@ export function StagePatientSteps({
             >
               <button
                 type="button"
-                className={`stage-ops-steps__status-trigger${statusMenuOpen ? ' is-open' : ''}${selectedStatusOption ? ` is-${selectedStatusOption.id}` : ''}`}
+                className={`stage-ops-steps__status-trigger${statusMenuOpen ? ' is-open' : ''}${selectedStatusOption ? ` is-${statusFilterTone(selectedStatusOption)}` : ''}`}
                 aria-label="Filter by status"
                 aria-haspopup="listbox"
                 aria-expanded={statusMenuOpen}
@@ -262,20 +1324,20 @@ export function StagePatientSteps({
                     <button
                       type="button"
                       role="option"
-                      aria-selected={statusFilter === 'all'}
-                      className={`stage-ops-steps__status-option${statusFilter === 'all' ? ' is-selected' : ''}`}
+                      aria-selected={activeStatusFilter === 'all'}
+                      className={`stage-ops-steps__status-option${activeStatusFilter === 'all' ? ' is-selected' : ''}`}
                       onClick={() => pickStatus('all')}
                     >
                       All statuses
                     </button>
                   </li>
-                  {STATUS_FILTERS.map((status) => (
+                  {statusFilters.map((status) => (
                     <li key={status.id}>
                       <button
                         type="button"
                         role="option"
-                        aria-selected={statusFilter === status.id}
-                        className={`stage-ops-steps__status-option is-${status.id}${statusFilter === status.id ? ' is-selected' : ''}`}
+                        aria-selected={activeStatusFilter === status.id}
+                        className={`stage-ops-steps__status-option is-${statusFilterTone(status)}${activeStatusFilter === status.id ? ' is-selected' : ''}`}
                         onClick={() => pickStatus(status.id)}
                       >
                         {status.meaning}
@@ -286,30 +1348,53 @@ export function StagePatientSteps({
               ) : null}
             </div>
 
-            <label className="stage-ops-steps__patient-search">
-              <Search size={15} aria-hidden="true" />
-              <input
-                type="search"
-                value={patientQuery}
-                onChange={(event) => setPatientQuery(event.target.value)}
-                placeholder="Search patients"
-                aria-label="Search patients"
-              />
-            </label>
+            {scopedPatient ? (
+              <span className="stage-ops-steps__patient-chip">
+                {scopedPatient.patientName}
+                <button
+                  type="button"
+                  className="stage-ops-steps__patient-chip-clear"
+                  aria-label="Clear patient"
+                  onClick={() => dispatch({ type: 'CLEAR_OPS_PATIENT' })}
+                >
+                  <X size={14} aria-hidden="true" />
+                </button>
+              </span>
+            ) : (
+              <label className="stage-ops-steps__patient-search">
+                <Search size={15} aria-hidden="true" />
+                <input
+                  type="search"
+                  value={patientQuery}
+                  onChange={(event) => setPatientQuery(event.target.value)}
+                  placeholder="Search patients"
+                  aria-label="Search patients"
+                />
+              </label>
+            )}
           </div>
         </div>
 
-        {displayDays.length ? (
+        {attentionDisplayDays.length ? (
           <ol
             className="stage-ops-step-feed"
             aria-label="Step updates"
             key={selectedStepId}
           >
-            {displayDays.map((day) => (
-              <li key={day.key} className="stage-ops-step-feed__day">
+            {attentionDisplayDays.map((day) => (
+              <li
+                key={day.key}
+                className={`stage-ops-step-feed__day${
+                  day.key === 'needs-attention' ? ' is-attention' : ''
+                }`}
+              >
                 <h4 className="stage-ops-step-feed__day-header">
                   <time
-                    dateTime={day.key === 'undated' ? undefined : day.key}
+                    dateTime={
+                      day.key === 'undated' || day.key === 'needs-attention'
+                        ? undefined
+                        : day.key
+                    }
                   >
                     {day.label}
                   </time>
@@ -321,16 +1406,151 @@ export function StagePatientSteps({
 
                 <ul className="stage-ops-step-feed__rows">
                   {day.rows.map((row) => {
-                    const detail = detailForRow(row.patientId)
+                    const rawDetail = detailForRow(row.patientId)
+                    const detail =
+                      selectedStepId === 'extract-and-verify' && rawDetail
+                        ? overlayIntakeDetail(
+                            rawDetail,
+                            state.intakeFieldEdits[row.patientId],
+                            state.intakeSectionRows[row.patientId],
+                          )
+                        : rawDetail
                     const canonical = intakeDemoPatient(row.patientId)?.canonical
                     const suggestedCaseManager = caseManagerSuggestion(
                       row.patientId,
                     )
+                    const suggestedProvider = providerSuggestion(row.patientId)
+                    const patientLocation =
+                      providerPatientLocationDisplay(row.patientId)
+                    const locationMatchedProviders =
+                      providersForPatientLocation(row.patientId)
+                    const locationMatchedSuggestion =
+                      locationMatchedProviders.find(
+                        (provider) => provider.id === suggestedProvider.id,
+                      ) ?? locationMatchedProviders[0]
+                    const recommendedProvider =
+                      selectedStepId === 'select-provider'
+                        ? locationMatchedSuggestion
+                        : undefined
+                    const selectedProviderId =
+                      state.providerSelectedIds[row.patientId] ??
+                      locationMatchedSuggestion?.id ??
+                      suggestedProvider.id
+                    const selectedProvider =
+                      locationMatchedProviders.find(
+                        (provider) => provider.id === selectedProviderId,
+                      ) ??
+                      PROVIDER_OPTIONS.find(
+                        (provider) => provider.id === selectedProviderId,
+                      ) ??
+                      locationMatchedSuggestion ??
+                      suggestedProvider
+                    const noProviderLocationMatch =
+                      selectedStepId === 'select-provider' &&
+                      locationMatchedProviders.length === 0
+                    const providerTerritoryResolution =
+                      state.providerTerritoryResolutions[row.patientId]
+                    const providerConfirmed = Boolean(
+                      state.providerConfirmed[row.patientId],
+                    )
+                    const liveAvailability =
+                      state.providerAvailability[row.patientId]
+                    const isLatestProviderAvailability =
+                      row.patientId === latestProviderAvailability?.patientId
+                    const historicalAvailabilityOutcome:
+                      | 'waiting'
+                      | 'confirmed'
+                      | 'timeout' =
+                      row.status === 'done'
+                        ? 'confirmed'
+                        : row.status === 'blocked'
+                          ? 'timeout'
+                          : 'waiting'
+                    const showProviderAvailability =
+                      selectedStepId === 'confirm-provider-availability' &&
+                      (Boolean(liveAvailability) ||
+                        row.status === 'done' ||
+                        row.status === 'blocked' ||
+                        row.status === 'waiting' ||
+                        row.status === 'current')
+                    const providerAvailability = showProviderAvailability
+                      ? liveAvailability
+                        ? {
+                            provider: selectedProvider,
+                            requestedAt: liveAvailability.requestedAt,
+                            deadlineAt: liveAvailability.deadlineAt,
+                            outcome: liveAvailability.outcome,
+                            resolvedAt: liveAvailability.resolvedAt,
+                            responseDuration:
+                              liveAvailability.outcome === 'confirmed'
+                                ? '13 minutes'
+                                : liveAvailability.outcome === 'timeout' ||
+                                    liveAvailability.outcome ===
+                                      'placement_completed'
+                                  ? '1 hour'
+                                  : undefined,
+                          }
+                        : {
+                            provider: selectedProvider,
+                            requestedAt:
+                              historicalAvailabilityOutcome === 'confirmed'
+                                ? shiftedOpsTimestamp(row.occurredAt, -13)
+                                : historicalAvailabilityOutcome === 'timeout'
+                                  ? shiftedOpsTimestamp(row.occurredAt, -60)
+                                  : row.occurredAt,
+                            deadlineAt:
+                              historicalAvailabilityOutcome === 'timeout'
+                                ? row.occurredAt
+                                : historicalAvailabilityOutcome ===
+                                    'confirmed'
+                                  ? shiftedOpsTimestamp(row.occurredAt, 47)
+                                  : shiftedOpsTimestamp(row.occurredAt, 60),
+                            outcome: historicalAvailabilityOutcome,
+                            resolvedAt:
+                              historicalAvailabilityOutcome === 'confirmed'
+                                ? row.occurredAt
+                                : undefined,
+                            responseDuration:
+                              historicalAvailabilityOutcome === 'confirmed'
+                                ? '13 minutes'
+                                : historicalAvailabilityOutcome === 'timeout'
+                                  ? '1 hour'
+                                  : undefined,
+                          }
+                      : undefined
+                    const liveSchedulingHandoff =
+                      selectedStepId === 'send-referral-provider'
+                        ? state.schedulingHandoffs.find(
+                            (handoff) => handoff.patientId === row.patientId,
+                          )
+                        : undefined
+                    const schedulingHandoff =
+                      liveSchedulingHandoff ??
+                      (selectedStepId === 'send-referral-provider'
+                        ? {
+                            patientId: row.patientId,
+                            patientName: row.patientName,
+                            provider: selectedProvider,
+                            route:
+                              row.status === 'done'
+                                ? ('provider_confirmed' as const)
+                                : ('manual_placement' as const),
+                            requestedAt: row.occurredAt,
+                            deadlineAt: row.occurredAt,
+                            readyAt: row.occurredAt,
+                            samplePdf: referralPdfForPatient(row.patientId),
+                          }
+                        : undefined)
+                    const patientSchedule =
+                      selectedStepId === 'schedule-patient'
+                        ? state.patientSchedules[row.patientId]
+                        : undefined
                     const assignmentSuggestion =
                       selectedStepId === 'determine-owner'
                         ? suggestedCaseManager
                         : undefined
                     const assignmentConfirmed =
+                      row.status === 'done' ||
                       Boolean(confirmedAssignments[row.patientId])
                     const selectedCaseManagerEmail =
                       selectedCaseManagers[row.patientId] ??
@@ -343,38 +1563,114 @@ export function StagePatientSteps({
                     const notification =
                       selectedStepId === 'assign-owner'
                         ? caseManagerNotification(
-                          row.patientId,
-                          row.patientName,
-                          selectedCaseManager,
-                        )
+                            row.patientId,
+                            row.patientName,
+                            selectedCaseManager,
+                          )
                         : undefined
                     const referralNotification =
                       stageId === 'handoff' &&
-                        selectedStepId === 'notify-referral-source'
+                      selectedStepId === 'notify-referral-source'
                         ? referralSourceNotification(
-                          row.patientId,
-                          row.patientName,
-                          canonical,
-                        )
+                            row.patientId,
+                            row.patientName,
+                            canonical,
+                          )
                         : undefined
-                    const mondayRecord =
-                      stageId === 'handoff' &&
+                    const recordsHandoff =
+                      selectedStepId === 'update-monday-drk'
+                        ? state.schedulingHandoffs.find(
+                            (handoff) => handoff.patientId === row.patientId,
+                          )
+                        : undefined
+                    const assignedProvider =
+                      selectedStepId === 'update-monday-drk'
+                        ? recordsHandoff?.provider ?? selectedProvider
+                        : undefined
+                    const mondayRecord = (() => {
+                      if (
+                        stageId === 'handoff' &&
                         selectedStepId === 'create-monday-record'
-                        ? mondayRecordForPatient(
+                      ) {
+                        return mondayRecordForPatient(
                           row.patientId,
                           row.patientName,
                           canonical,
                         )
+                      }
+                      if (selectedStepId !== 'update-monday-drk' || !assignedProvider) {
+                        return undefined
+                      }
+                      return mondayRecordWithAssignedProvider(
+                        mondayRecordForPatient(
+                          row.patientId,
+                          row.patientName,
+                          canonical,
+                        ),
+                        assignedProvider,
+                        recordsHandoff?.route === 'manual_placement'
+                          ? 'Provider placed'
+                          : 'Provider confirmed',
+                      )
+                    })()
+                    const eodSchedulingCheck =
+                      selectedStepId === 'check-scheduling-status' ||
+                      selectedStepId === 'follow-up-case-manager' ||
+                      selectedStepId === 'escalate-unresolved-cases'
+                        ? eodForPatient(row.patientId, state.patientSchedules)
                         : undefined
-                    const drkDraft =
-                      stageId === 'handoff' &&
+                    const eodEscalatedForPatient = Boolean(
+                      eodEscalated[row.patientId] ||
+                        eodSchedulingCheck?.escalatedToManagement,
+                    )
+                    const eodManualCmFollowUpForPatient = Boolean(
+                      eodManualCmFollowUp[row.patientId],
+                    )
+                    const weeklyVisitCheck =
+                      selectedStepId === 'patient-seen' ||
+                      selectedStepId === 'wound-healed' ||
+                      selectedStepId === 'patient-expired' ||
+                      selectedStepId === 'patient-on-hold'
+                        ? weeklyVisitCheckForPatient(row.patientId)
+                        : undefined
+                    const weeklyRescheduleForPatient = Boolean(
+                      weeklyRescheduleConfirmed[row.patientId],
+                    )
+                    const weeklyDischargeForPatient = Boolean(
+                      weeklyDischargeReview[row.patientId] ||
+                        weeklyVisitCheck?.dischargeReviewQueued,
+                    )
+                    const weeklyHoldsActionForPatient = Boolean(
+                      weeklyHoldsActionTaken[row.patientId] ||
+                        weeklyVisitCheck?.movedToHolds ||
+                        weeklyVisitCheck?.closureActionTaken,
+                    )
+                    const weeklyAppointmentRescheduledForPatient = Boolean(
+                      weeklyAppointmentRescheduled[row.patientId],
+                    )
+                    const drkDraft = (() => {
+                      if (
+                        stageId === 'handoff' &&
                         selectedStepId === 'create-update-drk'
-                        ? drkDraftForPatient(
+                      ) {
+                        return drkDraftForPatient(
                           row.patientId,
                           row.patientName,
                           canonical,
                         )
-                        : undefined
+                      }
+                      if (selectedStepId !== 'update-monday-drk' || !assignedProvider) {
+                        return undefined
+                      }
+                      return drkDraftWithAssignedProvider(
+                        drkDraftForPatient(
+                          row.patientId,
+                          row.patientName,
+                          canonical,
+                        ),
+                        assignedProvider,
+                      )
+                    })()
                     return (
                       <li
                         key={`${row.patientId}-${row.stepId}`}
@@ -382,32 +1678,207 @@ export function StagePatientSteps({
                       >
                         <StageFeedMessage
                           summary={
-                            drkDraft
+                            noProviderLocationMatch
+                              ? providerTerritoryResolution === 'assigned'
+                                ? `${selectedProvider.name} selected by Nicole`
+                                : providerTerritoryResolution === 'discharged'
+                                  ? 'Patient discharged after Nicole review'
+                                  : 'Patient sent for review to Nicole'
+                              : recommendedProvider && selectedProvider
+                              ? providerConfirmed
+                                ? `${selectedProvider.name} selected as Provider`
+                                : 'Provider needs to be selected'
+                              : selectedStepId ===
+                                    'confirm-provider-availability' &&
+                                  providerAvailability
+                                ? providerAvailability.outcome === 'confirmed'
+                                  ? `${selectedProvider.name} confirmed availability`
+                                  : providerAvailability.outcome ===
+                                      'placement_completed'
+                                    ? `${selectedProvider.name} placed manually`
+                                    : providerAvailability.outcome === 'timeout'
+                                      ? `${selectedProvider.name} did not respond · CM placement needed`
+                                      : `${selectedProvider.name} availability confirmation requested`
+                              : selectedStepId === 'update-monday-drk' &&
+                                  assignedProvider
+                                ? `Monday.com and DRK updated with ${assignedProvider.name}`
+                              : schedulingHandoff
+                              ? schedulingHandoff.route === 'provider_confirmed'
+                                ? `Referral sent to ${schedulingHandoff.provider.name}`
+                                : 'Referral ready to send'
+                              : drkDraft
                               ? drkDraft.readyForFill
                                 ? 'DRK chart created'
                                 : 'DRK chart draft needs review'
                               : mondayRecord
-                                ? 'Monday.com record created'
-                                : referralNotification
-                                  ? `Referral source notified · ${referralNotification.ccName} CCd`
-                                  : selectedStepId === 'assign-owner'
-                                    ? `${selectedCaseManager.name} notified`
-                                    : selectedStepId === 'determine-owner'
-                                      ? assignmentConfirmed
-                                        ? `${selectedCaseManager.name} confirmed as Case Manager`
-                                        : 'Case Manager needs to be confirmed'
-                                      : row.summary
+                              ? 'Monday.com record created'
+                              : referralNotification
+                              ? `Referral source notified · ${referralNotification.ccName} CCd`
+                              : selectedStepId === 'assign-owner'
+                              ? `${selectedCaseManager.name} notified`
+                              : selectedStepId === 'determine-owner'
+                                ? assignmentConfirmed
+                                  ? `${selectedCaseManager.name} confirmed as Case Manager`
+                                  : row.patientId ===
+                                      latestPartnerContact?.patientId
+                                    ? PARTNER_HANDOFF_SUMMARY
+                                    : 'Case Manager needs to be confirmed'
+                              : selectedStepId === 'check-scheduling-status' &&
+                                  eodSchedulingCheck
+                                ? eodSchedulingCheckDisplaySummary(
+                                    eodSchedulingCheck,
+                                    {
+                                      manualCmFollowUp:
+                                        eodManualCmFollowUpForPatient,
+                                      escalatedToManagement:
+                                        eodEscalatedForPatient,
+                                    },
+                                  )
+                              : selectedStepId === 'follow-up-case-manager' &&
+                                  eodSchedulingCheck
+                                ? eodCmFollowUpSummary(
+                                    eodSchedulingCheck,
+                                    eodManualCmFollowUpForPatient,
+                                  )
+                              : selectedStepId === 'escalate-unresolved-cases' &&
+                                  eodSchedulingCheck
+                                ? row.status === 'blocked'
+                                  ? eodEscalationSummary(eodSchedulingCheck)
+                                  : eodEscalatedForPatient
+                                    ? eodEscalationConfirmLabel(eodSchedulingCheck)
+                                    : eodEscalationSummary(eodSchedulingCheck)
+                              : selectedStepId === 'patient-seen' &&
+                                  weeklyVisitCheck
+                                ? weeklyAppointmentRescheduledForPatient
+                                  ? weeklyMissedVisitSummary(weeklyVisitCheck, {
+                                      appointmentRescheduled: true,
+                                    })
+                                  : weeklyDischargeForPatient
+                                    ? weeklyMissedVisitSummary(
+                                        weeklyVisitCheck,
+                                        {
+                                          dischargeReviewSent: true,
+                                        },
+                                      )
+                                    : weeklyRescheduleForPatient
+                                      ? weeklyMissedVisitSummary(
+                                          weeklyVisitCheck,
+                                        )
+                                      : weeklyVisitCheckSummary(
+                                          weeklyVisitCheck,
+                                        )
+                              : (selectedStepId === 'wound-healed' ||
+                                    selectedStepId === 'patient-expired' ||
+                                    selectedStepId === 'patient-on-hold') &&
+                                  weeklyVisitCheck
+                                ? weeklyHoldsClosuresSummary(
+                                    weeklyVisitCheck,
+                                    weeklyHoldsActionForPatient,
+                                  )
+                              : eodSchedulingCheck
+                                ? eodSchedulingCheckSummary(eodSchedulingCheck)
+                                : row.summary
                           }
                           patientName={row.patientName}
+                          onScopePatient={() => {
+                            setPatientQuery('')
+                            dispatch({
+                              type: 'SCOPE_OPS_PATIENT',
+                              patientId: row.patientId,
+                              patientName: row.patientName,
+                            })
+                          }}
                           status={
-                            selectedStepId === 'determine-owner'
+                            noProviderLocationMatch
+                              ? providerTerritoryResolution
+                                ? 'done'
+                                : 'waiting'
+                              : selectedStepId === 'check-scheduling-status' ||
+                                  selectedStepId === 'follow-up-case-manager' ||
+                                  selectedStepId === 'escalate-unresolved-cases'
+                                ? (eodSchedulingStatusOption(
+                                    row.patientId,
+                                    state.patientSchedules,
+                                  )
+                                    .tone ?? 'done')
+                              : selectedStepId === 'patient-seen' &&
+                                  weeklyVisitCheck
+                                ? weeklyVisitCheck.visitOutcome === 'seen'
+                                  ? 'done'
+                                  : 'waiting'
+                              : (selectedStepId === 'wound-healed' ||
+                                    selectedStepId === 'patient-expired' ||
+                                    selectedStepId === 'patient-on-hold') &&
+                                  weeklyVisitCheck
+                                ? weeklyHoldsActionForPatient
+                                  ? 'done'
+                                  : 'waiting'
+                              : selectedStepId === 'select-provider'
+                              ? providerConfirmed
+                                ? 'done'
+                                : 'waiting'
+                              : selectedStepId ===
+                                    'confirm-provider-availability' &&
+                                  providerAvailability
+                                ? providerAvailability.outcome === 'confirmed' ||
+                                  providerAvailability.outcome ===
+                                    'placement_completed'
+                                  ? 'done'
+                                  : providerAvailability.outcome === 'timeout'
+                                    ? 'blocked'
+                                    : 'waiting'
+                              : selectedStepId === 'update-monday-drk'
+                              ? 'done'
+                              : schedulingHandoff
+                              ? schedulingHandoff.route === 'provider_confirmed'
+                                ? 'done'
+                                : 'waiting'
+                              : selectedStepId === 'determine-owner'
                               ? assignmentConfirmed
                                 ? 'done'
                                 : 'waiting'
                               : row.status
                           }
+                          statusLabel={
+                            selectedStepId === 'check-scheduling-status' ||
+                            selectedStepId === 'follow-up-case-manager' ||
+                            selectedStepId === 'escalate-unresolved-cases'
+                              ? eodSchedulingStatusOption(
+                                  row.patientId,
+                                  state.patientSchedules,
+                                ).meaning
+                              : weeklyStatusLabel(
+                                  selectedStepId,
+                                  selectedStepId === 'patient-seen' &&
+                                    weeklyVisitCheck
+                                    ? weeklyVisitCheck.visitOutcome === 'seen'
+                                      ? 'done'
+                                      : 'waiting'
+                                    : (selectedStepId === 'wound-healed' ||
+                                          selectedStepId === 'patient-expired' ||
+                                          selectedStepId === 'patient-on-hold') &&
+                                        weeklyVisitCheck
+                                      ? weeklyHoldsActionForPatient
+                                        ? 'done'
+                                        : 'waiting'
+                                      : '',
+                                ) ?? undefined
+                          }
                           occurredAt={row.occurredAt}
-                          detail={detail}
+                          detail={
+                            (eodSchedulingCheck &&
+                              (selectedStepId === 'check-scheduling-status' ||
+                                selectedStepId === 'follow-up-case-manager' ||
+                                selectedStepId ===
+                                  'escalate-unresolved-cases')) ||
+                            (weeklyVisitCheck &&
+                              (selectedStepId === 'patient-seen' ||
+                                selectedStepId === 'wound-healed' ||
+                                selectedStepId === 'patient-expired' ||
+                                selectedStepId === 'patient-on-hold'))
+                              ? null
+                              : detail
+                          }
                           showPdf={selectedStepId === 'receive-referral'}
                           isPartnerConfirmed={
                             row.status === 'done' ||
@@ -415,11 +1886,18 @@ export function StagePatientSteps({
                           }
                           onConfirmPartner={
                             selectedStepId === 'confirm-referral-contacted'
-                              ? () =>
-                                setPartnerConfirmed((current) => ({
-                                  ...current,
-                                  [row.patientId]: true,
-                                }))
+                              ? () => {
+                                  setPartnerConfirmed((current) => ({
+                                    ...current,
+                                    [row.patientId]: true,
+                                  }))
+                                  dispatch({
+                                    type: 'CONFIRM_PARTNER_CONTACTED',
+                                    patientId: row.patientId,
+                                    patientName: row.patientName,
+                                    occurredAt: opsTimestamp(),
+                                  })
+                                }
                               : undefined
                           }
                           assignmentSuggestion={assignmentSuggestion}
@@ -429,37 +1907,402 @@ export function StagePatientSteps({
                           onCaseManagerChange={
                             assignmentSuggestion
                               ? (email) =>
-                                setSelectedCaseManagers((current) => ({
-                                  ...current,
-                                  [row.patientId]: email,
-                                }))
+                                  setSelectedCaseManagers((current) => ({
+                                    ...current,
+                                    [row.patientId]: email,
+                                  }))
                               : undefined
                           }
                           onConfirmAssignment={
                             assignmentSuggestion
                               ? () => {
-                                setConfirmedAssignments((current) => ({
-                                  ...current,
-                                  [row.patientId]: true,
-                                }))
-                                setLatestAssignmentNotification({
-                                  patientId: row.patientId,
-                                  occurredAt: currentOpsTimestamp(),
-                                })
-                                setAssignmentNotificationUnread(true)
-                              }
+                                  const occurredAt = opsTimestamp()
+                                  setConfirmedAssignments((current) => ({
+                                    ...current,
+                                    [row.patientId]: true,
+                                  }))
+                                  dispatch({
+                                    type: 'CONFIRM_ASSIGNMENT_HANDOFF',
+                                    patientId: row.patientId,
+                                    patientName: row.patientName,
+                                    occurredAt,
+                                  })
+                                }
+                              : undefined
+                          }
+                          intakeEditable={selectedStepId === 'extract-and-verify'}
+                          isIntakeConfirmed={Boolean(
+                            state.intakeVerified[row.patientId],
+                          )}
+                          onIntakeFieldChange={
+                            selectedStepId === 'extract-and-verify'
+                              ? (key, value) =>
+                                  dispatch({
+                                    type: 'EDIT_INTAKE_FIELD',
+                                    patientId: row.patientId,
+                                    key,
+                                    value,
+                                  })
+                              : undefined
+                          }
+                          onIntakeSectionRowsReplace={
+                            selectedStepId === 'extract-and-verify'
+                              ? (sectionId, rows) =>
+                                  dispatch({
+                                    type: 'REPLACE_INTAKE_SECTION_ROWS',
+                                    patientId: row.patientId,
+                                    sectionId,
+                                    rows,
+                                  })
+                              : undefined
+                          }
+                          onConfirmIntakeReview={
+                            selectedStepId === 'extract-and-verify'
+                              ? () =>
+                                  dispatch({
+                                    type: 'CONFIRM_INTAKE_REVIEW',
+                                    patientId: row.patientId,
+                                    patientName: row.patientName,
+                                    occurredAt: opsTimestamp(),
+                                  })
+                              : undefined
+                          }
+                          onReopenIntakeReview={
+                            selectedStepId === 'extract-and-verify'
+                              ? () =>
+                                  dispatch({
+                                    type: 'REOPEN_INTAKE_REVIEW',
+                                    patientId: row.patientId,
+                                  })
                               : undefined
                           }
                           caseManagerNotification={notification}
                           referralNotification={referralNotification}
                           mondayRecord={mondayRecord}
                           drkDraft={drkDraft}
-                          isUnread={
-                            showUnreadAssignmentMessage &&
-                            selectedStepId === 'assign-owner' &&
-                            row.patientId ===
-                            latestAssignmentNotification?.patientId
+                          providerRecommendation={recommendedProvider}
+                          providerOptions={locationMatchedProviders}
+                          providerSelectionLocation={
+                            selectedStepId === 'select-provider'
+                              ? patientLocation
+                              : undefined
                           }
+                          fallbackProviderOptions={
+                            noProviderLocationMatch ? PROVIDER_OPTIONS : undefined
+                          }
+                          providerTerritoryResolution={
+                            providerTerritoryResolution
+                          }
+                          selectedProviderId={selectedProviderId}
+                          isProviderConfirmed={providerConfirmed}
+                          onProviderChange={
+                            recommendedProvider || noProviderLocationMatch
+                              ? (providerId) =>
+                                  dispatch({
+                                    type: 'SELECT_PROVIDER',
+                                    patientId: row.patientId,
+                                    providerId,
+                                  })
+                              : undefined
+                          }
+                          onAssignFallbackProvider={
+                            noProviderLocationMatch &&
+                            !providerTerritoryResolution
+                              ? () => {
+                                  const times = availabilityRequestTimes()
+                                  dispatch({
+                                    type: 'RESOLVE_PROVIDER_TERRITORY',
+                                    patientId: row.patientId,
+                                    resolution: 'assigned',
+                                    requestedAt: times.requestedAt,
+                                    deadlineAt: times.deadlineAt,
+                                  })
+                                }
+                              : undefined
+                          }
+                          onDischargePatient={
+                            noProviderLocationMatch &&
+                            !providerTerritoryResolution
+                              ? () =>
+                                  dispatch({
+                                    type: 'RESOLVE_PROVIDER_TERRITORY',
+                                    patientId: row.patientId,
+                                    resolution: 'discharged',
+                                  })
+                              : undefined
+                          }
+                          onConfirmProvider={
+                            recommendedProvider
+                              ? () => {
+                                  const times = availabilityRequestTimes()
+                                  dispatch({
+                                    type: 'CONFIRM_PROVIDER_SELECTION',
+                                    patientId: row.patientId,
+                                    requestedAt: times.requestedAt,
+                                    deadlineAt: times.deadlineAt,
+                                  })
+                                }
+                              : undefined
+                          }
+                          providerAvailability={providerAvailability}
+                          schedulingHandoff={schedulingHandoff}
+                          patientSchedule={patientSchedule}
+                          onSelectSchedulingSlot={
+                            patientSchedule?.status === 'waiting'
+                              ? (slotId) =>
+                                  dispatch({
+                                    type: 'SELECT_SCHEDULING_SLOT',
+                                    patientId: row.patientId,
+                                    slotId,
+                                  })
+                              : undefined
+                          }
+                          onCompletePatientSchedule={
+                            patientSchedule?.status === 'waiting'
+                              ? () =>
+                                  dispatch({
+                                    type: 'COMPLETE_PATIENT_SCHEDULE',
+                                    patientId: row.patientId,
+                                    scheduledAt: opsTimestamp(),
+                                  })
+                              : undefined
+                          }
+                          onRecordSchedulingBlocker={
+                            patientSchedule?.status === 'waiting'
+                              ? (reason) =>
+                                  dispatch({
+                                    type: 'RECORD_SCHEDULING_BLOCKER',
+                                    patientId: row.patientId,
+                                    reason,
+                                    occurredAt: opsTimestamp(),
+                                  })
+                              : undefined
+                          }
+                          eodSchedulingCheck={eodSchedulingCheck}
+                          eodFollowUp={selectedStepId === 'follow-up-case-manager'}
+                          eodEscalation={
+                            selectedStepId === 'escalate-unresolved-cases'
+                          }
+                          eodManualFollowUp={
+                            selectedStepId === 'follow-up-case-manager' &&
+                            eodManualCmFollowUpForPatient
+                          }
+                          eodEscalatedToManagement={eodEscalatedForPatient}
+                          eodManualCmFollowUpSent={eodManualCmFollowUpForPatient}
+                          onEodFollowUpWithCaseManager={
+                            eodSchedulingCheck &&
+                            selectedStepId === 'check-scheduling-status' &&
+                            eodCmNotifyPending(eodSchedulingCheck)
+                              ? () => {
+                                  setEodManualCmFollowUp((current) => ({
+                                    ...current,
+                                    [row.patientId]: true,
+                                  }))
+                                  dispatch({
+                                    type: 'CONFIRM_EOD_FOLLOW_UP',
+                                    patientId: row.patientId,
+                                  })
+                                }
+                              : undefined
+                          }
+                          onEodEscalateToManagement={
+                            eodSchedulingCheck &&
+                            selectedStepId === 'check-scheduling-status'
+                              ? () => {
+                                  setEodEscalated((current) => ({
+                                    ...current,
+                                    [row.patientId]: true,
+                                  }))
+                                  dispatch({
+                                    type: 'CONFIRM_EOD_ESCALATION',
+                                    patientId: row.patientId,
+                                  })
+                                }
+                              : undefined
+                          }
+                          weeklyVisitCheck={weeklyVisitCheck}
+                          weeklyHoldsClosures={
+                            selectedStepId === 'wound-healed' ||
+                            selectedStepId === 'patient-expired' ||
+                            selectedStepId === 'patient-on-hold'
+                          }
+                          weeklyRescheduleConfirmed={weeklyRescheduleForPatient}
+                          weeklyDischargeReviewSent={weeklyDischargeForPatient}
+                          weeklyHoldsActionTaken={weeklyHoldsActionForPatient}
+                          weeklyAppointmentRescheduled={
+                            weeklyAppointmentRescheduledForPatient
+                          }
+                          onWeeklyConfirmReschedule={
+                            weeklyVisitCheck &&
+                            selectedStepId === 'patient-seen' &&
+                            weeklyMissedVisitPending(weeklyVisitCheck) &&
+                            !weeklyRescheduleForPatient &&
+                            !weeklyAppointmentRescheduledForPatient
+                              ? () => {
+                                  setWeeklyRescheduleConfirmed((current) => ({
+                                    ...current,
+                                    [row.patientId]: true,
+                                  }))
+                                  dispatch({
+                                    type: 'RESOLVE_ACTION_TIMER',
+                                    patientId: row.patientId,
+                                    actionId: 'weekly-mark-not-seen',
+                                  })
+                                  dispatch({
+                                    type: 'START_ACTION_TIMER',
+                                    patientId: row.patientId,
+                                    patientName: row.patientName,
+                                    actionId: 'weekly-confirm-rescheduled',
+                                  })
+                                }
+                              : undefined
+                          }
+                          onWeeklyConfirmAppointmentRescheduled={
+                            weeklyVisitCheck &&
+                            selectedStepId === 'patient-seen' &&
+                            weeklyRescheduleForPatient &&
+                            !weeklyDischargeForPatient &&
+                            !weeklyAppointmentRescheduledForPatient
+                              ? () => {
+                                  setWeeklyAppointmentRescheduled((current) => ({
+                                    ...current,
+                                    [row.patientId]: true,
+                                  }))
+                                  dispatch({
+                                    type: 'RESOLVE_ACTION_TIMER',
+                                    patientId: row.patientId,
+                                    actionId: 'weekly-confirm-rescheduled',
+                                  })
+                                }
+                              : undefined
+                          }
+                          onWeeklyEscalateDischargeReview={
+                            weeklyVisitCheck &&
+                            selectedStepId === 'patient-seen' &&
+                            weeklyDischargeReviewDue(weeklyVisitCheck) &&
+                            !weeklyDischargeForPatient
+                              ? () => {
+                                  setWeeklyDischargeReview((current) => ({
+                                    ...current,
+                                    [row.patientId]: true,
+                                  }))
+                                  dispatch({
+                                    type: 'RESOLVE_ACTION_TIMER',
+                                    patientId: row.patientId,
+                                    actionId: 'weekly-escalate-dc',
+                                  })
+                                }
+                              : undefined
+                          }
+                          onWeeklyHoldsAction={
+                            weeklyVisitCheck &&
+                            (selectedStepId === 'wound-healed' ||
+                              selectedStepId === 'patient-expired' ||
+                              selectedStepId === 'patient-on-hold') &&
+                            !weeklyHoldsActionForPatient
+                              ? () => {
+                                  setWeeklyHoldsActionTaken((current) => ({
+                                    ...current,
+                                    [row.patientId]: true,
+                                  }))
+                                  dispatch({
+                                    type: 'RESOLVE_ACTION_TIMER',
+                                    patientId: row.patientId,
+                                    actionId:
+                                      selectedStepId === 'wound-healed'
+                                        ? 'weekly-qa-discharge'
+                                        : selectedStepId === 'patient-expired'
+                                          ? 'weekly-remove-dc'
+                                          : 'weekly-move-holds',
+                                  })
+                                }
+                              : undefined
+                          }
+                          referralPacketPdf={
+                            selectedStepId === 'send-referral-provider'
+                              ? schedulingHandoff?.samplePdf ??
+                                referralPdfForPatient(row.patientId)
+                              : undefined
+                          }
+                          onProviderAvailabilityConfirmed={
+                            liveAvailability?.outcome === 'waiting'
+                              ? () =>
+                                  dispatch({
+                                    type: 'CONFIRM_PROVIDER_AVAILABILITY',
+                                    patientId: row.patientId,
+                                    patientName: row.patientName,
+                                    provider: selectedProvider,
+                                    resolvedAt: opsTimestamp(),
+                                  })
+                              : undefined
+                          }
+                          onProviderAvailabilityTimeout={
+                            liveAvailability?.outcome === 'waiting'
+                              ? () =>
+                                  dispatch({
+                                    type: 'TIMEOUT_PROVIDER_AVAILABILITY',
+                                    patientId: row.patientId,
+                                    resolvedAt: opsTimestamp(),
+                                  })
+                              : undefined
+                          }
+                          onManualPlacementCompleted={
+                            liveAvailability?.outcome === 'timeout'
+                              ? () =>
+                                  dispatch({
+                                    type: 'COMPLETE_MANUAL_PLACEMENT',
+                                    patientId: row.patientId,
+                                    patientName: row.patientName,
+                                    provider: selectedProvider,
+                                    readyAt: opsTimestamp(),
+                                  })
+                              : undefined
+                          }
+                          isUnread={
+                            (showUnreadAssignmentMessage &&
+                              selectedStepId === 'assign-owner' &&
+                              row.patientId ===
+                                latestAssignmentHandoff?.patientId) ||
+                            (showUnreadProviderMessage &&
+                              selectedStepId ===
+                                'confirm-provider-availability' &&
+                              isLatestProviderAvailability) ||
+                            (showUnreadHandoffMessage &&
+                              selectedStepId === 'send-referral-provider' &&
+                              row.patientId ===
+                                latestSchedulingHandoff?.patientId) ||
+                            (showUnreadProviderRecordsMessage &&
+                              selectedStepId === 'update-monday-drk' &&
+                              row.patientId ===
+                                latestSchedulingHandoff?.patientId) ||
+                            (showUnreadEodFollowUpMessage &&
+                              selectedStepId === 'follow-up-case-manager' &&
+                              row.patientId ===
+                                state.latestEodFollowUpPatientId) ||
+                            (showUnreadEodEscalationMessage &&
+                              selectedStepId === 'escalate-unresolved-cases' &&
+                              row.patientId ===
+                                state.latestEodEscalationPatientId) ||
+                            (showUnreadAssignmentHandoff &&
+                              isAssignmentHandoffStep(selectedStepId) &&
+                              row.patientId ===
+                                latestAssignmentHandoff?.patientId) ||
+                            (showUnreadProviderSelect &&
+                              selectedStepId === 'select-provider' &&
+                              row.patientId ===
+                                latestAssignmentHandoff?.patientId) ||
+                            (showUnreadIntakeDuplicate &&
+                              isIntakeFollowUpStep(selectedStepId) &&
+                              row.patientId === latestIntakeReview?.patientId) ||
+                            (showUnreadAssignmentOwner &&
+                              selectedStepId === 'determine-owner' &&
+                              row.patientId === latestPartnerContact?.patientId)
+                          }
+                          actionTimer={timerForPatientStep(
+                            state.actionTimers,
+                            row.patientId,
+                            selectedStepId,
+                          )}
                         />
                       </li>
                     )
@@ -470,7 +2313,9 @@ export function StagePatientSteps({
           </ol>
         ) : (
           <p className="muted stage-ops-steps__empty">
-            No patients match this step with the current filters.
+            {scopedPatient
+              ? `${scopedPatient.patientName} is not on this step yet.`
+              : 'No patients match this step with the current filters.'}
           </p>
         )}
       </div>

@@ -102,6 +102,51 @@
   animation: microstep-attention-pulse 1.6s ease-out infinite;
 }
 
+.microstep-list__attention-dot.is-warning {
+  background: #d97706;
+  box-shadow: 0 0 0 1px rgba(217, 119, 6, 0.2);
+  animation: none;
+}
+
+.microstep-list__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  flex: 0 0 auto;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.microstep-list__badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex: 0 0 auto;
+}
+
+.microstep-list__count.is-overdue {
+  background: #b91c1c;
+}
+
+.microstep-list__count.is-unread {
+  background: #2563eb;
+}
+
+.microstep-list__button.is-overdue strong {
+  color: #b91c1c;
+}
+
+.microstep-list__button.is-unread:not(.is-overdue) strong {
+  color: #1d4ed8;
+}
+
 @keyframes microstep-attention-pulse {
   0% {
     box-shadow: 0 0 0 0 rgba(154, 69, 56, 0.48);
