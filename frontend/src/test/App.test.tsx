@@ -83,6 +83,15 @@ describe('automation inspection console', () => {
 
     expect(screen.getByLabelText(/Stage summary/i)).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /Referral intake/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole('navigation', { name: /Stage navigation/i }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /^Next$/i }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /^Previous$/i }),
+    ).not.toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: /^Steps$/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: /^Worklist$/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: /^History$/i })).not.toBeInTheDocument()
@@ -99,6 +108,34 @@ describe('automation inspection console', () => {
     expect(screen.getAllByText(/Gonzalez, Eric/i).length).toBeGreaterThan(0)
     expect(
       screen.queryByRole('list', { name: /Microstep run history/i }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('moves between stages with previous and next on the stage summary', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(
+      screen.getByRole('button', { name: /Inspect Referral intake/i }),
+    )
+    await user.click(screen.getByRole('button', { name: /^Next$/i }))
+    expect(
+      screen.getByRole('heading', { name: /2\. Assignment/i }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /^Previous$/i }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Next$/i })).toBeInTheDocument()
+
+    await openStage(user, 'Weekly visit cycle')
+    expect(
+      screen.getByRole('heading', { name: /7\. Weekly visit cycle/i }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /^Previous$/i }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /^Next$/i }),
     ).not.toBeInTheDocument()
   })
 
