@@ -186,34 +186,40 @@ PYTHONPATH=src python3.11 src/monday.com/push_referral.py \
 ### Live testing-infobox feed
 
 Referral Intake keeps its demo referrals and can additionally show real PDF arrivals
-from the configured testing inbox. Start the local Stage 1 service in one terminal
-and Vite in another:
+from the configured testing inbox. Use one stable `INTAKE_DATA_ROOT` so every run
+shares the same processed-attachment ledger, then start the local Stage 1 service
+in one terminal and Vite in another:
 
 ```powershell
 $env:PYTHONPATH='src'
-python run_pipeline.py inbox-api
+$env:INTAKE_DATA_ROOT='tmp/intake-service'
+python run_pipeline.py inbox-api --start-monitor
 
 cd frontend
 npm run dev
 ```
 
 Vite proxies `/api` to `http://127.0.0.1:8787`. On **Referral intake**, the live
-status control can start and stop autonomous Outlook polling. It runs extraction,
-safe duplicate reads, durable retries, review-email delivery, and reply polling.
-Stopping during a PDF finishes that active cycle before the worker exits. The
-service always starts OFF unless `--start-monitor` is supplied:
+status indicator reports autonomous Outlook polling, extraction, safe duplicate
+reads, durable retries, review-email delivery, and reply polling. Worker controls
+are intentionally CLI-only; operators cannot start or stop infrastructure from the
+workflow UI. The service starts OFF unless `--start-monitor` is supplied:
 
 ```powershell
 python run_pipeline.py inbox-api --start-monitor
 ```
 
-`inbox-api` is the local UI control plane and remains running when live monitoring
-is OFF. The frontend continues making read-only `GET /api/intake/inbox` and
-`GET /api/intake/monitor` requests so it can display saved referrals and worker
-status; those requests appear in the terminal but do not poll Outlook, run
-extraction, send email, or write to Monday or DRK. Pressing **Stop** only stops the
-background inbox worker. Press `Ctrl+C` in the API terminal to stop the local
-service completely, which also makes the live-inbox panel unavailable.
+`inbox-api` remains running even when live monitoring is OFF. The frontend continues
+making read-only `GET /api/intake/inbox` and `GET /api/intake/monitor` requests so it
+can display saved referrals and worker status; those requests do not poll Outlook,
+run extraction, send email, or write to Monday or DRK. Press `Ctrl+C` in the API
+terminal to stop the service and its background worker.
+
+The durable ledger is `<INTAKE_DATA_ROOT>/state.sqlite`. Completed, queued, and
+permanently failed attachments are excluded from later polling. Do not rotate the
+data root, delete this file, or pass `--force` during normal operation. The
+`inbox-api` and one-off `outlook` commands now derive their defaults from the same
+`INTAKE_DATA_ROOT`; an explicit `--state-db` remains available for debugging only.
 
 The local service cannot write Monday or DRK. Partner acknowledgement and the DRK
 duplicate check remain disabled unless their explicit CLI flags or environment

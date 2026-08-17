@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import pytest
 
+from drk_emr.create_patient import fill as fill_module
 from drk_emr.create_patient.fill import (
     FORBIDDEN_CREATE_PATIENT_IDS,
     FORBIDDEN_CREATE_PATIENT_TEXT,
     _is_forbidden_create_patient,
     safe_click,
 )
+from drk_emr.create_patient.schema import DrkCreatePayloadDraft
 from drk_emr.create_patient.synthetic_data import build_test_intake_data
 
 
@@ -119,3 +121,55 @@ def test_safe_click_allows_add_insurance() -> None:
     el = _FakeEl(eid="saveInsuranceBtn", text="Add Insurance")
     safe_click(el, purpose="save insurance entry only")
     assert el.clicked is True
+
+
+def test_sparse_canonical_draft_fills_only_explicit_values(monkeypatch) -> None:
+    populated: list[tuple[str, object]] = []
+
+    class _Wait:
+        def __init__(self, *_args, **_kwargs) -> None:
+            pass
+
+        def until(self, _condition):
+            return object()
+
+    monkeypatch.setattr(fill_module, "WebDriverWait", _Wait)
+    monkeypatch.setattr(
+        fill_module,
+        "_set_input",
+        lambda _driver, field_id, value: populated.append((field_id, value)),
+    )
+    monkeypatch.setattr(
+        fill_module,
+        "_select_by_visible_text",
+        lambda _driver, field_id, value: populated.append((field_id, value)),
+    )
+    monkeypatch.setattr(
+        fill_module,
+        "_select_by_value",
+        lambda _driver, field_id, value: populated.append((field_id, value)),
+    )
+    monkeypatch.setattr(
+        fill_module,
+        "_set_checkbox",
+        lambda _driver, field_id, value: populated.append((field_id, value)),
+    )
+    monkeypatch.setattr(fill_module, "assert_create_patient_untouched", lambda _driver: None)
+
+    draft = DrkCreatePayloadDraft.model_validate(
+        {
+            "demographics": {
+                "first_name": "Synthetic",
+                "last_name": "Patient",
+                "date_of_birth": "1970-01-02",
+            }
+        }
+    )
+    result = fill_module.fill_intake_draft(object(), draft)
+
+    assert populated == [
+        ("firstName", "Synthetic"),
+        ("lastName", "Patient"),
+        ("dateOfBirth", "1970-01-02"),
+    ]
+    assert result["populated_fields"] == ["firstName", "lastName", "dateOfBirth"]

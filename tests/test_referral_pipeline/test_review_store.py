@@ -151,6 +151,7 @@ def test_partner_contact_confirmation_cannot_enter_destination_write_queue(tmp_p
     assert review.workflow_case_id == "case-123"
     assert store.confirmed() == []
     assert store.claim_for_monday_execution("review_partner_contact") == "wrong_purpose"
+    assert review.workflow_apply_status == "pending"
 
 
 def test_find_active_returns_reusable_review(tmp_path) -> None:

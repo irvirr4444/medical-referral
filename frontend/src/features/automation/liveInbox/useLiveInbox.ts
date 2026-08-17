@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   fetchLiveInbox,
   fetchLiveInboxMonitor,
-  setLiveInboxMonitor,
 } from './api'
 import type { LiveInboxState } from './types'
 
@@ -43,23 +42,6 @@ export function useLiveInbox(enabled: boolean, pollIntervalMs = 10_000) {
     }
   }, [])
 
-  const toggleMonitor = useCallback(async () => {
-    const active = state.monitor?.enabled
-      || ['starting', 'monitoring', 'processing'].includes(state.monitor?.state ?? '')
-    setState((current) => ({ ...current, monitorControlPending: true, error: undefined }))
-    try {
-      const monitor = await setLiveInboxMonitor(!active)
-      setState((current) => ({ ...current, monitor, monitorControlPending: false }))
-      await refresh(true)
-    } catch (error) {
-      setState((current) => ({
-        ...current,
-        monitorControlPending: false,
-        error: error instanceof Error ? error.message : 'Monitor control failed.',
-      }))
-    }
-  }, [refresh, state.monitor])
-
   useEffect(() => {
     if (!enabled) return
     void refresh()
@@ -70,5 +52,5 @@ export function useLiveInbox(enabled: boolean, pollIntervalMs = 10_000) {
     }
   }, [enabled, pollIntervalMs, refresh])
 
-  return { ...state, refresh: () => refresh(true), toggleMonitor }
+  return { ...state, refresh: () => refresh(true) }
 }

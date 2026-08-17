@@ -34,6 +34,9 @@ class ReviewRequest:
     drk_draft: dict[str, Any] | None = None
     last_dry_run_at: str | None = None
     last_dry_run_result: dict[str, Any] | None = None
+    workflow_apply_status: str | None = None
+    workflow_apply_attempts: int = 0
+    workflow_apply_last_error: str | None = None
 
 
 @dataclass(frozen=True)

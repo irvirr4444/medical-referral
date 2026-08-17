@@ -39,6 +39,27 @@ def test_review_recipient_never_defaults_to_referral_sender(monkeypatch) -> None
     ) == ""
 
 
+def test_review_store_backend_matches_workflow_case_backend() -> None:
+    assert runner._review_uses_supabase(
+        {
+            "synthetic_persistence_allowed": True,
+            "workflow_database_backend": "supabase",
+        }
+    )
+    assert not runner._review_uses_supabase(
+        {
+            "synthetic_persistence_allowed": True,
+            "workflow_database_backend": "sqlite",
+        }
+    )
+    assert not runner._review_uses_supabase(
+        {
+            "synthetic_persistence_allowed": False,
+            "workflow_database_backend": "supabase",
+        }
+    )
+
+
 def test_outlook_poll_includes_unfinished_ledger_jobs(tmp_path) -> None:
     state = InboxState(tmp_path / "state.sqlite")
     attachment = InboundPdfAttachment(
@@ -332,6 +353,8 @@ def test_first_email_failure_does_not_block_later_emails(tmp_path, monkeypatch) 
             str(tmp_path / "out"),
             "--state-db",
             str(tmp_path / "state.sqlite"),
+            "--workflow-sqlite-path",
+            str(tmp_path / "workflow.sqlite"),
             "--verbose",
         ]
     )

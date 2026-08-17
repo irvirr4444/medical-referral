@@ -36,7 +36,6 @@ export type LiveInboxState = {
   fetchedAt?: string
   error?: string
   monitor?: LiveInboxMonitorState
-  monitorControlPending?: boolean
 }
 
 export type LiveInboxMonitorState = {

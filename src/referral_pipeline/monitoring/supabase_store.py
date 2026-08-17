@@ -147,6 +147,30 @@ class SupabaseWorkflowStore:
             raise SupabaseWorkflowError("external operation upsert did not return a row")
         return operations[0]
 
+    def claim_external_operation(
+        self,
+        operation_id: str,
+        *,
+        case_id: str,
+        claimed_by: str,
+        lease_seconds: int = 300,
+        allow_uncertain: bool = False,
+    ) -> str:
+        del case_id
+        rows = self._request(
+            "POST",
+            "rpc/claim_wcw_external_operation",
+            json_body={
+                "p_operation_id": operation_id,
+                "p_claimed_by": claimed_by,
+                "p_lease_seconds": max(30, lease_seconds),
+                "p_allow_uncertain": bool(allow_uncertain),
+            },
+        )
+        if not isinstance(rows, str):
+            raise SupabaseWorkflowError("external operation claim returned an unexpected response")
+        return rows
+
     def list_external_operations(self, case_id: str) -> list[ExternalOperation]:
         rows = self._request(
             "GET",

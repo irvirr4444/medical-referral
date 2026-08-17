@@ -9,6 +9,7 @@ from typing import Any, Callable
 
 from Outlook.graph import OutlookGraphClient
 from Outlook.mail import InboundPdfMetadata
+from referral_pipeline.monitoring.routing import persistence_for
 from referral_pipeline.monitoring.store import WorkflowStore
 from referral_pipeline.stage_one.identity import source_ref
 
@@ -93,7 +94,7 @@ class IntakeInboxFeed:
             metadata = {
                 key: value
                 for key, value in cached.items()
-                if key not in {"status", "case_id", "patient_label", "steps"}
+                if key not in {"status", "case_id", "patient_label", "steps", "persistence"}
             }
             referrals.append({**metadata, **self._workflow_projection(referral_id)})
         return {**payload, "referrals": referrals}
@@ -116,8 +117,11 @@ class IntakeInboxFeed:
             raise KeyError(referral_id)
         events = self._workflow_store.list_events(case.case_id, limit=100)
         return {
-            "case": case.model_dump(mode="json"),
-            "steps": _step_projection(events),
+            "case": {
+                **case.model_dump(mode="json"),
+                "persistence": persistence_for(self._workflow_store, case.case_id),
+            },
+            "steps": _step_projection(events, case_status=case.status),
             "events": [event.model_dump(mode="json") for event in events],
         }
 
@@ -126,23 +130,28 @@ class IntakeInboxFeed:
             return {"cases": []}
         return {
             "cases": [
-                case.model_dump(mode="json")
+                {
+                    **case.model_dump(mode="json"),
+                    "persistence": persistence_for(self._workflow_store, case.case_id),
+                }
                 for case in self._workflow_store.list_workflow_cases(limit=limit)
             ]
         }
 
     def _workflow_projection(self, referral_id: str) -> dict[str, Any]:
         if self._workflow_store is None:
-            return {"status": "pending_extraction", "case_id": None, "steps": {}}
+            return {"status": "pending_extraction", "case_id": None, "steps": {}, "persistence": "none"}
         case = self._workflow_store.workflow_case_by_source_ref(referral_id)
         if case is None:
-            return {"status": "pending_extraction", "case_id": None, "steps": {}}
+            return {"status": "pending_extraction", "case_id": None, "steps": {}, "persistence": "none"}
         events = self._workflow_store.list_events(case.case_id, limit=100)
+        effective_status = "completed" if case.current_stage > 1 else case.status
         return {
-            "status": "completed" if case.current_stage > 1 else case.status,
+            "status": effective_status,
             "case_id": case.case_id,
             "patient_label": case.patient_label,
-            "steps": _step_projection(events),
+            "persistence": persistence_for(self._workflow_store, case.case_id),
+            "steps": _step_projection(events, case_status=effective_status),
         }
 
 
@@ -153,7 +162,11 @@ def _with_limited_referrals(payload: dict[str, Any], limit: int) -> dict[str, An
     }
 
 
-def _step_projection(events: list[Any]) -> dict[str, dict[str, Any]]:
+def _step_projection(
+    events: list[Any],
+    *,
+    case_status: str | None = None,
+) -> dict[str, dict[str, Any]]:
     mapping = {
         "referral_received": ("receive-referral", "Referral email identified", "done"),
         "extraction_started": ("extract-and-verify", "Extracting referral details", "current"),
@@ -204,6 +217,33 @@ def _step_projection(events: list[Any]) -> dict[str, dict[str, Any]]:
             "occurred_at": event.occurred_at.isoformat(),
             "details": details,
         }
+    extraction = steps.get("extract-and-verify")
+    if extraction is not None and extraction["status"] == "blocked":
+        if case_status == "processing":
+            steps["extract-and-verify"] = {
+                "step_id": "extract-and-verify",
+                "status": "current",
+                "summary": "Retrying referral processing",
+                "occurred_at": extraction["occurred_at"],
+                "details": {},
+            }
+        elif case_status in {"awaiting_partner_contact", "completed"}:
+            completed = next(
+                (
+                    event
+                    for event in reversed(events)
+                    if event.event_type == "extraction_completed"
+                ),
+                None,
+            )
+            if completed is not None:
+                steps["extract-and-verify"] = {
+                    "step_id": "extract-and-verify",
+                    "status": "done",
+                    "summary": "Referral details extracted",
+                    "occurred_at": completed.occurred_at.isoformat(),
+                    "details": dict(completed.details or {}),
+                }
     return steps
 
 

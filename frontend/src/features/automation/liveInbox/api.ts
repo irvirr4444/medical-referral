@@ -57,25 +57,6 @@ export async function fetchLiveInboxMonitor({
   return parseLiveInboxMonitor(payload)
 }
 
-export async function setLiveInboxMonitor(
-  enabled: boolean,
-): Promise<LiveInboxMonitorState> {
-  const response = await fetch(
-    `/api/intake/monitor/${enabled ? 'start' : 'stop'}`,
-    {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: '{}',
-    },
-  )
-  const payload: unknown = await response.json()
-  if (!response.ok) throw new Error(`Monitor control request failed (${response.status})`)
-  return parseLiveInboxMonitor(payload)
-}
-
 export function parseLiveInboxMonitor(value: unknown): LiveInboxMonitorState {
   if (
     !isRecord(value) ||

@@ -17,7 +17,8 @@ REVIEW_SELECT = """
            intake_plan_path, monday_preview_path, drk_draft_path, source_message_id,
            source_conversation_id, created_at, monday_item_id, drk_status, email_subject, email_body,
            email_html_body, email_text_body, email_content_type, last_dry_run_at, last_dry_run_result,
-           review_purpose, workflow_case_id
+           review_purpose, workflow_case_id, workflow_apply_status, workflow_apply_attempts,
+           workflow_apply_last_error
     FROM referral_reviews
 """
 
@@ -377,14 +378,17 @@ class ReviewStore:
                     if purpose == "partner_contact"
                     else "confirmed"
                 )
+                apply_status = "pending" if purpose == "partner_contact" else "not_required"
                 connection.execute(
                     """
                     UPDATE referral_reviews
                     SET status = ?, confirmed_at = ?,
-                        confirmation_message_id = ?, error = NULL
+                        confirmation_message_id = ?, error = NULL,
+                        workflow_apply_status = COALESCE(workflow_apply_status, ?),
+                        workflow_apply_attempts = COALESCE(workflow_apply_attempts, 0)
                     WHERE review_id = ?
                     """,
-                    (confirmed_status, _now(), message_id, review_id),
+                    (confirmed_status, _now(), message_id, apply_status, review_id),
                 )
                 return confirmed_status
             if intent == "correction":
@@ -534,6 +538,84 @@ class ReviewStore:
             ).fetchall()
         return [_row_to_request(row) for row in rows]
 
+    def pending_workflow_applies(self) -> list[ReviewRequest]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                REVIEW_SELECT
+                + """
+                WHERE review_purpose = 'partner_contact'
+                  AND status = 'partner_contact_confirmed'
+                  AND COALESCE(workflow_apply_status, 'pending') IN ('pending', 'failed')
+                ORDER BY created_at
+                """
+            ).fetchall()
+        return [_row_to_request(row) for row in rows]
+
+    def mark_workflow_apply(
+        self,
+        review_id: str,
+        *,
+        status: str,
+        error: str | None = None,
+    ) -> None:
+        if status not in {"pending", "applied", "failed", "not_required"}:
+            raise ValueError("invalid workflow apply status")
+        with self._connect() as connection:
+            if status == "failed":
+                connection.execute(
+                    """
+                    UPDATE referral_reviews
+                    SET workflow_apply_status = ?,
+                        workflow_apply_attempts = COALESCE(workflow_apply_attempts, 0) + 1,
+                        workflow_apply_last_error = ?
+                    WHERE review_id = ?
+                    """,
+                    (status, error, review_id),
+                )
+                return
+            connection.execute(
+                """
+                UPDATE referral_reviews
+                SET workflow_apply_status = ?,
+                    workflow_apply_attempts = CASE
+                        WHEN ? = 'applied' THEN COALESCE(workflow_apply_attempts, 0) + 1
+                        ELSE COALESCE(workflow_apply_attempts, 0)
+                    END,
+                    workflow_apply_last_error = ?
+                WHERE review_id = ?
+                """,
+                (status, status, error, review_id),
+            )
+
+    def set_partner_contact_context(
+        self,
+        review_id: str,
+        *,
+        outcome: str,
+        sender: str,
+        message_id: str,
+    ) -> None:
+        import json
+
+        with self._connect() as connection:
+            connection.execute(
+                """
+                UPDATE referral_reviews
+                SET last_dry_run_result = ?
+                WHERE review_id = ?
+                """,
+                (
+                    json.dumps(
+                        {
+                            "contact_outcome": outcome,
+                            "confirmed_by": sender,
+                            "confirmation_message_id": message_id,
+                        }
+                    ),
+                    review_id,
+                ),
+            )
+
     def mark_monday_applied(self, review_id: str, *, item_id: str, drk_status: str) -> None:
         with self._connect() as connection:
             connection.execute(
@@ -570,6 +652,9 @@ class ReviewStore:
             "last_dry_run_result": "TEXT",
             "review_purpose": "TEXT NOT NULL DEFAULT 'destination_write'",
             "workflow_case_id": "TEXT",
+            "workflow_apply_status": "TEXT",
+            "workflow_apply_attempts": "INTEGER NOT NULL DEFAULT 0",
+            "workflow_apply_last_error": "TEXT",
         }
         for name, declaration in additions.items():
             if name not in columns:
@@ -619,6 +704,9 @@ def _row_to_request(row: tuple) -> ReviewRequest:
         last_dry_run_result=dry_run_result,
         purpose=str(row[20] or "destination_write") if len(row) > 20 else "destination_write",
         workflow_case_id=str(row[21]) if len(row) > 21 and row[21] else None,
+        workflow_apply_status=str(row[22]) if len(row) > 22 and row[22] else None,
+        workflow_apply_attempts=int(row[23] or 0) if len(row) > 23 else 0,
+        workflow_apply_last_error=str(row[24]) if len(row) > 24 and row[24] else None,
     )
 
 

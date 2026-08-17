@@ -8,16 +8,18 @@ import os
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 from urllib.parse import parse_qs, urlparse
 
 from dotenv import load_dotenv
 
 from Outlook.graph import OutlookGraphClient, OutlookGraphConfig, OutlookGraphError
+from Outlook.review_mail import OutlookReviewMailbox
 from referral_pipeline.api.intake_inbox import IntakeInboxFeed
 from referral_pipeline.live_monitor import LiveInboxMonitor, LiveInboxMonitorConfig
-from referral_pipeline.monitoring.store import create_workflow_store
+from referral_pipeline.monitoring.store import create_routed_workflow_store, create_workflow_store
 from referral_pipeline.workflow import WorkflowExecutionService
+from referral_pipeline.workflow.handoff import HandoffExecutionError
 from referral_pipeline.workflow.service import WorkflowExecutionError
 
 
@@ -26,6 +28,7 @@ class IntakeApiServer(ThreadingHTTPServer):
     monitor: LiveInboxMonitor
     default_limit: int
     workflow_execution: WorkflowExecutionService
+    handoff_mailbox_factory: Callable[[], Any]
 
     def server_close(self) -> None:
         self.monitor.stop(wait=False)
@@ -116,7 +119,15 @@ class IntakeApiHandler(BaseHTTPRequestHandler):
             parsed.path.startswith("/api/workflow/assignments/")
             and parsed.path.endswith("/confirm")
         )
-        if not monitor_control and not assignment_confirm:
+        handoff_preview = (
+            parsed.path.startswith("/api/workflow/handoffs/")
+            and parsed.path.endswith("/preview")
+        )
+        handoff_execute = (
+            parsed.path.startswith("/api/workflow/handoffs/")
+            and parsed.path.endswith("/execute")
+        )
+        if not monitor_control and not assignment_confirm and not handoff_preview and not handoff_execute:
             self._send_json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
             return
         if not self._is_local_control_request():
@@ -140,12 +151,44 @@ class IntakeApiHandler(BaseHTTPRequestHandler):
         case_id = parsed.path.split("/")[-2]
         try:
             body = self._read_json_object()
-            payload = self.server.workflow_execution.confirm_assignment(
-                case_id,
-                case_manager_email=str(body.get("case_manager_email") or ""),
-                decided_by=str(body.get("decided_by") or "demo-operator"),
-            )
-        except (ValueError, WorkflowExecutionError) as error:
+            if handoff_preview or handoff_execute:
+                operation_type = str(body.get("operation_type") or "")
+                if not operation_type:
+                    raise ValueError("operation_type is required")
+                if handoff_preview:
+                    payload = self.server.workflow_execution.preview_handoff_operation(
+                        case_id,
+                        operation_type,
+                    )
+                else:
+                    if body.get("confirm") is not True:
+                        raise ValueError("handoff execute requires confirm=true")
+                    confirm_monday_write = bool(body.get("confirm_monday_write"))
+                    if operation_type == "create-monday-record" and not confirm_monday_write:
+                        raise ValueError("create-monday-record requires confirm_monday_write=true")
+                    mailbox = None
+                    if operation_type == "notify-assigned-case-manager":
+                        try:
+                            mailbox = self.server.handoff_mailbox_factory()
+                        except Exception as error:
+                            raise HandoffExecutionError(
+                                f"case-manager notification mailbox is unavailable: {error}"
+                            ) from error
+                    payload = self.server.workflow_execution.execute_handoff_operation(
+                        case_id,
+                        operation_type,
+                        execute=True,
+                        confirm_monday_write=confirm_monday_write,
+                        mailbox=mailbox,
+                        operator_retry=bool(body.get("operator_retry")),
+                    )
+            else:
+                payload = self.server.workflow_execution.confirm_assignment(
+                    case_id,
+                    case_manager_email=str(body.get("case_manager_email") or ""),
+                    decided_by=str(body.get("decided_by") or "demo-operator"),
+                )
+        except (ValueError, WorkflowExecutionError, HandoffExecutionError) as error:
             self._send_json(HTTPStatus.CONFLICT, {"error": str(error)})
             return
         self._send_json(HTTPStatus.OK, payload)
@@ -228,6 +271,7 @@ def create_server(
     stage_one_drk_check: bool = False,
     review_recipient: str | None = None,
     workflow_execution: WorkflowExecutionService | None = None,
+    handoff_mailbox_factory: Callable[[], Any] | None = None,
 ) -> IntakeApiServer:
     load_dotenv()
     if host not in {"127.0.0.1", "localhost", "::1"}:
@@ -262,11 +306,23 @@ def create_server(
             review_recipient=review_recipient or os.getenv("REVIEW_RECIPIENT_EMAIL"),
         )
     )
-    workflow_store = create_workflow_store(
-        backend=effective_backend,
-        sqlite_path=effective_sqlite_path,
+    workflow_store = (
+        create_routed_workflow_store(
+            sqlite_path=effective_sqlite_path,
+            include_remote=effective_backend == "supabase",
+        )
+        if effective_backend == "supabase"
+        else create_workflow_store(
+            backend=effective_backend,
+            sqlite_path=effective_sqlite_path,
+        )
     )
     server.workflow_execution = workflow_execution or WorkflowExecutionService(workflow_store)
+    server.handoff_mailbox_factory = handoff_mailbox_factory or (
+        lambda: OutlookReviewMailbox(
+            OutlookGraphClient(OutlookGraphConfig.from_environment())
+        )
+    )
     server.feed = feed or IntakeInboxFeed(
         lambda: OutlookGraphClient(OutlookGraphConfig.from_environment()),
         cache_ttl_seconds=cache_ttl_seconds,

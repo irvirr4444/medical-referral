@@ -45,11 +45,12 @@ class StageOneTracker:
                 "filename": getattr(attachment, "safe_filename", None) or attachment.filename,
                 "received_at": getattr(attachment, "received_at", None),
                 "sender": getattr(attachment, "sender", None),
+                "message_id": getattr(attachment, "message_id", None),
             },
         )
         return stored
 
-    def processing_started(self, case: WorkflowCase) -> WorkflowCase:
+    def processing_started(self, case: WorkflowCase, *, revision: int = 1) -> WorkflowCase:
         status = "completed" if case.status == "completed" else "processing"
         updated = case.model_copy(update={"status": status, "updated_at": _utc_now()})
         stored = self.store.upsert_workflow_case(updated)
@@ -57,11 +58,18 @@ class StageOneTracker:
             case.case_id,
             "extraction_started",
             source="extractor",
-            event_key=f"stage1:{case.source_ref}:extraction-started",
+            event_key=f"stage1:{case.source_ref}:extraction-started:rev{revision}",
+            details={"revision": revision},
         )
         return stored
 
-    def extraction_completed(self, case: WorkflowCase, manifest: dict[str, Any]) -> WorkflowCase:
+    def extraction_completed(
+        self,
+        case: WorkflowCase,
+        manifest: dict[str, Any],
+        *,
+        revision: int = 1,
+    ) -> WorkflowCase:
         now = _utc_now()
         referral = _load_manifest_referral(manifest)
         patient_label = _text(referral.get("patient_name"))
@@ -84,36 +92,53 @@ class StageOneTracker:
             case.case_id,
             "extraction_completed",
             source="extractor",
-            event_key=f"stage1:{case.source_ref}:extraction-completed",
+            event_key=f"stage1:{case.source_ref}:extraction-completed:rev{revision}",
             details={
                 "outcome": outcome,
                 "patient_label": patient_label,
                 "fields": _stage_one_fields(referral),
+                "revision": revision,
+                "monday_preview": _load_json_object(
+                    manifest.get("preview_path") or manifest.get("master_sheet_preview_path")
+                ),
+                "drk_draft": _load_json_object(manifest.get("drk_draft_path")),
+                "source_message_id": manifest.get("source_message_id"),
             },
         )
+        self.monday_checked(stored, manifest, revision=revision)
+        return stored
+
+    def monday_checked(
+        self,
+        case: WorkflowCase,
+        manifest: dict[str, Any],
+        *,
+        revision: int = 1,
+    ) -> None:
         self.record(
             case.case_id,
             "monday_duplicate_checked",
             source="monday",
-            event_key=f"stage1:{case.source_ref}:monday-duplicate",
+            event_key=f"stage1:{case.source_ref}:monday-duplicate:rev{revision}",
             details={
                 "status": manifest.get("duplicate_status"),
                 "write_performed": False,
+                "revision": revision,
             },
         )
-        return stored
 
-    def drk_checked(self, case: WorkflowCase, decision: dict[str, Any]) -> None:
+    def drk_checked(self, case: WorkflowCase, decision: dict[str, Any], *, revision: int = 1) -> None:
         self.record(
             case.case_id,
             "drk_duplicate_checked",
             source="drk",
-            event_key=f"stage1:{case.source_ref}:drk-duplicate",
+            event_key=f"stage1:{case.source_ref}:drk-duplicate:rev{revision}",
             details={
                 "status": decision.get("status"),
                 "reason": decision.get("reason"),
                 "candidate_count": len(decision.get("candidate_patient_ids") or []),
                 "write_performed": False,
+                "revision": revision,
             },
         )
 
@@ -183,15 +208,22 @@ class StageOneTracker:
         )
         return stored
 
-    def failed(self, case: WorkflowCase, *, event_type: str, error_code: str) -> WorkflowCase:
+    def failed(
+        self,
+        case: WorkflowCase,
+        *,
+        event_type: str,
+        error_code: str,
+        revision: int = 1,
+    ) -> WorkflowCase:
         updated = case.model_copy(update={"status": "failed", "updated_at": _utc_now()})
         stored = self.store.upsert_workflow_case(updated)
         self.record(
             case.case_id,
             event_type,
             source="pipeline",
-            event_key=f"stage1:{case.source_ref}:{event_type}",
-            details={"error_code": error_code},
+            event_key=f"stage1:{case.source_ref}:{event_type}:rev{revision}",
+            details={"error_code": error_code, "revision": revision},
         )
         return stored
 
@@ -239,8 +271,7 @@ def acknowledgement_digest(*, case_id: str, recipient: str, template_version: st
     return hashlib.sha256(value).hexdigest()
 
 
-def _load_manifest_referral(manifest: dict[str, Any]) -> dict[str, Any]:
-    path = manifest.get("plan_path")
+def _load_json_object(path: Any) -> dict[str, Any]:
     if not path:
         return {}
     try:
@@ -250,7 +281,12 @@ def _load_manifest_referral(manifest: dict[str, Any]) -> dict[str, Any]:
         payload = json.loads(Path(path).read_text(encoding="utf-8"))
     except (OSError, ValueError, TypeError):
         return {}
-    referral = payload.get("referral") if isinstance(payload, dict) else None
+    return payload if isinstance(payload, dict) else {}
+
+
+def _load_manifest_referral(manifest: dict[str, Any]) -> dict[str, Any]:
+    payload = _load_json_object(manifest.get("plan_path"))
+    referral = payload.get("referral") if payload else None
     return referral if isinstance(referral, dict) else {}
 
 

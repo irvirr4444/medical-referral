@@ -22,6 +22,11 @@ def test_preflight_requires_an_internal_reviewer_and_loads_synthetic_hashes(
     monkeypatch.setenv("OUTLOOK_MAILBOX", "inbox@example.test")
     monkeypatch.setenv("WORKFLOW_DATABASE_BACKEND", "sqlite")
     monkeypatch.setenv("REFERRAL_REVIEW_STORE", "sqlite")
+    monkeypatch.setenv("WORKFLOW_SQLITE_PATH", str(tmp_path / "workflow.sqlite"))
+    monkeypatch.setenv("INTAKE_DATA_ROOT", str(tmp_path))
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
+    monkeypatch.delenv("SUPABASE_SERVICE_KEY", raising=False)
     monkeypatch.setenv("REVIEW_RECIPIENT_EMAIL", "")
 
     missing = run_stage_one_preflight()
@@ -32,6 +37,8 @@ def test_preflight_requires_an_internal_reviewer_and_loads_synthetic_hashes(
     ready = run_stage_one_preflight()
     assert ready["ready"] is True
     assert next(item for item in ready["checks"] if item["name"] == "synthetic_allowlist")["status"] == "ok"
+    assert next(item for item in ready["checks"] if item["name"] == "case_manager_roster")["status"] == "ok"
+    assert next(item for item in ready["checks"] if item["name"] == "local_schema")["status"] == "ok"
 
 
 def test_email_preview_renders_both_messages_without_sending(tmp_path) -> None:

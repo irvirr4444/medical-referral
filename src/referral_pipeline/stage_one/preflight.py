@@ -75,12 +75,18 @@ def run_stage_one_preflight(*, live: bool = False) -> dict[str, object]:
         )
     )
 
+    checks.append(_capture("case_manager_roster", _check_roster))
+    checks.append(_capture("local_schema", _check_local_schema))
+
     if live and not any(check.name == "outlook" and check.status == "error" for check in checks):
         checks.append(_capture("outlook_live", _check_outlook))
     if live and os.getenv("MONDAY_DOT_COM_API_KEY", "").strip():
         checks.append(_capture("monday_live", _check_monday))
+        checks.append(_capture("monday_board", _check_monday_board))
     if live and supabase_enabled and os.getenv("SUPABASE_URL", "").strip() and _supabase_key():
         checks.append(_capture("supabase_schema", _check_supabase))
+    if live and os.getenv("EMR_URL", "").strip() and os.getenv("EMR_USERNAME", "").strip():
+        checks.append(_capture("drk_live", _check_drk))
 
     errors = sum(check.status == "error" for check in checks)
     warnings = sum(check.status == "warning" for check in checks)
@@ -139,11 +145,19 @@ def _check_outlook() -> str:
     roles = set(_jwt_claims(client._token()).get("roles") or [])  # noqa: SLF001
     missing = {"Mail.Read", "Mail.Send"} - roles
     if missing:
-        raise RuntimeError("Missing Microsoft Graph application roles: " + ", ".join(sorted(missing)))
+        raise RuntimeError(
+            "Missing Microsoft Graph application roles: "
+            + ", ".join(sorted(missing))
+            + ". Remediation: grant Mail.Read and Mail.Send to the app registration."
+        )
     client.get_json(
         f"/users/{client.config.mailbox}/mailFolders/inbox/messages?$select=id&$top=1"
     )
-    return "Mailbox read succeeded; application Mail.Read and Mail.Send are present"
+    reviewer = os.getenv("REVIEW_RECIPIENT_EMAIL", "").strip()
+    return (
+        "Mailbox read succeeded; application Mail.Read and Mail.Send are present"
+        + (f"; internal reviewer {reviewer} is configured" if reviewer else "")
+    )
 
 
 def _jwt_claims(token: str) -> dict[str, object]:
@@ -161,8 +175,140 @@ def _check_monday() -> str:
 
     payload = monday_graphql("query { me { id } }")
     if not (payload.get("data") or {}).get("me"):
-        raise RuntimeError("Monday did not return the current user")
+        raise RuntimeError("Monday did not return the current user. Remediation: verify MONDAY_DOT_COM_API_KEY.")
     return "Monday read-only identity query succeeded"
+
+
+def _check_monday_board() -> str:
+    import sys
+    from pathlib import Path
+
+    monday_dir = Path(__file__).resolve().parents[2] / "monday.com"
+    if str(monday_dir) not in sys.path:
+        sys.path.insert(0, str(monday_dir))
+    from master_sheet_writer import load_master_sheet_write_config
+    from monday_api import monday_graphql
+
+    config_path = Path(
+        os.getenv("MASTER_SHEET_WRITE_CONFIG")
+        or monday_dir / "master_sheet_write_config.example.json"
+    )
+    config = load_master_sheet_write_config(config_path)
+    payload = monday_graphql(
+        "query ($ids: [ID!]) { boards(ids: $ids) { id name } }",
+        variables={"ids": [str(config.board_id)]},
+    )
+    boards = ((payload.get("data") or {}).get("boards") or [])
+    if not boards:
+        raise RuntimeError(
+            f"Master Sheet board {config.board_id} is not readable. "
+            "Remediation: confirm the API key can access the configured Monday board."
+        )
+    board = boards[0]
+    return f"Master Sheet board {board.get('id')} ({board.get('name')}) is readable"
+
+
+def _check_roster() -> str:
+    from referral_pipeline.workflow.roster import load_case_manager_roster
+
+    managers = load_case_manager_roster()
+    if not managers:
+        raise RuntimeError(
+            "Case-manager roster is empty. Remediation: populate case_managers.json "
+            "or set CASE_MANAGER_ROSTER_PATH."
+        )
+    return f"{len(managers)} case managers loaded from the configured roster"
+
+
+def _check_local_schema() -> str:
+    import sqlite3
+    from pathlib import Path
+
+    from referral_pipeline.monitoring.sqlite_store import SQLiteWorkflowStore
+
+    workflow_path = Path(
+        os.getenv("WORKFLOW_SQLITE_PATH")
+        or Path(os.getenv("INTAKE_DATA_ROOT", "tmp/intake-service")) / "workflow-monitor.sqlite"
+    )
+    SQLiteWorkflowStore(workflow_path)
+    with sqlite3.connect(workflow_path) as connection:
+        tables = {
+            row[0]
+            for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        }
+        operation_columns = {
+            row[1] for row in connection.execute("PRAGMA table_info(wcw_external_operations)")
+        }
+    required = {
+        "wcw_workflow_cases",
+        "wcw_workflow_events",
+        "wcw_work_items",
+        "wcw_workflow_decisions",
+        "wcw_external_operations",
+    }
+    missing = sorted(required - tables)
+    if missing:
+        raise RuntimeError(
+            "Local workflow schema is missing "
+            + ", ".join(missing)
+            + ". Remediation: recreate the SQLite workflow database."
+        )
+    needed_operation_columns = {"lease_until", "claimed_by"}
+    missing_op_columns = sorted(needed_operation_columns - operation_columns)
+    if missing_op_columns:
+        raise RuntimeError(
+            "wcw_external_operations is missing "
+            + ", ".join(missing_op_columns)
+            + ". Remediation: reopen the SQLite workflow store so claim/lease columns migrate."
+        )
+    state_path = Path(os.getenv("INTAKE_DATA_ROOT", "tmp/intake-service")) / "state.sqlite"
+    from referral_pipeline.review.store import ReviewStore
+
+    ReviewStore(state_path)
+    with sqlite3.connect(state_path) as connection:
+        columns = {
+            row[1] for row in connection.execute("PRAGMA table_info(referral_reviews)")
+        }
+    needed = {
+        "review_id",
+        "workflow_case_id",
+        "workflow_apply_status",
+        "workflow_apply_attempts",
+        "workflow_apply_last_error",
+    }
+    missing_columns = sorted(needed - columns)
+    if missing_columns:
+        raise RuntimeError(
+            "referral_reviews is missing "
+            + ", ".join(missing_columns)
+            + ". Remediation: open the review store once so SQLite migrates apply-state columns."
+        )
+    return "Local Stage 2-3 tables present; referral_reviews apply-state columns present"
+
+
+def _check_drk() -> str:
+    from pathlib import Path
+    from tempfile import TemporaryDirectory
+
+    from drk_emr.common.browser import login, login_url_for, make_driver, require_env
+
+    username = require_env("EMR_USERNAME")
+    password = require_env("EMR_PASSWORD")
+    emr_url = require_env("EMR_URL")
+    driver = None
+    try:
+        with TemporaryDirectory(prefix="drk-preflight-") as tmp:
+            driver = make_driver(Path(tmp))
+            login(driver, login_url_for(emr_url), username, password)
+            current = str(driver.current_url)
+    finally:
+        if driver is not None:
+            driver.quit()
+    if "dashboard" not in current.casefold():
+        raise RuntimeError(
+            "DRK login did not reach the dashboard. Remediation: verify EMR_URL and the DRK account."
+        )
+    return "DRK login succeeded and the dashboard is reachable"
 
 
 def _check_supabase() -> str:
@@ -170,9 +316,15 @@ def _check_supabase() -> str:
     key = _supabase_key()
     headers = {"apikey": key, "Authorization": f"Bearer {key}"}
     targets = {
-        "wcw_workflow_cases": "case_id,status",
+        "wcw_workflow_cases": "case_id,status,current_stage",
         "wcw_workflow_events": "event_key,event_type,entity_id",
-        "referral_reviews": "review_id,review_purpose,workflow_case_id",
+        "wcw_work_items": "work_item_id,case_id,status",
+        "wcw_workflow_decisions": "decision_id,idempotency_key,case_id",
+        "wcw_external_operations": "operation_id,idempotency_key,operation_type,status,lease_until,claimed_by",
+        "referral_reviews": (
+            "review_id,review_purpose,workflow_case_id,workflow_apply_status,"
+            "workflow_apply_attempts,workflow_apply_last_error"
+        ),
     }
     for table, columns in targets.items():
         response = requests.get(
@@ -182,5 +334,8 @@ def _check_supabase() -> str:
             timeout=20,
         )
         if not response.ok:
-            raise RuntimeError(f"{table} is unavailable or missing expected columns (HTTP {response.status_code})")
-    return "Required Stage 1 Supabase tables and columns are readable"
+            raise RuntimeError(
+                f"{table} is unavailable or missing expected columns (HTTP {response.status_code}). "
+                "Remediation: apply supabase/migrations in filename order."
+            )
+    return "Required Stage 1-3 Supabase tables and apply-state columns are readable"

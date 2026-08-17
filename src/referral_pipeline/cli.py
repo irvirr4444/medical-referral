@@ -29,12 +29,12 @@ from referral_pipeline.review.workflow import create_and_send_review  # noqa: E4
 from referral_pipeline.runner import main as run_inbound_main  # noqa: E402
 from referral_pipeline.state import InboxState  # noqa: E402
 from referral_pipeline.monitoring.cli import add_monitoring_commands, run_monitoring_command  # noqa: E402
+from referral_pipeline.monitoring.store import create_routed_workflow_store  # noqa: E402
 from referral_pipeline.api.server import main as run_intake_api  # noqa: E402
 from referral_pipeline.stage_one.email_preview import render_stage_one_email_preview  # noqa: E402
 from referral_pipeline.stage_one.preflight import run_stage_one_preflight  # noqa: E402
 
 
-DEFAULT_OUTPUT_ROOT = Path("tmp") / "inbox-runs"
 LATEST_POINTER_NAME = "latest.json"
 # Temporary test toggle. Change to True when Monday duplicate checks should run.
 MONDAY_DUPLICATE_CHECK_ENABLED = False
@@ -46,6 +46,10 @@ class IntakeCLIError(RuntimeError):
 
 def _build_parser() -> argparse.ArgumentParser:
     load_dotenv()
+    default_data_root = Path(os.getenv("INTAKE_DATA_ROOT", "tmp/intake-service"))
+    default_output_root = default_data_root / "inbox-runs"
+    default_state_db = default_data_root / "state.sqlite"
+    default_workflow_sqlite_path = default_data_root / "workflow-monitor.sqlite"
     parser = argparse.ArgumentParser(
         description="Run the Outlook-to-Monday referral intake flow with safe defaults.",
     )
@@ -80,11 +84,15 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     inbox_api.add_argument("--cache-ttl-seconds", type=int, default=30)
     inbox_api.add_argument("--workflow-database-backend", choices=("sqlite", "supabase"))
-    inbox_api.add_argument("--workflow-sqlite-path", type=Path)
+    inbox_api.add_argument(
+        "--workflow-sqlite-path",
+        type=Path,
+        default=default_workflow_sqlite_path,
+    )
     inbox_api.add_argument(
         "--data-root",
         type=Path,
-        default=Path(os.getenv("INTAKE_DATA_ROOT", "tmp/intake-service")),
+        default=default_data_root,
     )
     inbox_api.add_argument("--poll-interval-seconds", type=int, default=60)
     inbox_api.add_argument("--retry-interval-seconds", type=int, default=60)
@@ -108,8 +116,8 @@ def _build_parser() -> argparse.ArgumentParser:
     outlook.add_argument("--agency-records-file", type=Path)
     outlook.add_argument("--include-full-row", action="store_true")
     outlook.add_argument("--config", type=Path)
-    outlook.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
-    outlook.add_argument("--state-db", type=Path)
+    outlook.add_argument("--output-root", type=Path, default=default_output_root)
+    outlook.add_argument("--state-db", type=Path, default=default_state_db)
     outlook.add_argument("--force", action="store_true", help="Reprocess eligible PDFs even when already recorded.")
     outlook.add_argument("--quiet", action="store_true", help="Suppress progress logs while retaining the final summary.")
     outlook.add_argument(
@@ -128,7 +136,11 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Run the read-only DRK duplicate check after extraction.",
     )
     outlook.add_argument("--workflow-database-backend", choices=("sqlite", "supabase"))
-    outlook.add_argument("--workflow-sqlite-path", type=Path)
+    outlook.add_argument(
+        "--workflow-sqlite-path",
+        type=Path,
+        default=default_workflow_sqlite_path,
+    )
     outlook.add_argument(
         "--review-recipient",
         help="Internal reviewer responsible for confirming referral-partner outreach.",
@@ -141,7 +153,7 @@ def _build_parser() -> argparse.ArgumentParser:
     source = apply.add_mutually_exclusive_group()
     source.add_argument("--preview", type=Path, help="Apply a specific master-sheet-preview.json file.")
     source.add_argument("--run", type=Path, help="Apply the only preview inside a specific run directory.")
-    apply.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
+    apply.add_argument("--output-root", type=Path, default=default_output_root)
     apply.add_argument("--confirm-master-sheet-write", action="store_true", required=True)
 
     approvals = commands.add_parser(
@@ -160,8 +172,14 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Create the Monday item once for each confirmed review; DRK remains a pending draft.",
     )
     approvals.add_argument("--max-messages", type=int, default=25)
-    approvals.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
-    approvals.add_argument("--state-db", type=Path)
+    approvals.add_argument("--output-root", type=Path, default=default_output_root)
+    approvals.add_argument("--state-db", type=Path, default=default_state_db)
+    approvals.add_argument("--workflow-database-backend", choices=("sqlite", "supabase"))
+    approvals.add_argument(
+        "--workflow-sqlite-path",
+        type=Path,
+        default=default_workflow_sqlite_path,
+    )
 
     review_send = commands.add_parser(
         "review-send",
@@ -223,25 +241,83 @@ def _build_parser() -> argparse.ArgumentParser:
     retries.add_argument("--agency-records-file", type=Path)
     retries.add_argument("--include-full-row", action="store_true")
     retries.add_argument("--config", type=Path)
-    retries.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
-    retries.add_argument("--state-db", type=Path)
+    retries.add_argument("--output-root", type=Path, default=default_output_root)
+    retries.add_argument("--state-db", type=Path, default=default_state_db)
+    retries.add_argument("--workflow-database-backend", choices=("sqlite", "supabase"))
+    retries.add_argument(
+        "--workflow-sqlite-path",
+        type=Path,
+        default=default_workflow_sqlite_path,
+    )
     retries.add_argument("--quiet", action="store_true")
     retries.add_argument("--send-review", action="store_true", default=True)
     retries.add_argument("--no-send-review", action="store_false", dest="send_review")
     retries.add_argument("--review-recipient", help="Reviewer email; defaults to REVIEW_RECIPIENT_EMAIL.")
+    retries.add_argument(
+        "--retry-step",
+        choices=("all", "extraction", "monday", "drk", "acknowledgement", "workflow"),
+        default="all",
+    )
+    retries.add_argument(
+        "--refresh-config",
+        action="store_true",
+        help="Replace stored job options with the current retries flags before processing.",
+    )
+    retries.add_argument("--send-partner-acknowledgement", action="store_true")
+    retries.add_argument("--drk-duplicate-check", action="store_true")
 
     failures = commands.add_parser(
         "failures",
         help="List permanent intake failures and optionally requeue one by sha256.",
     )
-    failures.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
-    failures.add_argument("--state-db", type=Path)
+    failures.add_argument("--output-root", type=Path, default=default_output_root)
+    failures.add_argument("--state-db", type=Path, default=default_state_db)
     failures.add_argument("--limit", type=int, default=50, help="Maximum failed jobs to list.")
     failures.add_argument(
         "--requeue",
         metavar="SHA256",
         help="Move one permanent failure back onto the discovery queue for a deliberate retry.",
     )
+    failures.add_argument(
+        "--refresh-config",
+        action="store_true",
+        help="When requeuing, replace stored job options with current intake defaults.",
+    )
+
+    handoff_preview = commands.add_parser(
+        "handoff-preview",
+        help="Preview one Stage 3 operation without consuming it or writing externally.",
+    )
+    handoff_preview.add_argument("--case-id", required=True)
+    handoff_preview.add_argument(
+        "--operation-type",
+        required=True,
+        choices=("notify-assigned-case-manager", "create-monday-record", "prefill-drk-chart"),
+    )
+    handoff_preview.add_argument("--output-root", type=Path, default=default_output_root)
+    handoff_preview.add_argument("--workflow-database-backend", choices=("sqlite", "supabase"))
+    handoff_preview.add_argument("--workflow-sqlite-path", type=Path, default=default_workflow_sqlite_path)
+
+    handoff_execute = commands.add_parser(
+        "handoff-execute",
+        help="Execute one Stage 3 operation after explicit confirmation. Monday requires --confirm-monday-write.",
+    )
+    handoff_execute.add_argument("--case-id", required=True)
+    handoff_execute.add_argument(
+        "--operation-type",
+        required=True,
+        choices=("notify-assigned-case-manager", "create-monday-record", "prefill-drk-chart"),
+    )
+    handoff_execute.add_argument("--confirm", action="store_true", required=True)
+    handoff_execute.add_argument(
+        "--confirm-monday-write",
+        action="store_true",
+        help="Required for create-monday-record. Default remains dry-run/preview.",
+    )
+    handoff_execute.add_argument("--operator-retry", action="store_true")
+    handoff_execute.add_argument("--output-root", type=Path, default=default_output_root)
+    handoff_execute.add_argument("--workflow-database-backend", choices=("sqlite", "supabase"))
+    handoff_execute.add_argument("--workflow-sqlite-path", type=Path, default=default_workflow_sqlite_path)
 
     add_monitoring_commands(commands)
 
@@ -490,7 +566,20 @@ def _run_approvals(args: argparse.Namespace) -> int:
     print(f"[review] checking {args.max_messages} recent inbox messages")
     print(f"[review] mode: {mode}")
     print(f"[review] writes attempted: {'yes' if args.execute else 'no'}")
-    result = ApprovalProcessor(state_db=state_db, mailbox=mailbox).poll(
+    workflow_backend = (
+        args.workflow_database_backend
+        or os.getenv("WORKFLOW_DATABASE_BACKEND")
+        or "sqlite"
+    ).strip().casefold()
+    result = ApprovalProcessor(
+        state_db=state_db,
+        mailbox=mailbox,
+        allow_supabase_store=workflow_backend == "supabase",
+        workflow_store=create_routed_workflow_store(
+            sqlite_path=args.workflow_sqlite_path,
+            include_remote=workflow_backend == "supabase",
+        ),
+    ).poll(
         max_messages=args.max_messages,
         execute=args.execute,
         dry_run=args.dry_run,
@@ -538,6 +627,19 @@ def _run_retries(args: argparse.Namespace) -> int:
         delegated.append("--send-review")
     if args.review_recipient:
         delegated.extend(("--review-recipient", args.review_recipient))
+    if args.workflow_database_backend:
+        delegated.extend(("--workflow-database-backend", args.workflow_database_backend))
+    delegated.extend(
+        ("--workflow-sqlite-path", str(args.workflow_sqlite_path.resolve()))
+    )
+    if getattr(args, "retry_step", None) and args.retry_step != "all":
+        delegated.extend(("--retry-step", args.retry_step))
+    if getattr(args, "refresh_config", False):
+        delegated.append("--refresh-config")
+    if getattr(args, "send_partner_acknowledgement", False):
+        delegated.append("--send-partner-acknowledgement")
+    if getattr(args, "drk_duplicate_check", False):
+        delegated.append("--drk-duplicate-check")
 
     print(f"[intake] source: durable retry queue (max {args.max_jobs})")
     print(f"[intake] run directory: {run_dir}")
@@ -605,6 +707,26 @@ def _run_failures(args: argparse.Namespace) -> int:
             job = state.requeue_failed(sha256=args.requeue)
         except KeyError as error:
             raise IntakeCLIError(str(error)) from error
+        if args.refresh_config:
+            job = state.refresh_options(
+                sha256=args.requeue,
+                options={
+                    "input_mode": "image",
+                    "max_pages": None,
+                    "monday_mode": "live-readonly" if MONDAY_DUPLICATE_CHECK_ENABLED else "disabled",
+                    "monday_records_file": None,
+                    "include_full_row": False,
+                    "agency_mode": "live-readonly",
+                    "agency_records_file": None,
+                    "config": None,
+                    "master_sheet_mode": "dry-run",
+                    "confirm_master_sheet_write": False,
+                    "send_review": True,
+                    "send_partner_acknowledgement": False,
+                    "drk_duplicate_check": False,
+                    "review_recipient": os.getenv("REVIEW_RECIPIENT_EMAIL"),
+                },
+            )
         print(
             json.dumps(
                 {
@@ -612,6 +734,7 @@ def _run_failures(args: argparse.Namespace) -> int:
                     "sha256": job.sha256,
                     "filename": job.filename,
                     "subject": job.subject,
+                    "config_refreshed": bool(args.refresh_config),
                     "next": "python run_pipeline.py outlook --send-review  or  python run_pipeline.py retries",
                 },
                 indent=2,
@@ -640,6 +763,42 @@ def _run_failures(args: argparse.Namespace) -> int:
     }
     print(json.dumps(payload, indent=2, ensure_ascii=False))
     return 1 if jobs else 0
+
+
+def _run_handoff(args: argparse.Namespace, *, preview: bool) -> int:
+    from referral_pipeline.workflow import WorkflowExecutionService
+
+    backend = (
+        args.workflow_database_backend
+        or os.getenv("WORKFLOW_DATABASE_BACKEND")
+        or "sqlite"
+    ).strip().casefold()
+    store = create_routed_workflow_store(
+        sqlite_path=args.workflow_sqlite_path,
+        include_remote=backend == "supabase",
+    )
+    service = WorkflowExecutionService(store)
+    mailbox = None
+    if args.operation_type == "notify-assigned-case-manager" and not preview:
+        mailbox = OutlookReviewMailbox(OutlookGraphClient(OutlookGraphConfig.from_environment()))
+    if preview:
+        result = service.preview_handoff_operation(args.case_id, args.operation_type, mailbox=mailbox)
+    else:
+        if args.operation_type == "create-monday-record" and not args.confirm_monday_write:
+            raise IntakeCLIError("create-monday-record requires --confirm-monday-write")
+        result = service.execute_handoff_operation(
+            args.case_id,
+            args.operation_type,
+            execute=True,
+            confirm_monday_write=bool(args.confirm_monday_write),
+            mailbox=mailbox,
+            operator_retry=bool(getattr(args, "operator_retry", False)),
+        )
+    print(json.dumps(result, indent=2, default=str))
+    status = result.get("status")
+    if result.get("mode") == "preview" or status in {"ready", "succeeded", "blocked"}:
+        return 0
+    return 1
 
 
 def _select_preview(args: argparse.Namespace) -> tuple[Path, dict[str, Any] | None]:
@@ -736,6 +895,10 @@ def main(argv: list[str] | None = None) -> int:
             return _run_retries(args)
         if args.command == "failures":
             return _run_failures(args)
+        if args.command == "handoff-preview":
+            return _run_handoff(args, preview=True)
+        if args.command == "handoff-execute":
+            return _run_handoff(args, preview=False)
         if args.command == "stage-one-doctor":
             return _run_stage_one_doctor(args)
         if args.command == "stage-one-email-preview":

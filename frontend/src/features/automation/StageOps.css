@@ -3069,33 +3069,10 @@
   background: rgb(17 103 95 / 8%);
 }
 
-.stage-ops-live-inbox button:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-
-.stage-ops-live-inbox button.stage-ops-live-inbox__toggle {
-  display: inline-flex;
-  width: auto;
-  gap: 0.3rem;
-  padding: 0 0.55rem;
-  border: 1px solid currentColor;
-  border-radius: 999px;
-  font: inherit;
-}
-
-.stage-ops-live-inbox .is-spinning {
-  animation: live-inbox-spin 0.9s linear infinite;
-}
-
 @keyframes live-inbox-pulse {
   0% { box-shadow: 0 0 0 0 rgb(26 155 140 / 30%); }
   70% { box-shadow: 0 0 0 5px rgb(26 155 140 / 0%); }
   100% { box-shadow: 0 0 0 0 rgb(26 155 140 / 0%); }
-}
-
-@keyframes live-inbox-spin {
-  to { transform: rotate(360deg); }
 }
 
 @media (max-width: 760px) {

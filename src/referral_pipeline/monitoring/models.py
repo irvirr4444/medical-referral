@@ -130,11 +130,13 @@ class ExternalOperation(StrictModel):
     case_id: str
     stage: int = Field(ge=2, le=7)
     operation_type: str
-    status: Literal["ready", "running", "succeeded", "blocked", "failed"]
+    status: Literal["ready", "running", "succeeded", "blocked", "failed", "uncertain"]
     request_payload: dict[str, Any] = Field(default_factory=dict)
     result: dict[str, Any] = Field(default_factory=dict)
     attempts: int = Field(default=0, ge=0)
     last_error: str | None = None
+    lease_until: datetime | None = None
+    claimed_by: str | None = None
     created_at: datetime
     updated_at: datetime
     completed_at: datetime | None = None

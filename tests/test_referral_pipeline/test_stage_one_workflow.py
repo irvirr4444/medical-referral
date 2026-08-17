@@ -203,6 +203,24 @@ def test_inbox_projection_exposes_persisted_stage_one_steps(tmp_path) -> None:
 
     assert referral["case_id"] == case.case_id
     assert referral["patient_label"] == "TEST Patient"
+    assert referral["persistence"] == "sqlite"
     assert referral["steps"]["extract-and-verify"]["status"] == "done"
     assert referral["steps"]["check-monday"]["status"] == "done"
     assert feed.read_timeline(referral["id"])["case"]["case_id"] == case.case_id
+
+
+def test_retry_revisions_insert_new_events_instead_of_ignoring_duplicates(tmp_path) -> None:
+    store = SQLiteWorkflowStore(tmp_path / "workflow.sqlite")
+    tracker = StageOneTracker(store)
+    case = tracker.discover(_attachment())
+    case = tracker.processing_started(case, revision=1)
+    case = tracker.extraction_completed(case, _manifest(tmp_path), revision=1)
+    tracker.failed(case, event_type="stage_one_failed", error_code="OutlookGraphError", revision=1)
+    tracker.extraction_completed(case, _manifest(tmp_path), revision=2)
+
+    events = store.list_events(case.case_id)
+    keys = [event.event_key for event in events]
+    assert any(key.endswith("extraction-completed:rev1") for key in keys)
+    assert any(key.endswith("extraction-completed:rev2") for key in keys)
+    assert any(key.endswith("stage_one_failed:rev1") for key in keys)
+    assert sum(event.event_type == "extraction_completed" for event in events) == 2

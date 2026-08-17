@@ -39,6 +39,15 @@ class WorkflowStore(Protocol):
     def record_decision(self, decision: WorkflowDecision) -> bool: ...
     def list_decisions(self, case_id: str) -> list[WorkflowDecision]: ...
     def upsert_external_operation(self, operation: ExternalOperation) -> ExternalOperation: ...
+    def claim_external_operation(
+        self,
+        operation_id: str,
+        *,
+        case_id: str,
+        claimed_by: str,
+        lease_seconds: int = 300,
+        allow_uncertain: bool = False,
+    ) -> str: ...
     def list_external_operations(self, case_id: str) -> list[ExternalOperation]: ...
     def list_events(self, entity_id: str, *, limit: int = 100) -> list[WorkflowEvent]: ...
     def enqueue_acknowledgement(self, acknowledgement: OutboundAcknowledgement) -> bool: ...
@@ -87,3 +96,40 @@ def create_workflow_store(
 
         return SupabaseWorkflowStore.from_environment()
     raise ValueError("WORKFLOW_DATABASE_BACKEND must be sqlite or supabase")
+
+
+def create_routed_workflow_store(
+    *,
+    sqlite_path: str | Path | None = None,
+    include_remote: bool | None = None,
+    allow_local_fallback: bool = False,
+) -> WorkflowStore:
+    """Read both stores when Supabase is configured; never create new remote cases here.
+
+    When include_remote is true, Supabase initialization failure raises unless
+    allow_local_fallback is explicitly enabled for development.
+    """
+    from referral_pipeline.monitoring.sqlite_store import SQLiteWorkflowStore
+
+    local = SQLiteWorkflowStore(
+        Path(sqlite_path or os.getenv("WORKFLOW_SQLITE_PATH") or "tmp/workflow-monitor.sqlite")
+    )
+    selected = (os.getenv("WORKFLOW_DATABASE_BACKEND") or "sqlite").strip().casefold()
+    want_remote = include_remote if include_remote is not None else selected == "supabase"
+    if not want_remote:
+        return local
+    from referral_pipeline.monitoring.supabase_store import SupabaseWorkflowStore
+
+    try:
+        remote = SupabaseWorkflowStore.from_environment()
+    except Exception as error:
+        if allow_local_fallback:
+            return local
+        raise RuntimeError(
+            "Supabase workflow store is required but could not be initialized. "
+            "Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY, or pass "
+            "allow_local_fallback=True only for local development."
+        ) from error
+    from referral_pipeline.monitoring.routing import RoutingWorkflowStore
+
+    return RoutingWorkflowStore(local=local, remote=remote)

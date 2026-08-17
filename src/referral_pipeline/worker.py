@@ -17,7 +17,7 @@ from Outlook.review_mail import OutlookReviewMailbox
 from referral_pipeline.monitoring.config import DEFAULT_CONFIG_PATH
 from referral_pipeline.monitoring.drk_capture import DEFAULT_PROFILE_PATH
 from referral_pipeline.monitoring.health import WorkerHealthReporter, create_worker_health_reporter
-from referral_pipeline.monitoring.store import create_workflow_store
+from referral_pipeline.monitoring.store import create_routed_workflow_store
 from referral_pipeline.monitoring.worker_cycle import run_monitor_cycle
 from referral_pipeline.review.workflow import ApprovalProcessor
 from referral_pipeline.runner import main as run_inbound_main
@@ -317,9 +317,20 @@ def run_approval_cycle(
             processor = ApprovalProcessor(
                 state_db=state_db,
                 mailbox=OutlookReviewMailbox(client),
-                workflow_store=create_workflow_store(
-                    backend=workflow_database_backend,
+                allow_supabase_store=(
+                    (workflow_database_backend or os.getenv("WORKFLOW_DATABASE_BACKEND") or "sqlite")
+                    .strip()
+                    .casefold()
+                    == "supabase"
+                ),
+                workflow_store=create_routed_workflow_store(
                     sqlite_path=workflow_sqlite_path,
+                    include_remote=(
+                        (workflow_database_backend or os.getenv("WORKFLOW_DATABASE_BACKEND") or "sqlite")
+                        .strip()
+                        .casefold()
+                        == "supabase"
+                    ),
                 ),
             )
         else:

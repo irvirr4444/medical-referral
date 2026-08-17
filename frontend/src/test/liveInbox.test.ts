@@ -1,6 +1,9 @@
+import { render, screen } from '@testing-library/react'
+import { createElement } from 'react'
 import { describe, expect, it } from 'vitest'
 import { feedForStep } from '../features/automation/ops'
 import { mergeLiveInboxFeed, isLiveInboxRow } from '../features/automation/liveInbox/feed'
+import { LiveInboxStatus } from '../features/automation/liveInbox/LiveInboxStatus'
 import {
   parseLiveInboxMonitor,
   parseLiveInboxPayload,
@@ -145,6 +148,23 @@ describe('live intake inbox', () => {
     expect(unknown.summary).toBe('Queued for DRK chart check')
   })
 
+  it('does not describe an absent check as queued after Stage 1 completed', () => {
+    const referral: LiveInboxReferral = {
+      ...LIVE_REFERRAL,
+      status: 'completed',
+      case_id: 'case-completed',
+    }
+    const row = mergeLiveInboxFeed({
+      demoDays: [],
+      referrals: [referral],
+      drkDuplicateCheckEnabled: true,
+      statuses: ['waiting'],
+      selectedStepId: 'check-drk',
+    }).flatMap((day) => day.rows)[0]
+
+    expect(row.summary).toBe('DRK chart check not recorded')
+  })
+
   it('shows a persisted DRK result even if the current monitor has checking disabled', () => {
     const referral: LiveInboxReferral = {
       ...LIVE_REFERRAL,
@@ -196,5 +216,72 @@ describe('live intake inbox', () => {
     expect(monitor.state).toBe('processing')
     expect(monitor.safety.monday_writes).toBe(false)
     expect(() => parseLiveInboxMonitor({ available: true })).toThrow('invalid response')
+  })
+
+  it('shows monitor health without exposing worker start or stop controls', () => {
+    const monitor = parseLiveInboxMonitor({
+      available: true,
+      state: 'monitoring',
+      enabled: true,
+      active_cycle: null,
+      started_at: '2026-08-14T08:30:00Z',
+      stopped_at: null,
+      last_heartbeat_at: '2026-08-14T08:31:00Z',
+      next_poll_at: '2026-08-14T08:32:00Z',
+      cycle_count: 1,
+      last_cycle: null,
+      error_type: null,
+      poll_interval_seconds: 60,
+      max_messages: 1,
+      safety: {
+        monday_writes: false,
+        drk_writes: false,
+        review_email: true,
+        partner_acknowledgement: true,
+        drk_duplicate_check: true,
+      },
+    })
+
+    render(createElement(LiveInboxStatus, {
+      state: { status: 'connected', referrals: [LIVE_REFERRAL], monitor },
+      onRefresh: () => undefined,
+    }))
+
+    expect(screen.getByText('Monitoring test infobox - 1 PDF')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Refresh test infobox' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /live monitoring/i })).not.toBeInTheDocument()
+  })
+
+  it('describes approval polling without presenting inbox PDFs as reply work', () => {
+    const monitor = parseLiveInboxMonitor({
+      available: true,
+      state: 'processing',
+      enabled: true,
+      active_cycle: 'approvals',
+      started_at: '2026-08-14T08:30:00Z',
+      stopped_at: null,
+      last_heartbeat_at: '2026-08-14T08:31:00Z',
+      next_poll_at: null,
+      cycle_count: 2,
+      last_cycle: null,
+      error_type: null,
+      poll_interval_seconds: 60,
+      max_messages: 10,
+      safety: {
+        monday_writes: false,
+        drk_writes: false,
+        review_email: true,
+        partner_acknowledgement: false,
+        drk_duplicate_check: false,
+      },
+    })
+
+    render(createElement(LiveInboxStatus, {
+      state: { status: 'connected', referrals: [LIVE_REFERRAL], monitor },
+      onRefresh: () => undefined,
+    }))
+
+    expect(screen.getByText('Checking review replies')).toBeInTheDocument()
+    expect(screen.queryByText(/10 PDFs/)).not.toBeInTheDocument()
   })
 })

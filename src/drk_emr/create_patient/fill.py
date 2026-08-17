@@ -21,6 +21,7 @@ from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import Select, WebDriverWait
 from seleniumwire import webdriver
 
+from drk_emr.create_patient.schema import DrkCreatePayloadDraft
 from drk_emr.create_patient.synthetic_data import SyntheticIntakeData, build_test_intake_data
 
 
@@ -462,6 +463,153 @@ def fill_intake_form(driver: webdriver.Chrome, data: SyntheticIntakeData) -> dic
 
     assert_create_patient_untouched(driver)
     return {"filled": True, "created_patient": False, "notes": notes, "data": data.to_dict()}
+
+
+def fill_intake_draft(driver: webdriver.Chrome, data: DrkCreatePayloadDraft) -> dict[str, Any]:
+    """Fill only values explicitly present in a canonical DRK draft.
+
+    This is intentionally separate from ``fill_intake_form``: that helper fills a
+    complete synthetic fixture, while production referral drafts are sparse and
+    must never inherit test defaults.
+    """
+    notes: list[dict[str, Any]] = []
+    populated: list[str] = []
+    wait = WebDriverWait(driver, 20)
+    wait.until(ec.presence_of_element_located((By.ID, "patientIntakeForm")))
+
+    def text(field_id: str, value: str | None) -> None:
+        if value is None or not str(value).strip():
+            return
+        _set_input(driver, field_id, str(value).strip())
+        populated.append(field_id)
+
+    def select_text(field_id: str, value: str | None) -> None:
+        if value is None or not str(value).strip():
+            return
+        _select_by_visible_text(driver, field_id, str(value).strip())
+        populated.append(field_id)
+
+    def select_value(field_id: str, value: str | None) -> None:
+        if value is None or not str(value).strip():
+            return
+        _select_by_value(driver, field_id, str(value).strip())
+        populated.append(field_id)
+
+    def checkbox(field_id: str, value: bool | None) -> None:
+        if value is None:
+            return
+        _set_checkbox(driver, field_id, value)
+        populated.append(field_id)
+
+    def typeahead(field_id: str, value: str | None) -> None:
+        if value is None or not str(value).strip():
+            return
+        result = _try_typeahead(driver, field_id, str(value).strip())
+        notes.append(result)
+        if result.get("selected"):
+            populated.append(field_id)
+
+    demographics = data.demographics
+    text("firstName", demographics.first_name)
+    text("middleName", demographics.middle_name)
+    text("lastName", demographics.last_name)
+    text("suffix", demographics.suffix)
+    text("ssn", demographics.ssn)
+    text("dateOfBirth", demographics.date_of_birth)
+    select_text("genderIdentityId", demographics.gender)
+    select_text("languageId", demographics.preferred_language)
+
+    for prefix, address in (
+        ("primary", data.primary_address),
+        ("secondary", data.secondary_address),
+    ):
+        text(f"{prefix}Address1", address.address_line_1)
+        text(f"{prefix}Address2", address.address_line_2)
+        text(f"{prefix}City", address.city)
+        select_value(f"{prefix}StateId", address.state)
+        text(f"{prefix}ZipCode", address.zip_code)
+        select_text(f"{prefix}CountryId", address.country)
+
+    contact = data.contact
+    text("primaryPhoneNumber", contact.primary_phone)
+    text("secondaryPhoneNumber", contact.secondary_phone)
+    text("email", contact.email)
+    text("fax", contact.fax)
+
+    emergency = data.emergency_contact
+    select_text("relationshipId", emergency.relationship)
+    text("relativeFirstName", emergency.first_name)
+    text("relativeLastName", emergency.last_name)
+    text("emergencyContactPhoneNumber", emergency.phone)
+    checkbox("patientGuardian", emergency.patient_guardian)
+    text("carePrimaryAddress1", emergency.address_line_1)
+    text("carePrimaryAddress2", emergency.address_line_2)
+    text("carePrimaryCity", emergency.city)
+    select_value("carePrimaryStateId", emergency.state)
+    text("carePrimaryZipCode", emergency.zip_code)
+
+    admission = data.admission
+    text("admissionDate", admission.admission_date)
+    typeahead("placeOfServiceSearch", admission.place_of_service_query)
+    typeahead("facilitySearch", admission.facility_query)
+    typeahead("homeHealthSearch", admission.home_health_query)
+    typeahead("providerSearch", admission.provider_query)
+    typeahead("territorySearch", admission.territory_query)
+    checkbox("medicareAdmission", admission.medicare_admission)
+    checkbox("palliativeAdmission", admission.palliative_care)
+    checkbox("hospice", admission.hospice)
+
+    referral = data.referral
+    typeahead("marketerSearch", referral.referral_source_query)
+    text("referralDate", referral.referral_date)
+    for name, value in (
+        ("clinical_referring_provider", referral.clinical_referring_provider),
+        ("clinical_referring_facility", referral.clinical_referring_facility),
+    ):
+        if value:
+            notes.append({"field": name, "value": value, "note": "not mapped to a verified DRK control"})
+
+    for index, insurance in enumerate(data.insurances):
+        values = insurance.model_dump(exclude_none=True)
+        if not values:
+            continue
+        add_ins = wait.until(ec.element_to_be_clickable((By.ID, "addInsuranceBtn")))
+        safe_click(add_ins, purpose="open insurance entry form")
+        wait.until(ec.presence_of_element_located((By.ID, "insuranceEntryForm")))
+        typeahead("insurancePayerSearch", insurance.payer_query)
+        select_value("insuranceType", insurance.insurance_type)
+        text("policyNumber", insurance.policy_number)
+        text("groupNumber", insurance.group_number)
+        text("groupName", insurance.group_name)
+        text("verifiedWith", insurance.verified_with)
+        text("effectiveDate", insurance.effective_date)
+        text("terminationDate", insurance.termination_date)
+        text("copay", insurance.copay)
+        text("deductibleAmount", insurance.deductible_amount)
+        text("percentCoverage", insurance.percent_coverage)
+        text("deductibleMet", insurance.deductible_met)
+        checkbox("isPatientPolicyHolder", insurance.is_patient_policy_holder)
+        if insurance.is_patient_policy_holder is False and insurance.subscriber is not None:
+            section = wait.until(ec.visibility_of_element_located((By.ID, "subscriberSection")))
+            driver.execute_script("arguments[0].scrollIntoView({block:'center'});", section)
+            text("subscriberFirstName", insurance.subscriber.first_name)
+            text("subscriberLastName", insurance.subscriber.last_name)
+            text("subscriberDateOfBirth", insurance.subscriber.date_of_birth)
+            select_text("subscriberRelationshipId", insurance.subscriber.relationship_to_patient)
+        save_ins = wait.until(ec.element_to_be_clickable((By.ID, "saveInsuranceBtn")))
+        if _is_forbidden_create_patient(save_ins):
+            raise RuntimeError("saveInsuranceBtn unexpectedly matched Create Patient guard")
+        safe_click(save_ins, purpose="save insurance entry only")
+        populated.append(f"insurance[{index}]")
+        time.sleep(1.0)
+
+    assert_create_patient_untouched(driver)
+    return {
+        "filled": bool(populated),
+        "created_patient": False,
+        "notes": notes,
+        "populated_fields": populated,
+    }
 
 
 def read_filled_snapshot(driver: webdriver.Chrome) -> dict[str, Any]:

@@ -378,12 +378,69 @@ class SupabaseReviewStore:
             for row in self._get(
                 "referral_reviews",
                 {
-                    "status": "in.(confirmed,dry_run_completed)",
                     "review_purpose": "eq.destination_write",
+                    "status": "in.(confirmed,dry_run_completed)",
                     "order": "created_at.asc",
                 },
             )
         ]
+
+    def pending_workflow_applies(self) -> list[ReviewRequest]:
+        return [
+            _request_from_row(row)
+            for row in self._get(
+                "referral_reviews",
+                {
+                    "review_purpose": "eq.partner_contact",
+                    "status": "eq.partner_contact_confirmed",
+                    "or": "(workflow_apply_status.is.null,workflow_apply_status.in.(pending,failed))",
+                    "order": "created_at.asc",
+                },
+            )
+        ]
+
+    def mark_workflow_apply(
+        self,
+        review_id: str,
+        *,
+        status: str,
+        error: str | None = None,
+    ) -> None:
+        if status not in {"pending", "applied", "failed", "not_required"}:
+            raise ValueError("invalid workflow apply status")
+        review = self.get(review_id)
+        attempts = review.workflow_apply_attempts
+        if status in {"applied", "failed"}:
+            attempts += 1
+        self._patch(
+            "referral_reviews",
+            {"review_id": f"eq.{review_id}"},
+            {
+                "workflow_apply_status": status,
+                "workflow_apply_attempts": attempts,
+                "workflow_apply_last_error": error,
+            },
+        )
+
+    def set_partner_contact_context(
+        self,
+        review_id: str,
+        *,
+        outcome: str,
+        sender: str,
+        message_id: str,
+    ) -> None:
+        self._patch(
+            "referral_reviews",
+            {"review_id": f"eq.{review_id}"},
+            {
+                "last_dry_run_result": {
+                    "contact_outcome": outcome,
+                    "confirmed_by": sender,
+                    "confirmation_message_id": message_id,
+                }
+            },
+        )
 
     def mark_monday_applied(self, review_id: str, *, item_id: str, drk_status: str) -> None:
         self._patch(
@@ -494,6 +551,9 @@ def _request_from_row(row: dict[str, Any]) -> ReviewRequest:
         drk_draft=_object(row.get("drk_draft")),
         last_dry_run_at=_optional_text(row.get("last_dry_run_at")),
         last_dry_run_result=_object(row.get("last_dry_run_result")),
+        workflow_apply_status=_optional_text(row.get("workflow_apply_status")),
+        workflow_apply_attempts=int(row.get("workflow_apply_attempts") or 0),
+        workflow_apply_last_error=_optional_text(row.get("workflow_apply_last_error")),
     )
 
 

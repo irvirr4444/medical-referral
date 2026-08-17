@@ -285,7 +285,12 @@ export function StagePatientSteps({
     if (selectedStepId !== 'confirm-referral-contacted') return 0
     return days.reduce(
       (count, day) =>
-        count + day.rows.filter((row) => row.status === 'waiting').length,
+        count + day.rows.filter(
+          (row) =>
+            row.status === 'waiting' &&
+            isLiveInboxRow(row) &&
+            row.workflowStep?.step_id === 'confirm-referral-contacted',
+        ).length,
       0,
     )
   }, [days, selectedStepId])
@@ -698,7 +703,6 @@ export function StagePatientSteps({
             <LiveInboxStatus
               state={liveInbox}
               onRefresh={liveInbox.refresh}
-              onToggle={liveInbox.toggleMonitor}
             />
           ) : null}
 

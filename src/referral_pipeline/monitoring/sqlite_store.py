@@ -177,14 +177,16 @@ class SQLiteWorkflowStore:
                 INSERT INTO wcw_external_operations
                     (operation_id, idempotency_key, case_id, stage, operation_type,
                      status, request_payload_json, result_json, attempts, last_error,
-                     created_at, updated_at, completed_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     lease_until, claimed_by, created_at, updated_at, completed_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(operation_id) DO UPDATE SET
                     status = excluded.status,
                     request_payload_json = excluded.request_payload_json,
                     result_json = excluded.result_json,
                     attempts = excluded.attempts,
                     last_error = excluded.last_error,
+                    lease_until = excluded.lease_until,
+                    claimed_by = excluded.claimed_by,
                     updated_at = excluded.updated_at,
                     completed_at = excluded.completed_at
                 """,
@@ -192,7 +194,8 @@ class SQLiteWorkflowStore:
                     payload["operation_id"], payload["idempotency_key"], payload["case_id"],
                     payload["stage"], payload["operation_type"], payload["status"],
                     _json(payload["request_payload"]), _json(payload["result"]),
-                    payload["attempts"], payload["last_error"], payload["created_at"],
+                    payload["attempts"], payload["last_error"], payload.get("lease_until"),
+                    payload.get("claimed_by"), payload["created_at"],
                     payload["updated_at"], payload["completed_at"],
                 ),
             )
@@ -211,6 +214,73 @@ class SQLiteWorkflowStore:
                 (case_id,),
             ).fetchall()
         return [_external_operation_from_row(row) for row in rows]
+
+    def claim_external_operation(
+        self,
+        operation_id: str,
+        *,
+        case_id: str,
+        claimed_by: str,
+        lease_seconds: int = 300,
+        allow_uncertain: bool = False,
+    ) -> str:
+        now = utc_now()
+        now_iso = now.isoformat()
+        lease_until = now + timedelta(seconds=max(30, lease_seconds))
+        with self._connect() as connection:
+            expired = connection.execute(
+                """
+                UPDATE wcw_external_operations
+                SET status = 'uncertain', lease_until = NULL,
+                    last_error = 'running lease expired; external outcome is unknown',
+                    updated_at = ?
+                WHERE operation_id = ? AND case_id = ?
+                  AND status = 'running'
+                  AND (lease_until IS NULL OR lease_until <= ?)
+                """,
+                (now_iso, operation_id, case_id, now_iso),
+            )
+            if expired.rowcount:
+                return "uncertain"
+            claimed = connection.execute(
+                """
+                UPDATE wcw_external_operations
+                SET status = 'running', attempts = attempts + 1, claimed_by = ?,
+                    lease_until = ?, last_error = NULL, updated_at = ?
+                WHERE operation_id = ? AND case_id = ?
+                  AND (
+                    status IN ('ready', 'failed', 'blocked')
+                    OR (status = 'uncertain' AND ? = 1)
+                  )
+                """,
+                (
+                    claimed_by or None,
+                    lease_until.isoformat(),
+                    now_iso,
+                    operation_id,
+                    case_id,
+                    int(bool(allow_uncertain)),
+                ),
+            )
+            if claimed.rowcount:
+                return "claimed"
+            row = connection.execute(
+                """
+                SELECT status, lease_until FROM wcw_external_operations
+                WHERE operation_id = ? AND case_id = ?
+                """,
+                (operation_id, case_id),
+            ).fetchone()
+            if row is None:
+                return "not_found"
+            status = str(row["status"])
+            if status == "succeeded":
+                return "already_succeeded"
+            if status == "running":
+                return "busy"
+            if status == "uncertain":
+                return "uncertain"
+            return "not_retryable"
 
     def list_events(self, entity_id: str, *, limit: int = 100) -> list[WorkflowEvent]:
         with self._connect() as connection:
@@ -633,6 +703,7 @@ class SQLiteWorkflowStore:
         with self._connect() as connection:
             connection.executescript(_SQLITE_SCHEMA)
             _allow_duplicate_referral_ids(connection)
+            _ensure_external_operation_columns(connection)
 
     def _connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self.path)
@@ -661,6 +732,16 @@ def _external_operation_from_row(row: sqlite3.Row) -> ExternalOperation:
     payload["request_payload"] = json.loads(payload.pop("request_payload_json"))
     payload["result"] = json.loads(payload.pop("result_json"))
     return ExternalOperation.model_validate(payload)
+
+
+def _ensure_external_operation_columns(connection: sqlite3.Connection) -> None:
+    columns = {
+        row[1] for row in connection.execute("PRAGMA table_info(wcw_external_operations)")
+    }
+    if "lease_until" not in columns:
+        connection.execute("ALTER TABLE wcw_external_operations ADD COLUMN lease_until TEXT")
+    if "claimed_by" not in columns:
+        connection.execute("ALTER TABLE wcw_external_operations ADD COLUMN claimed_by TEXT")
 
 
 def _allow_duplicate_referral_ids(connection: sqlite3.Connection) -> None:
@@ -780,6 +861,8 @@ CREATE TABLE IF NOT EXISTS wcw_external_operations (
     result_json TEXT NOT NULL DEFAULT '{}',
     attempts INTEGER NOT NULL DEFAULT 0,
     last_error TEXT,
+    lease_until TEXT,
+    claimed_by TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     completed_at TEXT

@@ -77,6 +77,14 @@ function pendingSummary(
   if (stepId === 'check-drk' && drkDuplicateCheckEnabled === false) {
     return 'DRK chart check disabled'
   }
+  if (referral.status === 'completed') {
+    return {
+      'extract-and-verify': 'Extraction result not recorded',
+      'check-monday': 'Monday duplicate check not recorded',
+      'check-drk': 'DRK chart check not recorded',
+      'confirm-referral-contacted': 'Referral follow-up not recorded',
+    }[stepId] ?? 'Stage 1 result not recorded'
+  }
   return {
     'extract-and-verify': 'Queued for referral extraction',
     'check-monday': 'Queued for Monday duplicate check',

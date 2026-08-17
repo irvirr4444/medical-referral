@@ -48,6 +48,8 @@ including:
 3. `supabase/migrations/202608120002_allow_duplicate_referral_ids.sql`
 4. `supabase/migrations/202608120003_scope_review_confirmation.sql`
 5. `supabase/migrations/202608130001_harden_stage_one_workflow.sql`
+6. `supabase/migrations/202608130002_create_workflow_execution.sql`
+7. `supabase/migrations/202608140001_workflow_apply_state.sql`
 
 After applying them, set the backend environment only:
 
@@ -108,15 +110,22 @@ python run_pipeline.py stage-one-email-preview --run tmp\inbox-runs\<timestamp>
 Run the frontend projection separately:
 
 ```powershell
-python run_pipeline.py inbox-api
+$env:INTAKE_DATA_ROOT='tmp/intake-service'
+python run_pipeline.py inbox-api --start-monitor
 ```
 
 The local API binds only to `127.0.0.1` until authentication is implemented.
 It remains available while the background monitor is OFF because the frontend
 still reads the saved feed and monitor status. Terminal lines for
 `GET /api/intake/inbox` and `GET /api/intake/monitor` are read-only UI polling,
-not Outlook processing. Stop the worker from the UI; use `Ctrl+C` to stop the API
-itself.
+not Outlook processing. The workflow UI intentionally exposes status only. Start
+the worker with `--start-monitor` and use `Ctrl+C` in the API terminal to stop it.
+
+Keep `INTAKE_DATA_ROOT` stable between restarts. Its `state.sqlite` ledger excludes
+completed, queued, and permanently failed Outlook attachments from later cycles.
+Changing the root, deleting the ledger, or using `--force` creates deliberate
+reprocessing behavior. The autonomous API and emergency one-off `outlook` command
+derive their default state and output paths from this same root.
 
 The DRK feed label follows the reported safety configuration. It shows `DRK chart
 check disabled` only when `drk_duplicate_check` is explicitly false, remains
