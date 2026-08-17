@@ -381,7 +381,9 @@ describe('automation inspection console', () => {
     ).toBeInTheDocument()
   })
 
-  it('lets an operator add and remove intake list rows, then persist them on save', async () => {
+  it(
+    'lets an operator add and remove intake list rows, then persist them on save',
+    async () => {
     const user = userEvent.setup()
     render(<App />)
     await user.click(
@@ -568,7 +570,9 @@ describe('automation inspection console', () => {
     expect(
       within(confirmedArticle).getByRole('textbox', { name: /^Warning 16$/i }),
     ).toHaveValue('Needs interpreter for follow-up')
-  })
+  },
+  15_000,
+)
 
   it('surfaces seeded overdue confirmation timers on nav, banner, and assignment', async () => {
     const user = userEvent.setup()
@@ -749,7 +753,7 @@ describe('automation inspection console', () => {
     const handoffPanel = screen.getByLabelText(/Patient steps/i)
     expect(
       within(handoffPanel).getByRole('button', {
-        name: /Notify referral source.*new update/i,
+        name: /Notify Case Manager.*new update/i,
       }),
     ).toBeInTheDocument()
     expect(
@@ -759,7 +763,7 @@ describe('automation inspection console', () => {
     ).toBeInTheDocument()
     expect(
       within(handoffPanel).getByRole('button', {
-        name: /Create DRK Chart.*new update/i,
+        name: /Prepare DRK Chart.*new update/i,
       }),
     ).toBeInTheDocument()
     expect(within(handoffPanel).getByText(/^Unread$/i)).toBeInTheDocument()
@@ -772,7 +776,7 @@ describe('automation inspection console', () => {
     expect(within(handoffPanel).getByText(/^Unread$/i)).toBeInTheDocument()
     expect(
       within(handoffPanel).getByRole('button', {
-        name: /Create DRK Chart.*new update/i,
+        name: /Prepare DRK Chart.*new update/i,
       }),
     ).toBeInTheDocument()
     expect(

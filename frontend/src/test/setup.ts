@@ -40,3 +40,10 @@ Object.defineProperty(window, 'scrollTo', {
   writable: true,
   value: () => undefined,
 })
+
+vi.stubGlobal(
+  'fetch',
+  vi.fn(() =>
+    Promise.reject(new Error('unmocked network request in tests')),
+  ),
+)
