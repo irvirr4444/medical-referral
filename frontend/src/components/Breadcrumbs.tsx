@@ -1,5 +1,6 @@
 import { ChevronRight } from 'lucide-react'
 import { isFlowOpsPage } from '../data/flowOps'
+import { canonicalOpsPageId } from '../features/automation/combinedAssignment'
 import {
   AUTOMATION_STAGES,
   automationStage,
@@ -13,7 +14,8 @@ export function Breadcrumbs() {
     state.activePage === 'operations' ? 'overview' : state.activePage
   if (!isFlowOpsPage(page)) return null
 
-  const stage = automationStage(page)
+  const opsPage = canonicalOpsPageId(page)
+  const stage = automationStage(opsPage)
   const stageIndex =
     AUTOMATION_STAGES.findIndex((item) => item.id === stage.id) + 1
 

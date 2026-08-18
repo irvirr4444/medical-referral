@@ -8,9 +8,10 @@ import {
   parseOpsDate,
   patientJourneyById,
   STAGE_LABEL,
-  STAGE_ORDER,
+  stepsForCombinedAssignment,
   stepsForPatient,
 } from './ops'
+import { VISIBLE_STAGE_IDS, canonicalOpsPageId } from './combinedAssignment'
 import { resolvePatientKey } from './patientProfile'
 import { StageFeedMessage } from './StageFeedMessage'
 import { automationStage } from './stages'
@@ -38,7 +39,7 @@ export function PatientWorkflowPipeline({ patientKey }: { patientKey: string }) 
     ? patientJourneyById(resolved.patientId, resolved.patientName)
     : null
   const [viewedStageId, setViewedStageId] = useState<FlowOpsPageId>(
-    journey?.currentStageId ?? 'intake',
+    canonicalOpsPageId(journey?.currentStageId ?? 'intake'),
   )
   const [selectedByStage, setSelectedByStage] = useState<
     Partial<Record<FlowOpsPageId, string>>
@@ -46,14 +47,17 @@ export function PatientWorkflowPipeline({ patientKey }: { patientKey: string }) 
 
   if (!journey) return null
 
+  const visibleCurrentStageId = canonicalOpsPageId(journey.currentStageId)
   const currentStage = journey.stages.find(
     (stage) => stage.stageId === journey.currentStageId,
   )
   const currentStep = activeStep(
-    stepsForPatient(journey.currentStageId, journey.patientId),
+    visibleCurrentStageId === 'assignment'
+      ? stepsForCombinedAssignment(journey.patientId)
+      : stepsForPatient(journey.currentStageId, journey.patientId),
   )
   const skim = [
-    STAGE_LABEL[journey.currentStageId],
+    STAGE_LABEL[visibleCurrentStageId],
     currentStep?.stepName,
     currentStage?.headline,
   ]
@@ -61,7 +65,10 @@ export function PatientWorkflowPipeline({ patientKey }: { patientKey: string }) 
     .join(' · ')
 
   const microsteps = automationStage(viewedStageId).microsteps
-  const viewedSteps = stepsForPatient(viewedStageId, journey.patientId)
+  const viewedSteps =
+    viewedStageId === 'assignment'
+      ? stepsForCombinedAssignment(journey.patientId)
+      : stepsForPatient(viewedStageId, journey.patientId)
   const stepStatuses = viewedSteps.length
     ? Object.fromEntries(viewedSteps.map((step) => [step.stepId, step.status]))
     : undefined
@@ -92,13 +99,13 @@ export function PatientWorkflowPipeline({ patientKey }: { patientKey: string }) 
       {skim ? <p className="patient-workflow__skim">{skim}</p> : null}
 
       <div className="patient-workflow__stages">
-        {STAGE_ORDER.map((stageId, index) => {
+        {VISIBLE_STAGE_IDS.map((stageId, index) => {
           const outcome = journey.stages.find(
             (stage) => stage.stageId === stageId,
           )
           const status = outcome?.status ?? 'upcoming'
           const viewing = viewedStageId === stageId
-          const current = journey.currentStageId === stageId
+          const current = visibleCurrentStageId === stageId
           return (
             <button
               key={stageId}

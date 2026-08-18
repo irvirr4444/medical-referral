@@ -3,6 +3,7 @@ import { Breadcrumbs } from './components/Breadcrumbs'
 import { FlowNav } from './components/FlowNav'
 import { StageOperationsPage } from './components/StageOperationsPage'
 import { OverviewPage } from './components/WorkflowModal'
+import { canonicalOpsPageId } from './features/automation/combinedAssignment'
 import { isFlowOpsPage } from './data/flowOps'
 import {
   actionLabel,
@@ -76,11 +77,12 @@ function Dashboard() {
   const { state } = useDemo()
   const patientKey = usePatientPathKey()
   const page = state.activePage === 'operations' ? 'overview' : state.activePage
+  const opsPage = isFlowOpsPage(page) ? canonicalOpsPageId(page) : null
 
   let body: ReactNode
   if (patientKey) body = <PatientProfilePage patientKey={patientKey} />
   else if (page === 'overview') body = <OverviewPage />
-  else if (isFlowOpsPage(page)) body = <StageOperationsPage pageId={page} />
+  else if (opsPage) body = <StageOperationsPage pageId={opsPage} />
   else body = <OverviewPage />
 
   return (
@@ -88,9 +90,7 @@ function Dashboard() {
       {patientKey ? null : <FlowNav />}
       {patientKey ? null : <Breadcrumbs />}
       {patientKey ? null : (
-        <OverdueConfirmationsBanner
-          stageId={isFlowOpsPage(page) ? page : null}
-        />
+        <OverdueConfirmationsBanner stageId={opsPage} />
       )}
       {body}
     </div>

@@ -1,5 +1,6 @@
 import type { FlowOpsPageId } from '../../data/flowOps'
 import type { DemoState } from '../../types'
+import { COMBINED_ASSIGNMENT_STEP_IDS } from './combinedAssignment'
 import { STAGE_STEP_IDS } from './ops/fixtures/patientSteps'
 
 type UnreadFlag = keyof Pick<
@@ -26,7 +27,7 @@ const UNREAD_STEP_FLAGS: Record<string, UnreadFlag> = {
   'check-drk': 'intakeDrkUnread',
   'confirm-referral-contacted': 'intakePartnerUnread',
   'determine-owner': 'assignmentOwnerUnread',
-  'assign-owner': 'assignmentNotifyUnread',
+  'assign-owner': 'assignmentOwnerUnread',
   'notify-referral-source': 'handoffNotifyUnread',
   'create-monday-record': 'handoffMondayUnread',
   'create-update-drk': 'handoffDrkUnread',
@@ -47,7 +48,11 @@ export function unreadStepCounts(state: DemoState): Record<string, number> {
 }
 
 export function unreadCountForStage(state: DemoState, stageId: string): number {
-  const stepIds = STAGE_STEP_IDS[stageId as FlowOpsPageId] ?? []
+  const canonical = stageId === 'handoff' ? 'assignment' : stageId
+  const stepIds =
+    canonical === 'assignment'
+      ? COMBINED_ASSIGNMENT_STEP_IDS
+      : (STAGE_STEP_IDS[stageId as FlowOpsPageId] ?? [])
   return stepIds.reduce((total, stepId) => {
     const flag = UNREAD_STEP_FLAGS[stepId]
     return total + (flag && state[flag] ? 1 : 0)

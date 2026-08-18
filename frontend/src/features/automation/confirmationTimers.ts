@@ -23,7 +23,7 @@ export const ACTION_DEFS: Record<
   },
   'confirm-assignment': {
     stageId: 'assignment',
-    stepId: 'determine-owner',
+    stepId: 'assign-owner',
     slaMs: 30 * 60_000,
     label: 'Confirm case manager',
   },

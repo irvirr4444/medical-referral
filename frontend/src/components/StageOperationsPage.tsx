@@ -10,7 +10,7 @@ import { OverviewImpactBoard } from './OverviewImpactBoard'
 import './WorkflowModal.css'
 import './StageOperationsPage.css'
 
-/** Inspectable automation page shared by workflow sections 1-7. */
+/** Inspectable automation page shared by workflow sections 1-6. */
 export function StageOperationsPage({ pageId }: { pageId: FlowOpsPageId }) {
   const { dispatch } = useDemo()
   const config = FLOW_OPS[pageId]
@@ -40,6 +40,12 @@ export function StageOperationsPage({ pageId }: { pageId: FlowOpsPageId }) {
             Goal
           </span>
           <p>{stage.purpose}</p>
+          {pageId === 'assignment' ? (
+            <>
+              <p className="caption">Starts when: {stage.trigger}</p>
+              <p className="caption">Successful when: {stage.successDefinition}</p>
+            </>
+          ) : null}
         </div>
         <dl className="stage-page__meta">
           <div>
