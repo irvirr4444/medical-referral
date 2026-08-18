@@ -2021,10 +2021,16 @@
   font-size: 0.84rem;
   font-weight: 650;
   cursor: pointer;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
 }
 
 .stage-ops-step-feed__availability-timeout:hover {
-  background: rgba(18, 35, 63, 0.04);
+  border-color: var(--forest);
+  background: var(--forest);
+  color: var(--cream);
 }
 
 .stage-ops-step-feed__availability-timeout.is-danger {
@@ -2208,7 +2214,7 @@
 }
 
 .stage-ops-step-feed__schedule-reason:hover {
-  background: rgba(18, 35, 63, 0.04);
+  background: var(--cream);
 }
 
 .stage-ops-step-feed__schedule-receipt {
@@ -2252,18 +2258,24 @@
   justify-content: center;
   min-height: 2rem;
   padding: 0.35rem 0.75rem;
-  border: 1px solid rgba(14, 124, 134, 0.45);
+  border: 1px solid rgba(18, 35, 63, 0.2);
   border-radius: 9px;
   background: #fff;
-  color: var(--teal);
+  color: var(--navy);
   font-size: 0.84rem;
   font-weight: 650;
   white-space: nowrap;
   cursor: pointer;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
 }
 
 .stage-ops-step-feed__confirm.is-actionable:hover {
-  background: rgba(14, 124, 134, 0.08);
+  border-color: var(--forest);
+  background: var(--forest);
+  color: var(--cream);
 }
 
 .stage-ops-step-feed__confirm.is-confirmed,
