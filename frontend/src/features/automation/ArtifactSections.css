@@ -280,6 +280,18 @@
   background: var(--sage-pale);
 }
 
+.stage-ops-step-feed__message.is-blocked .artifact-sections.is-feed .artifact-section__toggle,
+.stage-ops-step-feed__message.is-overdue .artifact-sections.is-feed .artifact-section__toggle,
+.stage-ops-step-feed__message.is-waiting .artifact-sections.is-feed .artifact-section__toggle,
+.stage-ops-step-feed__message.is-warning .artifact-sections.is-feed .artifact-section__toggle {
+  background: #fff;
+}
+
+.stage-ops-step-feed__message.is-done .artifact-sections.is-feed .artifact-section__toggle,
+.stage-ops-step-feed__message.is-current .artifact-sections.is-feed .artifact-section__toggle {
+  background: var(--sage-pale);
+}
+
 .artifact-sections.is-feed .artifact-section__count {
   font-size: 0.7rem;
 }

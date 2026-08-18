@@ -2338,7 +2338,26 @@
 
 .stage-ops-step-feed__fields-toggle:hover {
   border-color: var(--forest-mid);
-  background: var(--surface);
+  background: var(--sage-pale);
+}
+
+.stage-ops-step-feed__message.is-blocked .stage-ops-step-feed__fields-toggle,
+.stage-ops-step-feed__message.is-overdue .stage-ops-step-feed__fields-toggle,
+.stage-ops-step-feed__message.is-waiting .stage-ops-step-feed__fields-toggle,
+.stage-ops-step-feed__message.is-warning .stage-ops-step-feed__fields-toggle {
+  background: #fff;
+}
+
+.stage-ops-step-feed__message.is-blocked .stage-ops-step-feed__fields-toggle:hover,
+.stage-ops-step-feed__message.is-overdue .stage-ops-step-feed__fields-toggle:hover,
+.stage-ops-step-feed__message.is-waiting .stage-ops-step-feed__fields-toggle:hover,
+.stage-ops-step-feed__message.is-warning .stage-ops-step-feed__fields-toggle:hover {
+  background: #fff;
+}
+
+.stage-ops-step-feed__message.is-done .stage-ops-step-feed__fields-toggle,
+.stage-ops-step-feed__message.is-current .stage-ops-step-feed__fields-toggle {
+  background: var(--sage-pale);
 }
 
 .stage-ops-step-feed__fields-toggle-copy {
