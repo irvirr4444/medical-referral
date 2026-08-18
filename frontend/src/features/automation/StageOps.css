@@ -1363,10 +1363,10 @@
   min-width: 0;
 }
 
-.stage-ops-step-feed__provider-territory-empty>div {
+.stage-ops-step-feed__provider-territory-copy {
   display: grid;
   align-content: start;
-  gap: 0.12rem;
+  gap: 0.10rem;
   min-width: 0;
 }
 
@@ -1379,7 +1379,7 @@
   margin: 0;
 }
 
-.stage-ops-step-feed__provider-territory-empty>div>p:last-child {
+.stage-ops-step-feed__provider-territory-copy>p:last-child {
   color: var(--gray);
   font-size: 0.78rem;
   line-height: 1.4;

@@ -225,13 +225,12 @@ function MondayRecordView({ record }: { record: MondayRecord }) {
         {fields.map(([label, value, updated]) => (
           <div
             key={label}
-            className={`stage-ops-step-feed__decision-item${
-              /^(Home health|Wound|Insurance|Case manager|Assigned provider)/i.test(
-                label,
-              )
+            className={`stage-ops-step-feed__decision-item${/^(Home health|Wound|Insurance|Case manager|Assigned provider)/i.test(
+              label,
+            )
                 ? ' is-wide'
                 : ''
-            }${updated ? ' is-updated' : ''}`}
+              }${updated ? ' is-updated' : ''}`}
           >
             <dt>{label}</dt>
             <dd>
@@ -309,9 +308,9 @@ function DrkDraftView({
           ],
           ...(assignedProvider
             ? [
-                ['Assigned provider', assignedProvider],
-                ['Provider NPI', providerNpi ?? 'Not documented'],
-              ]
+              ['Assigned provider', assignedProvider],
+              ['Provider NPI', providerNpi ?? 'Not documented'],
+            ]
             : []),
         ].map(([label, value]) => (
           <div
@@ -329,9 +328,8 @@ function DrkDraftView({
       </dl>
       <button
         type="button"
-        className={`stage-ops-step-feed__details-toggle${
-          detailsOpen ? ' is-open' : ''
-        }`}
+        className={`stage-ops-step-feed__details-toggle${detailsOpen ? ' is-open' : ''
+          }`}
         aria-expanded={detailsOpen}
         onClick={onToggleDetails}
       >
@@ -568,18 +566,16 @@ function SchedulingPanel({
                       <button
                         key={item.id}
                         type="button"
-                        className={`stage-ops-step-feed__schedule-slot${
-                          selected ? ' is-selected' : ''
-                        }${unavailable ? ' is-unavailable' : ''}`}
+                        className={`stage-ops-step-feed__schedule-slot${selected ? ' is-selected' : ''
+                          }${unavailable ? ' is-unavailable' : ''}`}
                         disabled={unavailable || !onSelectSlot}
                         aria-pressed={selected}
                         aria-label={
                           unavailable
-                            ? `${group.dateLabel} ${item.timeLabel}, unavailable${
-                                item.unavailableReason
-                                  ? `, ${item.unavailableReason}`
-                                  : ''
-                              }`
+                            ? `${group.dateLabel} ${item.timeLabel}, unavailable${item.unavailableReason
+                              ? `, ${item.unavailableReason}`
+                              : ''
+                            }`
                             : `${group.dateLabel} ${item.timeLabel}`
                         }
                         onClick={() => onSelectSlot?.(item.id)}
@@ -599,9 +595,8 @@ function SchedulingPanel({
           <div className="stage-ops-step-feed__schedule-actions">
             <button
               type="button"
-              className={`stage-ops-step-feed__confirm${
-                canSchedule ? ' is-actionable' : ''
-              }`}
+              className={`stage-ops-step-feed__confirm${canSchedule ? ' is-actionable' : ''
+                }`}
               onClick={onSchedule}
               disabled={!canSchedule}
             >
@@ -724,9 +719,8 @@ function EodSchedulingCheckPanel({
 
   return (
     <div
-      className={`stage-ops-step-feed__eod-check${
-        record.overdue ? ' is-overdue' : ''
-      }`}
+      className={`stage-ops-step-feed__eod-check${record.overdue ? ' is-overdue' : ''
+        }`}
       aria-label="Unscheduled referral review"
     >
       <EodPartiesSection record={record} />
@@ -928,9 +922,8 @@ function WeeklyPartiesSection({
       </div>
       <p className="stage-ops-step-feed__referral-handoff-meta">
         {patientName
-          ? `Not seen · ${record.consecutiveNotSeen} consecutive week${
-              record.consecutiveNotSeen === 1 ? '' : 's'
-            } · last visit ${record.lastVisitAt}`
+          ? `Not seen · ${record.consecutiveNotSeen} consecutive week${record.consecutiveNotSeen === 1 ? '' : 's'
+          } · last visit ${record.lastVisitAt}`
           : `Last visit ${record.lastVisitAt}`}
       </p>
     </section>
@@ -971,9 +964,8 @@ function WeeklyVisitCheckPanel({
 
   return (
     <div
-      className={`stage-ops-step-feed__weekly-check${
-        needsAttention ? ' is-attention' : ''
-      }`}
+      className={`stage-ops-step-feed__weekly-check${needsAttention ? ' is-attention' : ''
+        }`}
       aria-label="Weekly visit review"
     >
       {!showMissFollowUp ? <WeeklyPartiesSection record={record} /> : null}
@@ -1041,9 +1033,9 @@ function WeeklyVisitCheckPanel({
       ) : null}
 
       {pendingMiss &&
-      rescheduleConfirmed &&
-      !appointmentRescheduled &&
-      onConfirmAppointmentRescheduled ? (
+        rescheduleConfirmed &&
+        !appointmentRescheduled &&
+        onConfirmAppointmentRescheduled ? (
         <div className="stage-ops-step-feed__availability-actions">
           <button
             type="button"
@@ -1292,8 +1284,8 @@ export function StageFeedMessage({
   const proofFields = decision || contactConfirmation
     ? []
     : (detail?.example?.artifactSections?.[0]?.fields ?? [])
-        .filter((field) => !isHiddenProofField(field.label))
-        .slice(0, 3)
+      .filter((field) => !isHiddenProofField(field.label))
+      .slice(0, 3)
   const samplePdf = showPdf ? detail?.example?.samplePdf : undefined
   const committedSections = (detail?.example?.artifactSections ?? []).filter(
     (section) =>
@@ -1302,10 +1294,10 @@ export function StageFeedMessage({
   )
   const sectionsWithListDrafts = fieldsEditable
     ? committedSections.map((section) =>
-        intakeSectionDrafts[section.id]
-          ? { ...section, fields: intakeSectionDrafts[section.id] }
-          : section,
-      )
+      intakeSectionDrafts[section.id]
+        ? { ...section, fields: intakeSectionDrafts[section.id] }
+        : section,
+    )
     : committedSections
   const allSections = fieldsEditable
     ? overlayIntakeFieldValues(sectionsWithListDrafts, intakeDrafts)
@@ -1344,11 +1336,9 @@ export function StageFeedMessage({
 
   return (
     <article
-      className={`stage-ops-step-feed__message is-${status} is-open${
-        isUnread ? ' is-unread' : ''
-      }${actionTimer?.status === 'overdue' ? ' is-overdue' : ''}${
-        actionTimer?.status === 'warning' ? ' is-warning' : ''
-      }`}
+      className={`stage-ops-step-feed__message is-${status} is-open${isUnread ? ' is-unread' : ''
+        }${actionTimer?.status === 'overdue' ? ' is-overdue' : ''}${actionTimer?.status === 'warning' ? ' is-warning' : ''
+        }`}
       aria-label={`${summary} · ${patientName} · ${meaning}${actionTimerAriaSuffix(
         actionTimer,
       )}`}
@@ -1425,9 +1415,8 @@ export function StageFeedMessage({
               <div className="stage-ops-step-feed__fields-panel">
                 <button
                   type="button"
-                  className={`stage-ops-step-feed__fields-toggle${
-                    fieldsOpen ? ' is-open' : ''
-                  }`}
+                  className={`stage-ops-step-feed__fields-toggle${fieldsOpen ? ' is-open' : ''
+                    }`}
                   aria-expanded={fieldsOpen}
                   aria-controls={`${artifactId}-required-fields`}
                   onClick={() => setFieldsOpen((current) => !current)}
@@ -1461,9 +1450,8 @@ export function StageFeedMessage({
                       return (
                         <div
                           key={intakeEditKey('required-fields', field)}
-                          className={`stage-ops-step-feed__decision-item${
-                            isLong ? ' is-wide' : ''
-                          } ${tone}`}
+                          className={`stage-ops-step-feed__decision-item${isLong ? ' is-wide' : ''
+                            } ${tone}`}
                         >
                           <dt>{field.label}</dt>
                           <dd
@@ -1503,9 +1491,8 @@ export function StageFeedMessage({
               <div className="stage-ops-step-feed__intake-confirm">
                 <button
                   type="button"
-                  className={`stage-ops-step-feed__confirm${
-                    isIntakeConfirmed ? ' is-confirmed' : ' is-actionable'
-                  }`}
+                  className={`stage-ops-step-feed__confirm${isIntakeConfirmed ? ' is-confirmed' : ' is-actionable'
+                    }`}
                   onClick={() => {
                     if (intakeEditing) {
                       flushIntakeDrafts()
@@ -1625,9 +1612,8 @@ export function StageFeedMessage({
               </label>
               <button
                 type="button"
-                className={`stage-ops-step-feed__confirm${
-                  isAssignmentConfirmed ? ' is-confirmed' : ' is-actionable'
-                }`}
+                className={`stage-ops-step-feed__confirm${isAssignmentConfirmed ? ' is-confirmed' : ' is-actionable'
+                  }`}
                 onClick={onConfirmAssignment}
                 disabled={isAssignmentConfirmed || !onConfirmAssignment}
               >
@@ -1642,7 +1628,7 @@ export function StageFeedMessage({
             className="stage-ops-step-feed__provider-territory-empty"
             aria-label="Provider territory review"
           >
-            <div>
+            <div className="stage-ops-step-feed__provider-territory-copy">
               <strong>
                 No company provider in {providerSelectionLocation}
               </strong>
@@ -1652,7 +1638,7 @@ export function StageFeedMessage({
               </p>
             </div>
             {providerTerritoryResolution === 'assigned' &&
-            selectedFallbackProvider ? (
+              selectedFallbackProvider ? (
               <p className="stage-ops-step-feed__territory-resolution">
                 {selectedFallbackProvider.name} selected · Availability request
                 ready
@@ -1738,9 +1724,8 @@ export function StageFeedMessage({
               </label>
               <button
                 type="button"
-                className={`stage-ops-step-feed__confirm${
-                  isProviderConfirmed ? ' is-confirmed' : ' is-actionable'
-                }`}
+                className={`stage-ops-step-feed__confirm${isProviderConfirmed ? ' is-confirmed' : ' is-actionable'
+                  }`}
                 onClick={onConfirmProvider}
                 disabled={isProviderConfirmed || !onConfirmProvider}
               >
@@ -1788,13 +1773,13 @@ export function StageFeedMessage({
                 <div>
                   <dt>
                     {providerAvailability.outcome === 'confirmed' ||
-                    providerAvailability.outcome === 'placement_completed'
+                      providerAvailability.outcome === 'placement_completed'
                       ? 'Confirmed'
                       : 'Response deadline'}
                   </dt>
                   <dd>
                     {providerAvailability.outcome === 'confirmed' ||
-                    providerAvailability.outcome === 'placement_completed'
+                      providerAvailability.outcome === 'placement_completed'
                       ? providerAvailability.resolvedAt
                       : providerAvailability.deadlineAt}
                   </dd>
@@ -1847,8 +1832,8 @@ export function StageFeedMessage({
             ) : null}
 
             {providerAvailability.outcome === 'waiting' &&
-            (onProviderAvailabilityConfirmed ||
-              onProviderAvailabilityTimeout) ? (
+              (onProviderAvailabilityConfirmed ||
+                onProviderAvailabilityTimeout) ? (
               <div className="stage-ops-step-feed__availability-actions">
                 <button
                   type="button"
@@ -1969,13 +1954,12 @@ export function StageFeedMessage({
               {caseManagerNotification.patientFields.map((field) => (
                 <div
                   key={field.label}
-                  className={`stage-ops-step-feed__decision-item${
-                    /^(Patient name|Date of birth|Contact number|Patient address)$/i.test(
-                      field.label,
-                    )
+                  className={`stage-ops-step-feed__decision-item${/^(Patient name|Date of birth|Contact number|Patient address)$/i.test(
+                    field.label,
+                  )
                       ? ''
                       : ' is-wide'
-                  }`}
+                    }`}
                 >
                   <dt>{field.label}</dt>
                   <dd>{field.value}</dd>
@@ -2060,9 +2044,8 @@ export function StageFeedMessage({
                   Partner replied?
                 </span>
                 <span
-                  className={`stage-ops-step-feed__reply-pill${
-                    contactedBack ? ' is-confirmed' : ' is-pending'
-                  }`}
+                  className={`stage-ops-step-feed__reply-pill${contactedBack ? ' is-confirmed' : ' is-pending'
+                    }`}
                 >
                   {contactedBack ? 'Confirmed' : 'Not yet'}
                 </span>
