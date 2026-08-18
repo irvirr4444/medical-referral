@@ -592,7 +592,9 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
         schedulingHandoffUnread:
           action.page === 'scheduling' ? false : state.schedulingHandoffUnread,
         handoffNavUnread:
-          action.page === 'handoff' ? false : state.handoffNavUnread,
+          action.page === 'handoff' || action.page === 'assignment'
+            ? false
+            : state.handoffNavUnread,
         providerNavUnread:
           action.page === 'provider' ? false : state.providerNavUnread,
       }

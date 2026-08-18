@@ -3,7 +3,7 @@ import { step } from './shared'
 
 export const END_OF_DAY_STAGE: AutomationStageDefinition = {
   id: 'end-of-day',
-  title: '6. End-of-day check',
+  title: '5. End-of-day check',
   shortTitle: 'End-of-day check',
   purpose:
     'Confirm each due referral is scheduled in Monday.com, follow up with the case manager when it is not, and escalate unresolved cases to management.',

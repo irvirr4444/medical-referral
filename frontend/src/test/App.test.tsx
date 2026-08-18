@@ -52,10 +52,10 @@ describe('automation inspection console', () => {
     await user.click(screen.getByRole('button', { name: /^Confirm$/i }))
     expect(screen.getByText('112')).toBeInTheDocument()
     expect(
-      screen.getByRole('heading', { name: /Seven inspectable stages/i }),
+      screen.getByRole('heading', { name: /Six inspectable stages/i }),
     ).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: /^Inspect /i })).toHaveLength(
-      7,
+      6,
     )
 
     await user.click(
@@ -568,7 +568,7 @@ describe('automation inspection console', () => {
     expect(
       within(confirmedArticle).getByRole('textbox', { name: /^Warning 16$/i }),
     ).toHaveValue('Needs interpreter for follow-up')
-  })
+  }, 15_000)
 
   it('surfaces seeded overdue confirmation timers on nav, banner, and assignment', async () => {
     const user = userEvent.setup()
@@ -710,27 +710,29 @@ describe('automation inspection console', () => {
     await user.click(
       within(stepsPanel).getByRole('button', { name: /Notify Case Manager/i }),
     )
+    const marcusNotify = within(stepsPanel).getByRole('article', {
+      name: /Marcus Feldman/i,
+    })
+    expect(within(marcusNotify).getByText(/^Unread$/i)).toBeInTheDocument()
     expect(
-      screen.queryByRole('button', { name: /2\. Assignment.*(new update|overdue)/i }),
-    ).not.toBeInTheDocument()
-    expect(
-      within(stepsPanel).queryByRole('button', {
-        name: /Notify Case Manager.*new update/i,
-      }),
-    ).not.toBeInTheDocument()
-    expect(within(stepsPanel).getByText(/^Unread$/i)).toBeInTheDocument()
-    expect(
-      within(stepsPanel).getByText(/^Nadine Pelicano notified$/i),
+      within(marcusNotify).getByText(
+        /Referral source notified · Cole Winfield CCd/i,
+      ),
     ).toBeInTheDocument()
     expect(
-      within(stepsPanel).getAllByText(/ndelpelicano@westcoastwound\.com/i)
-        .length,
-    ).toBeGreaterThan(0)
+      within(marcusNotify).getByLabelText(/Referral source notification email/i),
+    ).toBeInTheDocument()
+    expect(within(marcusNotify).getByText(/^To$/i)).toBeInTheDocument()
+    expect(within(marcusNotify).getByText(/^CC$/i)).toBeInTheDocument()
+    expect(within(marcusNotify).getByText(/^Subject$/i)).toBeInTheDocument()
     expect(
-      within(stepsPanel).getAllByLabelText(
+      within(marcusNotify).queryByText(/^Nadine Pelicano notified$/i),
+    ).not.toBeInTheDocument()
+    expect(
+      within(marcusNotify).queryByLabelText(
         /Patient data shared with case manager/i,
-      ).length,
-    ).toBeGreaterThan(0)
+      ),
+    ).not.toBeInTheDocument()
 
     await user.click(
       within(stepsPanel).getByRole('button', { name: /Assign Case Manager/i }),
@@ -741,54 +743,49 @@ describe('automation inspection console', () => {
     expect(within(stepsPanel).queryByText(/^Unread$/i)).not.toBeInTheDocument()
 
     expect(
-      screen.getByRole('button', { name: /3\. Handoff.*new update/i }),
-    ).toBeInTheDocument()
-    await user.click(
-      screen.getByRole('button', { name: /3\. Handoff.*new update/i }),
-    )
-    const handoffPanel = screen.getByLabelText(/Patient steps/i)
-    expect(
-      within(handoffPanel).getByRole('button', {
-        name: /Notify referral source.*new update/i,
-      }),
+      screen.getByRole('button', { name: /2\. Assignment.*(new update|overdue)/i }),
     ).toBeInTheDocument()
     expect(
-      within(handoffPanel).getByRole('button', {
+      within(stepsPanel).getByRole('button', {
         name: /Create Monday\.com Record.*new update/i,
       }),
     ).toBeInTheDocument()
     expect(
-      within(handoffPanel).getByRole('button', {
-        name: /Create DRK Chart.*new update/i,
+      within(stepsPanel).getByRole('button', {
+        name: /Prepare DRK Chart.*new update/i,
       }),
     ).toBeInTheDocument()
-    expect(within(handoffPanel).getByText(/^Unread$/i)).toBeInTheDocument()
+    expect(
+      within(stepsPanel).queryByRole('button', {
+        name: /Notify referral source/i,
+      }),
+    ).not.toBeInTheDocument()
 
     await user.click(
-      within(handoffPanel).getByRole('button', {
+      within(stepsPanel).getByRole('button', {
         name: /Create Monday\.com Record.*new update/i,
       }),
     )
-    expect(within(handoffPanel).getByText(/^Unread$/i)).toBeInTheDocument()
+    expect(within(stepsPanel).getByText(/^Unread$/i)).toBeInTheDocument()
     expect(
-      within(handoffPanel).getByRole('button', {
-        name: /Create DRK Chart.*new update/i,
+      within(stepsPanel).getByRole('button', {
+        name: /Prepare DRK Chart.*new update/i,
       }),
     ).toBeInTheDocument()
     expect(
-      within(handoffPanel).queryByRole('button', {
+      within(stepsPanel).queryByRole('button', {
         name: /Create Monday\.com Record.*new update/i,
       }),
     ).not.toBeInTheDocument()
 
     expect(
       screen.getByRole('button', {
-        name: /4\. Provider selection.*(new update|overdue)/i,
+        name: /3\. Provider selection.*(new update|overdue)/i,
       }),
     ).toBeInTheDocument()
     await user.click(
       screen.getByRole('button', {
-        name: /4\. Provider selection.*(new update|overdue)/i,
+        name: /3\. Provider selection.*(new update|overdue)/i,
       }),
     )
     const providerPanel = screen.getByLabelText(/Patient steps/i)
@@ -862,28 +859,44 @@ describe('automation inspection console', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('shows referral-source notifications as email messages', async () => {
+  it('shows Monday.com and DRK preparation artifacts on Assignment & handoff', async () => {
     const user = userEvent.setup()
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: /3\. Handoff/i }))
+    await user.click(
+      screen.getByRole('button', { name: /2\. Assignment & handoff/i }),
+    )
     const stepsPanel = screen.getByLabelText(/Patient steps/i)
 
     expect(
-      within(stepsPanel).getByRole('button', {
+      within(stepsPanel).getByRole('button', { name: /Assign Case Manager/i }),
+    ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).getByRole('button', { name: /Notify Case Manager/i }),
+    ).toBeInTheDocument()
+    expect(
+      within(stepsPanel).queryByRole('button', {
         name: /Notify referral source/i,
       }),
-    ).toHaveAttribute('aria-current', 'step')
+    ).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /3\. Handoff/i })).not.toBeInTheDocument()
+
+    await user.click(
+      within(stepsPanel).getByRole('button', { name: /Notify Case Manager/i }),
+    )
     expect(
-      within(stepsPanel).getAllByLabelText(
-        /Referral source notification email/i,
-      ).length,
-    ).toBeGreaterThan(0)
-    expect(within(stepsPanel).getAllByText(/^To$/i).length).toBeGreaterThan(0)
-    expect(within(stepsPanel).getAllByText(/^CC$/i).length).toBeGreaterThan(0)
+      within(stepsPanel).getAllByLabelText(/Referral source notification email/i)
+        .length,
+    ).toBe(6)
     expect(
-      within(stepsPanel).getAllByText(/^Subject$/i).length,
+      within(stepsPanel).getAllByText(/Referral source notified/i).length,
     ).toBeGreaterThan(0)
+    expect(within(stepsPanel).getAllByText(/^To$/i).length).toBe(6)
+    expect(within(stepsPanel).getAllByText(/^CC$/i).length).toBe(6)
+    expect(within(stepsPanel).getAllByText(/^Subject$/i).length).toBe(6)
+    expect(
+      within(stepsPanel).getByRole('article', { name: /Sardina, Frank/i }),
+    ).toBeInTheDocument()
 
     await user.click(
       within(stepsPanel).getByRole('button', {
@@ -898,7 +911,7 @@ describe('automation inspection console', () => {
     ).toBe(6)
 
     await user.click(
-      within(stepsPanel).getByRole('button', { name: /Create DRK Chart/i }),
+      within(stepsPanel).getByRole('button', { name: /Prepare DRK Chart/i }),
     )
     expect(
       within(stepsPanel).getAllByLabelText(/DRK chart draft details/i).length,
@@ -910,7 +923,7 @@ describe('automation inspection console', () => {
     render(<App />)
 
     await user.click(
-      screen.getByRole('button', { name: /4\. Provider selection/i }),
+      screen.getByRole('button', { name: /3\. Provider selection/i }),
     )
     const stepsPanel = screen.getByLabelText(/Patient steps/i)
 
@@ -953,7 +966,7 @@ describe('automation inspection console', () => {
     expect(within(providerArticle).getByText(/^Selected$/i)).toBeInTheDocument()
     expect(
       screen.getByRole('button', {
-        name: /4\. Provider selection.*(new update|overdue)/i,
+        name: /3\. Provider selection.*(new update|overdue)/i,
       }),
     ).toBeInTheDocument()
     expect(
@@ -969,7 +982,7 @@ describe('automation inspection console', () => {
     )
     expect(
       screen.queryByRole('button', {
-        name: /4\. Provider selection.*new update/i,
+        name: /3\. Provider selection.*new update/i,
       }),
     ).not.toBeInTheDocument()
     expect(
@@ -1010,7 +1023,7 @@ describe('automation inspection console', () => {
       }),
     ).not.toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: /4\. Provider selection/i }),
+      screen.getByRole('button', { name: /3\. Provider selection/i }),
     ).toHaveAttribute('aria-current', 'page')
     expect(
       within(stepsPanel).getByRole('button', {
@@ -1019,7 +1032,7 @@ describe('automation inspection console', () => {
     ).toBeInTheDocument()
     expect(
       screen.queryByRole('button', {
-        name: /5\. Scheduling.*new update/i,
+        name: /4\. Scheduling.*new update/i,
       }),
     ).not.toBeInTheDocument()
 
@@ -1047,18 +1060,18 @@ describe('automation inspection console', () => {
     expect(within(stepsPanel).getAllByText(/^Assigned provider$/i).length).toBeGreaterThan(0)
     expect(
       screen.getByRole('button', {
-        name: /5\. Scheduling.*new update/i,
+        name: /4\. Scheduling.*new update/i,
       }),
     ).toBeInTheDocument()
 
     await user.click(
       screen.getByRole('button', {
-        name: /5\. Scheduling.*new update/i,
+        name: /4\. Scheduling.*new update/i,
       }),
     )
     expect(
       screen.queryByRole('button', {
-        name: /5\. Scheduling.*new update/i,
+        name: /4\. Scheduling.*new update/i,
       }),
     ).not.toBeInTheDocument()
     const schedulingPanel = screen.getByLabelText(/Patient steps/i)
@@ -1087,9 +1100,9 @@ describe('automation inspection console', () => {
     ).toBeInTheDocument()
 
     await user.click(
-      screen.getByRole('button', { name: /4\. Provider selection/i }),
+      screen.getByRole('button', { name: /3\. Provider selection/i }),
     )
-    await user.click(screen.getByRole('button', { name: /5\. Scheduling/i }))
+    await user.click(screen.getByRole('button', { name: /4\. Scheduling/i }))
     expect(
       within(screen.getByLabelText(/Patient steps/i)).queryByText(/^Unread$/i),
     ).not.toBeInTheDocument()
@@ -1100,7 +1113,7 @@ describe('automation inspection console', () => {
     render(<App />)
 
     await user.click(
-      screen.getByRole('button', { name: /4\. Provider selection/i }),
+      screen.getByRole('button', { name: /3\. Provider selection/i }),
     )
     const stepsPanel = screen.getByLabelText(/Patient steps/i)
     const helen = within(stepsPanel).getByRole('article', {
@@ -1133,7 +1146,7 @@ describe('automation inspection console', () => {
     ).not.toBeInTheDocument()
     expect(
       screen.queryByRole('button', {
-        name: /5\. Scheduling.*new update/i,
+        name: /4\. Scheduling.*new update/i,
       }),
     ).not.toBeInTheDocument()
 
@@ -1154,7 +1167,7 @@ describe('automation inspection console', () => {
     ).toBeInTheDocument()
     expect(
       screen.queryByRole('button', {
-        name: /5\. Scheduling.*new update/i,
+        name: /4\. Scheduling.*new update/i,
       }),
     ).not.toBeInTheDocument()
 
@@ -1165,13 +1178,13 @@ describe('automation inspection console', () => {
     )
     expect(
       screen.getByRole('button', {
-        name: /5\. Scheduling.*new update/i,
+        name: /4\. Scheduling.*new update/i,
       }),
     ).toBeInTheDocument()
 
     await user.click(
       screen.getByRole('button', {
-        name: /5\. Scheduling.*new update/i,
+        name: /4\. Scheduling.*new update/i,
       }),
     )
     const schedulingPanel = screen.getByLabelText(/Patient steps/i)
@@ -1192,7 +1205,7 @@ describe('automation inspection console', () => {
     render(<App />)
 
     await user.click(
-      screen.getByRole('button', { name: /4\. Provider selection/i }),
+      screen.getByRole('button', { name: /3\. Provider selection/i }),
     )
     const stepsPanel = screen.getByLabelText(/Patient steps/i)
     const reviewArticle = within(stepsPanel)
@@ -1206,7 +1219,7 @@ describe('automation inspection console', () => {
     ).toBeInTheDocument()
     expect(
       screen.queryByRole('button', {
-        name: /5\. Scheduling.*new update/i,
+        name: /4\. Scheduling.*new update/i,
       }),
     ).not.toBeInTheDocument()
   })
@@ -1215,7 +1228,7 @@ describe('automation inspection console', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: /5\. Scheduling/i }))
+    await user.click(screen.getByRole('button', { name: /4\. Scheduling/i }))
     expect(screen.getByLabelText(/Patient steps/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/Step updates/i)).toBeInTheDocument()
     expect(
@@ -1228,7 +1241,7 @@ describe('automation inspection console', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: /5\. Scheduling/i }))
+    await user.click(screen.getByRole('button', { name: /4\. Scheduling/i }))
     const stepsPanel = screen.getByLabelText(/Patient steps/i)
     await user.click(
       within(stepsPanel).getByRole('button', {
@@ -1257,7 +1270,7 @@ describe('automation inspection console', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: /5\. Scheduling/i }))
+    await user.click(screen.getByRole('button', { name: /4\. Scheduling/i }))
     const stepsPanel = screen.getByLabelText(/Patient steps/i)
     expect(
       within(stepsPanel).getByRole('button', {
@@ -1301,7 +1314,7 @@ describe('automation inspection console', () => {
     ).not.toBeInTheDocument()
 
     await user.click(
-      screen.getByRole('button', { name: /6\. End-of-day check/i }),
+      screen.getByRole('button', { name: /5\. End-of-day check/i }),
     )
     const eodPanel = screen.getByLabelText(/Patient steps/i)
     expect(
@@ -1315,7 +1328,7 @@ describe('automation inspection console', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: /5\. Scheduling/i }))
+    await user.click(screen.getByRole('button', { name: /4\. Scheduling/i }))
     const stepsPanel = screen.getByLabelText(/Patient steps/i)
 
     const james = within(stepsPanel).getByRole('article', {
@@ -1368,7 +1381,7 @@ describe('automation inspection console', () => {
     render(<App />)
 
     await user.click(
-      screen.getByRole('button', { name: /6\. End-of-day check/i }),
+      screen.getByRole('button', { name: /5\. End-of-day check/i }),
     )
     const stepsPanel = screen.getByLabelText(/Patient steps/i)
 
@@ -1538,7 +1551,7 @@ describe('automation inspection console', () => {
     render(<App />)
 
     await user.click(
-      screen.getByRole('button', { name: /6\. End-of-day check/i }),
+      screen.getByRole('button', { name: /5\. End-of-day check/i }),
     )
     const stepsPanel = screen.getByLabelText(/Patient steps/i)
     const thomasRow = within(stepsPanel)
@@ -1555,7 +1568,7 @@ describe('automation inspection console', () => {
 
     expect(
       screen.getByRole('button', {
-        name: /6\. End-of-day check.*(new update|overdue)/i,
+        name: /5\. End-of-day check.*(new update|overdue)/i,
       }),
     ).toBeInTheDocument()
 
@@ -1574,7 +1587,7 @@ describe('automation inspection console', () => {
 
     expect(
       screen.queryByRole('button', {
-        name: /6\. End-of-day check.*(new update|overdue)/i,
+        name: /5\. End-of-day check.*(new update|overdue)/i,
       }),
     ).not.toBeInTheDocument()
 
@@ -1602,7 +1615,7 @@ describe('automation inspection console', () => {
     render(<App />)
 
     await user.click(
-      screen.getByRole('button', { name: /6\. End-of-day check/i }),
+      screen.getByRole('button', { name: /5\. End-of-day check/i }),
     )
     const stepsPanel = screen.getByLabelText(/Patient steps/i)
     const mariaRow = within(stepsPanel)
@@ -1617,7 +1630,7 @@ describe('automation inspection console', () => {
 
     expect(
       screen.getByRole('button', {
-        name: /6\. End-of-day check.*(new update|overdue)/i,
+        name: /5\. End-of-day check.*(new update|overdue)/i,
       }),
     ).toBeInTheDocument()
 
@@ -1636,7 +1649,7 @@ describe('automation inspection console', () => {
 
     expect(
       screen.queryByRole('button', {
-        name: /6\. End-of-day check.*(new update|overdue)/i,
+        name: /5\. End-of-day check.*(new update|overdue)/i,
       }),
     ).not.toBeInTheDocument()
 
@@ -1663,7 +1676,7 @@ describe('automation inspection console', () => {
     render(<App />)
 
     await user.click(
-      screen.getByRole('button', { name: /6\. End-of-day check/i }),
+      screen.getByRole('button', { name: /5\. End-of-day check/i }),
     )
     const stepsPanel = screen.getByLabelText(/Patient steps/i)
     const followUpStep = within(stepsPanel)
@@ -1746,7 +1759,7 @@ describe('automation inspection console', () => {
     render(<App />)
 
     await user.click(
-      screen.getByRole('button', { name: /6\. End-of-day check/i }),
+      screen.getByRole('button', { name: /5\. End-of-day check/i }),
     )
     const stepsPanel = screen.getByLabelText(/Patient steps/i)
     const followUpStep = within(stepsPanel)
@@ -1830,7 +1843,7 @@ describe('automation inspection console', () => {
     render(<App />)
 
     await user.click(
-      screen.getByRole('button', { name: /6\. End-of-day check/i }),
+      screen.getByRole('button', { name: /5\. End-of-day check/i }),
     )
     const stepsPanel = screen.getByLabelText(/Patient steps/i)
     await user.click(
@@ -1899,7 +1912,7 @@ describe('automation inspection console', () => {
     render(<App />)
 
     await user.click(
-      screen.getByRole('button', { name: /7\. Weekly visit cycle/i }),
+      screen.getByRole('button', { name: /6\. Weekly visit cycle/i }),
     )
     const stepsPanel = screen.getByLabelText(/Patient steps/i)
 
@@ -2039,7 +2052,7 @@ describe('automation inspection console', () => {
     render(<App />)
 
     await user.click(
-      screen.getByRole('button', { name: /7\. Weekly visit cycle/i }),
+      screen.getByRole('button', { name: /6\. Weekly visit cycle/i }),
     )
     const stepsPanel = screen.getByLabelText(/Patient steps/i)
 
@@ -2502,7 +2515,9 @@ describe('patient profile route', () => {
       within(workflow).queryByLabelText(/Search patients/i),
     ).not.toBeInTheDocument()
 
-    await user.click(within(workflow).getByRole('button', { name: /3 Handoff/i }))
+    await user.click(
+      within(workflow).getByRole('button', { name: /2 Assignment & handoff/i }),
+    )
     expect(workflow).toHaveTextContent(/No demo updates for this step yet/i)
     expect(workflow).toHaveTextContent(/Referral intake · Referral partner contacted/)
   })

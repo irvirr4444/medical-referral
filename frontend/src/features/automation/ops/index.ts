@@ -26,6 +26,12 @@ import {
 } from './fixtures/patientJourneys'
 import { PATIENT_STEP_BREAKDOWNS } from './fixtures/patientSteps'
 import { automationStage } from '../stages'
+import {
+  canonicalOpsPageId,
+  COMBINED_ASSIGNMENT_STEP_IDS,
+  fixtureStepId,
+  opsSourceStage,
+} from '../combinedAssignment'
 import { BUTLER_INTAKE_SNAPSHOTS } from '../fixtures/butlerIntakeSnapshots'
 import { intakeDemoPatient } from '../fixtures/intakeDemoPatients'
 import {
@@ -50,6 +56,31 @@ export function opsRecipeForStage(stageId: FlowOpsPageId): StageOpsRecipe {
 
 export function opsFixtureForStage(stageId: FlowOpsPageId): StageOpsFixture {
   return FIXTURES[stageId]
+}
+
+export function stepsForCombinedAssignment(
+  patientId: string,
+): Array<PatientStepProgress & { stepName: string; description: string }> {
+  const byId = new Map(
+    [
+      ...stepsForPatient('assignment', patientId),
+      ...stepsForPatient('handoff', patientId),
+    ].map((row) => [row.stepId, row]),
+  )
+  const stage = automationStage('assignment')
+  return COMBINED_ASSIGNMENT_STEP_IDS.flatMap((stepId) => {
+    const row = byId.get(fixtureStepId('assignment', stepId)) ?? byId.get(stepId)
+    if (!row) return []
+    const step = stage.microsteps.find((item) => item.id === stepId)
+    return [
+      {
+        ...row,
+        stepId,
+        stepName: step?.name ?? row.stepName,
+        description: step?.description ?? row.description,
+      },
+    ]
+  })
 }
 
 export function openEventsForSection(
@@ -109,7 +140,12 @@ export function stepsForPatient(
   const stage = automationStage(stageId)
   const rows = PATIENT_STEP_BREAKDOWNS[stageId][patientId] ?? []
   return rows.map((row) => {
-    const step = stage.microsteps.find((item) => item.id === row.stepId)
+    const displayStage =
+      (stageId === 'handoff' || stageId === 'assignment') &&
+      (COMBINED_ASSIGNMENT_STEP_IDS as readonly string[]).includes(row.stepId)
+        ? automationStage('assignment')
+        : stage
+    const step = displayStage.microsteps.find((item) => item.id === row.stepId)
     return {
       ...row,
       stepName: step?.name ?? row.stepId,
@@ -138,11 +174,13 @@ export function feedForStep(
   ).filter((status) => status !== 'upcoming')
   const query = filters?.patientQuery?.trim().toLowerCase() ?? ''
 
+  const sourceStageId = opsSourceStage(stageId, stepId)
+  const lookupStepId = fixtureStepId(stageId, stepId)
   const rows: StepFeedRow[] = []
-  for (const patient of patientsForStage(stageId)) {
+  for (const patient of patientsForStage(sourceStageId)) {
     if (query && !patient.patientName.toLowerCase().includes(query)) continue
-    const progress = stepsForPatient(stageId, patient.patientId).find(
-      (row) => row.stepId === stepId,
+    const progress = stepsForPatient(sourceStageId, patient.patientId).find(
+      (row) => row.stepId === lookupStepId,
     )
     if (!progress || !allowedStatuses.includes(progress.status)) continue
 
@@ -202,13 +240,19 @@ export function detailForPatientStep(
   patientId: string,
   stepId: string,
 ) {
-  const stage = automationStage(stageId)
+  const sourceStageId = opsSourceStage(stageId, stepId)
+  const lookupStepId = fixtureStepId(stageId, stepId)
+  const displayStageId = canonicalOpsPageId(stageId)
+  const stage = automationStage(
+    displayStageId === 'assignment' ? 'assignment' : sourceStageId,
+  )
   const microstep = stage.microsteps.find((item) => item.id === stepId)
   const progress =
-    stepsForPatient(stageId, patientId).find((row) => row.stepId === stepId) ??
-    null
+    stepsForPatient(sourceStageId, patientId).find(
+      (row) => row.stepId === lookupStepId,
+    ) ?? null
   const patientName =
-    patientsForStage(stageId).find((patient) => patient.patientId === patientId)
+    patientsForStage(sourceStageId).find((patient) => patient.patientId === patientId)
       ?.patientName ?? patientId
 
   if (stageId === 'intake') {
@@ -234,7 +278,7 @@ export function detailForPatientStep(
   const example =
     microstep && progress
       ? synthesizeStepExample({
-          stageId,
+          stageId: sourceStageId,
           patientId,
           patientName,
           microstep,

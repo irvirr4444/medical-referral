@@ -5,7 +5,7 @@ import { automationStage } from '../features/automation/stages'
 import { OverviewImpactBoard } from './OverviewImpactBoard'
 import './WorkflowModal.css'
 
-/** Inspectable automation page shared by workflow sections 1-7. */
+/** Inspectable automation page shared by workflow sections 1-6. */
 export function StageOperationsPage({ pageId }: { pageId: FlowOpsPageId }) {
   const config = FLOW_OPS[pageId]
   const stage = automationStage(pageId)
@@ -22,6 +22,12 @@ export function StageOperationsPage({ pageId }: { pageId: FlowOpsPageId }) {
             </span>
             <p>{stage.purpose}</p>
           </div>
+          {pageId === 'assignment' ? (
+            <>
+              <p className="caption">Starts when: {stage.trigger}</p>
+              <p className="caption">Successful when: {stage.successDefinition}</p>
+            </>
+          ) : null}
         </div>
       </header>
       <OverviewImpactBoard key={pageId} scope={pageId} />

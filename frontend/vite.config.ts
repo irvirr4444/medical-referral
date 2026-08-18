@@ -3,6 +3,7 @@ import path from 'node:path'
 import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
+import type { ServerResponse } from 'node:http'
 import type { Connect, Plugin, ViteDevServer } from 'vite'
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url))
@@ -20,7 +21,7 @@ const ALLOWED_PDFS = new Set([
 
 function serveReferralPdf(
   req: Connect.IncomingMessage,
-  res: Connect.ServerResponse,
+  res: ServerResponse,
   next: Connect.NextFunction,
 ) {
   try {

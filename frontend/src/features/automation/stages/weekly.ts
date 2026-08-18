@@ -3,7 +3,7 @@ import { step } from './shared'
 
 export const WEEKLY_STAGE: AutomationStageDefinition = {
   id: 'weekly',
-  title: '7. Weekly visit cycle',
+  title: '6. Weekly visit cycle',
   shortTitle: 'Weekly visit cycle',
   purpose:
     'Answer the weekly clinical questions in order: seen, healed, expired, and on hold — then route the matching action.',

@@ -4,12 +4,12 @@ import { useEscapeDismiss } from '../../hooks/useEscapeDismiss'
 import { useDemo } from '../../state/useDemo'
 import { MicrostepList } from './MicrostepList'
 import { StageFeedMessage } from './StageFeedMessage'
+import { isHandoffOperationStep } from './combinedAssignment'
 import { overlayIntakeDetail } from './overlayIntakeDetail'
-import { detailForPatientStep, feedForStep, parseOpsDate, patientsForStage, stepsForPatient } from './ops'
+import { detailForPatientStep, feedForStep, parseOpsDate, patientsForStage, stepsForCombinedAssignment, stepsForPatient } from './ops'
 import type { StepFeedDay, StepFeedRow } from './ops/types'
 import {
   CASE_MANAGER_OPTIONS,
-  caseManagerNotification,
   caseManagerSuggestion,
   drkDraftForPatient,
   drkDraftWithAssignedProvider,
@@ -238,18 +238,15 @@ function weeklyStatusLabel(
   )
 }
 
-const ASSIGNMENT_HANDOFF_STEP_IDS = [
-  'notify-referral-source',
-  'create-monday-record',
-  'create-update-drk',
-] as const
-
-type AssignmentHandoffStepId = (typeof ASSIGNMENT_HANDOFF_STEP_IDS)[number]
+type AssignmentHandoffStepId =
+  | 'notify-referral-source'
+  | 'create-monday-record'
+  | 'create-update-drk'
 
 function isAssignmentHandoffStep(
   stepId: string,
 ): stepId is AssignmentHandoffStepId {
-  return ASSIGNMENT_HANDOFF_STEP_IDS.includes(stepId as AssignmentHandoffStepId)
+  return isHandoffOperationStep(stepId)
 }
 
 function assignmentHandoffUnreadForStep(
@@ -387,8 +384,6 @@ export function StagePatientSteps({
   const [confirmedAssignments, setConfirmedAssignments] = useState<
     Record<string, boolean>
   >({})
-  const [showUnreadAssignmentMessage, setShowUnreadAssignmentMessage] =
-    useState(false)
   const [showUnreadProviderMessage, setShowUnreadProviderMessage] =
     useState(false)
   const [showUnreadHandoffMessage, setShowUnreadHandoffMessage] =
@@ -448,7 +443,6 @@ export function StagePatientSteps({
     setPartnerConfirmed({})
     setSelectedCaseManagers({})
     setConfirmedAssignments({})
-    setShowUnreadAssignmentMessage(false)
     setShowUnreadProviderMessage(false)
     setShowUnreadHandoffMessage(false)
     setShowUnreadProviderRecordsMessage(false)
@@ -546,10 +540,9 @@ export function StagePatientSteps({
 
   const displayDays = useMemo(() => {
     const latest =
-      selectedStepId === 'determine-owner'
+      selectedStepId === 'assign-owner' || selectedStepId === 'determine-owner'
         ? latestPartnerContact
-        : selectedStepId === 'assign-owner' ||
-      selectedStepId === 'select-provider' ||
+        : selectedStepId === 'select-provider' ||
       isAssignmentHandoffStep(selectedStepId)
         ? latestAssignmentHandoff
         : selectedStepId === 'confirm-provider-availability'
@@ -586,6 +579,7 @@ export function StagePatientSteps({
           ...latestRow,
           occurredAt: latest.occurredAt,
           status:
+            selectedStepId === 'assign-owner' ||
             selectedStepId === 'determine-owner'
               ? ('waiting' as const)
               : selectedStepId === 'update-monday-drk'
@@ -598,6 +592,7 @@ export function StagePatientSteps({
                     ? ('done' as const)
                     : latestRow.status,
           summary:
+            selectedStepId === 'assign-owner' ||
             selectedStepId === 'determine-owner'
               ? PARTNER_HANDOFF_SUMMARY
               : selectedStepId === 'update-monday-drk'
@@ -608,11 +603,13 @@ export function StagePatientSteps({
                   ? intakeFollowUpSummary(latest.patientId, selectedStepId)
                   : latestRow.summary,
         }
-      : selectedStepId === 'determine-owner' && latestPartnerContact
+      : (selectedStepId === 'assign-owner' ||
+            selectedStepId === 'determine-owner') &&
+          latestPartnerContact
         ? {
             patientId: latestPartnerContact.patientId,
             patientName: latestPartnerContact.patientName,
-            stepId: 'determine-owner',
+            stepId: selectedStepId,
             status: 'waiting' as const,
             summary: PARTNER_HANDOFF_SUMMARY,
             occurredAt: latestPartnerContact.occurredAt,
@@ -635,15 +632,6 @@ export function StagePatientSteps({
             summary: referralSummary,
             occurredAt: latestSchedulingHandoff.readyAt,
           }
-        : selectedStepId === 'assign-owner' && latestAssignmentHandoff
-          ? {
-              patientId: latestAssignmentHandoff.patientId,
-              patientName: latestAssignmentHandoff.patientName,
-              stepId: 'assign-owner',
-              status: 'done' as const,
-              summary: 'Case manager notified of the new assignment',
-              occurredAt: latestAssignmentHandoff.occurredAt,
-            }
         : selectedStepId === 'select-provider' && latestAssignmentHandoff
           ? {
               patientId: latestAssignmentHandoff.patientId,
@@ -664,7 +652,7 @@ export function StagePatientSteps({
                   ? 'Referral source notified · assigned case manager CCd'
                   : selectedStepId === 'create-monday-record'
                     ? 'Monday.com record created from canonical referral'
-                    : 'DRK chart created from approved intake data',
+                    : 'DRK form prepared for final human review',
               occurredAt: latestAssignmentHandoff.occurredAt,
             }
         : isIntakeFollowUpStep(selectedStepId) && latestIntakeReview
@@ -967,7 +955,10 @@ export function StagePatientSteps({
 
   const scopedStepStatuses = useMemo(() => {
     if (!scopedPatient) return undefined
-    const rows = stepsForPatient(stageId, scopedPatient.patientId)
+    const rows =
+      stageId === 'assignment'
+        ? stepsForCombinedAssignment(scopedPatient.patientId)
+        : stepsForPatient(stageId, scopedPatient.patientId)
     if (!rows.length) return undefined
     return Object.fromEntries(rows.map((row) => [row.stepId, row.status]))
   }, [scopedPatient, stageId])
@@ -975,13 +966,14 @@ export function StagePatientSteps({
   useEffect(() => {
     if (
       stageId !== 'assignment' ||
-      selectedStepId !== 'assign-owner' ||
-      !state.assignmentNotifyUnread
+      (selectedStepId !== 'assign-owner' &&
+        selectedStepId !== 'determine-owner') ||
+      !state.assignmentOwnerUnread
     ) {
       return
     }
-    setShowUnreadAssignmentMessage(true)
-  }, [selectedStepId, stageId, state.assignmentNotifyUnread])
+    setShowUnreadAssignmentOwner(true)
+  }, [selectedStepId, stageId, state.assignmentOwnerUnread])
 
   useEffect(() => {
     if (
@@ -1018,7 +1010,6 @@ export function StagePatientSteps({
 
   useEffect(() => {
     if (
-      stageId !== 'handoff' ||
       !isAssignmentHandoffStep(selectedStepId) ||
       !assignmentHandoffUnreadForStep(state, selectedStepId)
     ) {
@@ -1043,17 +1034,6 @@ export function StagePatientSteps({
     }
     setShowUnreadProviderSelect(true)
   }, [selectedStepId, stageId, state.providerSelectUnread])
-
-  useEffect(() => {
-    if (
-      stageId !== 'assignment' ||
-      selectedStepId !== 'determine-owner' ||
-      !state.assignmentOwnerUnread
-    ) {
-      return
-    }
-    setShowUnreadAssignmentOwner(true)
-  }, [selectedStepId, stageId, state.assignmentOwnerUnread])
 
   useEffect(() => {
     if (
@@ -1107,24 +1087,18 @@ export function StagePatientSteps({
   ])
 
   const selectStep = (stepId: string) => {
-    if (selectedStepId === 'determine-owner' && stepId !== 'determine-owner') {
+    if (
+      (selectedStepId === 'assign-owner' ||
+        selectedStepId === 'determine-owner') &&
+      stepId !== selectedStepId
+    ) {
       setShowUnreadAssignmentOwner(false)
     }
-    if (stepId === 'determine-owner') {
+    if (stepId === 'assign-owner' || stepId === 'determine-owner') {
       const unread = state.assignmentOwnerUnread
       setShowUnreadAssignmentOwner(unread)
       if (unread) {
         dispatch({ type: 'MARK_ASSIGNMENT_OWNER_READ' })
-      }
-    }
-    if (selectedStepId === 'assign-owner' && stepId !== 'assign-owner') {
-      setShowUnreadAssignmentMessage(false)
-    }
-    if (stepId === 'assign-owner') {
-      const unread = state.assignmentNotifyUnread
-      setShowUnreadAssignmentMessage(unread)
-      if (unread) {
-        dispatch({ type: 'MARK_ASSIGNMENT_NOTIFY_READ' })
       }
     }
     if (
@@ -1546,6 +1520,7 @@ export function StagePatientSteps({
                         ? state.patientSchedules[row.patientId]
                         : undefined
                     const assignmentSuggestion =
+                      selectedStepId === 'assign-owner' ||
                       selectedStepId === 'determine-owner'
                         ? suggestedCaseManager
                         : undefined
@@ -1560,16 +1535,7 @@ export function StagePatientSteps({
                         (manager) =>
                           manager.email === selectedCaseManagerEmail,
                       ) ?? suggestedCaseManager
-                    const notification =
-                      selectedStepId === 'assign-owner'
-                        ? caseManagerNotification(
-                            row.patientId,
-                            row.patientName,
-                            selectedCaseManager,
-                          )
-                        : undefined
                     const referralNotification =
-                      stageId === 'handoff' &&
                       selectedStepId === 'notify-referral-source'
                         ? referralSourceNotification(
                             row.patientId,
@@ -1588,10 +1554,7 @@ export function StagePatientSteps({
                         ? recordsHandoff?.provider ?? selectedProvider
                         : undefined
                     const mondayRecord = (() => {
-                      if (
-                        stageId === 'handoff' &&
-                        selectedStepId === 'create-monday-record'
-                      ) {
+                      if (selectedStepId === 'create-monday-record') {
                         return mondayRecordForPatient(
                           row.patientId,
                           row.patientName,
@@ -1649,10 +1612,7 @@ export function StagePatientSteps({
                       weeklyAppointmentRescheduled[row.patientId],
                     )
                     const drkDraft = (() => {
-                      if (
-                        stageId === 'handoff' &&
-                        selectedStepId === 'create-update-drk'
-                      ) {
+                      if (selectedStepId === 'create-update-drk') {
                         return drkDraftForPatient(
                           row.patientId,
                           row.patientName,
@@ -1708,15 +1668,14 @@ export function StagePatientSteps({
                                 : 'Referral ready to send'
                               : drkDraft
                               ? drkDraft.readyForFill
-                                ? 'DRK chart created'
+                                ? 'DRK form prepared for review'
                                 : 'DRK chart draft needs review'
                               : mondayRecord
                               ? 'Monday.com record created'
                               : referralNotification
                               ? `Referral source notified · ${referralNotification.ccName} CCd`
-                              : selectedStepId === 'assign-owner'
-                              ? `${selectedCaseManager.name} notified`
-                              : selectedStepId === 'determine-owner'
+                              : selectedStepId === 'assign-owner' ||
+                                  selectedStepId === 'determine-owner'
                                 ? assignmentConfirmed
                                   ? `${selectedCaseManager.name} confirmed as Case Manager`
                                   : row.patientId ===
@@ -1833,7 +1792,8 @@ export function StagePatientSteps({
                               ? schedulingHandoff.route === 'provider_confirmed'
                                 ? 'done'
                                 : 'waiting'
-                              : selectedStepId === 'determine-owner'
+                              : selectedStepId === 'assign-owner' ||
+                                  selectedStepId === 'determine-owner'
                               ? assignmentConfirmed
                                 ? 'done'
                                 : 'waiting'
@@ -1976,7 +1936,6 @@ export function StagePatientSteps({
                                   })
                               : undefined
                           }
-                          caseManagerNotification={notification}
                           referralNotification={referralNotification}
                           mondayRecord={mondayRecord}
                           drkDraft={drkDraft}
@@ -2259,10 +2218,10 @@ export function StagePatientSteps({
                               : undefined
                           }
                           isUnread={
-                            (showUnreadAssignmentMessage &&
-                              selectedStepId === 'assign-owner' &&
-                              row.patientId ===
-                                latestAssignmentHandoff?.patientId) ||
+                            (showUnreadAssignmentOwner &&
+                              (selectedStepId === 'assign-owner' ||
+                                selectedStepId === 'determine-owner') &&
+                              row.patientId === latestPartnerContact?.patientId) ||
                             (showUnreadProviderMessage &&
                               selectedStepId ===
                                 'confirm-provider-availability' &&
@@ -2293,10 +2252,7 @@ export function StagePatientSteps({
                                 latestAssignmentHandoff?.patientId) ||
                             (showUnreadIntakeDuplicate &&
                               isIntakeFollowUpStep(selectedStepId) &&
-                              row.patientId === latestIntakeReview?.patientId) ||
-                            (showUnreadAssignmentOwner &&
-                              selectedStepId === 'determine-owner' &&
-                              row.patientId === latestPartnerContact?.patientId)
+                              row.patientId === latestIntakeReview?.patientId)
                           }
                           actionTimer={timerForPatientStep(
                             state.actionTimers,

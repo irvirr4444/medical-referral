@@ -15,7 +15,7 @@ const STAGE_ORDER: FlowOpsPageId[] = [
 const STAGE_LABEL: Record<FlowOpsPageId, string> = {
   intake: 'Referral intake',
   handoff: 'Handoff',
-  assignment: 'Assignment',
+  assignment: 'Assignment & handoff',
   provider: 'Provider selection',
   scheduling: 'Scheduling',
   'end-of-day': 'End-of-day check',

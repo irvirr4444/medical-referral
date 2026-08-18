@@ -1,10 +1,12 @@
 import { WORKFLOW_MODAL_TABS } from '../data/constants'
+import { canonicalOpsPageId } from '../features/automation/combinedAssignment'
 import {
   overdueStageIds,
   overdueTimers,
 } from '../features/automation/confirmationTimers'
 import { unreadCountForStage } from '../features/automation/unreadSteps'
 import { navigateAppPath, patientKeyFromPath } from '../features/automation/patientRoute'
+import { isFlowOpsPage } from '../data/flowOps'
 import { useDemo } from '../state/useDemo'
 import './FlowNav.css'
 
@@ -16,12 +18,15 @@ export function FlowNav() {
   const { state, dispatch } = useDemo()
   const overdue = overdueTimers(state.actionTimers)
   const overdueStages = overdueStageIds(state.actionTimers)
+  const activePage = isFlowOpsPage(state.activePage)
+    ? canonicalOpsPageId(state.activePage)
+    : state.activePage
 
   return (
     <nav className="flow-nav" aria-label="Primary">
       <div className="flow-nav__inner">
         {APP_NAV_ITEMS.map((item) => {
-          const active = state.activePage === item.id
+          const active = activePage === item.id
           // Red is scoped to the open step so clearing the worklist in front of
           // you clears the badge; blue stays stage-wide so a new update waiting
           // on a later step still surfaces.

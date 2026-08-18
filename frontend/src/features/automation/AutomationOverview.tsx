@@ -44,7 +44,7 @@ export function AutomationOverview() {
       >
         <div className="section-heading">
           <div>
-            <h2 id="automation-stage-map-title">Seven inspectable stages</h2>
+            <h2 id="automation-stage-map-title">Six inspectable stages</h2>
           </div>
         </div>
         <ol className="automation-stage-map__grid">
