@@ -884,16 +884,17 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
         !record ||
         record.status !== 'waiting' ||
         !slot ||
-        slot.status !== 'open' ||
-        record.selectedSlotId === action.slotId
+        slot.status !== 'open'
       ) {
         return state
       }
+      const selectedSlotId =
+        record.selectedSlotId === action.slotId ? null : action.slotId
       return {
         ...state,
         patientSchedules: {
           ...state.patientSchedules,
-          [action.patientId]: { ...record, selectedSlotId: action.slotId },
+          [action.patientId]: { ...record, selectedSlotId },
         },
       }
     }

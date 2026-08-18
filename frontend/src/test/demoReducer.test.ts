@@ -499,7 +499,7 @@ describe('demoReducer', () => {
     )
   })
 
-  it('selects a slot, schedules the patient, and stays idempotent', () => {
+  it('selects a slot, toggles deselect, schedules the patient, and stays idempotent', () => {
     let state = createInitialState()
     const maria = state.patientSchedules['maria-alvarez']!
     expect(maria.status).toBe('waiting')
@@ -510,6 +510,22 @@ describe('demoReducer', () => {
       type: 'SELECT_SCHEDULING_SLOT',
       patientId: 'maria-alvarez',
       slotId: unavailable.id,
+    })
+    expect(state.patientSchedules['maria-alvarez']?.selectedSlotId).toBeNull()
+
+    state = demoReducer(state, {
+      type: 'SELECT_SCHEDULING_SLOT',
+      patientId: 'maria-alvarez',
+      slotId: 'maria-today-1530',
+    })
+    expect(state.patientSchedules['maria-alvarez']?.selectedSlotId).toBe(
+      'maria-today-1530',
+    )
+
+    state = demoReducer(state, {
+      type: 'SELECT_SCHEDULING_SLOT',
+      patientId: 'maria-alvarez',
+      slotId: 'maria-today-1530',
     })
     expect(state.patientSchedules['maria-alvarez']?.selectedSlotId).toBeNull()
 

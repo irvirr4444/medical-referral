@@ -1041,8 +1041,10 @@
 
 .stage-ops-step-feed__patient::before {
   content: '·';
+  display: inline-block;
   margin-right: 0.55rem;
   color: rgba(18, 35, 63, 0.35);
+  text-decoration: none;
 }
 
 .stage-ops-step-feed__patient.is-link {
@@ -2121,8 +2123,10 @@
 }
 
 .stage-ops-step-feed__schedule-slot {
-  display: grid;
-  justify-items: start;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
   gap: 0.1rem;
   min-width: 7.25rem;
   min-height: 2.7rem;
@@ -2134,6 +2138,7 @@
   font: inherit;
   font-size: 0.92rem;
   font-weight: 700;
+  line-height: 1.2;
   text-align: left;
   cursor: pointer;
 }
@@ -2148,6 +2153,7 @@
 .stage-ops-step-feed__schedule-slot:hover:not(:disabled) {
   border-color: var(--navy);
   background: #f7f9f8;
+  color: var(--navy);
 }
 
 .stage-ops-step-feed__schedule-slot.is-selected {
@@ -2155,6 +2161,12 @@
   background: var(--navy);
   color: #fff;
   box-shadow: 0 6px 14px rgba(18, 35, 63, 0.18);
+}
+
+.stage-ops-step-feed__schedule-slot.is-selected:hover:not(:disabled) {
+  border-color: var(--navy);
+  background: var(--navy);
+  color: #fff;
 }
 
 .stage-ops-step-feed__schedule-slot.is-selected small {
