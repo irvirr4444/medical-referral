@@ -141,7 +141,7 @@
 }
 
 .stage-page .stage-ops-steps__rail {
-  align-self: start;
+  width: 100%;
   height: fit-content;
   min-height: 0;
   border: 1px solid var(--border);
