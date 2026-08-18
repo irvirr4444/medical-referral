@@ -40,12 +40,6 @@ export function StageOperationsPage({ pageId }: { pageId: FlowOpsPageId }) {
             Goal
           </span>
           <p>{stage.purpose}</p>
-          {pageId === 'assignment' ? (
-            <>
-              <p className="caption">Starts when: {stage.trigger}</p>
-              <p className="caption">Successful when: {stage.successDefinition}</p>
-            </>
-          ) : null}
         </div>
         <dl className="stage-page__meta">
           <div>
