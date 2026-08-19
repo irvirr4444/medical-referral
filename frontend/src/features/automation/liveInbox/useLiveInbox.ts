@@ -118,5 +118,23 @@ export function useLiveInbox(enabled: boolean, pollIntervalMs = 10_000) {
     }
   }, [])
 
+  useEffect(() => {
+    if (!enabled) return
+    // Background tabs throttle setInterval, so a poll can silently stall
+    // for minutes while the tab is hidden. Catch up immediately instead of
+    // waiting for the next (possibly delayed) interval tick.
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return
+      void refreshInbox()
+      void refreshMonitor()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
+    }
+  }, [enabled, refreshInbox, refreshMonitor])
+
   return { ...state, refresh: () => void refreshInbox(true) }
 }

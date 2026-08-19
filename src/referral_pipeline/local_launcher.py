@@ -58,6 +58,7 @@ class LaunchOptions:
     stage_one_drk_check: bool = False
     partner_acknowledgement: bool = False
     workflow_database_backend: str | None = None
+    max_approval_messages: int = 25
 
     @property
     def frontend_dir(self) -> Path:
@@ -140,6 +141,12 @@ def build_api_command(options: LaunchOptions) -> list[str]:
         "--start-monitor",
         "--workflow-database-backend",
         effective_workflow_backend(options.workflow_database_backend),
+        # The default 100 fetches uniqueBody for 100 messages every cycle,
+        # which took 100+s against a mailbox this session's testing had
+        # grown, so the 30s-interval approval cycle ran back-to-back and
+        # starved the live UI's own Outlook calls of latency headroom.
+        "--max-approval-messages",
+        str(options.max_approval_messages),
     ]
     if options.partner_acknowledgement:
         command.append("--partner-acknowledgement")

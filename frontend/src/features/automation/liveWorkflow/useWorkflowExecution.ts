@@ -54,5 +54,22 @@ export function useWorkflowExecution(enabled: boolean, pollIntervalMs = 10_000) 
     }
   }, [enabled, pollIntervalMs, refresh])
 
+  useEffect(() => {
+    if (!enabled) return
+    // Background tabs throttle setInterval, so a poll can silently stall
+    // for minutes while the tab is hidden. Catch up immediately instead of
+    // waiting for the next (possibly delayed) interval tick.
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return
+      void refresh()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
+    }
+  }, [enabled, refresh])
+
   return { ...state, refresh, confirm }
 }

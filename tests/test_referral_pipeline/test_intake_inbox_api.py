@@ -51,7 +51,7 @@ def test_inbox_feed_projects_metadata_without_pdf_content() -> None:
     client = _GraphClient()
     feed = IntakeInboxFeed(lambda: client, cache_ttl_seconds=30, clock=lambda: 10.0)
 
-    first = feed.read(limit=10)
+    first = feed.read(limit=10, force=True)
     second = feed.read(limit=10)
 
     assert client.calls == 1
@@ -86,7 +86,7 @@ def test_cached_mailbox_metadata_refreshes_workflow_projection(tmp_path) -> None
         clock=lambda: 10.0,
         workflow_store=store,
     )
-    first = feed.read(limit=10)
+    first = feed.read(limit=10, force=True)
     referral_id = first["referrals"][0]["id"]
     now = datetime.now(timezone.utc)
     store.upsert_workflow_case(
@@ -110,9 +110,9 @@ def test_cached_mailbox_metadata_refreshes_workflow_projection(tmp_path) -> None
             details={"status": "no_candidates_found", "write_performed": False},
         )
     )
-    second = feed.read(limit=10)
+    second = feed.read(limit=10, force=True)
 
-    assert client.calls == 1
+    assert client.calls == 2
     step = second["referrals"][0]["steps"]["check-monday"]
     assert step["summary"] == "No matching Monday.com patient found"
     assert step["details"]["status"] == "No matching patient found"
@@ -251,7 +251,7 @@ def test_case_advanced_to_stage_two_supersedes_stage_one_failure(tmp_path) -> No
         )
     )
 
-    referral = feed.read(limit=10)["referrals"][0]
+    referral = feed.read(limit=10, force=True)["referrals"][0]
 
     assert referral["status"] == "completed"
     assert referral["steps"]["extract-and-verify"]["status"] == "done"
@@ -435,6 +435,11 @@ def test_workflow_api_persists_assignment_and_prepares_handoff(tmp_path) -> None
         workflow_execution=execution,
         handoff_mailbox_factory=lambda: Mailbox(),
     )
+    # Assignments/handoffs reads now come from a heartbeat-refreshed cache
+    # (never a live query) -- pull the current state in once, matching what
+    # the background heartbeat would already have done by the time the UI
+    # polls.
+    server.workflow_cache.refresh_now()
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     connection = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=2)
@@ -567,7 +572,7 @@ def test_cache_lock_is_not_held_during_graph_call() -> None:
 
     def reader() -> None:
         try:
-            feed.read(limit=10)
+            feed.read(limit=10, force=True)
         except BaseException as error:  # noqa: BLE001
             errors.append(error)
 
@@ -593,7 +598,7 @@ def test_concurrent_first_reads_share_one_graph_call() -> None:
 
     def reader() -> None:
         try:
-            results.append(feed.read(limit=10))
+            results.append(feed.read(limit=10, force=True))
         except BaseException as error:  # noqa: BLE001 - capture thread failure
             errors.append(error)
 
@@ -623,7 +628,7 @@ def test_stale_cache_is_returned_while_refresh_is_in_flight() -> None:
     client = _BlockingGraph(started, release)
     feed = IntakeInboxFeed(lambda: client, cache_ttl_seconds=30, clock=lambda: clock[0])
     client.release.set()
-    first = feed.read(limit=10)
+    first = feed.read(limit=10, force=True)
     assert client.calls == 1
     assert first.get("stale") is not True
     referral_id = first["referrals"][0]["id"]
@@ -634,7 +639,7 @@ def test_stale_cache_is_returned_while_refresh_is_in_flight() -> None:
     stale: dict | None = None
 
     def refresher() -> None:
-        feed.read(limit=10)
+        feed.read(limit=10, force=True)
 
     thread = threading.Thread(target=refresher)
     thread.start()
@@ -665,7 +670,7 @@ def test_failed_refresh_keeps_previous_cache_and_clears_inflight_state() -> None
     client = _BlockingGraph(started, release)
     feed = IntakeInboxFeed(lambda: client, cache_ttl_seconds=30, clock=lambda: clock[0])
     release.set()
-    first = feed.read(limit=10)
+    first = feed.read(limit=10, force=True)
     assert first["referrals"][0]["filename"] == "referral.pdf"
 
     release.clear()
@@ -676,7 +681,7 @@ def test_failed_refresh_keeps_previous_cache_and_clears_inflight_state() -> None
 
     def refresher() -> None:
         try:
-            feed.read(limit=10)
+            feed.read(limit=10, force=True)
         except BaseException as error:  # noqa: BLE001
             errors.append(error)
 
@@ -695,7 +700,7 @@ def test_failed_refresh_keeps_previous_cache_and_clears_inflight_state() -> None
     assert cached["referrals"][0]["id"] == first["referrals"][0]["id"]
 
     clock[0] = 50.0
-    retried = feed.read(limit=10)
+    retried = feed.read(limit=10, force=True)
     assert client.calls == 3
     assert retried.get("stale") is not True
     assert retried["referrals"][0]["filename"] == "referral.pdf"
@@ -714,11 +719,11 @@ def test_initial_waiters_time_out_instead_of_waiting_forever() -> None:
     errors: list[BaseException] = []
 
     def refresher() -> None:
-        feed.read(limit=10)
+        feed.read(limit=10, force=True)
 
     def waiter() -> None:
         try:
-            feed.read(limit=10)
+            feed.read(limit=10, force=True)
         except BaseException as error:  # noqa: BLE001
             errors.append(error)
 

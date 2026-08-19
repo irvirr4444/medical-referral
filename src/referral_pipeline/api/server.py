@@ -19,6 +19,7 @@ from referral_pipeline.api.intake_inbox import IntakeInboxFeed
 from referral_pipeline.live_monitor import LiveInboxMonitor, LiveInboxMonitorConfig
 from referral_pipeline.monitoring.store import create_live_workflow_store
 from referral_pipeline.workflow import WorkflowExecutionService
+from referral_pipeline.workflow.execution_cache import WorkflowExecutionCache
 from referral_pipeline.workflow.handoff import HandoffExecutionError
 from referral_pipeline.workflow.service import WorkflowExecutionError
 
@@ -28,10 +29,13 @@ class IntakeApiServer(ThreadingHTTPServer):
     monitor: LiveInboxMonitor
     default_limit: int
     workflow_execution: WorkflowExecutionService
+    workflow_cache: WorkflowExecutionCache
     handoff_mailbox_factory: Callable[[], Any]
 
     def server_close(self) -> None:
         self.monitor.stop(wait=False)
+        self.feed.stop_heartbeat()
+        self.workflow_cache.stop_heartbeat()
         super().server_close()
 
 
@@ -49,7 +53,7 @@ class IntakeApiHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/workflow/assignments":
             query = parse_qs(parsed.query)
             limit = _parse_workflow_limit(query.get("limit", ["100"])[0])
-            self._send_json(HTTPStatus.OK, self.server.workflow_execution.assignments(limit=limit))
+            self._send_json(HTTPStatus.OK, self.server.workflow_cache.assignments(limit=limit))
             return
         if parsed.path == "/api/workflow/attention":
             query = parse_qs(parsed.query)
@@ -73,7 +77,7 @@ class IntakeApiHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/workflow/handoffs":
             query = parse_qs(parsed.query)
             limit = _parse_workflow_limit(query.get("limit", ["100"])[0])
-            self._send_json(HTTPStatus.OK, self.server.workflow_execution.handoffs(limit=limit))
+            self._send_json(HTTPStatus.OK, self.server.workflow_cache.handoffs(limit=limit))
             return
         if parsed.path.startswith("/api/intake/inbox/pdf/"):
             referral_id = parsed.path.rsplit("/", 1)[-1]
@@ -173,8 +177,13 @@ class IntakeApiHandler(BaseHTTPRequestHandler):
         if monitor_control:
             if parsed.path.endswith("/start"):
                 payload = self.server.monitor.start()
+                if payload.get("enabled"):
+                    self.server.feed.start_heartbeat()
+                    self.server.workflow_cache.start_heartbeat()
             else:
                 payload = self.server.monitor.stop(wait=False)
+                self.server.feed.stop_heartbeat()
+                self.server.workflow_cache.stop_heartbeat()
             self._send_json(HTTPStatus.OK, payload)
             return
 
@@ -221,6 +230,12 @@ class IntakeApiHandler(BaseHTTPRequestHandler):
         except (ValueError, WorkflowExecutionError, HandoffExecutionError) as error:
             self._send_json(HTTPStatus.CONFLICT, {"error": str(error)})
             return
+        if not handoff_preview:
+            # A real write (assignment confirm, or a real handoff execute)
+            # just happened -- pull it into the cache now rather than
+            # leaving the UI looking at pre-write state until the next
+            # heartbeat tick.
+            self.server.workflow_cache.refresh_now()
         self._send_json(HTTPStatus.OK, payload)
 
     def _is_local_control_request(self) -> bool:
@@ -341,6 +356,7 @@ def create_server(
         backend=effective_backend,
     )
     server.workflow_execution = workflow_execution or WorkflowExecutionService(workflow_store)
+    server.workflow_cache = WorkflowExecutionCache(server.workflow_execution)
     server.handoff_mailbox_factory = handoff_mailbox_factory or (
         lambda: OutlookReviewMailbox(
             OutlookGraphClient(OutlookGraphConfig.from_environment())
@@ -421,7 +437,9 @@ def main(argv: list[str] | None = None) -> int:
         review_recipient=args.review_recipient,
     )
     if args.start_monitor:
-        server.monitor.start()
+        if server.monitor.start().get("enabled"):
+            server.feed.start_heartbeat()
+            server.workflow_cache.start_heartbeat()
     print(f"[intake-api] Listening on http://{args.host}:{server.server_port}")
     print(
         "[intake-api] GET /api/intake/inbox  GET /api/intake/monitor  "

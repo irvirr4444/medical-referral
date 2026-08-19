@@ -199,7 +199,7 @@ def test_inbox_projection_exposes_persisted_stage_one_steps(tmp_path) -> None:
             ]
 
     feed = IntakeInboxFeed(lambda: Graph(), workflow_store=store)
-    referral = feed.read(limit=10)["referrals"][0]
+    referral = feed.read(limit=10, force=True)["referrals"][0]
 
     assert referral["case_id"] == case.case_id
     assert referral["patient_label"] == "TEST Patient"
