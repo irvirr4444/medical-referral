@@ -1,5 +1,6 @@
 import {
   CalendarDays,
+  ChevronDown,
   Info,
   Minus,
   Search,
@@ -7,7 +8,7 @@ import {
   TrendingUp,
   X,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   bossPeriodById,
   buildBossPeriodViews,
@@ -15,27 +16,22 @@ import {
   BOSS_DEMO_TODAY,
   emptyBossPeriodView,
   formatMetricDelta,
-  inclusiveDayCount,
   type BossMetricCard,
   type BossMetricsScope,
   type BossPeriodId,
   type BossPeriodView,
 } from '../data/bossMetrics'
 import { buildBossMetricPatients } from '../data/bossMetricPatients'
-import { buildImpactTrendSeries } from '../data/impactPeriods'
 import { useEscapeDismiss } from '../hooks/useEscapeDismiss'
 import { DatePeriodPicker } from './DatePeriodPicker'
-import { DotMatrixChart } from './DotMatrixChart'
 import './OverviewImpactBoard.css'
 
 export function OverviewImpactBoard({
   scope = 'overview',
-  showChart = true,
   density = 'comfortable',
   title = 'Objectives',
 }: {
   scope?: BossMetricsScope
-  showChart?: boolean
   density?: 'comfortable' | 'compact'
   title?: string
 }) {
@@ -47,10 +43,16 @@ export function OverviewImpactBoard({
       })),
     [scope],
   )
+  const periodOptions: Array<{ id: BossPeriodId; label: string }> = [
+    ...periodTabs,
+    { id: 'custom', label: 'Pick dates' },
+  ]
   const headingId = `boss-metrics-heading-${scope}`
 
   const [selectedId, setSelectedId] = useState<BossPeriodId>('today')
+  const [periodMenuOpen, setPeriodMenuOpen] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const periodMenuRef = useRef<HTMLDivElement>(null)
   const [customStart, setCustomStart] = useState('2026-08-01')
   const [customEnd, setCustomEnd] = useState(BOSS_DEMO_TODAY)
   const [appliedCustom, setAppliedCustom] = useState<BossPeriodView | null>(null)
@@ -210,8 +212,40 @@ export function OverviewImpactBoard({
     setPickerOpen(false)
   }
 
+  const closePeriodMenu = () => {
+    setPeriodMenuOpen(false)
+  }
+
+  const choosePeriod = (id: BossPeriodId) => {
+    setPeriodMenuOpen(false)
+    if (id === 'custom') {
+      openPicker()
+      return
+    }
+    setSelectedId(id)
+  }
+
   useEscapeDismiss(selectedMetric !== null, closePatientList)
   useEscapeDismiss(pickerOpen, closePicker)
+  useEscapeDismiss(periodMenuOpen, closePeriodMenu)
+
+  useEffect(() => {
+    if (!periodMenuOpen) return
+
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      if (
+        periodMenuRef.current &&
+        !periodMenuRef.current.contains(event.target as Node)
+      ) {
+        setPeriodMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('pointerdown', closeOnOutsidePointer)
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutsidePointer)
+    }
+  }, [periodMenuOpen])
 
   const applyCustomRange = (start: string, end: string) => {
     const next = buildCustomBossMetrics(start, end, scope)
@@ -223,65 +257,56 @@ export function OverviewImpactBoard({
     setPickerOpen(false)
   }
 
-  const trendSeries = useMemo(() => {
-    const primaryTotal = active.metrics.reduce(
-      (sum, metric) => sum + metric.value,
-      0,
-    )
-    const customDays =
-      selectedId === 'custom'
-        ? (inclusiveDayCount(customStart, customEnd) ?? undefined)
-        : undefined
-    return buildImpactTrendSeries(
-      scope,
-      selectedId === 'custom' ? 'custom' : selectedId,
-      primaryTotal,
-      customDays,
-    )
-  }, [active.metrics, customEnd, customStart, scope, selectedId])
-
   return (
     <section
-      className={`impact-board panel impact-board--${density}${
-        showChart ? '' : ' impact-board--no-chart'
-      }`}
+      className={`impact-board panel impact-board--${density}`}
       aria-labelledby={headingId}
     >
       <div className="impact-board__toolbar">
         <h2 id={headingId}>{title}</h2>
-        <div
-          className="impact-board__segment"
-          role="tablist"
-          aria-label="Reporting period"
-        >
-          {periodTabs.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              role="tab"
-              aria-selected={selectedId === tab.id}
-              className={`impact-board__segment-btn ${
-                selectedId === tab.id ? 'is-active' : ''
-              }`}
-              onClick={() => setSelectedId(tab.id)}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <div className="impact-board__period-dropdown" ref={periodMenuRef}>
           <button
             type="button"
-            role="tab"
-            aria-selected={selectedId === 'custom'}
-            aria-haspopup="dialog"
-            aria-expanded={pickerOpen}
-            className={`impact-board__segment-btn ${
-              selectedId === 'custom' ? 'is-active' : ''
-            }`}
-            onClick={openPicker}
+            className="impact-board__period-trigger"
+            aria-label="Reporting period"
+            aria-haspopup="listbox"
+            aria-expanded={periodMenuOpen}
+            onClick={() => setPeriodMenuOpen((open) => !open)}
           >
-            <CalendarDays size={15} aria-hidden="true" />
-            Pick dates
+            <span>
+              {selectedId === 'custom'
+                ? appliedCustom?.label ?? 'Pick dates'
+                : periodTabs.find((tab) => tab.id === selectedId)?.label ??
+                  'Today'}
+            </span>
+            <ChevronDown size={16} aria-hidden="true" />
           </button>
+          {periodMenuOpen ? (
+            <ul
+              className="impact-board__period-menu"
+              role="listbox"
+              aria-label="Reporting period"
+            >
+              {periodOptions.map((option) => (
+                <li key={option.id}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={selectedId === option.id}
+                    className={`impact-board__period-option${
+                      selectedId === option.id ? ' is-selected' : ''
+                    }`}
+                    onClick={() => choosePeriod(option.id)}
+                  >
+                    {option.id === 'custom' ? (
+                      <CalendarDays size={15} aria-hidden="true" />
+                    ) : null}
+                    {option.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       </div>
 
@@ -344,13 +369,6 @@ export function OverviewImpactBoard({
               )
             })}
           </ul>
-          {showChart ? (
-            <DotMatrixChart
-              series={trendSeries}
-              title="Activity density"
-              maxRows={density === 'compact' ? 8 : 10}
-            />
-          ) : null}
         </div>
       </article>
 

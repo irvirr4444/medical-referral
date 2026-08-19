@@ -40,7 +40,8 @@ describe('dialog Escape dismissal', () => {
       screen.queryByRole('dialog', { name: /New referrals/i }),
     ).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('tab', { name: /Pick dates/i }))
+    await user.click(screen.getByRole('button', { name: /Reporting period/i }))
+    await user.click(screen.getByRole('option', { name: /Pick dates/i }))
     expect(
       screen.getByRole('dialog', { name: /Select reporting period/i }),
     ).toBeInTheDocument()

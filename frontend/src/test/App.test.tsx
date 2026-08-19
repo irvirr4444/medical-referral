@@ -27,7 +27,7 @@ describe('automation inspection console', () => {
     expect(screen.getByRole('button', { name: /Account/i })).toBeInTheDocument()
     expect(
       screen.getByRole('heading', {
-        name: /Today's Overview/i,
+        name: /Intake Automation/i,
       }),
     ).toBeInTheDocument()
     expect(screen.getByText(/Referral Intake & Scheduling/i)).toBeInTheDocument()
@@ -38,9 +38,8 @@ describe('automation inspection console', () => {
     expect(screen.getByText(/Patients scheduled/i)).toBeInTheDocument()
     expect(screen.getByText(/^Patients seen$/i)).toBeInTheDocument()
     expect(screen.getByText(/Wounds healed/i)).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: /^Today$/i })).toHaveAttribute(
-      'aria-selected',
-      'true',
+    expect(screen.getByRole('button', { name: /Reporting period/i })).toHaveTextContent(
+      /^Today$/i,
     )
     expect(screen.getByText('18')).toBeInTheDocument()
     expect(screen.getAllByText(/vs yesterday/i).length).toBeGreaterThan(0)
@@ -56,19 +55,24 @@ describe('automation inspection console', () => {
       screen.getByRole('button', { name: /Close patient list/i }),
     )
 
-    await user.click(screen.getByRole('tab', { name: /This week/i }))
+    await user.click(screen.getByRole('button', { name: /Reporting period/i }))
+    await user.click(screen.getByRole('option', { name: /This week/i }))
     expect(screen.getByText('82')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('tab', { name: /Pick dates/i }))
+    await user.click(screen.getByRole('button', { name: /Reporting period/i }))
+    await user.click(screen.getByRole('option', { name: /Pick dates/i }))
     const dateDialog = screen.getByRole('dialog')
     await user.click(
       within(dateDialog).getByRole('button', { name: /^Confirm$/i }),
     )
     expect(screen.getByText('112')).toBeInTheDocument()
     expect(
-      screen.getByRole('heading', { name: /^Needs attention$/i }),
-    ).toBeInTheDocument()
-    expect(screen.getByLabelText(/Quick access/i)).toBeInTheDocument()
+      screen.queryByRole('heading', { name: /^Needs attention$/i }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('heading', { name: /Live activity/i }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByLabelText(/^Steps$/i)).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: /^Inspect /i })).toHaveLength(
       6,
     )
