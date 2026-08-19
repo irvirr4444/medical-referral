@@ -44,12 +44,13 @@ export function AutomationOverview() {
             {dateLabel} · {clockLabel}
           </p>
           <h1 id="automation-overview-title">Intake Automation</h1>
-          <p className="overview-masthead__sub">
-            Referral Intake & Scheduling
-          </p>
           <p className="overview-masthead__desc">
-            Every referral tracked from inbox to scheduled visit — automation
-            handles the routine, your team confirms the exceptions.
+            Every referral is tracked automatically from the moment it lands in
+            the inbox to a scheduled patient visit. The system reads each
+            referral PDF, verifies the required patient information, assigns
+            the right case manager and provider, and prepares scheduling
+            while your team only steps in to confirm decisions and handle the
+            exceptions that need human judgment.
           </p>
         </div>
       </header>
@@ -77,7 +78,7 @@ export function AutomationOverview() {
           </ul>
         </aside>
 
-        <OverviewImpactBoard density="compact" title="Objectives" />
+        <OverviewImpactBoard density="compact" />
       </div>
 
       <section

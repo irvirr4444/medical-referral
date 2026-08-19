@@ -76,12 +76,7 @@ export function StageOperationsPage({ pageId }: { pageId: FlowOpsPageId }) {
 
   const stageObjectives = (
     <div className="stage-page__impact">
-      <OverviewImpactBoard
-        key={pageId}
-        scope={pageId}
-        density="compact"
-        title="Stage objectives"
-      />
+      <OverviewImpactBoard key={pageId} scope={pageId} density="compact" />
     </div>
   )
 

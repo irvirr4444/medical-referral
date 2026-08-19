@@ -30,9 +30,11 @@ describe('automation inspection console', () => {
         name: /Intake Automation/i,
       }),
     ).toBeInTheDocument()
-    expect(screen.getByText(/Referral Intake & Scheduling/i)).toBeInTheDocument()
     expect(
-      screen.getByRole('heading', { name: /Objectives/i }),
+      screen.getByText(/Every referral is tracked automatically/i),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: /^Today$/i }),
     ).toBeInTheDocument()
     expect(screen.getByText(/New referrals/i)).toBeInTheDocument()
     expect(screen.getByText(/Patients scheduled/i)).toBeInTheDocument()

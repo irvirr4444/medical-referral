@@ -29,11 +29,9 @@ import './OverviewImpactBoard.css'
 export function OverviewImpactBoard({
   scope = 'overview',
   density = 'comfortable',
-  title = 'Objectives',
 }: {
   scope?: BossMetricsScope
   density?: 'comfortable' | 'compact'
-  title?: string
 }) {
   const periodTabs = useMemo(
     () =>
@@ -263,7 +261,10 @@ export function OverviewImpactBoard({
       aria-labelledby={headingId}
     >
       <div className="impact-board__toolbar">
-        <h2 id={headingId}>{title}</h2>
+        <div className="impact-board__toolbar-copy">
+          <h2 id={headingId}>{active.label}</h2>
+          <p className="caption">{active.caption}</p>
+        </div>
         <div className="impact-board__period-dropdown" ref={periodMenuRef}>
           <button
             type="button"
@@ -311,10 +312,6 @@ export function OverviewImpactBoard({
       </div>
 
       <article className="impact-board__period" aria-live="polite">
-        <header>
-          <h3>{active.label}</h3>
-          <p className="caption">{active.caption}</p>
-        </header>
         <div className="impact-board__body">
           <ul className="impact-board__stats">
             {active.metrics.map((metric) => {
