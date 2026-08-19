@@ -3419,7 +3419,8 @@
   background: #d59a16;
 }
 
-.stage-ops-live-inbox.is-connected {
+.stage-ops-live-inbox.is-connected,
+.stage-ops-live-inbox.is-syncing {
   color: #11675f;
   border-color: #b9dcd7;
   background: #f1faf8;

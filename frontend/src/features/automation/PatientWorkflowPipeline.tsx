@@ -8,12 +8,17 @@ import {
   parseOpsDate,
   patientJourneyById,
   STAGE_LABEL,
-  STAGE_ORDER,
   stepsForPatient,
 } from './ops'
 import { resolvePatientKey } from './patientProfile'
 import { StageFeedMessage } from './StageFeedMessage'
 import { automationStage } from './stages'
+import {
+  VISIBLE_STAGE_ORDER,
+  canonicalOpsPageId,
+  combinedVisibleStageOutcome,
+  visibleStageLabel,
+} from './combinedAssignment'
 import './PatientProfilePage.css'
 import './StageInspector.css'
 import './StageOps.css'
@@ -38,7 +43,7 @@ export function PatientWorkflowPipeline({ patientKey }: { patientKey: string }) 
     ? patientJourneyById(resolved.patientId, resolved.patientName)
     : null
   const [viewedStageId, setViewedStageId] = useState<FlowOpsPageId>(
-    journey?.currentStageId ?? 'intake',
+    canonicalOpsPageId(journey?.currentStageId ?? 'intake'),
   )
   const [selectedByStage, setSelectedByStage] = useState<
     Partial<Record<FlowOpsPageId, string>>
@@ -53,7 +58,7 @@ export function PatientWorkflowPipeline({ patientKey }: { patientKey: string }) 
     stepsForPatient(journey.currentStageId, journey.patientId),
   )
   const skim = [
-    STAGE_LABEL[journey.currentStageId],
+    visibleStageLabel(journey.currentStageId, STAGE_LABEL),
     currentStep?.stepName,
     currentStage?.headline,
   ]
@@ -92,13 +97,11 @@ export function PatientWorkflowPipeline({ patientKey }: { patientKey: string }) 
       {skim ? <p className="patient-workflow__skim">{skim}</p> : null}
 
       <div className="patient-workflow__stages">
-        {STAGE_ORDER.map((stageId, index) => {
-          const outcome = journey.stages.find(
-            (stage) => stage.stageId === stageId,
-          )
+        {VISIBLE_STAGE_ORDER.map((stageId, index) => {
+          const outcome = combinedVisibleStageOutcome(journey.stages, stageId)
           const status = outcome?.status ?? 'upcoming'
           const viewing = viewedStageId === stageId
-          const current = journey.currentStageId === stageId
+          const current = canonicalOpsPageId(journey.currentStageId) === stageId
           return (
             <button
               key={stageId}
@@ -108,7 +111,7 @@ export function PatientWorkflowPipeline({ patientKey }: { patientKey: string }) 
               aria-pressed={viewing}
               onClick={() => setViewedStageId(stageId)}
             >
-              {index + 1} {STAGE_LABEL[stageId]}
+              {index + 1} {visibleStageLabel(stageId, STAGE_LABEL)}
             </button>
           )
         })}
@@ -116,7 +119,7 @@ export function PatientWorkflowPipeline({ patientKey }: { patientKey: string }) 
 
       <div
         className="stage-ops panel"
-        aria-label={`${STAGE_LABEL[viewedStageId]} operations`}
+        aria-label={`${visibleStageLabel(viewedStageId, STAGE_LABEL)} operations`}
       >
         <div className="stage-ops-steps" aria-label="Patient steps">
           <aside className="stage-ops-steps__rail">

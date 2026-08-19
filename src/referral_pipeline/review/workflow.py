@@ -17,7 +17,7 @@ from referral_pipeline.review.store import build_review_store
 from referral_pipeline.review.summary import render_review_email
 from referral_pipeline.monitoring.models import PatientLink, utc_now
 from referral_pipeline.monitoring.observer import record_lifecycle_event
-from referral_pipeline.monitoring.store import WorkflowStore
+from referral_pipeline.monitoring.store import WorkflowStore, workflow_reads_existing_remote
 from referral_pipeline.persistence_policy import SyntheticPersistencePolicy
 from referral_pipeline.stage_one.tracker import StageOneTracker
 from referral_pipeline.workflow import WorkflowExecutionService
@@ -282,6 +282,17 @@ class ApprovalProcessor:
         self.state_db = Path(state_db)
         self.store = build_review_store(state_db, allow_supabase=False)
         remote = build_review_store(state_db, allow_supabase=True) if allow_supabase_store else self.store
+        if (
+            allow_supabase_store
+            and type(remote) is type(self.store)
+            and workflow_reads_existing_remote()
+        ):
+            from referral_pipeline.review.supabase_store import SupabaseReviewStore
+
+            try:
+                remote = SupabaseReviewStore.from_environment() or self.store
+            except Exception:
+                remote = self.store
         self._remote_store = None if type(remote) is type(self.store) else remote
         self.mailbox = mailbox
         self.intent_classifier = intent_classifier

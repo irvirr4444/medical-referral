@@ -23,6 +23,7 @@ import {
   sumCompletedJourneyCaseMinutes,
 } from '../data/patientJourney'
 import { createInitialWorkflowScenarios } from '../data/workflowScenarios'
+import { canonicalOpsPageId } from '../features/automation/combinedAssignment'
 import { referralPdfForPatient } from '../features/automation/fixtures/intakeDemoPatients'
 import {
   seedPatientSchedules,
@@ -36,6 +37,7 @@ import {
   tickActionTimers,
   timerPatientName,
 } from '../features/automation/confirmationTimers'
+import { isDemoDataMode } from '../features/automation/demoDataMode'
 import type { ScenarioBucket } from '../data/scenarioTypes'
 import type {
   AutomationStep,
@@ -331,7 +333,7 @@ function focusJourneyStep(state: DemoState, caseId: string): DemoState {
   return {
     ...state,
     journeyFocusCaseId: caseId,
-    activePage: step.stage,
+    activePage: canonicalOpsPageId(step.stage),
     scenarioFilter: 'all',
     // Do not auto-open the PDF workspace — only "Review Referral" should.
     selectedReferralId: null,
@@ -529,7 +531,7 @@ export function createInitialState(): DemoState {
     intakePartnerUnread: false,
     latestPartnerContact: null,
     assignmentOwnerUnread: false,
-    actionTimers: seedActionTimers(),
+    actionTimers: isDemoDataMode() ? seedActionTimers() : {},
   }
 }
 
@@ -583,19 +585,23 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
     case 'TOGGLE_HOW_CALCULATED':
       return { ...state, howCalculatedOpen: !state.howCalculatedOpen }
 
-    case 'SET_ACTIVE_PAGE':
+    case 'SET_ACTIVE_PAGE': {
+      const page = canonicalOpsPageId(action.page)
       return {
         ...state,
-        activePage: action.page,
+        activePage: page,
         scenarioFilter: 'all',
         selectedReferralId: null,
         schedulingHandoffUnread:
-          action.page === 'scheduling' ? false : state.schedulingHandoffUnread,
+          page === 'scheduling' ? false : state.schedulingHandoffUnread,
         handoffNavUnread:
-          action.page === 'handoff' ? false : state.handoffNavUnread,
+          page === 'assignment' || action.page === 'handoff'
+            ? false
+            : state.handoffNavUnread,
         providerNavUnread:
-          action.page === 'provider' ? false : state.providerNavUnread,
+          page === 'provider' ? false : state.providerNavUnread,
       }
+    }
 
     case 'SET_SCENARIO_FILTER':
       return { ...state, scenarioFilter: action.filter }

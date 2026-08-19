@@ -1,5 +1,8 @@
 import type { FlowOpsPageId } from '../../../../data/flowOps'
 import type { ArtifactField, ArtifactSection } from '../../types'
+import {
+  isHandoffOperationStep,
+} from '../../combinedAssignment'
 
 type StepEvidence = {
   received: string
@@ -301,7 +304,39 @@ function receipt(
   return { received, produced, evidence, fields }
 }
 
+function heroLookup(
+  stageId: FlowOpsPageId,
+  patientId: string,
+  stepId: string,
+): { story?: HeroStory; evidence?: StepEvidence } {
+  const lookupStage: FlowOpsPageId = isHandoffOperationStep(stepId)
+    ? 'handoff'
+    : stageId === 'handoff'
+      ? 'assignment'
+      : stageId
+  const lookupStep =
+    stepId === 'assign-owner' && lookupStage === 'assignment'
+      ? HERO_STORIES.assignment?.steps['determine-owner']
+        ? 'determine-owner'
+        : 'assign-owner'
+      : stepId
+  const story = HERO_STORIES[lookupStage]
+  if (!story || story.patientId !== patientId) return {}
+  return { story, evidence: story.steps[lookupStep] }
+}
+
+function heroEvidence(
+  stageId: FlowOpsPageId,
+  patientId: string,
+  stepId: string,
+): StepEvidence | undefined {
+  return heroLookup(stageId, patientId, stepId).evidence
+}
+
 export function heroPatientIdForStage(stageId: FlowOpsPageId): string | undefined {
+  if (stageId === 'assignment') {
+    return HERO_STORIES.assignment?.patientId
+  }
   return HERO_STORIES[stageId]?.patientId
 }
 
@@ -310,9 +345,7 @@ export function heroActionFields(
   patientId: string,
   stepId: string,
 ): ArtifactField[] | undefined {
-  const story = HERO_STORIES[stageId]
-  if (!story || story.patientId !== patientId) return undefined
-  return story.steps[stepId]?.fields
+  return heroEvidence(stageId, patientId, stepId)?.fields
 }
 
 export function heroArtifactSections(
@@ -320,9 +353,8 @@ export function heroArtifactSections(
   patientId: string,
   stepId: string,
 ): ArtifactSection[] | undefined {
-  const story = HERO_STORIES[stageId]
-  const evidence = story?.steps[stepId]
-  if (!story || story.patientId !== patientId || !evidence) return undefined
+  const { story, evidence } = heroLookup(stageId, patientId, stepId)
+  if (!story || !evidence) return undefined
 
   return [
     {

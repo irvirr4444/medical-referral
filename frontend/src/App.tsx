@@ -3,10 +3,12 @@ import { FlowNav } from './components/FlowNav'
 import { StageOperationsPage } from './components/StageOperationsPage'
 import { OverviewPage } from './components/WorkflowModal'
 import { isFlowOpsPage } from './data/flowOps'
-import {
-  actionLabel,
-  attentionSummary,
-} from './features/automation/confirmationTimers'
+import { canonicalOpsPageId } from './features/automation/combinedAssignment'
+import { AttentionProvider } from './features/automation/AttentionProvider'
+import { useAttention } from './features/automation/AttentionContext'
+import { attentionBannerModel } from './features/automation/liveWorkflow/attentionDisplay'
+import { LiveInboxProvider } from './features/automation/liveInbox/LiveInboxProvider'
+import { LiveWorkflowProvider } from './features/automation/liveWorkflow/LiveWorkflowProvider'
 import { PatientProfilePage } from './features/automation/PatientProfilePage'
 import { usePatientPathKey } from './features/automation/patientRoute'
 import { DemoProvider } from './state/DemoContext'
@@ -15,58 +17,40 @@ import { useDemo } from './state/useDemo'
 /** Scoped to the open step on a stage; overview rolls the whole pipeline up. */
 function OverdueConfirmationsBanner({ stageId }: { stageId: string | null }) {
   const { state, dispatch } = useDemo()
-  const selectedStep = stageId
-    ? state.opsSelectedStepByStage[stageId]
-    : undefined
-  const timers = stageId
+  const { timers, openSignal } = useAttention()
+  const scopedStep = stageId ? state.opsSelectedStepByStage[stageId] : undefined
+  const scopedTimers = stageId
     ? Object.fromEntries(
-        Object.entries(state.actionTimers).filter(([, timer]) => {
+        Object.entries(timers).filter(([, timer]) => {
           if (timer.stageId !== stageId) return false
-          if (selectedStep) return timer.stepId === selectedStep
+          if (scopedStep) return timer.stepId === scopedStep
           return true
         }),
       )
-    : state.actionTimers
-  const { overdue, warning, oldest } = attentionSummary(timers)
-  if (!oldest) return null
-
-  const scope = stageId ? ' on this step' : ''
-  const headline =
-    overdue.length === 1
-      ? `1 confirmation needs immediate attention${scope}`
-      : `${overdue.length} confirmations need immediate attention${scope}`
-  const stages = [...new Set(overdue.map((timer) => timer.stageId))]
+    : timers
+  const banner = attentionBannerModel(Object.values(scopedTimers), {
+    scopeSuffix: stageId ? ' on this step' : '',
+    stageScoped: Boolean(stageId),
+  })
+  if (!banner) return null
 
   return (
     <button
       type="button"
       className="overdue-confirmations-banner"
-      aria-label={`${headline}. Oldest is ${actionLabel(oldest.actionId)} for ${
-        oldest.patientName
-      }.`}
+      aria-label={banner.ariaLabel}
       onClick={() => {
-        if (stageId) {
-          dispatch({
-            type: 'SCOPE_OPS_PATIENT',
-            patientId: oldest.patientId,
-            patientName: oldest.patientName,
-          })
-        } else {
-          dispatch({ type: 'SET_ACTIVE_PAGE', page: oldest.stageId })
-        }
+        openSignal(banner.target, dispatch)
         window.scrollTo({ top: 0, behavior: 'smooth' })
       }}
     >
-      <span className="overdue-confirmations-banner__badge">Overdue</span>
+      <span className="overdue-confirmations-banner__badge">{banner.badge}</span>
       <span className="overdue-confirmations-banner__copy">
-        <strong>{headline}</strong>
+        <strong>{banner.headline}</strong>
       </span>
-      <span className="overdue-confirmations-banner__meta">
-        {stageId
-          ? `${overdue.length} overdue`
-          : `${stages.length} ${stages.length === 1 ? 'stage' : 'stages'}`}
-        {warning.length ? ` · ${warning.length} due soon` : ''}
-      </span>
+      {banner.meta ? (
+        <span className="overdue-confirmations-banner__meta">{banner.meta}</span>
+      ) : null}
     </button>
   )
 }
@@ -74,7 +58,8 @@ function OverdueConfirmationsBanner({ stageId }: { stageId: string | null }) {
 function Dashboard() {
   const { state } = useDemo()
   const patientKey = usePatientPathKey()
-  const page = state.activePage === 'operations' ? 'overview' : state.activePage
+  const rawPage = state.activePage === 'operations' ? 'overview' : state.activePage
+  const page = canonicalOpsPageId(rawPage)
 
   let body: ReactNode
   if (patientKey) body = <PatientProfilePage patientKey={patientKey} />
@@ -98,7 +83,13 @@ function Dashboard() {
 export default function App() {
   return (
     <DemoProvider>
-      <Dashboard />
+      <LiveInboxProvider>
+        <LiveWorkflowProvider>
+          <AttentionProvider>
+            <Dashboard />
+          </AttentionProvider>
+        </LiveWorkflowProvider>
+      </LiveInboxProvider>
     </DemoProvider>
   )
 }

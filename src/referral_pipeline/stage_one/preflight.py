@@ -22,7 +22,15 @@ class PreflightCheck:
     detail: str
 
 
-def run_stage_one_preflight(*, live: bool = False) -> dict[str, object]:
+def run_stage_one_preflight(
+    *,
+    live: bool = False,
+    require_supabase: bool | None = None,
+    require_drk: bool = False,
+    require_partner_acknowledgement: bool = False,
+    live_outlook: bool | None = None,
+    live_supabase: bool | None = None,
+) -> dict[str, object]:
     load_dotenv()
     checks: list[PreflightCheck] = []
     reviewer = os.getenv("REVIEW_RECIPIENT_EMAIL", "").strip()
@@ -32,7 +40,10 @@ def run_stage_one_preflight(*, live: bool = False) -> dict[str, object]:
             bool(reviewer),
             "Internal intake-team review recipient configured"
             if reviewer
-            else "REVIEW_RECIPIENT_EMAIL is required and cannot fall back to the referral sender",
+            else (
+                "REVIEW_RECIPIENT_EMAIL is required and cannot fall back to the referral sender. "
+                "Remediation: set REVIEW_RECIPIENT_EMAIL to an internal intake-team address."
+            ),
         )
     )
 
@@ -53,12 +64,15 @@ def run_stage_one_preflight(*, live: bool = False) -> dict[str, object]:
         )
     )
 
-    supabase_enabled = bool(
-        os.getenv("WORKFLOW_DATABASE_BACKEND", "sqlite").strip().casefold() == "supabase"
-        or os.getenv("REFERRAL_REVIEW_STORE", "sqlite").strip().casefold() == "supabase"
-        or os.getenv("SUPABASE_URL", "").strip()
-        or _supabase_key()
-    )
+    if require_supabase is None:
+        supabase_enabled = bool(
+            os.getenv("WORKFLOW_DATABASE_BACKEND", "sqlite").strip().casefold() == "supabase"
+            or os.getenv("REFERRAL_REVIEW_STORE", "sqlite").strip().casefold() == "supabase"
+            or os.getenv("SUPABASE_URL", "").strip()
+            or _supabase_key()
+        )
+    else:
+        supabase_enabled = require_supabase
     checks.append(_supabase_configuration(required=supabase_enabled))
     checks.append(
         _environment_group(
@@ -71,19 +85,49 @@ def run_stage_one_preflight(*, live: bool = False) -> dict[str, object]:
         _environment_group(
             "drk_read",
             ("EMR_URL", "EMR_USERNAME", "EMR_PASSWORD"),
-            required=False,
+            required=require_drk,
         )
     )
+    if require_partner_acknowledgement:
+        outlook_vars = (
+            "OUTLOOK_TENANT_ID",
+            "OUTLOOK_CLIENT_ID",
+            "OUTLOOK_CLIENT_SECRET",
+            "OUTLOOK_MAILBOX",
+        )
+        outlook_ok = all(os.getenv(variable, "").strip() for variable in outlook_vars)
+        checks.append(
+            _required(
+                "partner_acknowledgement",
+                outlook_ok,
+                "Outlook mailbox is configured for partner acknowledgement"
+                if outlook_ok
+                else (
+                    "Partner acknowledgement requires Outlook Mail.Send. "
+                    "Remediation: set OUTLOOK_TENANT_ID, OUTLOOK_CLIENT_ID, "
+                    "OUTLOOK_CLIENT_SECRET, and OUTLOOK_MAILBOX."
+                ),
+            )
+        )
 
     checks.append(_capture("case_manager_roster", _check_roster))
     checks.append(_capture("local_schema", _check_local_schema))
 
-    if live and not any(check.name == "outlook" and check.status == "error" for check in checks):
+    check_outlook_live = live if live_outlook is None else live_outlook
+    check_supabase_live = live if live_supabase is None else live_supabase
+    if check_outlook_live and not any(
+        check.name == "outlook" and check.status == "error" for check in checks
+    ):
         checks.append(_capture("outlook_live", _check_outlook))
     if live and os.getenv("MONDAY_DOT_COM_API_KEY", "").strip():
         checks.append(_capture("monday_live", _check_monday))
         checks.append(_capture("monday_board", _check_monday_board))
-    if live and supabase_enabled and os.getenv("SUPABASE_URL", "").strip() and _supabase_key():
+    if (
+        check_supabase_live
+        and supabase_enabled
+        and os.getenv("SUPABASE_URL", "").strip()
+        and _supabase_key()
+    ):
         checks.append(_capture("supabase_schema", _check_supabase))
     if live and os.getenv("EMR_URL", "").strip() and os.getenv("EMR_USERNAME", "").strip():
         checks.append(_capture("drk_live", _check_drk))
@@ -108,7 +152,10 @@ def _environment_group(name: str, variables: tuple[str, ...], *, required: bool)
     if not missing:
         return PreflightCheck(name, "ok", "Configuration present")
     status = "error" if required else "warning"
-    return PreflightCheck(name, status, f"Not configured: {', '.join(missing)}")
+    detail = f"Not configured: {', '.join(missing)}"
+    if required:
+        detail += f". Remediation: set {', '.join(missing)}."
+    return PreflightCheck(name, status, detail)
 
 
 def _supabase_key() -> str:
@@ -126,10 +173,13 @@ def _supabase_configuration(*, required: bool) -> PreflightCheck:
         missing.append("SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SERVICE_KEY")
     if not missing:
         return PreflightCheck("supabase", "ok", "Backend configuration present")
+    detail = f"Not configured: {', '.join(missing)}"
+    if required:
+        detail += f". Remediation: set {', '.join(missing)}."
     return PreflightCheck(
         "supabase",
         "error" if required else "warning",
-        f"Not configured: {', '.join(missing)}",
+        detail,
     )
 
 
@@ -295,15 +345,25 @@ def _check_drk() -> str:
     username = require_env("EMR_USERNAME")
     password = require_env("EMR_PASSWORD")
     emr_url = require_env("EMR_URL")
+    # ignore_cleanup_errors: Chrome on Windows often keeps cache files open
+    # briefly after quit(), which would otherwise raise WinError 32.
+    tmp = TemporaryDirectory(prefix="drk-preflight-", ignore_cleanup_errors=True)
     driver = None
+    current = ""
     try:
-        with TemporaryDirectory(prefix="drk-preflight-") as tmp:
-            driver = make_driver(Path(tmp))
-            login(driver, login_url_for(emr_url), username, password)
-            current = str(driver.current_url)
+        driver = make_driver(Path(tmp.name))
+        login(driver, login_url_for(emr_url), username, password)
+        current = str(driver.current_url)
     finally:
         if driver is not None:
-            driver.quit()
+            try:
+                driver.quit()
+            except Exception:
+                pass
+        try:
+            tmp.cleanup()
+        except OSError:
+            pass
     if "dashboard" not in current.casefold():
         raise RuntimeError(
             "DRK login did not reach the dashboard. Remediation: verify EMR_URL and the DRK account."
@@ -316,9 +376,9 @@ def _check_supabase() -> str:
     key = _supabase_key()
     headers = {"apikey": key, "Authorization": f"Bearer {key}"}
     targets = {
-        "wcw_workflow_cases": "case_id,status,current_stage",
+        "wcw_workflow_cases": "case_id,status,current_stage,attention_due_at",
         "wcw_workflow_events": "event_key,event_type,entity_id",
-        "wcw_work_items": "work_item_id,case_id,status",
+        "wcw_work_items": "work_item_id,case_id,status,due_at",
         "wcw_workflow_decisions": "decision_id,idempotency_key,case_id",
         "wcw_external_operations": "operation_id,idempotency_key,operation_type,status,lease_until,claimed_by",
         "referral_reviews": (

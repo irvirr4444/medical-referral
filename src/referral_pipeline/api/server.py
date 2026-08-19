@@ -17,7 +17,7 @@ from Outlook.graph import OutlookGraphClient, OutlookGraphConfig, OutlookGraphEr
 from Outlook.review_mail import OutlookReviewMailbox
 from referral_pipeline.api.intake_inbox import IntakeInboxFeed
 from referral_pipeline.live_monitor import LiveInboxMonitor, LiveInboxMonitorConfig
-from referral_pipeline.monitoring.store import create_routed_workflow_store, create_workflow_store
+from referral_pipeline.monitoring.store import create_live_workflow_store
 from referral_pipeline.workflow import WorkflowExecutionService
 from referral_pipeline.workflow.handoff import HandoffExecutionError
 from referral_pipeline.workflow.service import WorkflowExecutionError
@@ -50,6 +50,25 @@ class IntakeApiHandler(BaseHTTPRequestHandler):
             query = parse_qs(parsed.query)
             limit = _parse_workflow_limit(query.get("limit", ["100"])[0])
             self._send_json(HTTPStatus.OK, self.server.workflow_execution.assignments(limit=limit))
+            return
+        if parsed.path == "/api/workflow/attention":
+            query = parse_qs(parsed.query)
+            try:
+                limit = _parse_workflow_limit(query.get("limit", ["200"])[0])
+                stage = _parse_workflow_stage(query.get("stage", [None])[0])
+            except ValueError as error:
+                self._send_json(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+                return
+            from referral_pipeline.workflow.attention import workflow_attention
+
+            self._send_json(
+                HTTPStatus.OK,
+                workflow_attention(
+                    self.server.workflow_execution.store,
+                    stage=stage,
+                    limit=limit,
+                ),
+            )
             return
         if parsed.path == "/api/workflow/handoffs":
             query = parse_qs(parsed.query)
@@ -103,6 +122,17 @@ class IntakeApiHandler(BaseHTTPRequestHandler):
                     "source": "testing-infobox",
                     "error": "Microsoft Graph could not read the testing infobox.",
                     "error_code": f"graph_{error.status_code or 'unavailable'}",
+                    "referrals": [],
+                },
+            )
+        except TimeoutError as error:
+            self._send_json(
+                HTTPStatus.GATEWAY_TIMEOUT,
+                {
+                    "connected": False,
+                    "source": "testing-infobox",
+                    "error": str(error),
+                    "error_code": "inbox_refresh_timeout",
                     "referrals": [],
                 },
             )
@@ -306,16 +336,9 @@ def create_server(
             review_recipient=review_recipient or os.getenv("REVIEW_RECIPIENT_EMAIL"),
         )
     )
-    workflow_store = (
-        create_routed_workflow_store(
-            sqlite_path=effective_sqlite_path,
-            include_remote=effective_backend == "supabase",
-        )
-        if effective_backend == "supabase"
-        else create_workflow_store(
-            backend=effective_backend,
-            sqlite_path=effective_sqlite_path,
-        )
+    workflow_store = create_live_workflow_store(
+        sqlite_path=effective_sqlite_path,
+        backend=effective_backend,
     )
     server.workflow_execution = workflow_execution or WorkflowExecutionService(workflow_store)
     server.handoff_mailbox_factory = handoff_mailbox_factory or (
@@ -431,6 +454,18 @@ def _parse_workflow_limit(value: str) -> int:
     if not 1 <= limit <= 500:
         raise ValueError("limit must be between 1 and 500")
     return limit
+
+
+def _parse_workflow_stage(value: str | None) -> int | None:
+    if value is None or str(value).strip() == "":
+        return None
+    try:
+        stage = int(value)
+    except (TypeError, ValueError) as error:
+        raise ValueError("stage must be an integer") from error
+    if not 1 <= stage <= 7:
+        raise ValueError("stage must be between 1 and 7")
+    return stage
 
 
 def _env_flag(name: str) -> bool:

@@ -9,6 +9,7 @@ from typing import Any
 from referral_pipeline.monitoring.models import WorkflowCase, WorkflowEvent
 from referral_pipeline.monitoring.store import WorkflowStore
 from referral_pipeline.stage_one.identity import case_id_for_source, source_ref
+from referral_pipeline.workflow.deadlines import with_case_deadline
 
 
 class StageOneTracker:
@@ -35,7 +36,9 @@ class StageOneTracker:
             updated_at=now,
             completed_at=None if existing is None else existing.completed_at,
         )
-        stored = self.store.upsert_workflow_case(case)
+        stored = self.store.upsert_workflow_case(
+            with_case_deadline(case, previous=existing, now=now)
+        )
         self.record(
             stored.case_id,
             "referral_received",
@@ -53,7 +56,7 @@ class StageOneTracker:
     def processing_started(self, case: WorkflowCase, *, revision: int = 1) -> WorkflowCase:
         status = "completed" if case.status == "completed" else "processing"
         updated = case.model_copy(update={"status": status, "updated_at": _utc_now()})
-        stored = self.store.upsert_workflow_case(updated)
+        stored = self.store.upsert_workflow_case(with_case_deadline(updated, previous=case))
         self.record(
             case.case_id,
             "extraction_started",
@@ -87,7 +90,7 @@ class StageOneTracker:
                 "updated_at": now,
             }
         )
-        stored = self.store.upsert_workflow_case(updated)
+        stored = self.store.upsert_workflow_case(with_case_deadline(updated, previous=case))
         self.record(
             case.case_id,
             "extraction_completed",
@@ -147,7 +150,7 @@ class StageOneTracker:
         updated = case.model_copy(
             update={"status": "completed", "updated_at": now, "completed_at": now}
         )
-        stored = self.store.upsert_workflow_case(updated)
+        stored = self.store.upsert_workflow_case(with_case_deadline(updated, previous=case))
         self.record(
             case.case_id,
             "partner_acknowledgement_sent",
@@ -168,7 +171,7 @@ class StageOneTracker:
         updated = case.model_copy(
             update={"status": "awaiting_partner_contact", "updated_at": now}
         )
-        stored = self.store.upsert_workflow_case(updated)
+        stored = self.store.upsert_workflow_case(with_case_deadline(updated, previous=case))
         self.record(
             case.case_id,
             "partner_contact_confirmation_requested",
@@ -191,8 +194,12 @@ class StageOneTracker:
             return None
         now = _utc_now()
         stored = self.store.upsert_workflow_case(
-            case.model_copy(
-                update={"status": "completed", "updated_at": now, "completed_at": now}
+            with_case_deadline(
+                case.model_copy(
+                    update={"status": "completed", "updated_at": now, "completed_at": now}
+                ),
+                previous=case,
+                now=now,
             )
         )
         self.record(
@@ -217,7 +224,7 @@ class StageOneTracker:
         revision: int = 1,
     ) -> WorkflowCase:
         updated = case.model_copy(update={"status": "failed", "updated_at": _utc_now()})
-        stored = self.store.upsert_workflow_case(updated)
+        stored = self.store.upsert_workflow_case(with_case_deadline(updated, previous=case))
         self.record(
             case.case_id,
             event_type,
@@ -235,7 +242,7 @@ class StageOneTracker:
         attempt_count: int,
     ) -> WorkflowCase:
         updated = case.model_copy(update={"status": "processing", "updated_at": _utc_now()})
-        stored = self.store.upsert_workflow_case(updated)
+        stored = self.store.upsert_workflow_case(with_case_deadline(updated, previous=case))
         self.record(
             case.case_id,
             "stage_one_retry_scheduled",

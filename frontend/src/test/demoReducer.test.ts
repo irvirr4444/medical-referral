@@ -227,6 +227,7 @@ describe('demoReducer', () => {
     expect(state.providerSelectUnread).toBe(true)
 
     state = demoReducer(state, { type: 'SET_ACTIVE_PAGE', page: 'handoff' })
+    expect(state.activePage).toBe('assignment')
     expect(state.handoffNavUnread).toBe(false)
     expect(state.handoffNotifyUnread).toBe(true)
     expect(state.assignmentNotifyUnread).toBe(true)

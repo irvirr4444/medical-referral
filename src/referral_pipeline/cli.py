@@ -29,8 +29,12 @@ from referral_pipeline.review.workflow import create_and_send_review  # noqa: E4
 from referral_pipeline.runner import main as run_inbound_main  # noqa: E402
 from referral_pipeline.state import InboxState  # noqa: E402
 from referral_pipeline.monitoring.cli import add_monitoring_commands, run_monitoring_command  # noqa: E402
-from referral_pipeline.monitoring.store import create_routed_workflow_store  # noqa: E402
+from referral_pipeline.monitoring.store import (  # noqa: E402
+    create_live_workflow_store,
+    workflow_reads_existing_remote,
+)
 from referral_pipeline.api.server import main as run_intake_api  # noqa: E402
+from referral_pipeline.local_launcher import run_from_cli_args  # noqa: E402
 from referral_pipeline.stage_one.email_preview import render_stage_one_email_preview  # noqa: E402
 from referral_pipeline.stage_one.preflight import run_stage_one_preflight  # noqa: E402
 
@@ -103,6 +107,43 @@ def _build_parser() -> argparse.ArgumentParser:
     inbox_api.add_argument("--partner-acknowledgement", action="store_true")
     inbox_api.add_argument("--stage-one-drk-check", action="store_true")
     inbox_api.add_argument("--start-monitor", action="store_true")
+
+    start = commands.add_parser(
+        "start",
+        help="Start the local inbox API and Vite frontend for development and demo.",
+    )
+    start.add_argument(
+        "--no-browser",
+        action="store_true",
+        help="Do not open the UI in the default browser.",
+    )
+    start.add_argument(
+        "--stage-one-drk-check",
+        action="store_true",
+        help="Enable Stage 1 DRK duplicate checking for this run only.",
+    )
+    start.add_argument(
+        "--partner-acknowledgement",
+        action="store_true",
+        help="Send partner acknowledgement emails for this run only.",
+    )
+    start.add_argument(
+        "--workflow-database-backend",
+        choices=("sqlite", "supabase"),
+        help="Workflow store for this run. Defaults to the existing routing policy.",
+    )
+    start.add_argument(
+        "--data-root",
+        type=Path,
+        help="Intake data root. Defaults to INTAKE_DATA_ROOT, or tmp/intake-service if unset.",
+    )
+    start.add_argument("--api-port", type=int, default=8787, help="Inbox API port (default 8787).")
+    start.add_argument(
+        "--frontend-port",
+        type=int,
+        default=5173,
+        help="Vite UI port (default 5173).",
+    )
     outlook.add_argument("--input-mode", choices=("auto", "text", "image", "hybrid"), default="image")
     outlook.add_argument("--max-pages", type=int)
     outlook.add_argument(
@@ -574,10 +615,10 @@ def _run_approvals(args: argparse.Namespace) -> int:
     result = ApprovalProcessor(
         state_db=state_db,
         mailbox=mailbox,
-        allow_supabase_store=workflow_backend == "supabase",
-        workflow_store=create_routed_workflow_store(
+        allow_supabase_store=workflow_reads_existing_remote(backend=workflow_backend),
+        workflow_store=create_live_workflow_store(
             sqlite_path=args.workflow_sqlite_path,
-            include_remote=workflow_backend == "supabase",
+            backend=workflow_backend,
         ),
     ).poll(
         max_messages=args.max_messages,
@@ -773,9 +814,9 @@ def _run_handoff(args: argparse.Namespace, *, preview: bool) -> int:
         or os.getenv("WORKFLOW_DATABASE_BACKEND")
         or "sqlite"
     ).strip().casefold()
-    store = create_routed_workflow_store(
+    store = create_live_workflow_store(
         sqlite_path=args.workflow_sqlite_path,
-        include_remote=backend == "supabase",
+        backend=backend,
     )
     service = WorkflowExecutionService(store)
     mailbox = None
@@ -847,6 +888,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "outlook":
             return _run_outlook(args)
+        if args.command == "start":
+            return run_from_cli_args(args)
         if args.command == "inbox-api":
             api_args = [
                 "--host",

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   Download,
@@ -9,16 +9,10 @@ import {
   Printer,
   X,
 } from 'lucide-react'
-import { Document, Page, pdfjs } from 'react-pdf'
 import { useEscapeDismiss } from '../../hooks/useEscapeDismiss'
-import 'react-pdf/dist/Page/AnnotationLayer.css'
-import 'react-pdf/dist/Page/TextLayer.css'
 import './IntakePdfPreview.css'
 
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url,
-).toString()
+const IntakePdfDocument = lazy(() => import('./IntakePdfDocument'))
 
 export function IntakePdfPreview({
   samplePdf,
@@ -158,31 +152,20 @@ export function IntakePdfPreview({
                     .
                   </p>
                 ) : (
-                  <Document
-                    file={fileUrl}
-                    loading={<p className="gmail-pdf__status">Loading PDF…</p>}
-                    onLoadSuccess={({ numPages }) => {
-                      setPageCount(numPages)
-                      setLoadError(false)
-                    }}
-                    onLoadError={() => setLoadError(true)}
+                  <Suspense
+                    fallback={<p className="gmail-pdf__status">Loading PDF…</p>}
                   >
-                    {Array.from({ length: pageCount }, (_, index) => (
-                      <div
-                        key={`page-${index + 1}`}
-                        data-pdf-page={index + 1}
-                        className="gmail-pdf__page-wrap"
-                      >
-                        <Page
-                          pageNumber={index + 1}
-                          width={pageWidth}
-                          className="gmail-pdf__page"
-                          renderTextLayer={false}
-                          renderAnnotationLayer={false}
-                        />
-                      </div>
-                    ))}
-                  </Document>
+                    <IntakePdfDocument
+                      fileUrl={fileUrl}
+                      pageCount={pageCount}
+                      pageWidth={pageWidth}
+                      onLoadSuccess={(numPages) => {
+                        setPageCount(numPages)
+                        setLoadError(false)
+                      }}
+                      onLoadError={() => setLoadError(true)}
+                    />
+                  </Suspense>
                 )}
               </div>
             </div>

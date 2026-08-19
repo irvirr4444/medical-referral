@@ -22,15 +22,22 @@ class IntakeInboxFeed:
         client_factory: Callable[[], OutlookGraphClient],
         *,
         cache_ttl_seconds: int = 30,
+        refresh_wait_timeout_seconds: float = 45.0,
         clock: Callable[[], float] = time.monotonic,
         workflow_store: WorkflowStore | None = None,
     ) -> None:
         if cache_ttl_seconds < 0:
             raise ValueError("cache_ttl_seconds cannot be negative")
+        if refresh_wait_timeout_seconds <= 0:
+            raise ValueError("refresh_wait_timeout_seconds must be positive")
         self._client_factory = client_factory
         self._cache_ttl_seconds = cache_ttl_seconds
+        self._refresh_wait_timeout_seconds = refresh_wait_timeout_seconds
         self._clock = clock
         self._lock = threading.Lock()
+        self._refresh_finished = threading.Event()
+        self._refresh_finished.set()
+        self._refreshing = False
         self._cached_at = 0.0
         self._cached_limit = 0
         self._cached_payload: dict[str, Any] | None = None
@@ -39,48 +46,88 @@ class IntakeInboxFeed:
 
     def read(self, *, limit: int = 10, force: bool = False) -> dict[str, Any]:
         safe_limit = min(max(limit, 1), 25)
-        with self._lock:
-            now = self._clock()
-            cache_valid = (
-                not force
-                and self._cached_payload is not None
-                and self._cached_limit >= safe_limit
-                and now - self._cached_at < self._cache_ttl_seconds
-            )
-            if cache_valid:
-                return self._with_current_workflow(self._cached_payload, safe_limit)
+        while True:
+            snapshot: dict[str, Any] | None = None
+            wait_for_refresh = False
+            become_refresher = False
+            served_stale = False
+            with self._lock:
+                cache_valid = (
+                    not force
+                    and self._cached_payload is not None
+                    and self._cached_limit >= safe_limit
+                    and self._clock() - self._cached_at < self._cache_ttl_seconds
+                )
+                if cache_valid:
+                    snapshot = _copy_cached_payload(self._cached_payload)
+                elif self._refreshing:
+                    if self._cached_payload is not None:
+                        snapshot = _copy_cached_payload(self._cached_payload)
+                        served_stale = True
+                    else:
+                        wait_for_refresh = True
+                else:
+                    become_refresher = True
+                    self._refreshing = True
+                    self._refresh_finished.clear()
 
-            attachments = self._client_factory().list_inbox_pdf_metadata(
-                max_messages=safe_limit,
-            )
-            references = {
-                source_ref(attachment.message_id, attachment.attachment_id): attachment
-                for attachment in attachments
-            }
-            referrals = [
-                {
-                    "id": referral_id,
-                    "filename": attachment.filename,
-                    "subject": attachment.subject,
-                    "sender": attachment.sender,
-                    "received_at": attachment.received_at,
-                    "source": "testing-infobox",
-                    **self._workflow_projection(referral_id),
-                }
-                for referral_id, attachment in references.items()
-            ]
-            referrals.sort(key=lambda item: item.get("received_at") or "", reverse=True)
-            payload = {
-                "connected": True,
+            if snapshot is not None:
+                payload = self._with_current_workflow(snapshot, safe_limit)
+                if served_stale:
+                    payload["stale"] = True
+                return payload
+            if wait_for_refresh:
+                if not self._refresh_finished.wait(
+                    timeout=self._refresh_wait_timeout_seconds,
+                ):
+                    raise TimeoutError(
+                        "Timed out waiting for the test infobox refresh to finish"
+                    )
+                continue
+
+            assert become_refresher
+            try:
+                payload, references = self._fetch_mailbox_metadata(safe_limit)
+                with self._lock:
+                    self._cached_payload = payload
+                    self._cached_limit = safe_limit
+                    self._cached_at = self._clock()
+                    self._references = references
+            finally:
+                with self._lock:
+                    self._refreshing = False
+                    self._refresh_finished.set()
+            return self._with_current_workflow(_copy_cached_payload(payload), safe_limit)
+
+    def _fetch_mailbox_metadata(
+        self, safe_limit: int
+    ) -> tuple[dict[str, Any], dict[str, InboundPdfMetadata]]:
+        attachments = self._client_factory().list_inbox_pdf_metadata(
+            max_messages=safe_limit,
+        )
+        references = {
+            source_ref(attachment.message_id, attachment.attachment_id): attachment
+            for attachment in attachments
+        }
+        referrals = [
+            {
+                "id": referral_id,
+                "filename": attachment.filename,
+                "subject": attachment.subject,
+                "sender": attachment.sender,
+                "received_at": attachment.received_at,
                 "source": "testing-infobox",
-                "fetched_at": datetime.now(timezone.utc).isoformat(),
-                "referrals": referrals,
             }
-            self._cached_at = now
-            self._cached_limit = safe_limit
-            self._cached_payload = payload
-            self._references = references
-            return payload
+            for referral_id, attachment in references.items()
+        ]
+        referrals.sort(key=lambda item: item.get("received_at") or "", reverse=True)
+        payload = {
+            "connected": True,
+            "source": "testing-infobox",
+            "fetched_at": datetime.now(timezone.utc).isoformat(),
+            "referrals": referrals,
+        }
+        return payload, references
 
     def _with_current_workflow(
         self,
@@ -153,6 +200,13 @@ class IntakeInboxFeed:
             "persistence": persistence_for(self._workflow_store, case.case_id),
             "steps": _step_projection(events, case_status=effective_status),
         }
+
+
+def _copy_cached_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        **payload,
+        "referrals": [dict(item) for item in payload.get("referrals") or []],
+    }
 
 
 def _with_limited_referrals(payload: dict[str, Any], limit: int) -> dict[str, Any]:

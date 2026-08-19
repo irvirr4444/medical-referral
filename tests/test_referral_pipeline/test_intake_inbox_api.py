@@ -422,6 +422,11 @@ def test_workflow_api_persists_assignment_and_prepares_handoff(tmp_path) -> None
         store,
         case_managers=[{"name": "Case Manager", "email": "manager@example.test"}],
     )
+    # The Stage 1 completion reconcile sweep now runs on the background
+    # approval cycle rather than on every assignments() read; run it once
+    # here to bring this hand-built case into Stage 2, matching what the
+    # worker would have already done by the time the UI polls.
+    execution.reconcile_stage_one_completions()
     server = create_server(
         host="127.0.0.1",
         port=0,
@@ -514,3 +519,221 @@ def test_workflow_api_persists_assignment_and_prepares_handoff(tmp_path) -> None
         server.shutdown()
         server.server_close()
         thread.join(timeout=2)
+
+
+class _BlockingGraph:
+    def __init__(self, started: threading.Event, release: threading.Event) -> None:
+        self.calls = 0
+        self.started = started
+        self.release = release
+        self.fail = False
+
+    def list_inbox_pdf_metadata(self, *, max_messages: int):
+        self.calls += 1
+        self.started.set()
+        if not self.release.wait(timeout=5):
+            raise AssertionError("Graph release was not signaled")
+        if self.fail:
+            raise RuntimeError("graph unavailable")
+        return [
+            InboundPdfMetadata(
+                message_id="message-1",
+                attachment_id="attachment-1",
+                filename="referral.pdf",
+                received_at="2026-08-12T08:30:00Z",
+                subject="New referral",
+                sender="sender@example.test",
+            )
+        ]
+
+    def download_pdf_attachment(self, metadata: InboundPdfMetadata):
+        from Outlook.mail import InboundPdfAttachment
+
+        return InboundPdfAttachment(
+            source="outlook-graph",
+            message_id=metadata.message_id,
+            attachment_id=metadata.attachment_id,
+            filename=metadata.filename,
+            content=b"%PDF-1.4\ntest",
+        )
+
+
+def test_cache_lock_is_not_held_during_graph_call() -> None:
+    started = threading.Event()
+    release = threading.Event()
+    client = _BlockingGraph(started, release)
+    feed = IntakeInboxFeed(lambda: client, cache_ttl_seconds=30, clock=lambda: 10.0)
+    errors: list[BaseException] = []
+
+    def reader() -> None:
+        try:
+            feed.read(limit=10)
+        except BaseException as error:  # noqa: BLE001
+            errors.append(error)
+
+    thread = threading.Thread(target=reader)
+    thread.start()
+    assert started.wait(timeout=2)
+    acquired = feed._lock.acquire(timeout=1)
+    assert acquired, "cache lock should be free while Graph is in flight"
+    feed._lock.release()
+    release.set()
+    thread.join(timeout=2)
+    assert not errors
+    assert feed._refreshing is False
+
+
+def test_concurrent_first_reads_share_one_graph_call() -> None:
+    started = threading.Event()
+    release = threading.Event()
+    client = _BlockingGraph(started, release)
+    feed = IntakeInboxFeed(lambda: client, cache_ttl_seconds=30, clock=lambda: 10.0)
+    results: list[dict] = []
+    errors: list[BaseException] = []
+
+    def reader() -> None:
+        try:
+            results.append(feed.read(limit=10))
+        except BaseException as error:  # noqa: BLE001 - capture thread failure
+            errors.append(error)
+
+    first = threading.Thread(target=reader)
+    second = threading.Thread(target=reader)
+    third = threading.Thread(target=reader)
+    first.start()
+    assert started.wait(timeout=2)
+    second.start()
+    third.start()
+    assert client.calls == 1
+    release.set()
+    first.join(timeout=2)
+    second.join(timeout=2)
+    third.join(timeout=2)
+    assert not errors
+    assert client.calls == 1
+    assert len(results) == 3
+    assert all(item["referrals"][0]["filename"] == "referral.pdf" for item in results)
+    assert feed._refreshing is False
+
+
+def test_stale_cache_is_returned_while_refresh_is_in_flight() -> None:
+    clock = [10.0]
+    started = threading.Event()
+    release = threading.Event()
+    client = _BlockingGraph(started, release)
+    feed = IntakeInboxFeed(lambda: client, cache_ttl_seconds=30, clock=lambda: clock[0])
+    client.release.set()
+    first = feed.read(limit=10)
+    assert client.calls == 1
+    assert first.get("stale") is not True
+    referral_id = first["referrals"][0]["id"]
+
+    client.release.clear()
+    started.clear()
+    clock[0] = 50.0
+    stale: dict | None = None
+
+    def refresher() -> None:
+        feed.read(limit=10)
+
+    thread = threading.Thread(target=refresher)
+    thread.start()
+    assert started.wait(timeout=2)
+    assert feed._refreshing is True
+    stale = feed.read(limit=10)
+    forced = feed.read(limit=10, force=True)
+    filename, content = feed.read_pdf(referral_id)
+    assert client.calls == 2
+    assert stale is not None
+    assert stale["stale"] is True
+    assert forced["stale"] is True
+    assert stale["referrals"][0]["filename"] == "referral.pdf"
+    assert stale["fetched_at"] == first["fetched_at"]
+    assert forced["fetched_at"] == first["fetched_at"]
+    assert filename == "referral.pdf"
+    assert content.startswith(b"%PDF-")
+    release.set()
+    thread.join(timeout=2)
+    assert feed._refreshing is False
+    assert client.calls == 2
+
+
+def test_failed_refresh_keeps_previous_cache_and_clears_inflight_state() -> None:
+    clock = [10.0]
+    started = threading.Event()
+    release = threading.Event()
+    client = _BlockingGraph(started, release)
+    feed = IntakeInboxFeed(lambda: client, cache_ttl_seconds=30, clock=lambda: clock[0])
+    release.set()
+    first = feed.read(limit=10)
+    assert first["referrals"][0]["filename"] == "referral.pdf"
+
+    release.clear()
+    started.clear()
+    client.fail = True
+    clock[0] = 50.0
+    errors: list[BaseException] = []
+
+    def refresher() -> None:
+        try:
+            feed.read(limit=10)
+        except BaseException as error:  # noqa: BLE001
+            errors.append(error)
+
+    thread = threading.Thread(target=refresher)
+    thread.start()
+    assert started.wait(timeout=2)
+    release.set()
+    thread.join(timeout=2)
+    assert errors
+    assert feed._refreshing is False
+
+    clock[0] = 10.0
+    client.fail = False
+    cached = feed.read(limit=10)
+    assert client.calls == 2
+    assert cached["referrals"][0]["id"] == first["referrals"][0]["id"]
+
+    clock[0] = 50.0
+    retried = feed.read(limit=10)
+    assert client.calls == 3
+    assert retried.get("stale") is not True
+    assert retried["referrals"][0]["filename"] == "referral.pdf"
+
+
+def test_initial_waiters_time_out_instead_of_waiting_forever() -> None:
+    started = threading.Event()
+    release = threading.Event()
+    client = _BlockingGraph(started, release)
+    feed = IntakeInboxFeed(
+        lambda: client,
+        cache_ttl_seconds=30,
+        refresh_wait_timeout_seconds=0.05,
+        clock=lambda: 10.0,
+    )
+    errors: list[BaseException] = []
+
+    def refresher() -> None:
+        feed.read(limit=10)
+
+    def waiter() -> None:
+        try:
+            feed.read(limit=10)
+        except BaseException as error:  # noqa: BLE001
+            errors.append(error)
+
+    first = threading.Thread(target=refresher)
+    first.start()
+    assert started.wait(timeout=2)
+    second = threading.Thread(target=waiter)
+    second.start()
+    second.join(timeout=2)
+    assert second.is_alive() is False
+    assert first.is_alive()
+    assert errors
+    assert isinstance(errors[0], TimeoutError)
+    assert client.calls == 1
+    release.set()
+    first.join(timeout=2)
+    assert feed._refreshing is False
+    assert client.calls == 1

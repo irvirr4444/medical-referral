@@ -546,6 +546,7 @@ def _tracker_for_job(
     if not args.workflow_tracking:
         return None
     persisted_backend = str(job.options.get("workflow_database_backend") or "").strip()
+    # Retries must keep writing to the store that already has this case.
     backend = persisted_backend or policy.stage_one_backend(
         _requested_workflow_backend(args),
         job.sha256,

@@ -37,6 +37,7 @@ export function parseLiveInboxPayload(value: unknown): LiveInboxPayload {
     connected: true,
     source: 'testing-infobox',
     fetched_at: typeof value.fetched_at === 'string' ? value.fetched_at : undefined,
+    stale: value.stale === true,
     referrals: value.referrals
       .map(parseReferral)
       .filter((item): item is LiveInboxReferral => item !== null),

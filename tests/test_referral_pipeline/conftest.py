@@ -14,4 +14,5 @@ if str(_MONDAY_DIR) not in sys.path:
 def use_local_review_store(monkeypatch):
     monkeypatch.setenv("REFERRAL_REVIEW_STORE", "sqlite")
     monkeypatch.setenv("WORKFLOW_DATABASE_BACKEND", "sqlite")
+    monkeypatch.delenv("WORKFLOW_READ_EXISTING_REMOTE", raising=False)
 

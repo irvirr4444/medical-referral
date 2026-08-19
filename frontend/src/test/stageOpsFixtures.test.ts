@@ -43,7 +43,12 @@ describe('stage operations fixtures', () => {
       for (const patient of patients) {
         const steps = stepsForPatient(stageId, patient.patientId)
         expect(steps.length).toBeGreaterThan(0)
-        expect(PATIENT_STEP_BREAKDOWNS[stageId][patient.patientId]).toBeTruthy()
+        expect(
+          PATIENT_STEP_BREAKDOWNS[stageId][patient.patientId] ??
+            (stageId === 'assignment'
+              ? PATIENT_STEP_BREAKDOWNS.handoff[patient.patientId]
+              : undefined),
+        ).toBeTruthy()
       }
 
       const openTotal = recipe.sections.reduce(

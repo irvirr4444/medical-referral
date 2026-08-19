@@ -3,7 +3,7 @@ import { step } from './shared'
 
 export const PROVIDER_STAGE: AutomationStageDefinition = {
   id: 'provider',
-  title: '4. Provider selection',
+  title: '3. Provider selection',
   shortTitle: 'Provider selection',
   purpose: 'Select an approved provider for the patient location and care need.',
   trigger: 'The case manager is assigned and the initial handoff records are complete.',

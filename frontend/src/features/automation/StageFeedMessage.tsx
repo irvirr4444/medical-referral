@@ -9,6 +9,7 @@ import {
   slaLabel,
 } from './confirmationTimers'
 import type { ActionTimer } from '../../types'
+import { attentionAriaSuffix, timerAttentionSeverity } from './liveWorkflow/attentionDisplay'
 import {
   intakeEditKey,
   isMultilineIntakeField,
@@ -76,10 +77,7 @@ function useNow(intervalMs = 1000) {
 }
 
 export function actionTimerAriaSuffix(timer?: ActionTimer | null) {
-  if (!timer || timer.status === 'resolved') return ''
-  if (timer.status === 'overdue') return ' · Immediate attention · overdue'
-  if (timer.status === 'warning') return ' · Due soon'
-  return ''
+  return attentionAriaSuffix(timer)
 }
 
 function ActionSlaAlert({
@@ -92,10 +90,28 @@ function ActionSlaAlert({
   const now = useNow()
   if (timer.status === 'resolved') return null
 
-  const action = actionLabel(timer.actionId)
+  const action = timer.label || actionLabel(timer.actionId)
   const sla = slaLabel(timer.actionId)
+  const severity = timerAttentionSeverity(timer)
 
-  if (timer.status === 'overdue') {
+  if (severity === 'blocked') {
+    return (
+      <div
+        className="stage-ops-step-feed__sla is-overdue"
+        aria-label={`Needs attention: ${action} for ${patientName} is blocked`}
+      >
+        <p className="stage-ops-step-feed__sla-flag">
+          <span className="stage-ops-step-feed__sla-badge">Needs attention</span>
+        </p>
+        <p className="stage-ops-step-feed__sla-action">
+          {action} · {patientName}
+        </p>
+        <p className="stage-ops-step-feed__sla-meta">Blocked</p>
+      </div>
+    )
+  }
+
+  if (severity === 'overdue') {
     return (
       <div
         className="stage-ops-step-feed__sla is-overdue"
@@ -119,7 +135,7 @@ function ActionSlaAlert({
     )
   }
 
-  const dueSoon = timer.status === 'warning'
+  const dueSoon = severity === 'due_soon'
   return (
     <div className={`stage-ops-step-feed__sla is-${timer.status}`}>
       <p className="stage-ops-step-feed__sla-flag">
@@ -141,6 +157,7 @@ function ActionSlaAlert({
 
 function TimerRemainingValue({ timer }: { timer: ActionTimer }) {
   const now = useNow()
+  if (timerAttentionSeverity(timer) === 'blocked') return <>Blocked</>
   if (timer.status === 'overdue') return <>Overdue</>
   return <>{remainingLabel(timer, now)}</>
 }

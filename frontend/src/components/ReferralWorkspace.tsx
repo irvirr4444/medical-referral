@@ -1,10 +1,13 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 import { useEscapeDismiss } from '../hooks/useEscapeDismiss'
 import { useDemo } from '../state/useDemo'
 import { DuplicateBadge, FieldStatusBadge, OutcomeBadge } from './StatusBadges'
-import { PdfViewer } from './PdfViewer'
 import './ReferralWorkspace.css'
+
+const PdfViewer = lazy(() =>
+  import('./PdfViewer').then((module) => ({ default: module.PdfViewer })),
+)
 
 export function ReferralWorkspace() {
   const { selectedReferral, dispatch } = useDemo()
@@ -128,10 +131,12 @@ export function ReferralWorkspace() {
 
         <div className="workspace__body">
           <div className="workspace__pdf">
-            <PdfViewer
-              referral={referral}
-              focusPage={evidenceField?.evidencePage}
-            />
+            <Suspense fallback={<p className="muted">Loading PDF…</p>}>
+              <PdfViewer
+                referral={referral}
+                focusPage={evidenceField?.evidencePage}
+              />
+            </Suspense>
           </div>
 
           <div className="workspace__details">

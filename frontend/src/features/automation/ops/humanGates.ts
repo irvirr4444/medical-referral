@@ -1,4 +1,5 @@
 import type { FlowOpsPageId } from '../../../data/flowOps'
+import { canonicalOpsPageId } from '../combinedAssignment'
 import type {
   HumanDecisionRecord,
   PatientStepProgress,
@@ -95,7 +96,7 @@ export function humanGateForStep(
   stageId: FlowOpsPageId,
   stepId: string,
 ): HumanGateDefinition | undefined {
-  return HUMAN_GATES[stageId]?.[stepId]
+  return HUMAN_GATES[canonicalOpsPageId(stageId)]?.[stepId]
 }
 
 export function applyHumanDecisions<T extends PatientStepProgress>(

@@ -88,6 +88,7 @@ class WorkflowCase(StrictModel):
     created_at: datetime
     updated_at: datetime
     completed_at: datetime | None = None
+    attention_due_at: datetime | None = None
 
 
 class WorkflowWorkItem(StrictModel):
@@ -106,6 +107,7 @@ class WorkflowWorkItem(StrictModel):
     created_at: datetime
     updated_at: datetime
     completed_at: datetime | None = None
+    due_at: datetime | None = None
 
 
 class WorkflowDecision(StrictModel):

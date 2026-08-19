@@ -151,6 +151,18 @@ class RoutingWorkflowStore:
             resolved_at=resolved_at,
         )
 
+    def list_exceptions(
+        self, *, status: str | None = None, limit: int = 200
+    ) -> list[WorkflowException]:
+        return _unique(
+            [
+                *self.remote.list_exceptions(status=status, limit=limit),
+                *self.local.list_exceptions(status=status, limit=limit),
+            ],
+            key=lambda exception: exception.exception_key,
+            limit=limit,
+        )
+
     def enqueue_notification(self, notification: NotificationRecord) -> bool:
         return self.local.enqueue_notification(notification)
 

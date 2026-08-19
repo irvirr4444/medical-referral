@@ -38,8 +38,9 @@ class SQLiteWorkflowStore:
                 INSERT INTO wcw_workflow_cases
                     (case_id, source_ref, source, attachment_sha256, referral_id,
                      patient_label, current_stage, status, source_received_at,
-                     monday_item_id, drk_patient_id, created_at, updated_at, completed_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     monday_item_id, drk_patient_id, created_at, updated_at, completed_at,
+                     attention_due_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(case_id) DO UPDATE SET
                     attachment_sha256 = COALESCE(excluded.attachment_sha256, attachment_sha256),
                     referral_id = COALESCE(excluded.referral_id, referral_id),
@@ -50,14 +51,15 @@ class SQLiteWorkflowStore:
                     monday_item_id = COALESCE(excluded.monday_item_id, monday_item_id),
                     drk_patient_id = COALESCE(excluded.drk_patient_id, drk_patient_id),
                     updated_at = excluded.updated_at,
-                    completed_at = excluded.completed_at
+                    completed_at = excluded.completed_at,
+                    attention_due_at = excluded.attention_due_at
                 """,
                 (
                     payload["case_id"], payload["source_ref"], payload["source"],
                     payload["attachment_sha256"], payload["referral_id"], payload["patient_label"],
                     payload["current_stage"], payload["status"], payload["source_received_at"],
                     payload["monday_item_id"], payload["drk_patient_id"], payload["created_at"],
-                    payload["updated_at"], payload["completed_at"],
+                    payload["updated_at"], payload["completed_at"], payload.get("attention_due_at"),
                 ),
             )
         stored = self.workflow_case(case.case_id)
@@ -87,8 +89,8 @@ class SQLiteWorkflowStore:
                 INSERT INTO wcw_work_items
                     (work_item_id, case_id, stage, step_id, owner_role, status,
                      recommended_assignee, recommendation_reason, assigned_to,
-                     payload_json, created_at, updated_at, completed_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     payload_json, created_at, updated_at, completed_at, due_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(work_item_id) DO UPDATE SET
                     status = excluded.status,
                     recommended_assignee = excluded.recommended_assignee,
@@ -96,7 +98,8 @@ class SQLiteWorkflowStore:
                     assigned_to = excluded.assigned_to,
                     payload_json = excluded.payload_json,
                     updated_at = excluded.updated_at,
-                    completed_at = excluded.completed_at
+                    completed_at = excluded.completed_at,
+                    due_at = excluded.due_at
                 """,
                 (
                     payload["work_item_id"], payload["case_id"], payload["stage"],
@@ -104,6 +107,7 @@ class SQLiteWorkflowStore:
                     payload["recommended_assignee"], payload["recommendation_reason"],
                     payload["assigned_to"], _json(payload["payload"]),
                     payload["created_at"], payload["updated_at"], payload["completed_at"],
+                    payload.get("due_at"),
                 ),
             )
         stored = self.work_item(item.work_item_id)
@@ -484,6 +488,23 @@ class SQLiteWorkflowStore:
             )
         return cursor.rowcount
 
+    def list_exceptions(
+        self, *, status: str | None = None, limit: int = 200
+    ) -> list[WorkflowException]:
+        clauses: list[str] = []
+        values: list[object] = []
+        if status is not None:
+            clauses.append("status = ?")
+            values.append(status)
+        where = f" WHERE {' AND '.join(clauses)}" if clauses else ""
+        values.append(max(1, min(limit, 500)))
+        with self._connect() as connection:
+            rows = connection.execute(
+                f"SELECT * FROM wcw_workflow_exceptions{where} ORDER BY last_seen_at DESC LIMIT ?",
+                values,
+            ).fetchall()
+        return [_exception_from_row(row) for row in rows]
+
     def enqueue_notification(self, notification: NotificationRecord) -> bool:
         with self._connect() as connection:
             cursor = connection.execute(
@@ -704,6 +725,7 @@ class SQLiteWorkflowStore:
             connection.executescript(_SQLITE_SCHEMA)
             _allow_duplicate_referral_ids(connection)
             _ensure_external_operation_columns(connection)
+            _ensure_attention_deadline_columns(connection)
 
     def _connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self.path)
@@ -719,6 +741,12 @@ def _work_item_from_row(row: sqlite3.Row) -> WorkflowWorkItem:
     payload = dict(row)
     payload["payload"] = json.loads(payload.pop("payload_json"))
     return WorkflowWorkItem.model_validate(payload)
+
+
+def _exception_from_row(row: sqlite3.Row) -> WorkflowException:
+    payload = dict(row)
+    payload["details"] = json.loads(payload.pop("details_json"))
+    return WorkflowException.model_validate(payload)
 
 
 def _decision_from_row(row: sqlite3.Row) -> WorkflowDecision:
@@ -742,6 +770,35 @@ def _ensure_external_operation_columns(connection: sqlite3.Connection) -> None:
         connection.execute("ALTER TABLE wcw_external_operations ADD COLUMN lease_until TEXT")
     if "claimed_by" not in columns:
         connection.execute("ALTER TABLE wcw_external_operations ADD COLUMN claimed_by TEXT")
+
+
+def _ensure_attention_deadline_columns(connection: sqlite3.Connection) -> None:
+    case_columns = {
+        row[1] for row in connection.execute("PRAGMA table_info(wcw_workflow_cases)")
+    }
+    if "attention_due_at" not in case_columns:
+        connection.execute("ALTER TABLE wcw_workflow_cases ADD COLUMN attention_due_at TEXT")
+    item_columns = {
+        row[1] for row in connection.execute("PRAGMA table_info(wcw_work_items)")
+    }
+    if "due_at" not in item_columns:
+        connection.execute("ALTER TABLE wcw_work_items ADD COLUMN due_at TEXT")
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_wcw_workflow_cases_attention_due
+            ON wcw_workflow_cases(attention_due_at)
+            WHERE attention_due_at IS NOT NULL
+              AND status NOT IN ('completed', 'cancelled', 'failed')
+        """
+    )
+    connection.execute("DROP INDEX IF EXISTS idx_wcw_work_items_due")
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_wcw_work_items_due
+            ON wcw_work_items(due_at)
+            WHERE due_at IS NOT NULL AND status NOT IN ('completed', 'cancelled')
+        """
+    )
 
 
 def _allow_duplicate_referral_ids(connection: sqlite3.Connection) -> None:
@@ -809,7 +866,8 @@ CREATE TABLE IF NOT EXISTS wcw_workflow_cases (
     drk_patient_id TEXT UNIQUE,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
-    completed_at TEXT
+    completed_at TEXT,
+    attention_due_at TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_wcw_workflow_cases_updated
     ON wcw_workflow_cases(updated_at DESC);
@@ -833,6 +891,7 @@ CREATE TABLE IF NOT EXISTS wcw_work_items (
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     completed_at TEXT,
+    due_at TEXT,
     UNIQUE(case_id, stage, step_id)
 );
 CREATE INDEX IF NOT EXISTS idx_wcw_work_items_queue

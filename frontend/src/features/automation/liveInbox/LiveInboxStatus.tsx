@@ -35,8 +35,11 @@ export function LiveInboxStatus({
 }
 
 function statusLabel(state: LiveInboxState) {
-  if (state.status === 'loading') return 'Connecting test infobox...'
   if (state.status === 'unavailable') return 'Demo data - test infobox unavailable'
+  if (state.status === 'loading' && !state.monitor) return 'Connecting test infobox...'
+  if (state.status === 'loading' || state.status === 'syncing') {
+    return 'Monitoring test infobox · syncing referrals'
+  }
   const count = `${state.referrals.length} PDF${state.referrals.length === 1 ? '' : 's'}`
   switch (state.monitor?.state) {
     case 'starting': return `Starting live monitor - ${count}`

@@ -47,10 +47,9 @@ import {
 } from './fixtures/weeklyVisitCheck'
 import {
   compareAttention,
-  overdueStepIds,
   timerForPatientStep,
-  warningStepIds,
 } from './confirmationTimers'
+import { countsByStep, stepIdsWithSeverity } from './liveWorkflow/attentionDisplay'
 import { intakeDemoPatient, referralPdfForPatient } from './fixtures/intakeDemoPatients'
 import { unreadStepCounts } from './unreadSteps'
 import {
@@ -61,12 +60,18 @@ import {
 } from './fixtures/providerAssignments'
 import { mergeLiveInboxFeed, isLiveInboxRow } from './liveInbox/feed'
 import { LiveInboxStatus } from './liveInbox/LiveInboxStatus'
-import { useLiveInbox } from './liveInbox/useLiveInbox'
+import { useLiveInboxContext } from './liveInbox/LiveInboxContext'
 import { mergeWorkflowFeed, isLiveWorkflowRow } from './liveWorkflow/feed'
-import { useWorkflowExecution } from './liveWorkflow/useWorkflowExecution'
+import { useLiveWorkflowContext } from './liveWorkflow/LiveWorkflowContext'
+import { useAttention } from './AttentionContext'
 import type { FlowOpsPageId } from '../../data/flowOps'
 import type { PatientStepStatus } from './ops/types'
 import type { AutomationMicrostep } from './types'
+import {
+  isAssignmentGateStep,
+  isCombinedAssignmentStage,
+  isHandoffOperationStep,
+} from './combinedAssignment'
 import './StageOps.css'
 
 type StatusFilterOption = {
@@ -242,20 +247,6 @@ function weeklyStatusLabel(
   )
 }
 
-const ASSIGNMENT_HANDOFF_STEP_IDS = [
-  'notify-referral-source',
-  'create-monday-record',
-  'create-update-drk',
-] as const
-
-type AssignmentHandoffStepId = (typeof ASSIGNMENT_HANDOFF_STEP_IDS)[number]
-
-function isAssignmentHandoffStep(
-  stepId: string,
-): stepId is AssignmentHandoffStepId {
-  return ASSIGNMENT_HANDOFF_STEP_IDS.includes(stepId as AssignmentHandoffStepId)
-}
-
 function assignmentHandoffUnreadForStep(
   state: {
     handoffNotifyUnread: boolean
@@ -365,10 +356,11 @@ export function StagePatientSteps({
   microsteps: AutomationMicrostep[]
 }) {
   const { state, dispatch } = useDemo()
+  const { timers: attentionTimers, refresh: refreshAttention } = useAttention()
   const [selectedStepId, setSelectedStepId] = useState(() => {
     return (
       microsteps.find((step) =>
-        Object.values(state.actionTimers).some(
+        Object.values(attentionTimers).some(
           (timer) =>
             timer.stageId === stageId &&
             timer.stepId === step.id &&
@@ -392,8 +384,6 @@ export function StagePatientSteps({
     Record<string, boolean>
   >({})
   const [workflowActionError, setWorkflowActionError] = useState<string | null>(null)
-  const [showUnreadAssignmentMessage, setShowUnreadAssignmentMessage] =
-    useState(false)
   const [showUnreadProviderMessage, setShowUnreadProviderMessage] =
     useState(false)
   const [showUnreadHandoffMessage, setShowUnreadHandoffMessage] =
@@ -428,15 +418,13 @@ export function StagePatientSteps({
   const [weeklyAppointmentRescheduled, setWeeklyAppointmentRescheduled] =
     useState<Record<string, boolean>>({})
   const statusMenuRef = useRef<HTMLDivElement>(null)
-  const liveInbox = useLiveInbox(stageId === 'intake')
-  const liveWorkflow = useWorkflowExecution(
-    stageId === 'assignment' || stageId === 'handoff',
-  )
+  const liveInbox = useLiveInboxContext()
+  const liveWorkflow = useLiveWorkflowContext()
 
   useEffect(() => {
     const overdueOrWarningStep =
       microsteps.find((step) =>
-        Object.values(state.actionTimers).some(
+        Object.values(attentionTimers).some(
           (timer) =>
             timer.stageId === stageId &&
             timer.stepId === step.id &&
@@ -458,7 +446,6 @@ export function StagePatientSteps({
     setSelectedCaseManagers({})
     setConfirmedAssignments({})
     setWorkflowActionError(null)
-    setShowUnreadAssignmentMessage(false)
     setShowUnreadProviderMessage(false)
     setShowUnreadHandoffMessage(false)
     setShowUnreadProviderRecordsMessage(false)
@@ -533,12 +520,12 @@ export function StagePatientSteps({
         selectedStepId,
       })
     }
-    if (stageId === 'assignment' || stageId === 'handoff') {
+    if (isCombinedAssignmentStage(stageId)) {
       return mergeWorkflowFeed({
         demoDays,
         assignments: liveWorkflow.assignments,
         handoffs: liveWorkflow.handoffs,
-        stageId,
+        stageId: 'assignment',
         selectedStepId,
         patientQuery,
         statuses,
@@ -591,11 +578,10 @@ export function StagePatientSteps({
 
   const displayDays = useMemo(() => {
     const latest =
-      selectedStepId === 'determine-owner'
+      isAssignmentGateStep(selectedStepId)
         ? latestPartnerContact
-        : selectedStepId === 'assign-owner' ||
-      selectedStepId === 'select-provider' ||
-      isAssignmentHandoffStep(selectedStepId)
+        : selectedStepId === 'select-provider' ||
+      isHandoffOperationStep(selectedStepId)
         ? latestAssignmentHandoff
         : selectedStepId === 'confirm-provider-availability'
           ? latestProviderAvailability
@@ -631,7 +617,7 @@ export function StagePatientSteps({
           ...latestRow,
           occurredAt: latest.occurredAt,
           status:
-            selectedStepId === 'determine-owner'
+            selectedStepId === 'assign-owner'
               ? ('waiting' as const)
               : selectedStepId === 'update-monday-drk'
               ? ('done' as const)
@@ -643,7 +629,7 @@ export function StagePatientSteps({
                     ? ('done' as const)
                     : latestRow.status,
           summary:
-            selectedStepId === 'determine-owner'
+            selectedStepId === 'assign-owner'
               ? PARTNER_HANDOFF_SUMMARY
               : selectedStepId === 'update-monday-drk'
               ? recordsSummary
@@ -653,11 +639,11 @@ export function StagePatientSteps({
                   ? intakeFollowUpSummary(latest.patientId, selectedStepId)
                   : latestRow.summary,
         }
-      : selectedStepId === 'determine-owner' && latestPartnerContact
+      : selectedStepId === 'assign-owner' && latestPartnerContact
         ? {
             patientId: latestPartnerContact.patientId,
             patientName: latestPartnerContact.patientName,
-            stepId: 'determine-owner',
+            stepId: 'assign-owner',
             status: 'waiting' as const,
             summary: PARTNER_HANDOFF_SUMMARY,
             occurredAt: latestPartnerContact.occurredAt,
@@ -680,15 +666,6 @@ export function StagePatientSteps({
             summary: referralSummary,
             occurredAt: latestSchedulingHandoff.readyAt,
           }
-        : selectedStepId === 'assign-owner' && latestAssignmentHandoff
-          ? {
-              patientId: latestAssignmentHandoff.patientId,
-              patientName: latestAssignmentHandoff.patientName,
-              stepId: 'assign-owner',
-              status: 'done' as const,
-              summary: 'Case manager notified of the new assignment',
-              occurredAt: latestAssignmentHandoff.occurredAt,
-            }
         : selectedStepId === 'select-provider' && latestAssignmentHandoff
           ? {
               patientId: latestAssignmentHandoff.patientId,
@@ -698,7 +675,7 @@ export function StagePatientSteps({
               summary: 'Case manager assigned · ready to select provider',
               occurredAt: latestAssignmentHandoff.occurredAt,
             }
-        : isAssignmentHandoffStep(selectedStepId) && latestAssignmentHandoff
+        : isHandoffOperationStep(selectedStepId) && latestAssignmentHandoff
           ? {
               patientId: latestAssignmentHandoff.patientId,
               patientName: latestAssignmentHandoff.patientName,
@@ -946,7 +923,7 @@ export function StagePatientSteps({
         ...day,
         rows: day.rows.filter((row) => {
           const status = timerForPatientStep(
-            state.actionTimers,
+            attentionTimers,
             row.patientId,
             selectedStepId,
           )?.status
@@ -957,7 +934,7 @@ export function StagePatientSteps({
   }, [
     filteredDisplayDays,
     activeStatusFilter,
-    state.actionTimers,
+    attentionTimers,
     selectedStepId,
   ])
 
@@ -980,7 +957,7 @@ export function StagePatientSteps({
       const keep: StepFeedRow[] = []
       for (const row of day.rows) {
         const status = timerForPatientStep(
-          state.actionTimers,
+          attentionTimers,
           row.patientId,
           selectedStepId,
         )?.status
@@ -993,8 +970,8 @@ export function StagePatientSteps({
 
     urgent.sort((a, b) =>
       compareAttention(
-        timerForPatientStep(state.actionTimers, a.patientId, selectedStepId),
-        timerForPatientStep(state.actionTimers, b.patientId, selectedStepId),
+        timerForPatientStep(attentionTimers, a.patientId, selectedStepId),
+        timerForPatientStep(attentionTimers, b.patientId, selectedStepId),
       ),
     )
 
@@ -1008,7 +985,7 @@ export function StagePatientSteps({
       },
       ...rest,
     ]
-  }, [scopedDisplayDays, state.actionTimers, selectedStepId])
+  }, [scopedDisplayDays, attentionTimers, selectedStepId])
 
   const scopedStepStatuses = useMemo(() => {
     if (!scopedPatient) return undefined
@@ -1019,14 +996,14 @@ export function StagePatientSteps({
 
   useEffect(() => {
     if (
-      stageId !== 'assignment' ||
+      !isCombinedAssignmentStage(stageId) ||
       selectedStepId !== 'assign-owner' ||
-      !state.assignmentNotifyUnread
+      !state.assignmentOwnerUnread
     ) {
       return
     }
-    setShowUnreadAssignmentMessage(true)
-  }, [selectedStepId, stageId, state.assignmentNotifyUnread])
+    setShowUnreadAssignmentOwner(true)
+  }, [selectedStepId, stageId, state.assignmentOwnerUnread])
 
   useEffect(() => {
     if (
@@ -1063,8 +1040,8 @@ export function StagePatientSteps({
 
   useEffect(() => {
     if (
-      stageId !== 'handoff' ||
-      !isAssignmentHandoffStep(selectedStepId) ||
+      !isCombinedAssignmentStage(stageId) ||
+      !isHandoffOperationStep(selectedStepId) ||
       !assignmentHandoffUnreadForStep(state, selectedStepId)
     ) {
       return
@@ -1088,17 +1065,6 @@ export function StagePatientSteps({
     }
     setShowUnreadProviderSelect(true)
   }, [selectedStepId, stageId, state.providerSelectUnread])
-
-  useEffect(() => {
-    if (
-      stageId !== 'assignment' ||
-      selectedStepId !== 'determine-owner' ||
-      !state.assignmentOwnerUnread
-    ) {
-      return
-    }
-    setShowUnreadAssignmentOwner(true)
-  }, [selectedStepId, stageId, state.assignmentOwnerUnread])
 
   useEffect(() => {
     if (
@@ -1152,24 +1118,14 @@ export function StagePatientSteps({
   ])
 
   const selectStep = (stepId: string) => {
-    if (selectedStepId === 'determine-owner' && stepId !== 'determine-owner') {
+    if (selectedStepId === 'assign-owner' && stepId !== 'assign-owner') {
       setShowUnreadAssignmentOwner(false)
     }
-    if (stepId === 'determine-owner') {
+    if (stepId === 'assign-owner') {
       const unread = state.assignmentOwnerUnread
       setShowUnreadAssignmentOwner(unread)
       if (unread) {
         dispatch({ type: 'MARK_ASSIGNMENT_OWNER_READ' })
-      }
-    }
-    if (selectedStepId === 'assign-owner' && stepId !== 'assign-owner') {
-      setShowUnreadAssignmentMessage(false)
-    }
-    if (stepId === 'assign-owner') {
-      const unread = state.assignmentNotifyUnread
-      setShowUnreadAssignmentMessage(unread)
-      if (unread) {
-        dispatch({ type: 'MARK_ASSIGNMENT_NOTIFY_READ' })
       }
     }
     if (
@@ -1236,12 +1192,12 @@ export function StagePatientSteps({
       }
     }
     if (
-      isAssignmentHandoffStep(selectedStepId) &&
-      !isAssignmentHandoffStep(stepId)
+      isHandoffOperationStep(selectedStepId) &&
+      !isHandoffOperationStep(stepId)
     ) {
       setShowUnreadAssignmentHandoff(false)
     }
-    if (isAssignmentHandoffStep(stepId)) {
+    if (isHandoffOperationStep(stepId)) {
       const unread = assignmentHandoffUnreadForStep(state, stepId)
       setShowUnreadAssignmentHandoff(unread)
       if (unread) {
@@ -1302,17 +1258,11 @@ export function StagePatientSteps({
           selectedStepId={selectedStepId}
           onSelect={selectStep}
           stepStatuses={scopedStepStatuses}
-          overdueStepIds={overdueStepIds(state.actionTimers, stageId)}
-          overdueCounts={Object.values(state.actionTimers).reduce<
-            Record<string, number>
-          >((counts, timer) => {
-            if (timer.stageId !== stageId || timer.status !== 'overdue') {
-              return counts
-            }
-            counts[timer.stepId] = (counts[timer.stepId] ?? 0) + 1
-            return counts
-          }, {})}
-          warningStepIds={warningStepIds(state.actionTimers, stageId)}
+          overdueStepIds={stepIdsWithSeverity(Object.values(attentionTimers), stageId, 'overdue')}
+          overdueCounts={countsByStep(Object.values(attentionTimers), stageId, 'overdue')}
+          blockedStepIds={stepIdsWithSeverity(Object.values(attentionTimers), stageId, 'blocked')}
+          blockedCounts={countsByStep(Object.values(attentionTimers), stageId, 'blocked')}
+          warningStepIds={stepIdsWithSeverity(Object.values(attentionTimers), stageId, 'due_soon')}
           unreadCounts={scopedPatient ? {} : stepUnreadCounts}
           attentionStepIds={
             scopedPatient ? [] : Object.keys(stepUnreadCounts)
@@ -1600,7 +1550,7 @@ export function StagePatientSteps({
                         ? state.patientSchedules[row.patientId]
                         : undefined
                     const assignmentSuggestion =
-                      selectedStepId === 'determine-owner' && !isLiveWorkflowRow(row)
+                      selectedStepId === 'assign-owner' && !isLiveWorkflowRow(row)
                         ? suggestedCaseManager
                         : undefined
                     const liveAssignment = isLiveWorkflowRow(row)
@@ -1628,10 +1578,8 @@ export function StagePatientSteps({
                       ) ?? (liveAssignment ? undefined : suggestedCaseManager)
                     const notification =
                       selectedCaseManager &&
-                      ((selectedStepId === 'assign-owner' && !liveAssignment) ||
-                        (stageId === 'handoff' &&
-                          selectedStepId === 'notify-referral-source' &&
-                          !liveHandoff))
+                      selectedStepId === 'notify-referral-source' &&
+                      !liveHandoff
                         ? caseManagerNotification(
                             row.patientId,
                             row.patientName,
@@ -1650,7 +1598,7 @@ export function StagePatientSteps({
                         : undefined
                     const mondayRecord = (() => {
                       if (
-                        stageId === 'handoff' &&
+                        isCombinedAssignmentStage(stageId) &&
                         selectedStepId === 'create-monday-record' &&
                         !liveHandoff
                       ) {
@@ -1712,7 +1660,7 @@ export function StagePatientSteps({
                     )
                     const drkDraft = (() => {
                       if (
-                        stageId === 'handoff' &&
+                        isCombinedAssignmentStage(stageId) &&
                         selectedStepId === 'create-update-drk' &&
                         !liveHandoff
                       ) {
@@ -1783,11 +1731,9 @@ export function StagePatientSteps({
                                 : 'DRK chart draft needs review'
                               : mondayRecord
                               ? 'Monday.com record created'
-                              : stageId === 'handoff' && notification
+                              : notification
                               ? `${notification.managerName} notified`
                               : selectedStepId === 'assign-owner'
-                              ? `${selectedCaseManager?.name ?? 'Case manager'} notified`
-                              : selectedStepId === 'determine-owner'
                                 ? assignmentConfirmed
                                   ? `${selectedCaseManager?.name ?? 'Case manager'} confirmed as Case Manager`
                                   : row.patientId ===
@@ -1906,7 +1852,7 @@ export function StagePatientSteps({
                               ? schedulingHandoff.route === 'provider_confirmed'
                                 ? 'done'
                                 : 'waiting'
-                              : selectedStepId === 'determine-owner'
+                              : selectedStepId === 'assign-owner'
                               ? assignmentConfirmed
                                 ? 'done'
                                 : 'waiting'
@@ -1999,6 +1945,7 @@ export function StagePatientSteps({
                                         liveAssignment.case_id,
                                         selectedCaseManagerEmail,
                                       )
+                                      .then(() => refreshAttention())
                                       .catch((error) =>
                                         setWorkflowActionError(
                                           error instanceof Error
@@ -2351,10 +2298,6 @@ export function StagePatientSteps({
                               : undefined
                           }
                           isUnread={
-                            (showUnreadAssignmentMessage &&
-                              selectedStepId === 'assign-owner' &&
-                              row.patientId ===
-                                latestAssignmentHandoff?.patientId) ||
                             (showUnreadProviderMessage &&
                               selectedStepId ===
                                 'confirm-provider-availability' &&
@@ -2376,7 +2319,7 @@ export function StagePatientSteps({
                               row.patientId ===
                                 state.latestEodEscalationPatientId) ||
                             (showUnreadAssignmentHandoff &&
-                              isAssignmentHandoffStep(selectedStepId) &&
+                              isHandoffOperationStep(selectedStepId) &&
                               row.patientId ===
                                 latestAssignmentHandoff?.patientId) ||
                             (showUnreadProviderSelect &&
@@ -2387,13 +2330,13 @@ export function StagePatientSteps({
                               isIntakeFollowUpStep(selectedStepId) &&
                               row.patientId === latestIntakeReview?.patientId) ||
                             (showUnreadAssignmentOwner &&
-                              selectedStepId === 'determine-owner' &&
+                              selectedStepId === 'assign-owner' &&
                               row.patientId === latestPartnerContact?.patientId)
                           }
                           liveInboxReferral={liveInboxReferral}
                           liveInboxStep={liveInboxStep}
                           actionTimer={timerForPatientStep(
-                            state.actionTimers,
+                            attentionTimers,
                             row.patientId,
                             selectedStepId,
                           )}

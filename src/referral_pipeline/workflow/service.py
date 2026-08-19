@@ -24,6 +24,7 @@ from referral_pipeline.workflow.operation_policy import (
     reconcile_operation,
 )
 from referral_pipeline.workflow.roster import load_case_manager_roster
+from referral_pipeline.workflow.deadlines import with_case_deadline, with_work_item_deadline
 
 
 ASSIGNMENT_STEP = "assign-case-manager"
@@ -52,6 +53,13 @@ class WorkflowExecutionService:
         }
 
     def reconcile_stage_one_completions(self) -> int:
+        """Bulk safety net for cases the per-confirmation apply path missed.
+
+        Scans every case, so it belongs on a periodic background cycle
+        (the approval worker calls this once per interval), not on-demand
+        read paths like assignments() -- each case can cost a remote
+        Supabase round trip through RoutingWorkflowStore.
+        """
         repaired = 0
         for case in self.store.list_workflow_cases(limit=500):
             if case.current_stage > 2:
@@ -91,35 +99,42 @@ class WorkflowExecutionService:
 
         if existing is None:
             existing = self.store.upsert_work_item(
-                WorkflowWorkItem(
-                    work_item_id=work_item_id,
-                    case_id=case_id,
-                    stage=2,
-                    step_id=ASSIGNMENT_STEP,
-                    owner_role=owner_role,
-                    status=desired_item_status,
-                    recommendation_reason=(
-                        "Territory rules are not connected; an intake-team member must choose."
-                        if reached
-                        else "Referral follow-up remains with the intake team before handoff."
+                with_work_item_deadline(
+                    WorkflowWorkItem(
+                        work_item_id=work_item_id,
+                        case_id=case_id,
+                        stage=2,
+                        step_id=ASSIGNMENT_STEP,
+                        owner_role=owner_role,
+                        status=desired_item_status,
+                        recommendation_reason=(
+                            "Territory rules are not connected; an intake-team member must choose."
+                            if reached
+                            else "Referral follow-up remains with the intake team before handoff."
+                        ),
+                        assigned_to=None if reached else "WCW Intake Team",
+                        payload={"contact_outcome": contact_outcome},
+                        created_at=now,
+                        updated_at=now,
                     ),
-                    assigned_to=None if reached else "WCW Intake Team",
-                    payload={"contact_outcome": contact_outcome},
-                    created_at=now,
-                    updated_at=now,
+                    now=now,
                 )
             )
             changed = True
         elif existing.status != desired_item_status or existing.owner_role != owner_role:
             existing = self.store.upsert_work_item(
-                existing.model_copy(
-                    update={
-                        "owner_role": owner_role,
-                        "status": desired_item_status,
-                        "assigned_to": None if reached else "WCW Intake Team",
-                        "payload": {**existing.payload, "contact_outcome": contact_outcome},
-                        "updated_at": now,
-                    }
+                with_work_item_deadline(
+                    existing.model_copy(
+                        update={
+                            "owner_role": owner_role,
+                            "status": desired_item_status,
+                            "assigned_to": None if reached else "WCW Intake Team",
+                            "payload": {**existing.payload, "contact_outcome": contact_outcome},
+                            "updated_at": now,
+                        }
+                    ),
+                    previous=existing,
+                    now=now,
                 )
             )
             changed = True
@@ -127,13 +142,17 @@ class WorkflowExecutionService:
         case = self._case(case_id)
         if case.current_stage != 2 or case.status != desired_case_status:
             self.store.upsert_workflow_case(
-                case.model_copy(
-                    update={
-                        "current_stage": 2,
-                        "status": desired_case_status,
-                        "updated_at": now,
-                        "completed_at": None,
-                    }
+                with_case_deadline(
+                    case.model_copy(
+                        update={
+                            "current_stage": 2,
+                            "status": desired_case_status,
+                            "updated_at": now,
+                            "completed_at": None,
+                        }
+                    ),
+                    previous=case,
+                    now=now,
                 )
             )
             changed = True
@@ -153,7 +172,6 @@ class WorkflowExecutionService:
         return changed
 
     def assignments(self, *, limit: int = 100) -> dict[str, Any]:
-        self.reconcile_stage_one_completions()
         items = [self._assignment_payload(item) for item in self.store.list_work_items(stage=2, limit=limit)]
         return {
             "items": items,
@@ -218,25 +236,33 @@ class WorkflowExecutionService:
             )
         if item.status != "completed" or item.assigned_to != email:
             item = self.store.upsert_work_item(
-                item.model_copy(
-                    update={
-                        "status": "completed",
-                        "assigned_to": email,
-                        "updated_at": now,
-                        "completed_at": item.completed_at or now,
-                    }
+                with_work_item_deadline(
+                    item.model_copy(
+                        update={
+                            "status": "completed",
+                            "assigned_to": email,
+                            "updated_at": now,
+                            "completed_at": item.completed_at or now,
+                        }
+                    ),
+                    previous=item,
+                    now=now,
                 )
             )
         case = self._case(case_id)
         if case.current_stage != 3 or case.status != "awaiting_handoff":
             self.store.upsert_workflow_case(
-                case.model_copy(
-                    update={
-                        "current_stage": 3,
-                        "status": "awaiting_handoff",
-                        "updated_at": now,
-                        "completed_at": None,
-                    }
+                with_case_deadline(
+                    case.model_copy(
+                        update={
+                            "current_stage": 3,
+                            "status": "awaiting_handoff",
+                            "updated_at": now,
+                            "completed_at": None,
+                        }
+                    ),
+                    previous=case,
+                    now=now,
                 )
             )
         if not any(
@@ -409,8 +435,11 @@ class WorkflowExecutionService:
                 current_case = self._case(case_id)
                 if current_case.monday_item_id != item_id:
                     self.store.upsert_workflow_case(
-                        current_case.model_copy(
-                            update={"monday_item_id": item_id, "updated_at": _now()}
+                        with_case_deadline(
+                            current_case.model_copy(
+                                update={"monday_item_id": item_id, "updated_at": _now()}
+                            ),
+                            previous=current_case,
                         )
                     )
 

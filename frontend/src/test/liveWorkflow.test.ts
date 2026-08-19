@@ -26,7 +26,7 @@ describe('live workflow feed', () => {
       assignments: [assignment],
       handoffs: [],
       stageId: 'assignment',
-      selectedStepId: 'determine-owner',
+      selectedStepId: 'assign-owner',
       patientQuery: '',
       statuses: ['waiting'],
     })
@@ -64,7 +64,7 @@ describe('live workflow feed', () => {
       demoDays: [],
       assignments: [],
       handoffs: [handoff],
-      stageId: 'handoff',
+      stageId: 'assignment',
       selectedStepId: 'create-monday-record',
       patientQuery: '',
       statuses: ['waiting'],
@@ -73,6 +73,66 @@ describe('live workflow feed', () => {
     expect(days[0].rows[0]).toEqual(
       expect.objectContaining({
         summary: 'Monday.com record ready to create',
+        status: 'waiting',
+      }),
+    )
+  })
+
+  it('keeps completed assignments visible on assign-owner and accepts the legacy handoff page id', () => {
+    const completed: LiveAssignment = {
+      ...assignment,
+      status: 'completed',
+      assigned_case_manager: {
+        name: 'Cole Ramirez',
+        email: 'cole@example.test',
+      },
+    }
+    const waitingDays = mergeWorkflowFeed({
+      demoDays: [],
+      assignments: [completed],
+      handoffs: [],
+      stageId: 'assignment',
+      selectedStepId: 'assign-owner',
+      patientQuery: '',
+      statuses: ['done'],
+    })
+    expect(waitingDays[0].rows[0]).toEqual(
+      expect.objectContaining({
+        status: 'done',
+        summary: 'Cole Ramirez confirmed as Case Manager',
+      }),
+    )
+
+    const handoff: LiveHandoff = {
+      case_id: 'case-1',
+      patient_label: 'Synthetic Patient',
+      status: 'awaiting_handoff',
+      assigned_case_manager: {
+        name: 'Case Manager',
+        email: 'manager@example.test',
+      },
+      operations: [
+        {
+          operation_id: 'operation-1',
+          operation_type: 'notify-assigned-case-manager',
+          status: 'ready',
+          updated_at: '2026-08-13T14:31:00Z',
+          request_payload: {},
+        },
+      ],
+    }
+    const legacyDays = mergeWorkflowFeed({
+      demoDays: [],
+      assignments: [],
+      handoffs: [handoff],
+      stageId: 'handoff',
+      selectedStepId: 'notify-referral-source',
+      patientQuery: '',
+      statuses: ['waiting'],
+    })
+    expect(legacyDays[0].rows[0]).toEqual(
+      expect.objectContaining({
+        summary: 'Notify assigned case manager',
         status: 'waiting',
       }),
     )

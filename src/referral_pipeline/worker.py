@@ -17,10 +17,14 @@ from Outlook.review_mail import OutlookReviewMailbox
 from referral_pipeline.monitoring.config import DEFAULT_CONFIG_PATH
 from referral_pipeline.monitoring.drk_capture import DEFAULT_PROFILE_PATH
 from referral_pipeline.monitoring.health import WorkerHealthReporter, create_worker_health_reporter
-from referral_pipeline.monitoring.store import create_routed_workflow_store
+from referral_pipeline.monitoring.store import (
+    create_live_workflow_store,
+    workflow_reads_existing_remote,
+)
 from referral_pipeline.monitoring.worker_cycle import run_monitor_cycle
 from referral_pipeline.review.workflow import ApprovalProcessor
 from referral_pipeline.runner import main as run_inbound_main
+from referral_pipeline.workflow.service import WorkflowExecutionService
 
 
 logger = logging.getLogger(__name__)
@@ -313,24 +317,20 @@ def run_approval_cycle(
     worker_dry_run = bool(dry_run or execute)
     try:
         if processor_factory is None:
+            backend = (
+                (workflow_database_backend or os.getenv("WORKFLOW_DATABASE_BACKEND") or "sqlite")
+                .strip()
+                .casefold()
+            )
+            sqlite_path = workflow_sqlite_path or data_root / "workflow-monitor.sqlite"
             client = OutlookGraphClient(OutlookGraphConfig.from_environment())
             processor = ApprovalProcessor(
                 state_db=state_db,
                 mailbox=OutlookReviewMailbox(client),
-                allow_supabase_store=(
-                    (workflow_database_backend or os.getenv("WORKFLOW_DATABASE_BACKEND") or "sqlite")
-                    .strip()
-                    .casefold()
-                    == "supabase"
-                ),
-                workflow_store=create_routed_workflow_store(
-                    sqlite_path=workflow_sqlite_path,
-                    include_remote=(
-                        (workflow_database_backend or os.getenv("WORKFLOW_DATABASE_BACKEND") or "sqlite")
-                        .strip()
-                        .casefold()
-                        == "supabase"
-                    ),
+                allow_supabase_store=workflow_reads_existing_remote(backend=backend),
+                workflow_store=create_live_workflow_store(
+                    sqlite_path=sqlite_path,
+                    backend=backend,
                 ),
             )
         else:
@@ -340,6 +340,14 @@ def run_approval_cycle(
             execute=False,
             dry_run=worker_dry_run,
         )
+        reconciled = 0
+        if getattr(processor, "workflow_store", None) is not None:
+            try:
+                reconciled = WorkflowExecutionService(
+                    processor.workflow_store
+                ).reconcile_stage_one_completions()
+            except Exception:  # noqa: BLE001 - the approval poll result still stands
+                logger.exception("Stage 1 completion reconciliation sweep failed")
         failed = any(item.get("status") == "failed" for item in result["executed"])
         return {
             "kind": "approvals",
@@ -347,6 +355,7 @@ def run_approval_cycle(
             "execution_enabled": False,
             "dry_run_enabled": worker_dry_run,
             "elapsed_seconds": round(time.perf_counter() - started, 2),
+            "reconciled": reconciled,
             **result,
         }
     except Exception as error:  # noqa: BLE001 - worker must survive cycle failures

@@ -351,6 +351,25 @@ class SupabaseWorkflowStore:
         )
         return len(rows or [])
 
+    def list_exceptions(
+        self, *, status: str | None = None, limit: int = 200
+    ) -> list[WorkflowException]:
+        params = {
+            "select": (
+                "exception_key,exception_type,entity_id,severity,status,"
+                "first_seen_at,last_seen_at,resolved_at"
+            ),
+            "order": "last_seen_at.desc",
+            "limit": str(max(1, min(limit, 500))),
+        }
+        if status is not None:
+            params["status"] = f"eq.{status}"
+        rows = self._request("GET", "wcw_workflow_exceptions", params=params)
+        return [
+            WorkflowException.model_validate({**row, "details": {}})
+            for row in rows
+        ]
+
     def enqueue_notification(self, notification: NotificationRecord) -> bool:
         rows = self._request(
             "POST",

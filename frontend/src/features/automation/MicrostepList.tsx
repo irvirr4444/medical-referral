@@ -9,6 +9,8 @@ export function MicrostepList({
   attentionStepIds = [],
   overdueStepIds = [],
   overdueCounts = {},
+  blockedStepIds = [],
+  blockedCounts = {},
   warningStepIds = [],
   unreadCounts = {},
   stepStatuses,
@@ -19,6 +21,8 @@ export function MicrostepList({
   attentionStepIds?: string[]
   overdueStepIds?: string[]
   overdueCounts?: Record<string, number>
+  blockedStepIds?: string[]
+  blockedCounts?: Record<string, number>
   warningStepIds?: string[]
   unreadCounts?: Record<string, number>
   stepStatuses?: Record<string, string>
@@ -28,18 +32,25 @@ export function MicrostepList({
       <ol>
         {steps.map((step, index) => {
           const selected = step.id === selectedStepId
+          const blockedCount = blockedCounts[step.id] ?? 0
           const overdueCount = overdueCounts[step.id] ?? 0
+          const isBlocked =
+            blockedCount > 0 || blockedStepIds.includes(step.id)
           const isOverdue =
             overdueCount > 0 || overdueStepIds.includes(step.id)
-          const isDueSoon = !isOverdue && warningStepIds.includes(step.id)
+          const isDueSoon =
+            !isBlocked && !isOverdue && warningStepIds.includes(step.id)
           const unreadCount = Math.max(
             unreadCounts[step.id] ?? 0,
             attentionStepIds.includes(step.id) ? 1 : 0,
           )
           const needsAttention = unreadCount > 0
           const stepStatus = stepStatuses?.[step.id]
+          const blockedBadge = isBlocked ? blockedCount || 1 : 0
           const overdueBadge = isOverdue ? overdueCount || 1 : 0
+          const visualCount = blockedBadge + overdueBadge
           const parts = [
+            blockedBadge > 0 ? `${blockedBadge} blocked` : null,
             overdueBadge > 0 ? `${overdueBadge} overdue` : null,
             unreadCount > 0
               ? `${unreadCount} new update${unreadCount === 1 ? '' : 's'}`
@@ -53,7 +64,7 @@ export function MicrostepList({
                 type="button"
                 className={`microstep-list__button${selected ? ' is-selected' : ''}${
                   stepStatus ? ` is-${stepStatus}` : ''
-                }${isOverdue ? ' is-overdue' : ''}${
+                }${isBlocked || isOverdue ? ' is-overdue' : ''}${
                   needsAttention ? ' is-unread' : ''
                 }`}
                 aria-current={selected ? 'step' : undefined}
@@ -72,14 +83,14 @@ export function MicrostepList({
                 <span className="microstep-list__copy">
                   <span className="microstep-list__title-row">
                     <strong>{step.name}</strong>
-                    {overdueBadge > 0 || unreadCount > 0 ? (
+                    {visualCount > 0 || unreadCount > 0 ? (
                       <span className="microstep-list__badges">
-                        {overdueBadge > 0 ? (
+                        {visualCount > 0 ? (
                           <span
                             className="microstep-list__count is-overdue"
                             aria-hidden="true"
                           >
-                            {overdueBadge}
+                            {visualCount}
                           </span>
                         ) : null}
                         {unreadCount > 0 ? (

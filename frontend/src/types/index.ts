@@ -221,6 +221,7 @@ export type ConfirmationActionId =
   | 'weekly-move-holds'
 
 export type ActionTimerStatus = 'pending' | 'warning' | 'overdue' | 'resolved'
+export type AttentionSeverity = 'normal' | 'due_soon' | 'overdue' | 'blocked'
 
 export interface ActionTimer {
   id: string
@@ -229,9 +230,12 @@ export interface ActionTimer {
   stageId: import('../data/flowOps').FlowOpsPageId
   stepId: string
   actionId: ConfirmationActionId
+  label?: string
   eligibleAt: number
   deadlineAt: number
   status: ActionTimerStatus
+  /** Present on live workflow signals. Legacy demo timers omit this. */
+  attentionSeverity?: AttentionSeverity
   resolvedAt?: number
 }
 

@@ -129,7 +129,7 @@ describe('patient journey actions', () => {
     expect(state.journeyFocusCaseId).toBe('in-ready-2')
 
     state = demoReducer(state, { type: 'SELECT_JOURNEY_PATIENT', patientId: 'linda-nguyen' })
-    expect(state.activePage).toBe('handoff')
+    expect(state.activePage).toBe('assignment')
     expect(state.journeyFocusCaseId).toBe('ho-inelig-1')
   })
 
@@ -169,7 +169,7 @@ describe('patient journey actions', () => {
     const journey = buildPatientJourney(state.workflowScenarios, 'james-carter')
     expect(journey.complete).toBe(false)
     expect(journey.current?.caseId).toBe('ho-dest-2')
-    expect(state.activePage).toBe('handoff')
+    expect(state.activePage).toBe('assignment')
     expect(state.journeyFocusCaseId).toBe('ho-dest-2')
     expect(journey.completedCount).toBe(1)
   })
@@ -177,7 +177,7 @@ describe('patient journey actions', () => {
   it('resolving a journey case in the live queue jumps to the next stage tab', () => {
     let state = createInitialState()
     state = demoReducer(state, { type: 'SELECT_JOURNEY_PATIENT', patientId: 'maria-alvarez' })
-    expect(state.activePage).toBe('handoff')
+    expect(state.activePage).toBe('assignment')
 
     state = demoReducer(state, { type: 'RESOLVE_SCENARIO_CASE', id: 'ho-ack-1' })
     expect(state.activePage).toBe('assignment')

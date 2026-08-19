@@ -26,12 +26,13 @@ export type LiveInboxPayload = {
   source: 'testing-infobox'
   fetched_at?: string
   referrals: LiveInboxReferral[]
+  stale?: boolean
   error?: string
   error_code?: string
 }
 
 export type LiveInboxState = {
-  status: 'loading' | 'connected' | 'unavailable'
+  status: 'loading' | 'syncing' | 'connected' | 'unavailable'
   referrals: LiveInboxReferral[]
   fetchedAt?: string
   error?: string

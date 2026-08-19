@@ -13,7 +13,6 @@ describe('automation stage definitions', () => {
     expect(AUTOMATION_STAGES.map((stage) => stage.id)).toEqual([
       'intake',
       'assignment',
-      'handoff',
       'provider',
       'scheduling',
       'end-of-day',
@@ -41,6 +40,23 @@ describe('automation stage definitions', () => {
     expect(automationStage('intake').microsteps[0].id).toBe('receive-referral')
     expect(automationStage('weekly').microsteps.at(-1)?.id).toBe(
       'patient-on-hold',
+    )
+    expect(automationStage('handoff').id).toBe('assignment')
+    expect(automationStage('assignment').microsteps.map((step) => step.id)).toEqual(
+      [
+        'assign-owner',
+        'notify-referral-source',
+        'create-monday-record',
+        'create-update-drk',
+      ],
+    )
+    expect(automationStage('assignment').microsteps.map((step) => step.name)).toEqual(
+      [
+        'Assign Case Manager',
+        'Notify Case Manager',
+        'Create Monday.com Record',
+        'Prepare DRK Chart',
+      ],
     )
   })
 

@@ -4,6 +4,11 @@ import type {
   StepFeedDay,
   StepFeedRow,
 } from '../ops/types'
+import {
+  isAssignmentGateStep,
+  isCombinedAssignmentStage,
+  isHandoffOperationStep,
+} from '../combinedAssignment'
 import type { LiveAssignment, LiveHandoff, HandoffOperation } from './types'
 
 export type LiveWorkflowFeedRow = StepFeedRow & {
@@ -30,9 +35,13 @@ export function mergeWorkflowFeed({
   patientQuery: string
   statuses: PatientStepStatus[]
 }): StepFeedDay[] {
-  const rows = stageId === 'assignment'
-    ? assignmentRows(assignments, selectedStepId)
-    : handoffRows(handoffs, selectedStepId)
+  const rows = isCombinedAssignmentStage(stageId)
+    ? isAssignmentGateStep(selectedStepId)
+      ? assignmentRows(assignments, selectedStepId)
+      : isHandoffOperationStep(selectedStepId)
+        ? handoffRows(handoffs, selectedStepId)
+        : []
+    : []
   const query = patientQuery.trim().toLowerCase()
   const visible = rows.filter((row) =>
     statuses.includes(row.status)
@@ -63,33 +72,19 @@ function assignmentRows(
   assignments: LiveAssignment[],
   stepId: string,
 ): LiveWorkflowFeedRow[] {
-  return assignments.flatMap((assignment) => {
+  if (!isAssignmentGateStep(stepId)) return []
+  return assignments.map((assignment) => {
     const patientName = assignment.patient_label ?? 'Referral'
-    if (stepId === 'determine-owner') {
-      return [{
-        patientId: assignment.case_id,
-        patientName,
-        stepId,
-        status: assignmentStatus(assignment),
-        summary: assignmentSummary(assignment),
-        occurredAt: assignment.updated_at,
-        source: 'workflow' as const,
-        assignment,
-      }]
+    return {
+      patientId: assignment.case_id,
+      patientName,
+      stepId,
+      status: assignmentStatus(assignment),
+      summary: assignmentSummary(assignment),
+      occurredAt: assignment.updated_at,
+      source: 'workflow' as const,
+      assignment,
     }
-    if (stepId === 'assign-owner' && assignment.status === 'completed') {
-      return [{
-        patientId: assignment.case_id,
-        patientName,
-        stepId,
-        status: 'done' as const,
-        summary: `${assignment.assigned_case_manager?.name ?? 'Case manager'} assigned; handoff ready`,
-        occurredAt: assignment.updated_at,
-        source: 'workflow' as const,
-        assignment,
-      }]
-    }
-    return []
   })
 }
 

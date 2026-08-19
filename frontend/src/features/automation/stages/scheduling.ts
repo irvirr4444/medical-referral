@@ -3,7 +3,7 @@ import { step } from './shared'
 
 export const SCHEDULING_STAGE: AutomationStageDefinition = {
   id: 'scheduling',
-  title: '5. Scheduling',
+  title: '4. Scheduling',
   shortTitle: 'Scheduling',
   purpose:
     'Send the referral to the confirmed provider and schedule the patient within 24–48 hours.',

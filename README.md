@@ -185,10 +185,30 @@ PYTHONPATH=src python3.11 src/monday.com/push_referral.py \
 
 ### Live testing-infobox feed
 
-Referral Intake keeps its demo referrals and can additionally show real PDF arrivals
-from the configured testing inbox. Use one stable `INTAKE_DATA_ROOT` so every run
-shares the same processed-attachment ledger, then start the local Stage 1 service
-in one terminal and Vite in another:
+From an activated virtual environment, the normal local development/demo startup is:
+
+```powershell
+& .\.venv\Scripts\Activate.ps1
+python run_pipeline.py start
+```
+
+That command reuses a stable `INTAKE_DATA_ROOT` (or `tmp/intake-service` if unset),
+runs the relevant preflight checks, starts the inbox API with autonomous monitoring,
+starts the Vite frontend, waits until both are ready, and opens
+`http://127.0.0.1:5173/`. Stop with Ctrl+C. Advanced controls remain under
+`python run_pipeline.py start --help` and `python run_pipeline.py inbox-api --help`.
+
+Vite proxies `/api` to `http://127.0.0.1:8787`. On **Referral intake**, the live
+status indicator reports autonomous Outlook polling, extraction, safe duplicate
+reads, durable retries, review-email delivery, and reply polling. Worker controls
+are intentionally CLI-only; operators cannot start or stop infrastructure from the
+workflow UI.
+
+#### Manual debugging
+
+Use separate terminals only when you need to debug the API or frontend in isolation.
+Keep one stable `INTAKE_DATA_ROOT` so every run shares the same processed-attachment
+ledger:
 
 ```powershell
 $env:PYTHONPATH='src'
@@ -199,11 +219,7 @@ cd frontend
 npm run dev
 ```
 
-Vite proxies `/api` to `http://127.0.0.1:8787`. On **Referral intake**, the live
-status indicator reports autonomous Outlook polling, extraction, safe duplicate
-reads, durable retries, review-email delivery, and reply polling. Worker controls
-are intentionally CLI-only; operators cannot start or stop infrastructure from the
-workflow UI. The service starts OFF unless `--start-monitor` is supplied:
+The service starts OFF unless `--start-monitor` is supplied:
 
 ```powershell
 python run_pipeline.py inbox-api --start-monitor

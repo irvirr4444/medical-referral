@@ -39,6 +39,10 @@ import {
 } from '../types'
 import { humanGateForStep } from './humanGates'
 import { actionProgressForStage } from './actionSteps'
+import {
+  COMBINED_ASSIGNMENT_PAGE_ID,
+  isCombinedAssignmentStage,
+} from '../combinedAssignment'
 
 const FIXTURES: Record<FlowOpsPageId, StageOpsFixture> = {
   intake: INTAKE_OPS_FIXTURE,
@@ -55,6 +59,12 @@ export function opsRecipeForStage(stageId: FlowOpsPageId): StageOpsRecipe {
 }
 
 export function opsFixtureForStage(stageId: FlowOpsPageId): StageOpsFixture {
+  if (stageId === COMBINED_ASSIGNMENT_PAGE_ID) {
+    return {
+      stageId,
+      events: [...ASSIGNMENT_OPS_FIXTURE.events, ...HANDOFF_OPS_FIXTURE.events],
+    }
+  }
   return FIXTURES[stageId]
 }
 
@@ -62,7 +72,7 @@ export function openEventsForSection(
   stageId: FlowOpsPageId,
   eventType: string,
 ): OpsEvent[] {
-  return FIXTURES[stageId].events
+  return opsFixtureForStage(stageId).events
     .filter((event) => event.eventType === eventType && event.status === 'open')
     .sort(preferButlerThenTime)
 }
@@ -71,14 +81,14 @@ export function allEventsForSection(
   stageId: FlowOpsPageId,
   eventType: string,
 ): OpsEvent[] {
-  return FIXTURES[stageId].events
+  return opsFixtureForStage(stageId).events
     .filter((event) => event.eventType === eventType)
     .sort(preferButlerThenTime)
 }
 
 export function patientsForStage(stageId: FlowOpsPageId): StagePatientRef[] {
   const seen = new Map<string, StagePatientRef>()
-  for (const event of FIXTURES[stageId].events) {
+  for (const event of opsFixtureForStage(stageId).events) {
     if (!seen.has(event.patientId)) {
       seen.set(event.patientId, {
         patientId: event.patientId,
@@ -112,14 +122,56 @@ export function defaultPatientIdForStage(stageId: FlowOpsPageId): string {
   return patients[0]?.patientId ?? ''
 }
 
+function upcomingFixtureRow(stepId: string): PatientStepProgress {
+  return { stepId, status: 'upcoming', summary: 'Not started' }
+}
+
+function composeCombinedAssignmentRows(patientId: string): PatientStepProgress[] {
+  const assignmentRows = PATIENT_STEP_BREAKDOWNS.assignment[patientId] ?? []
+  const handoffRows = PATIENT_STEP_BREAKDOWNS.handoff[patientId] ?? []
+  const assignmentGate =
+    assignmentRows.find((row) => row.stepId === 'determine-owner') ??
+    assignmentRows.find((row) => row.stepId === 'assign-owner')
+  const assignOwner: PatientStepProgress = assignmentGate
+    ? { ...assignmentGate, stepId: 'assign-owner' }
+    : handoffRows.length > 0
+      ? {
+          stepId: 'assign-owner',
+          status: 'done',
+          summary: 'Case manager confirmed',
+          occurredAt: handoffRows[0]?.occurredAt,
+        }
+      : upcomingFixtureRow('assign-owner')
+  const handoffById = new Map(handoffRows.map((row) => [row.stepId, row]))
+  return [
+    assignOwner,
+    handoffById.get('notify-referral-source') ??
+      upcomingFixtureRow('notify-referral-source'),
+    handoffById.get('create-monday-record') ??
+      upcomingFixtureRow('create-monday-record'),
+    handoffById.get('create-update-drk') ??
+      upcomingFixtureRow('create-update-drk'),
+  ]
+}
+
+function fixtureRowsForPatient(
+  stageId: FlowOpsPageId,
+  patientId: string,
+): PatientStepProgress[] {
+  if (isCombinedAssignmentStage(stageId)) {
+    return composeCombinedAssignmentRows(patientId)
+  }
+  return PATIENT_STEP_BREAKDOWNS[stageId][patientId] ?? []
+}
+
 export function stepsForPatient(
   stageId: FlowOpsPageId,
   patientId: string,
 ): Array<PatientStepProgress & { stepName: string; description: string }> {
   const stage = automationStage(stageId)
-  const fixtureRows = PATIENT_STEP_BREAKDOWNS[stageId][patientId] ?? []
+  const fixtureRows = fixtureRowsForPatient(stageId, patientId)
   const rows = actionProgressForStage(
-    stageId,
+    stageId === 'handoff' ? COMBINED_ASSIGNMENT_PAGE_ID : stageId,
     fixtureRows,
     stage.microsteps.map((step) => step.id),
   )
@@ -416,7 +468,7 @@ export function activityFeedForStage(
   day: string
   messages: ActivityFeedMessage[]
 }> {
-  const events = [...FIXTURES[stageId].events, ...supplementalEvents].sort(
+  const events = [...opsFixtureForStage(stageId).events, ...supplementalEvents].sort(
     (a, b) =>
       parseOpsDate(b.occurredAt).timeMs - parseOpsDate(a.occurredAt).timeMs,
   )
@@ -466,7 +518,7 @@ export function historyDaysForStage(stageId: FlowOpsPageId): Array<{
   const recipe = STAGE_OPS_RECIPES[stageId]
   const byDay = new Map<string, OpsEvent[]>()
 
-  for (const event of FIXTURES[stageId].events) {
+  for (const event of opsFixtureForStage(stageId).events) {
     const key = dayKey(event.occurredAt)
     const list = byDay.get(key) ?? []
     list.push(event)

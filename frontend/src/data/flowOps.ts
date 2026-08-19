@@ -43,8 +43,8 @@ export const FLOW_OPS: Record<FlowOpsPageId, FlowOpsConfig> = {
   },
   handoff: {
     id: 'handoff',
-    title: '3. Handoff',
-    blurb: 'Notify the referral source and assigned case manager, then create Monday.com / DRK records.',
+    title: '2. Assignment & handoff',
+    blurb: 'Confirm the case manager, notify them, and prepare the approved referral in Monday.com and DRK.',
     comparisonId: 'handoff',
     showNetwork: false,
     showImpact: false,
@@ -58,8 +58,8 @@ export const FLOW_OPS: Record<FlowOpsPageId, FlowOpsConfig> = {
   },
   assignment: {
     id: 'assignment',
-    title: '2. Assignment',
-    blurb: 'Match patient location to territory rules and confirm the case manager before handoff.',
+    title: '2. Assignment & handoff',
+    blurb: 'Confirm the case manager, notify them, and prepare the approved referral in Monday.com and DRK.',
     comparisonId: 'assignment',
     showNetwork: false,
     showImpact: false,
@@ -73,7 +73,7 @@ export const FLOW_OPS: Record<FlowOpsPageId, FlowOpsConfig> = {
   },
   provider: {
     id: 'provider',
-    title: '4. Provider selection',
+    title: '3. Provider selection',
     blurb: 'Suggest company providers by territory and keep send status human-controlled.',
     comparisonId: 'provider',
     showNetwork: false,
@@ -88,7 +88,7 @@ export const FLOW_OPS: Record<FlowOpsPageId, FlowOpsConfig> = {
   },
   scheduling: {
     id: 'scheduling',
-    title: '5. Scheduling',
+    title: '4. Scheduling',
     blurb: 'Present route-aware windows and monitor the one-hour provider-response timer.',
     comparisonId: 'scheduling',
     showNetwork: false,
@@ -103,7 +103,7 @@ export const FLOW_OPS: Record<FlowOpsPageId, FlowOpsConfig> = {
   },
   'end-of-day': {
     id: 'end-of-day',
-    title: '6. End-of-day check',
+    title: '5. End-of-day check',
     blurb: 'Scan unscheduled referrals after the deadline and build one management exception list.',
     comparisonId: 'end-of-day',
     showNetwork: false,
@@ -118,7 +118,7 @@ export const FLOW_OPS: Record<FlowOpsPageId, FlowOpsConfig> = {
   },
   weekly: {
     id: 'weekly',
-    title: '7. Weekly visit cycle',
+    title: '6. Weekly visit cycle',
     blurb: 'Track seen / not-seen visits, holds, healed/expired statuses, and discharge approvals.',
     comparisonId: 'weekly',
     showNetwork: false,

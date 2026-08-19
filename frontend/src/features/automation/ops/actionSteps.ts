@@ -11,7 +11,7 @@ const ACTION_GROUPS: Partial<
     'verify-handoff': ['link-destinations', 'reconcile-handoff'],
   },
   assignment: {
-    'determine-owner': [
+    'assign-owner': [
       'determine-owner',
       'assign-owner',
       'load-assignment-context',
@@ -22,6 +22,9 @@ const ACTION_GROUPS: Partial<
       'confirm-assignment',
       'write-assignment',
     ],
+    'notify-referral-source': ['load-approved-plan', 'map-monday-fields'],
+    'create-monday-record': ['write-monday'],
+    'create-update-drk': ['prepare-drk', 'apply-drk'],
   },
   provider: {
     'find-eligible-providers': [
@@ -64,7 +67,7 @@ const ACTION_GROUPS: Partial<
   },
 }
 
-const RECOMMENDATION_ACTIONS = new Set(['determine-owner', 'select-provider'])
+const RECOMMENDATION_ACTIONS = new Set(['select-provider'])
 const CONFIRMATION_ACTIONS = new Set([
   'assign-owner',
   'record-provider',

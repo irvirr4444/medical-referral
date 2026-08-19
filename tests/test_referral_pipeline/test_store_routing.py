@@ -175,3 +175,43 @@ def test_normal_aggregation_does_not_copy_local_cases(tmp_path) -> None:
     assert ids == {"case-wcw", "case-synth"}
     assert remote.workflow_case("case-wcw") is None
     assert local.workflow_case("case-synth") is None
+
+
+def test_live_store_stays_local_until_remote_read_is_requested(tmp_path, monkeypatch) -> None:
+    from referral_pipeline.monitoring.store import (
+        create_live_workflow_store,
+        workflow_reads_existing_remote,
+    )
+
+    monkeypatch.setenv("WORKFLOW_DATABASE_BACKEND", "sqlite")
+    monkeypatch.delenv("WORKFLOW_READ_EXISTING_REMOTE", raising=False)
+    store = create_live_workflow_store(sqlite_path=tmp_path / "local.sqlite", backend="sqlite")
+    assert isinstance(store, SQLiteWorkflowStore)
+    assert workflow_reads_existing_remote(backend="sqlite") is False
+    monkeypatch.setenv("WORKFLOW_READ_EXISTING_REMOTE", "1")
+    assert workflow_reads_existing_remote(backend="sqlite") is True
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
+    monkeypatch.delenv("SUPABASE_SERVICE_KEY", raising=False)
+    fallback = create_live_workflow_store(sqlite_path=tmp_path / "local.sqlite", backend="sqlite")
+    assert isinstance(fallback, SQLiteWorkflowStore)
+
+
+def test_approval_processor_reads_existing_remote_reviews_during_live_sqlite(tmp_path, monkeypatch) -> None:
+    from referral_pipeline.review.workflow import ApprovalProcessor
+
+    class DummyRemote:
+        pass
+
+    monkeypatch.setenv("WORKFLOW_READ_EXISTING_REMOTE", "1")
+    monkeypatch.setenv("REFERRAL_REVIEW_STORE", "sqlite")
+    monkeypatch.setattr(
+        "referral_pipeline.review.supabase_store.SupabaseReviewStore.from_environment",
+        classmethod(lambda cls: DummyRemote()),
+    )
+    processor = ApprovalProcessor(
+        state_db=tmp_path / "state.sqlite",
+        mailbox=object(),
+        allow_supabase_store=True,
+    )
+    assert isinstance(processor._remote_store, DummyRemote)
