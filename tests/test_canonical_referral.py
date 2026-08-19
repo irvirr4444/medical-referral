@@ -249,6 +249,7 @@ def test_all_seven_intake_values_survive_monday_and_drk_projection() -> None:
     assert monday.current_home_health_or_hospice == "Current Home Health"
     assert monday.wound_order_included is True
     assert monday.diagnosis_text == "Stage 3 sacral wound requiring skilled wound care."
+    assert "Stage 3 sacral wound requiring skilled wound care." not in (monday.notes or "")
     assert monday.insurance_provider == "Medicare"
     assert drk.demographics.ssn == "111-22-3333"
     assert drk.primary_address.address_line_1 == "1 Main St"

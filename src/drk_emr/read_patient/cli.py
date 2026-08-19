@@ -24,6 +24,12 @@ from selenium.webdriver.support.ui import WebDriverWait
 from seleniumwire import webdriver
 
 from drk_emr.common.models import DirectReplayResult, EndpointRecord, utc_timestamp_compact
+from drk_emr.common.patient_search import (
+    click_search_candidate,
+    dashboard_search_query,
+    search_patients_on_dashboard,
+    select_search_candidate,
+)
 from drk_emr.common.redaction import (
     mask_sensitive_headers,
     normalize_url_pattern,
@@ -75,36 +81,48 @@ def _extract_patient_id_from_url(url: str) -> str | None:
     return None
 
 
-def _open_patient_by_name(driver: webdriver.Chrome, patient_name: str) -> tuple[str, str]:
-    """On post-login Dashboard, click search label, type name, click top match."""
+def _open_patient_by_name(
+    driver: webdriver.Chrome,
+    patient_name: str,
+    *,
+    date_of_birth: str | None = None,
+    phone: str | None = None,
+    mrn: str | None = None,
+) -> tuple[str, str]:
+    """Search given-name-first, then open the row matching NAME/DOB/MRN/PHONE."""
     wait = WebDriverWait(driver, 25)
-
-    # Stay on the post-login Dashboard page. Do not navigate elsewhere first.
-    wait.until(lambda d: DASHBOARD_PATH.lower() in d.current_url.lower())
-    wait.until(ec.presence_of_element_located((By.ID, "dashPatientSearch")))
-
-    # First action after login: click the visible search label only.
-    search_label = wait.until(
-        ec.element_to_be_clickable((By.CSS_SELECTOR, "#dashPatientSearch label.psearch-input[for='patientSearchInput']"))
+    query = dashboard_search_query(patient_name)
+    snapshot = search_patients_on_dashboard(driver, patient_name)
+    if snapshot.error and not snapshot.candidates:
+        raise RuntimeError(f"DRK patient search failed: {snapshot.error} query={query!r}")
+    chosen = select_search_candidate(
+        snapshot.candidates,
+        name=patient_name,
+        date_of_birth=date_of_birth,
+        phone=phone,
+        mrn=mrn,
     )
-    search_label.click()
-
-    search_input = wait.until(ec.element_to_be_clickable((By.ID, "patientSearchInput")))
-    search_input.clear()
-    search_input.send_keys(patient_name)
-
-    # Prefer the highlighted/top active row, else first result row.
-    top_result = wait.until(
-        ec.element_to_be_clickable(
-            (
-                By.CSS_SELECTOR,
-                "#dashPatientSearch .psearch-results-wrap table.tbl tbody tr.is-active td.name-cell, "
-                "#dashPatientSearch .psearch-results-wrap table.tbl tbody tr td.name-cell",
-            )
+    if chosen is None:
+        rows = [
+            {
+                "name": item.display_name,
+                "dob": item.date_of_birth,
+                "mrn": item.mrn,
+                "phone": item.phone,
+                "age": item.age,
+                "sex": item.sex,
+            }
+            for item in snapshot.candidates
+        ]
+        raise RuntimeError(
+            "DRK search returned multiple rows and none uniquely matched DOB/phone/MRN. "
+            f"query={query!r} rows={rows}"
         )
+    _safe_log(
+        f"Opening DRK search row query={query!r} name={chosen.display_name!r} "
+        f"dob={chosen.date_of_birth!r} row={chosen.row_index}"
     )
-    top_result.click()
-
+    click_search_candidate(driver, chosen)
     wait.until(lambda d: _extract_patient_id_from_url(d.current_url) is not None)
     patient_id = _extract_patient_id_from_url(driver.current_url)
     if not patient_id:
@@ -604,6 +622,9 @@ def main(argv: list[str] | None = None) -> int:
     password = _require_env("EMR_PASSWORD")
     patient_name = os.getenv("TEST_PATIENT_NAME", "").strip()
     patient_id = os.getenv("TEST_PATIENT_ID", "").strip()
+    patient_dob = os.getenv("TEST_PATIENT_DOB", "").strip() or None
+    patient_phone = os.getenv("TEST_PATIENT_PHONE", "").strip() or None
+    patient_mrn = os.getenv("TEST_PATIENT_MRN", "").strip() or None
     if not patient_name and not patient_id:
         raise RuntimeError("Set TEST_PATIENT_NAME (preferred) or TEST_PATIENT_ID in .env")
     login_url, home_or_dashboard_url = _build_urls(emr_url, patient_id if not patient_name else None)
@@ -647,7 +668,13 @@ def main(argv: list[str] | None = None) -> int:
 
         # Resolve patient by name via Dashboard search (preferred), else direct ID URL.
         if patient_name:
-            patient_id, patient_dashboard_url = _open_patient_by_name(driver, patient_name)
+            patient_id, patient_dashboard_url = _open_patient_by_name(
+                driver,
+                patient_name,
+                date_of_birth=patient_dob,
+                phone=patient_phone,
+                mrn=patient_mrn,
+            )
         else:
             patient_dashboard_url = home_or_dashboard_url
 

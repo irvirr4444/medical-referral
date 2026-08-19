@@ -491,10 +491,10 @@ def evaluate_duplicate_snapshot(
         demographics = None
         if demographics_by_id is not None and candidate.patient_id in demographics_by_id:
             demographics = demographics_by_id[candidate.patient_id]
-        elif fetch_demographics is not None and driver is not None:
+        elif fetch_demographics is not None and driver is not None and candidate.patient_id:
             demographics = fetch_demographics(driver, candidate.patient_id)
-        elif demographics_by_id is None and fetch_demographics is None:
-            # Search API already carries enough identity for many cases; still require DOB.
+        else:
+            # Search table NAME/DOB/MRN/PHONE is enough to score a row without an API id.
             demographics = {
                 "id": int(candidate.patient_id) if candidate.patient_id.isdigit() else candidate.patient_id,
                 "fullName": candidate.display_name,
