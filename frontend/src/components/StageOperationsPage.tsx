@@ -30,7 +30,7 @@ export function StageOperationsPage({ pageId }: { pageId: FlowOpsPageId }) {
   const stageSummary = (
     <aside className="stage-page__rail panel-dark" aria-label="Stage summary">
       <p className="mono-label stage-page__index">
-        Stage {String(stageIndex + 1).padStart(2, '0')}
+        Step {String(stageIndex + 1).padStart(2, '0')}
       </p>
       <h1>{config.title}</h1>
       <div className="stage-page__goal">

@@ -1226,7 +1226,10 @@ export function StagePatientSteps({
   const stepsRail = (
     <aside className="stage-ops-steps__rail">
       <div className="stage-ops-steps__rail-copy">
-        <h2>{microsteps.length} steps</h2>
+        <h2>
+          {microsteps.length}{' '}
+          {microsteps.length === 1 ? 'microstep' : 'microsteps'}
+        </h2>
         <p className="muted">Select a step to see patient updates.</p>
       </div>
       <MicrostepList
