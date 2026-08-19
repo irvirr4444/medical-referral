@@ -248,6 +248,47 @@ disabled** only when the service explicitly reports that check OFF. It says
 **Queued for DRK chart check** when enabled or when configuration is temporarily
 unavailable; persisted DRK results always take priority.
 
+### Workflow store: sqlite vs. Supabase
+
+Stage 1-3 case state (`wcw_workflow_cases`, `wcw_work_items`, decisions, external
+operations) lives in `WORKFLOW_DATABASE_BACKEND`, either `sqlite` (default, path
+`WORKFLOW_SQLITE_PATH` or `<INTAKE_DATA_ROOT>/workflow-monitor.sqlite`) or `supabase`.
+`referral_pipeline start` always pins the same backend across the poll/API/approval
+child process and sets `WORKFLOW_READ_EXISTING_REMOTE=1`, so a run started on sqlite
+still **reads** cases that a previous run already wrote to Supabase — it just never
+**creates** new cases there. The startup banner prints the active backend and warns
+when the local job ledger shows a case was previously written remotely, so you know
+to expect Assignment/attention to reflect cross-backend history for that case.
+
+### Stage 2/3: assignment and handoff
+
+`GET /api/workflow/assignments` lists Stage 2 work items (`assign-case-manager`) with
+the configured case-manager roster. `POST /api/workflow/assignments/{case_id}/confirm`
+records the decision, advances the case to Stage 3 (`awaiting_handoff`), and
+**prepares** three `ExternalOperation`s — `notify-assigned-case-manager`,
+`create-monday-record`, `prefill-drk-chart` — all left in `status: "ready"`. None of
+them run automatically.
+
+`GET /api/workflow/handoffs` lists those operations per case.
+`POST /api/workflow/handoffs/{case_id}/preview` runs a dry-run of one operation.
+`POST /api/workflow/handoffs/{case_id}/execute` performs the real action, gated per
+operation type: Monday writes require `confirm: true` in the request body and are
+otherwise rejected with `409`; DRK remains fill-only and never submits/creates.
+
+### Workflow attention and deadlines
+
+`GET /api/workflow/attention?stage=&limit=` is a read-only projection over stored
+`attention_due_at` (cases) / `due_at` (work items) and open `wcw_workflow_exceptions`
+— it never writes workflow state. Severity is `overdue`, `due_soon` (inside the
+warning window), `blocked` (open exception), or `normal`. Per-step SLA durations
+default from `DEMO_SLA_SECONDS` in `referral_pipeline/workflow/attention_policy.py`
+and are **not confirmed WCW business rules** — override any step with
+`WCW_SLA_<STEP_ID>_SECONDS` (e.g. `WCW_SLA_ASSIGN_CASE_MANAGER_SECONDS`) and the
+due-soon window with `WCW_ATTENTION_WARNING_SECONDS`. A bulk reconciliation sweep
+that backstops cases the per-confirmation apply path missed runs on the background
+approval cycle, not on every read — it used to run inside `assignments()` and made
+that endpoint take 50+ seconds under real case volume.
+
 ### Synthetic inbox-to-Monday rehearsal
 
 The synthetic inbox fixtures contain no real patient data. They exercise four cases:
