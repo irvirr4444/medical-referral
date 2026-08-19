@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { OverviewImpactBoard } from '../../components/OverviewImpactBoard'
+import { activityForStage } from '../../data/activityFeed'
 import { useDemo } from '../../state/useDemo'
 import { AUTOMATION_STAGES } from './stages'
 import './AutomationOverview.css'
 
 export function AutomationOverview() {
-  const { dispatch } = useDemo()
+  const { state, dispatch } = useDemo()
+  const latestEvents = activityForStage(state.activityFeed, 'overview', 5)
   const [now, setNow] = useState(() => new Date())
 
   useEffect(() => {
@@ -45,6 +47,10 @@ export function AutomationOverview() {
           <p className="overview-masthead__sub">
             Referral Intake & Scheduling
           </p>
+          <p className="overview-masthead__desc">
+            Every referral tracked from inbox to scheduled visit — automation
+            handles the routine, your team confirms the exceptions.
+          </p>
         </div>
       </header>
 
@@ -73,6 +79,24 @@ export function AutomationOverview() {
 
         <OverviewImpactBoard density="compact" title="Objectives" />
       </div>
+
+      <section
+        className="overview-latest panel"
+        aria-labelledby="overview-latest-title"
+      >
+        <div className="overview-latest__heading">
+          <p className="mono-label">Today</p>
+          <h2 id="overview-latest-title">Latest events</h2>
+        </div>
+        <ul className="overview-latest__list">
+          {latestEvents.map((event) => (
+            <li key={event.id}>
+              <time>{event.time}</time>
+              <span>{event.text}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
     </main>
   )
 }

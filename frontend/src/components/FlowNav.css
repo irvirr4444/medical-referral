@@ -41,7 +41,14 @@
   line-height: 1;
 }
 
-.flow-nav__account {
+.flow-nav__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.flow-nav__icon-btn {
+  position: relative;
   display: grid;
   place-items: center;
   width: 2.15rem;
@@ -54,14 +61,32 @@
   cursor: pointer;
 }
 
-.flow-nav__account:hover {
+.flow-nav__icon-btn:hover {
   background: var(--sage-pale);
   color: var(--forest);
 }
 
-.flow-nav__account:focus-visible {
+.flow-nav__icon-btn:focus-visible {
   outline: 2px solid rgba(74, 92, 56, 0.55);
   outline-offset: 2px;
+}
+
+.flow-nav__badge {
+  position: absolute;
+  top: 0.05rem;
+  right: 0.05rem;
+  min-width: 1rem;
+  height: 1rem;
+  display: grid;
+  place-items: center;
+  padding: 0 0.2rem;
+  border-radius: 999px;
+  background: var(--status-blocked);
+  color: var(--cream);
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .overdue-confirmations-banner {

@@ -28,6 +28,14 @@
   font-size: 0.95rem;
 }
 
+.overview-masthead__desc {
+  margin: 0.15rem 0 0;
+  max-width: 46rem;
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
 /* ── Dashboard row: quick access | impact board ── */
 
 .overview-dashboard {
@@ -99,6 +107,57 @@
 
 .overview-dashboard .impact-board {
   min-height: 100%;
+}
+
+/* ── Latest events ── */
+
+.overview-latest {
+  padding: 0.85rem 0.95rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.overview-latest__heading {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.overview-latest__heading h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.overview-latest__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+
+.overview-latest__list li {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  align-items: baseline;
+  gap: 0.85rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.86rem;
+  color: var(--ink);
+}
+
+.overview-latest__list li:last-child {
+  border-bottom: 0;
+  padding-bottom: 0.15rem;
+}
+
+.overview-latest__list time {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--gray);
+  white-space: nowrap;
 }
 
 @media (max-width: 900px) {
