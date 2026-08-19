@@ -89,6 +89,136 @@
   line-height: 1;
 }
 
+.flow-nav__notif {
+  position: relative;
+}
+
+.flow-nav__notif-panel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  width: min(22rem, 86vw);
+  max-height: 24rem;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--cream);
+  box-shadow: 0 14px 30px rgba(26, 26, 24, 0.14);
+  z-index: 30;
+}
+
+.flow-nav__notif-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.7rem 0.85rem 0.55rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.flow-nav__notif-header h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.flow-nav__notif-header span {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--status-blocked);
+}
+
+.flow-nav__notif-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.35rem;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.flow-nav__notif-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.55rem 0.6rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.flow-nav__notif-item:hover,
+.flow-nav__notif-item:focus-visible {
+  background: var(--sage-pale);
+}
+
+.flow-nav__notif-dot {
+  flex: 0 0 auto;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+}
+
+.flow-nav__notif-dot--overdue {
+  background: var(--status-blocked);
+}
+
+.flow-nav__notif-dot--warning {
+  background: var(--status-attention);
+}
+
+.flow-nav__notif-copy {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.flow-nav__notif-title {
+  font-size: 0.84rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.flow-nav__notif-meta {
+  font-size: 0.74rem;
+  color: var(--ink-soft);
+  line-height: 1.3;
+}
+
+.flow-nav__notif-state {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.flow-nav__notif-state--overdue {
+  color: var(--status-blocked);
+}
+
+.flow-nav__notif-state--warning {
+  color: var(--status-attention);
+}
+
+.flow-nav__notif-empty {
+  margin: 0;
+  padding: 0.85rem;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}
+
 .overdue-confirmations-banner {
   display: flex;
   align-items: center;

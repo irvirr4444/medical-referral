@@ -30,18 +30,7 @@
 
 .impact-board__toolbar h2 {
   margin: 0;
-  font-size: 1.15rem;
-}
-
-.impact-board__toolbar-copy {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.35rem 0.65rem;
-}
-
-.impact-board__toolbar-copy .caption {
-  margin: 0;
+  font-size: 1.5rem;
 }
 
 .impact-board__period-dropdown {

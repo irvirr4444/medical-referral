@@ -659,9 +659,6 @@ describe('automation inspection console', () => {
     const marcus = within(stepsPanel).getByRole('article', {
       name: /Marcus Feldman/i,
     })
-    const david = within(stepsPanel).getByRole('article', {
-      name: /David Ruiz/i,
-    })
     expect(
       within(marcus).getByText(/Immediate attention/i),
     ).toBeInTheDocument()

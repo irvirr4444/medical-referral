@@ -261,10 +261,7 @@ export function OverviewImpactBoard({
       aria-labelledby={headingId}
     >
       <div className="impact-board__toolbar">
-        <div className="impact-board__toolbar-copy">
-          <h2 id={headingId}>{active.label}</h2>
-          <p className="caption">{active.caption}</p>
-        </div>
+        <h2 id={headingId}>{active.label}</h2>
         <div className="impact-board__period-dropdown" ref={periodMenuRef}>
           <button
             type="button"
