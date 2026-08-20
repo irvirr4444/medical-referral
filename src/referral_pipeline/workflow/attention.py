@@ -16,6 +16,7 @@ from referral_pipeline.workflow.attention_policy import (
     TERMINAL_CASE_STATUSES,
     TERMINAL_WORK_ITEM_STATUSES,
     action_label,
+    exception_stage_step,
     stage_one_step_id,
     ui_step_id,
     warning_window_seconds,
@@ -164,16 +165,23 @@ def _exception_signals(
         if exception.status != OPEN_EXCEPTION_STATUS:
             continue
         case = cases.get(exception.entity_id)
-        current_stage = 1 if case is None else case.current_stage
-        if stage is not None and current_stage != stage:
+        mapped = exception_stage_step(exception.exception_type)
+        if mapped is not None:
+            exception_stage, step_id = mapped
+        elif case is not None:
+            exception_stage = case.current_stage
+            step_id = ui_step_id(stage_one_step_id(case.status))
+        else:
+            exception_stage = 1
+            step_id = ""
+        if stage is not None and exception_stage != stage:
             continue
-        step_id = ui_step_id(stage_one_step_id(case.status)) if case is not None else ""
         signals.append(
             _signal(
                 signal_id=f"exception:{exception.exception_key}",
                 case_id=exception.entity_id,
                 patient_label=_patient_label(None if case is None else case.patient_label),
-                stage=current_stage,
+                stage=exception_stage,
                 step_id=step_id,
                 status=exception.status,
                 due_at=None,

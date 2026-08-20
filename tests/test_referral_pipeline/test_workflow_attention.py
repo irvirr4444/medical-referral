@@ -164,6 +164,31 @@ def test_open_exception_projects_as_blocked(tmp_path) -> None:
     assert "details" not in blocked[0]
 
 
+def test_scheduling_exception_is_placed_on_stage_five_not_case_stage(tmp_path) -> None:
+    store = SQLiteWorkflowStore(tmp_path / "workflow.sqlite")
+    store.upsert_workflow_case(_case(current_stage=3, status="handoff_in_progress"))
+    store.upsert_exception(
+        WorkflowException(
+            exception_key="scheduling:case-1:2026-08-17",
+            exception_type="scheduling_exception",
+            entity_id="case-1",
+            status="open",
+            first_seen_at=NOW,
+            last_seen_at=NOW,
+        )
+    )
+    payload = workflow_attention(store, now=NOW)
+    exceptions = [item for item in payload["items"] if item["source"] == "exception"]
+    assert len(exceptions) == 1
+    assert exceptions[0]["stage"] == 5
+    assert exceptions[0]["step_id"] == "check-scheduling-status"
+
+    filtered = workflow_attention(store, now=NOW, stage=5)
+    assert len(filtered["items"]) == 1
+    filtered_out = workflow_attention(store, now=NOW, stage=3)
+    assert filtered_out["items"] == []
+
+
 def test_stage_aggregation_and_stable_sorting(tmp_path) -> None:
     store = SQLiteWorkflowStore(tmp_path / "workflow.sqlite")
     store.upsert_workflow_case(

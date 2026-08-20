@@ -48,6 +48,16 @@ class RoutingWorkflowStore:
             source_ref
         )
 
+    def workflow_case_by_monday_item_id(self, monday_item_id: str) -> WorkflowCase | None:
+        return self.remote.workflow_case_by_monday_item_id(
+            monday_item_id
+        ) or self.local.workflow_case_by_monday_item_id(monday_item_id)
+
+    def workflow_case_by_drk_patient_id(self, drk_patient_id: str) -> WorkflowCase | None:
+        return self.remote.workflow_case_by_drk_patient_id(
+            drk_patient_id
+        ) or self.local.workflow_case_by_drk_patient_id(drk_patient_id)
+
     def list_workflow_cases(self, *, limit: int = 100) -> list[WorkflowCase]:
         return self._merge_cases(
             self.remote.list_workflow_cases(limit=limit),

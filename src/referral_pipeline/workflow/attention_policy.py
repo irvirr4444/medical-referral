@@ -59,6 +59,20 @@ TERMINAL_CASE_STATUSES = frozenset({"completed", "cancelled", "failed"})
 TERMINAL_WORK_ITEM_STATUSES = frozenset({"completed", "cancelled"})
 OPEN_EXCEPTION_STATUS = "open"
 
+# Monitoring exceptions (scheduling.py / visits.py) carry their own stage --
+# they are not produced by the Stage 1-3 case pipeline, so they must not be
+# placed by case.current_stage (which only ever advances through 1-3 today).
+EXCEPTION_STAGE_STEP: dict[str, tuple[int, str]] = {
+    "scheduling_exception": (5, "check-scheduling-status"),
+    "noncompliance_discharge_review": (6, "patient-seen"),
+    "qa_review": (6, "wound-healed"),
+    "discharge_approval_review": (6, "patient-expired"),
+}
+
+
+def exception_stage_step(exception_type: str) -> tuple[int, str] | None:
+    return EXCEPTION_STAGE_STEP.get(exception_type)
+
 
 def warning_window_seconds(environ: Mapping[str, str] | None = None) -> int:
     return _env_seconds("WCW_ATTENTION_WARNING_SECONDS", DEFAULT_WARNING_SECONDS, environ)

@@ -145,6 +145,9 @@ class IntakeApiHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API
         parsed = urlparse(self.path)
+        if parsed.path == "/api/monday/webhook":
+            self._handle_monday_webhook(parsed)
+            return
         monitor_control = parsed.path in {
             "/api/intake/monitor/start",
             "/api/intake/monitor/stop",
@@ -237,6 +240,39 @@ class IntakeApiHandler(BaseHTTPRequestHandler):
             # heartbeat tick.
             self.server.workflow_cache.refresh_now()
         self._send_json(HTTPStatus.OK, payload)
+
+    def _handle_monday_webhook(self, parsed: Any) -> None:
+        # Not gated by _is_local_control_request: Monday calls this from its
+        # own servers, so a same-origin check would either block it outright
+        # or (worse) pass trivially since server-to-server calls send no
+        # Origin header at all. The shared-secret token is the real guard.
+        from referral_pipeline.monitoring.config import load_monitoring_config
+        from referral_pipeline.monitoring.webhook import (
+            WebhookAuthError,
+            handle_webhook_payload,
+            verify_webhook_token,
+        )
+
+        query = parse_qs(parsed.query)
+        token = query.get("token", [None])[0]
+        try:
+            verify_webhook_token(token, expected=os.environ.get("MONDAY_WEBHOOK_TOKEN"))
+        except WebhookAuthError as error:
+            self._send_json(HTTPStatus.FORBIDDEN, {"error": str(error)})
+            return
+        try:
+            body = self._read_json_object()
+        except ValueError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+            return
+        result = handle_webhook_payload(
+            body,
+            store=self.server.workflow_execution.store,
+            config=load_monitoring_config(),
+        )
+        if result.get("processed"):
+            self.server.workflow_cache.refresh_now()
+        self._send_json(HTTPStatus.OK, result)
 
     def _is_local_control_request(self) -> bool:
         origin = self.headers.get("Origin")

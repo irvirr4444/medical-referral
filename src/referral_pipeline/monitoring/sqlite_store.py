@@ -73,6 +73,12 @@ class SQLiteWorkflowStore:
     def workflow_case_by_source_ref(self, source_ref: str) -> WorkflowCase | None:
         return self._workflow_case_where("source_ref", source_ref)
 
+    def workflow_case_by_monday_item_id(self, monday_item_id: str) -> WorkflowCase | None:
+        return self._workflow_case_where("monday_item_id", monday_item_id)
+
+    def workflow_case_by_drk_patient_id(self, drk_patient_id: str) -> WorkflowCase | None:
+        return self._workflow_case_where("drk_patient_id", drk_patient_id)
+
     def list_workflow_cases(self, *, limit: int = 100) -> list[WorkflowCase]:
         with self._connect() as connection:
             rows = connection.execute(
@@ -711,7 +717,7 @@ class SQLiteWorkflowStore:
             )
 
     def _workflow_case_where(self, column: str, value: str) -> WorkflowCase | None:
-        if column not in {"case_id", "source_ref"}:
+        if column not in {"case_id", "source_ref", "monday_item_id", "drk_patient_id"}:
             raise ValueError("unsupported workflow case lookup")
         with self._connect() as connection:
             row = connection.execute(
