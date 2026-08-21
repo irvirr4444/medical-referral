@@ -33,6 +33,8 @@ No confirm CTAs on: Receive referral in inbox, Check Monday for existing patient
 
 No confirm CTA on: Notify Case Manager (message only after the handoff).
 
+**Product rule (email):** when CM ownership is written, send a **notify** (not a confirm CTA) so the CM knows they own the patient. Monday does not do this today. See [docs/GMAIL_ALERTS.md](docs/GMAIL_ALERTS.md#case-manager-assignment--what-should-happen).
+
 ---
 
 ## 3. Handoff

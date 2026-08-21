@@ -7,6 +7,7 @@
 | [`test_drk_emr/`](test_drk_emr/) | `src/drk_emr/` |
 | [`test_outlook/`](test_outlook/) | Outlook and `.eml` adapters (`src/Outlook/`) |
 | [`test_referral_pipeline/`](test_referral_pipeline/) | Cross-system intake orchestration |
+| [`test_gmail_alert/`](test_gmail_alert/) | Gmail SLA alert catalog (`src/gmail_alert/`) |
 
 Monday package-local tests remain at `src/monday.com/tests/`.
 
@@ -24,4 +25,5 @@ PYTHONPATH=src pytest -q tests/test_monday
 PYTHONPATH=src pytest -q tests/test_drk_emr
 PYTHONPATH=src pytest -q tests/test_outlook
 PYTHONPATH=src pytest -q tests/test_referral_pipeline
+PYTHONPATH=src pytest -q tests/test_gmail_alert
 ```
