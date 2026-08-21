@@ -53,7 +53,7 @@ export function OverviewNeedsYou() {
   const [showAll, setShowAll] = useState(false)
   const [slotByPatient, setSlotByPatient] = useState<Record<string, string>>({})
 
-  const visible = showAll ? digest.ordered : digest.ordered.slice(0, 4)
+  const visible = showAll ? digest.ordered : digest.ordered.slice(0, 6)
   const late = visible.filter((timer) => timer.status === 'overdue')
   const soon = visible.filter((timer) => timer.status !== 'overdue')
 
@@ -270,7 +270,7 @@ export function OverviewNeedsYou() {
         <p className="overview-needs__empty">You are all caught up.</p>
       ) : null}
 
-      {digest.ordered.length > 4 ? (
+      {digest.ordered.length > 6 ? (
         <button
           type="button"
           className="overview-needs__more"
