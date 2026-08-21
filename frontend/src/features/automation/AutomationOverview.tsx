@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react'
 import { ArrowRight } from 'lucide-react'
-import { OverviewImpactBoard } from '../../components/OverviewImpactBoard'
-import { activityForStage } from '../../data/activityFeed'
 import { useDemo } from '../../state/useDemo'
+import { OverviewNeedsYou } from './OverviewNeedsYou'
 import { AUTOMATION_STAGES } from './stages'
 import './AutomationOverview.css'
 
 export function AutomationOverview() {
-  const { state, dispatch } = useDemo()
-  const latestEvents = activityForStage(state.activityFeed, 'overview', 5)
+  const { dispatch } = useDemo()
   const [now, setNow] = useState(() => new Date())
 
   useEffect(() => {
@@ -45,59 +43,42 @@ export function AutomationOverview() {
           </p>
           <h1 id="automation-overview-title">Intake Automation</h1>
           <p className="overview-masthead__desc">
-            Every referral is tracked automatically from the moment it lands in
-            the inbox to a scheduled patient visit. The system reads each
-            referral PDF, verifies the required patient information, assigns
-            the right case manager and provider, and prepares scheduling
-            while your team only steps in to confirm decisions and handle the
-            exceptions that need human judgment.
+            Every referral is tracked automatically from inbox to scheduled
+            visit you only confirm the decisions below.
           </p>
         </div>
       </header>
 
-      <div className="overview-dashboard">
-        <aside className="overview-quick panel-dark" aria-label="Steps">
-          <p className="mono-label">Steps</p>
-          <ul className="overview-quick__list">
-            {AUTOMATION_STAGES.map((stage, index) => (
-              <li key={stage.id}>
-                <button
-                  type="button"
-                  className="overview-quick__link"
-                  aria-label={`Inspect ${stage.shortTitle}`}
-                  onClick={() => openStage(stage.id)}
-                >
-                  <span className="overview-quick__index">
-                    {String(index + 1).padStart(2, '0')}
-                  </span>
-                  <span className="overview-quick__title">{stage.shortTitle}</span>
-                  <ArrowRight size={14} aria-hidden="true" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        </aside>
+      <OverviewNeedsYou />
 
-        <OverviewImpactBoard density="compact" />
-      </div>
-
-      <section
-        className="overview-latest panel"
-        aria-labelledby="overview-latest-title"
-      >
-        <div className="overview-latest__heading">
-          <p className="mono-label">Today</p>
-          <h2 id="overview-latest-title">Latest events</h2>
-        </div>
-        <ul className="overview-latest__list">
-          {latestEvents.map((event) => (
-            <li key={event.id}>
-              <time>{event.time}</time>
-              <span>{event.text}</span>
+      <nav className="overview-flow" aria-label="Steps">
+        <span className="overview-flow__label">How it works</span>
+        <ol className="overview-flow__list">
+          {AUTOMATION_STAGES.map((stage, index) => (
+            <li key={stage.id}>
+              <button
+                type="button"
+                className="overview-flow__link"
+                aria-label={`Inspect ${stage.shortTitle}`}
+                onClick={() => openStage(stage.id)}
+              >
+                <span className="overview-flow__index">
+                  {String(index + 1).padStart(2, '0')}
+                </span>
+                {stage.shortTitle}
+              </button>
+              {index < AUTOMATION_STAGES.length - 1 ? (
+                <ArrowRight
+                  size={12}
+                  strokeWidth={2}
+                  className="overview-flow__arrow"
+                  aria-hidden="true"
+                />
+              ) : null}
             </li>
           ))}
-        </ul>
-      </section>
+        </ol>
+      </nav>
     </main>
   )
 }

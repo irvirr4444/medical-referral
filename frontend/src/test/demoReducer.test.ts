@@ -567,6 +567,23 @@ describe('demoReducer', () => {
     expect(blockedAttempt).toBe(state)
   })
 
+  it('schedules a patient from an explicit slot without a prior selection', () => {
+    const state = demoReducer(createInitialState(), {
+      type: 'COMPLETE_PATIENT_SCHEDULE',
+      patientId: 'thomas-reed',
+      scheduledAt: 'August 14, 2026 at 4:20 PM',
+      slotId: 'thomas-tomorrow-1015',
+    })
+    expect(state.patientSchedules['thomas-reed']?.status).toBe('scheduled')
+    expect(state.patientSchedules['thomas-reed']?.selectedSlotId).toBe(
+      'thomas-tomorrow-1015',
+    )
+    expect(state.patientSchedules['thomas-reed']?.appointmentTime).toBe('10:15 AM')
+    expect(state.actionTimers['thomas-reed:schedule-patient']?.status).toBe(
+      'resolved',
+    )
+  })
+
   it('records a scheduling blocker without marking the patient scheduled', () => {
     let state = createInitialState()
     state = demoReducer(state, {

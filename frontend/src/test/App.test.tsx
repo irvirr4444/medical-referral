@@ -34,40 +34,14 @@ describe('automation inspection console', () => {
       screen.getByText(/Every referral is tracked automatically/i),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('heading', { name: /^Today$/i }),
+      screen.getByRole('heading', { name: /^Needs you$/i }),
     ).toBeInTheDocument()
-    expect(screen.getByText(/New referrals/i)).toBeInTheDocument()
-    expect(screen.getByText(/Patients scheduled/i)).toBeInTheDocument()
-    expect(screen.getByText(/^Patients seen$/i)).toBeInTheDocument()
-    expect(screen.getByText(/Wounds healed/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Reporting period/i })).toHaveTextContent(
-      /^Today$/i,
-    )
-    expect(screen.getByText('18')).toBeInTheDocument()
-    expect(screen.getAllByText(/vs yesterday/i).length).toBeGreaterThan(0)
-    expect(screen.getByText(/\+3 \(20%\)/)).toBeInTheDocument()
-
-    await user.click(
-      screen.getByRole('button', { name: /View patients for New referrals/i }),
-    )
-    const patientDialog = screen.getByRole('dialog', { name: /New referrals/i })
-    expect(patientDialog).toBeInTheDocument()
-    expect(within(patientDialog).getAllByRole('listitem')).toHaveLength(8)
-    await user.click(
-      screen.getByRole('button', { name: /Close patient list/i }),
-    )
-
-    await user.click(screen.getByRole('button', { name: /Reporting period/i }))
-    await user.click(screen.getByRole('option', { name: /This week/i }))
-    expect(screen.getByText('82')).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: /Reporting period/i }))
-    await user.click(screen.getByRole('option', { name: /Pick dates/i }))
-    const dateDialog = screen.getByRole('dialog')
-    await user.click(
-      within(dateDialog).getByRole('button', { name: /^Confirm$/i }),
-    )
-    expect(screen.getByText('112')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('heading', { name: /^Today$/i }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /Reporting period/i }),
+    ).not.toBeInTheDocument()
     expect(
       screen.queryByRole('heading', { name: /^Needs attention$/i }),
     ).not.toBeInTheDocument()
@@ -598,26 +572,21 @@ describe('automation inspection console', () => {
     ).toHaveValue('Needs interpreter for follow-up')
   }, 15_000)
 
-  it('surfaces seeded overdue confirmation timers on nav, banner, and assignment', async () => {
+  it('surfaces seeded overdue confirmation timers on nav and assignment', async () => {
     const user = userEvent.setup()
     render(<App />)
 
     expect(
-      screen.getByRole('button', {
+      screen.queryByRole('button', {
         name: /confirmations need immediate attention/i,
       }),
-    ).toBeInTheDocument()
+    ).not.toBeInTheDocument()
 
     await openStage(user, 'Assignment & handoff')
     const stepsPanel = screen.getByLabelText(/Patient steps/i)
     expect(
       within(stepsPanel).getByRole('button', {
         name: /Assign Case Manager.*overdue/i,
-      }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole('button', {
-        name: /1 confirmation needs immediate attention on this step/i,
       }),
     ).toBeInTheDocument()
 
@@ -667,11 +636,6 @@ describe('automation inspection console', () => {
     expect(
       within(stepsPanel).queryByRole('button', {
         name: /Assign Case Manager.*overdue/i,
-      }),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole('button', {
-        name: /needs? immediate attention on this step/i,
       }),
     ).not.toBeInTheDocument()
   })

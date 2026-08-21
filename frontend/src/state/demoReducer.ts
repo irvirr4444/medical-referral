@@ -128,6 +128,7 @@ export type DemoAction =
       type: 'COMPLETE_PATIENT_SCHEDULE'
       patientId: string
       scheduledAt: string
+      slotId?: string
     }
   | {
       type: 'RECORD_SCHEDULING_BLOCKER'
@@ -901,7 +902,11 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
 
     case 'COMPLETE_PATIENT_SCHEDULE': {
       const record = state.patientSchedules[action.patientId]
-      const slot = record ? selectedSlot(record) : null
+      const slot = action.slotId
+        ? record?.slots.find((item) => item.id === action.slotId) ?? null
+        : record
+          ? selectedSlot(record)
+          : null
       if (
         !record ||
         record.status !== 'waiting' ||
@@ -916,6 +921,7 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
           ...state.patientSchedules,
           [action.patientId]: {
             ...record,
+            selectedSlotId: slot.id,
             status: 'scheduled',
             appointmentDate: slot.appointmentDate,
             appointmentTime: slot.appointmentTime,
