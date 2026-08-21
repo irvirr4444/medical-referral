@@ -34,6 +34,8 @@
 
 \*16 case managers, each assigned to a geographic area with dedicated providers. No formal list in [Monday.com](http://Monday.com); Braxton to provide the list.
 
+\*\***Notify CM when ownership is written** (email: patient, area, short why, next step = provider, PDF when available). Monday Case Manager column change does **not** notify today — own this in our handoff. Details: [docs/GMAIL_ALERTS.md](docs/GMAIL_ALERTS.md).
+
 ## 
 
 ## 
@@ -94,14 +96,4 @@ a) wound is healed
 b) patient is being hospitalized  
 c) patient is expired  
 d) patient is on hold
-
-## **Additional Information Required (to be provided):**
-
-- CMs list as based on their location.  
-- Company Provider’s list as well to be handed out to the team.  
-- Access to DRK  
-- Access to infobox  
-- Additional information on RingRx  
-- ‘Patient Status’ variables list.  
-- Routing software used by case managers for provider scheduling (Optional)
 
