@@ -10,7 +10,7 @@ from unittest.mock import Mock
 import pytest
 
 from referral_pipeline.api.server import create_server
-from referral_pipeline.api.webhook_server import create_webhook_server
+from referral_pipeline.api.webhook_server import MondayWebhookHandler, create_webhook_server
 from referral_pipeline.monitoring.config import load_monitoring_config
 from referral_pipeline.monitoring.sqlite_store import SQLiteWorkflowStore
 from referral_pipeline.monitoring.webhook import (
@@ -58,6 +58,44 @@ def test_public_webhook_health_route_returns_json_without_logging_failure(tmp_pa
 
     assert response.status == HTTPStatus.OK
     assert payload == {"status": "ok", "service": "monday-webhook"}
+
+
+def test_public_webhook_logs_only_sanitized_processing_result(monkeypatch) -> None:
+    logged: list[str] = []
+    monkeypatch.setattr("builtins.print", lambda message, **_kwargs: logged.append(message))
+    handler = object.__new__(MondayWebhookHandler)
+
+    handler._log_processing_result(
+        {
+            "processed": True,
+            "item_id": "item-1",
+            "column_id": "status-column",
+            "report": {"patient_name": "Must Not Be Logged"},
+            "event_key": "internal-event-key",
+        }
+    )
+
+    assert len(logged) == 1
+    assert json.loads(logged[0]) == {
+        "event": "monday_webhook_result",
+        "processed": True,
+        "item_id": "item-1",
+        "column_id": "status-column",
+    }
+
+
+def test_public_webhook_logs_ignored_reason_without_payload(monkeypatch) -> None:
+    logged: list[str] = []
+    monkeypatch.setattr("builtins.print", lambda message, **_kwargs: logged.append(message))
+    handler = object.__new__(MondayWebhookHandler)
+
+    handler._log_processing_result({"ignored": "board_id_missing", "board_id": "secret-board"})
+
+    assert json.loads(logged[0]) == {
+        "event": "monday_webhook_result",
+        "processed": False,
+        "ignored": "board_id_missing",
+    }
 NAME_COLUMN = "name"
 
 

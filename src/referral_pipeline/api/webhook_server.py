@@ -58,6 +58,7 @@ class MondayWebhookHandler(BaseHTTPRequestHandler):
                 config=load_monitoring_config(),
                 expected_board_id=os.getenv("MONDAY_WEBHOOK_BOARD_ID"),
             )
+            self._log_processing_result(result)
         except WebhookAuthError as error:
             self._send_json(HTTPStatus.FORBIDDEN, {"error": str(error)})
             return
@@ -76,6 +77,25 @@ class MondayWebhookHandler(BaseHTTPRequestHandler):
         # string, so pass a real placeholder rather than an empty argument
         # tuple. This method is called for both successful and error replies.
         super().log_message("%s", "monday webhook request")
+
+    def _log_processing_result(self, result: dict[str, object]) -> None:
+        """Log only the non-PHI fields needed to diagnose webhook delivery."""
+
+        diagnostic: dict[str, object] = {"event": "monday_webhook_result"}
+        if result.get("processed") is True:
+            diagnostic["processed"] = True
+        elif "challenge" in result:
+            diagnostic["outcome"] = "challenge"
+        else:
+            diagnostic["processed"] = False
+
+        for key in ("ignored", "item_id", "column_id"):
+            value = result.get(key)
+            if isinstance(value, (str, int, float, bool)) or value is None:
+                if key in result:
+                    diagnostic[key] = value
+
+        print(json.dumps(diagnostic, ensure_ascii=True, sort_keys=True), flush=True)
 
     def _read_json(self) -> dict[str, object]:
         content_type = self.headers.get("Content-Type", "").split(";", 1)[0].strip()
