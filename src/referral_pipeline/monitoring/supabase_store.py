@@ -9,12 +9,17 @@ import requests
 
 from referral_pipeline.monitoring.models import (
     ComponentHealth,
+    ExternalOperation,
     NotificationRecord,
     OperationalSnapshot,
+    OutboundAcknowledgement,
     PatientLink,
+    WorkflowCase,
     WorkflowCounter,
+    WorkflowDecision,
     WorkflowEvent,
     WorkflowException,
+    WorkflowWorkItem,
     utc_now,
 )
 
@@ -32,12 +37,232 @@ class SupabaseWorkflowStore:
     @classmethod
     def from_environment(cls) -> "SupabaseWorkflowStore":
         url = os.getenv("SUPABASE_URL", "").strip()
-        key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+        key = (
+            os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+            or os.getenv("SUPABASE_SERVICE_KEY", "").strip()
+        )
         if not url or not key:
             raise SupabaseWorkflowError(
-                "Supabase monitoring requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY"
+                "Supabase monitoring requires SUPABASE_URL and "
+                "SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SERVICE_KEY)"
             )
         return cls(url=url, service_role_key=key)
+
+    def upsert_workflow_case(self, case: WorkflowCase) -> WorkflowCase:
+        self._upsert(
+            "wcw_workflow_cases",
+            case.model_dump(mode="json"),
+            on_conflict="case_id",
+        )
+        stored = self.workflow_case(case.case_id)
+        if stored is None:
+            raise SupabaseWorkflowError("workflow case upsert did not return a row")
+        return stored
+
+    def workflow_case(self, case_id: str) -> WorkflowCase | None:
+        return self._workflow_case_by("case_id", case_id)
+
+    def workflow_case_by_source_ref(self, source_ref: str) -> WorkflowCase | None:
+        return self._workflow_case_by("source_ref", source_ref)
+
+    def workflow_case_by_monday_item_id(self, monday_item_id: str) -> WorkflowCase | None:
+        return self._workflow_case_by("monday_item_id", monday_item_id)
+
+    def workflow_case_by_drk_patient_id(self, drk_patient_id: str) -> WorkflowCase | None:
+        return self._workflow_case_by("drk_patient_id", drk_patient_id)
+
+    def list_workflow_cases(self, *, limit: int = 100) -> list[WorkflowCase]:
+        rows = self._request(
+            "GET",
+            "wcw_workflow_cases",
+            params={"select": "*", "order": "updated_at.desc", "limit": str(max(1, min(limit, 500)))},
+        )
+        return [WorkflowCase.model_validate(row) for row in rows]
+
+    def upsert_work_item(self, item: WorkflowWorkItem) -> WorkflowWorkItem:
+        self._upsert(
+            "wcw_work_items",
+            item.model_dump(mode="json"),
+            on_conflict="work_item_id",
+        )
+        stored = self.work_item(item.work_item_id)
+        if stored is None:
+            raise SupabaseWorkflowError("workflow work item upsert did not return a row")
+        return stored
+
+    def work_item(self, work_item_id: str) -> WorkflowWorkItem | None:
+        rows = self._request(
+            "GET",
+            "wcw_work_items",
+            params={"select": "*", "work_item_id": f"eq.{work_item_id}", "limit": "1"},
+        )
+        return None if not rows else WorkflowWorkItem.model_validate(rows[0])
+
+    def list_work_items(
+        self,
+        *,
+        stage: int | None = None,
+        case_id: str | None = None,
+        limit: int = 100,
+    ) -> list[WorkflowWorkItem]:
+        params = {
+            "select": "*",
+            "order": "updated_at.desc",
+            "limit": str(max(1, min(limit, 500))),
+        }
+        if stage is not None:
+            params["stage"] = f"eq.{stage}"
+        if case_id is not None:
+            params["case_id"] = f"eq.{case_id}"
+        rows = self._request("GET", "wcw_work_items", params=params)
+        return [WorkflowWorkItem.model_validate(row) for row in rows]
+
+    def record_decision(self, decision: WorkflowDecision) -> bool:
+        rows = self._request(
+            "POST",
+            "wcw_workflow_decisions",
+            json_body=decision.model_dump(mode="json"),
+            params={"on_conflict": "idempotency_key"},
+            prefer="resolution=ignore-duplicates,return=representation",
+        )
+        return bool(rows)
+
+    def list_decisions(self, case_id: str) -> list[WorkflowDecision]:
+        rows = self._request(
+            "GET",
+            "wcw_workflow_decisions",
+            params={
+                "select": "*",
+                "case_id": f"eq.{case_id}",
+                "order": "created_at.asc",
+            },
+        )
+        return [WorkflowDecision.model_validate(row) for row in rows]
+
+    def upsert_external_operation(self, operation: ExternalOperation) -> ExternalOperation:
+        self._upsert(
+            "wcw_external_operations",
+            operation.model_dump(mode="json"),
+            on_conflict="operation_id",
+        )
+        operations = [
+            item for item in self.list_external_operations(operation.case_id)
+            if item.operation_id == operation.operation_id
+        ]
+        if not operations:
+            raise SupabaseWorkflowError("external operation upsert did not return a row")
+        return operations[0]
+
+    def claim_external_operation(
+        self,
+        operation_id: str,
+        *,
+        case_id: str,
+        claimed_by: str,
+        lease_seconds: int = 300,
+        allow_uncertain: bool = False,
+    ) -> str:
+        del case_id
+        rows = self._request(
+            "POST",
+            "rpc/claim_wcw_external_operation",
+            json_body={
+                "p_operation_id": operation_id,
+                "p_claimed_by": claimed_by,
+                "p_lease_seconds": max(30, lease_seconds),
+                "p_allow_uncertain": bool(allow_uncertain),
+            },
+        )
+        if not isinstance(rows, str):
+            raise SupabaseWorkflowError("external operation claim returned an unexpected response")
+        return rows
+
+    def list_external_operations(self, case_id: str) -> list[ExternalOperation]:
+        rows = self._request(
+            "GET",
+            "wcw_external_operations",
+            params={
+                "select": "*",
+                "case_id": f"eq.{case_id}",
+                "order": "created_at.asc",
+            },
+        )
+        return [ExternalOperation.model_validate(row) for row in rows]
+
+    def list_events(self, entity_id: str, *, limit: int = 100) -> list[WorkflowEvent]:
+        rows = self._request(
+            "GET",
+            "wcw_workflow_events",
+            params={
+                "select": "*",
+                "entity_id": f"eq.{entity_id}",
+                "order": "occurred_at.asc,event_key.asc",
+                "limit": str(max(1, min(limit, 500))),
+            },
+        )
+        return [WorkflowEvent.model_validate(row) for row in rows]
+
+    def enqueue_acknowledgement(self, acknowledgement: OutboundAcknowledgement) -> bool:
+        rows = self._request(
+            "POST",
+            "wcw_outbound_acknowledgements",
+            json_body=acknowledgement.model_dump(mode="json"),
+            params={"on_conflict": "case_id"},
+            prefer="resolution=ignore-duplicates,return=representation",
+        )
+        return bool(rows)
+
+    def claim_acknowledgement(
+        self,
+        case_id: str,
+        *,
+        recipient: str,
+        payload_digest: str,
+        lease_seconds: int = 300,
+    ) -> str:
+        rows = self._request(
+            "POST",
+            "rpc/claim_wcw_acknowledgement",
+            json_body={
+                "p_case_id": case_id,
+                "p_recipient": recipient.casefold(),
+                "p_payload_digest": payload_digest,
+                "p_lease_seconds": max(30, lease_seconds),
+            },
+        )
+        if not isinstance(rows, str):
+            raise SupabaseWorkflowError("acknowledgement claim returned an unexpected response")
+        return rows
+
+    def mark_acknowledgement_sent(self, case_id: str) -> None:
+        now = utc_now().isoformat()
+        self._request(
+            "PATCH",
+            "wcw_outbound_acknowledgements",
+            params={"case_id": f"eq.{case_id}", "status": "eq.sending"},
+            json_body={
+                "status": "sent",
+                "sent_at": now,
+                "lease_until": None,
+                "last_error": None,
+                "updated_at": now,
+            },
+            prefer="return=minimal",
+        )
+
+    def mark_acknowledgement_failed(self, case_id: str, error: str) -> None:
+        self._request(
+            "PATCH",
+            "wcw_outbound_acknowledgements",
+            params={"case_id": f"eq.{case_id}", "status": "eq.sending"},
+            json_body={
+                "status": "failed",
+                "lease_until": None,
+                "last_error": error[:500],
+                "updated_at": utc_now().isoformat(),
+            },
+            prefer="return=minimal",
+        )
 
     def save_snapshot(self, snapshot: OperationalSnapshot) -> bool:
         previous = self.latest_snapshot(snapshot.source, snapshot.external_id)
@@ -131,6 +356,25 @@ class SupabaseWorkflowStore:
             prefer="return=representation",
         )
         return len(rows or [])
+
+    def list_exceptions(
+        self, *, status: str | None = None, limit: int = 200
+    ) -> list[WorkflowException]:
+        params = {
+            "select": (
+                "exception_key,exception_type,entity_id,severity,status,"
+                "first_seen_at,last_seen_at,resolved_at"
+            ),
+            "order": "last_seen_at.desc",
+            "limit": str(max(1, min(limit, 500))),
+        }
+        if status is not None:
+            params["status"] = f"eq.{status}"
+        rows = self._request("GET", "wcw_workflow_exceptions", params=params)
+        return [
+            WorkflowException.model_validate({**row, "details": {}})
+            for row in rows
+        ]
 
     def enqueue_notification(self, notification: NotificationRecord) -> bool:
         rows = self._request(
@@ -281,6 +525,10 @@ class SupabaseWorkflowStore:
     def status_summary(self) -> dict[str, object]:
         return {
             "backend": "supabase",
+            "workflow_cases": self._count("wcw_workflow_cases"),
+            "pending_acknowledgements": self._count(
+                "wcw_outbound_acknowledgements", status="in.(pending,sending,failed)"
+            ),
             "snapshots": self._count("wcw_system_snapshots"),
             "events": self._count("wcw_workflow_events"),
             "open_exceptions": self._count("wcw_workflow_exceptions", status="eq.open"),
@@ -301,6 +549,16 @@ class SupabaseWorkflowStore:
             params={"on_conflict": on_conflict},
             prefer="resolution=merge-duplicates,return=minimal",
         )
+
+    def _workflow_case_by(self, column: str, value: str) -> WorkflowCase | None:
+        if column not in {"case_id", "source_ref", "monday_item_id", "drk_patient_id"}:
+            raise ValueError("unsupported workflow case lookup")
+        rows = self._request(
+            "GET",
+            "wcw_workflow_cases",
+            params={"select": "*", column: f"eq.{value}", "limit": "1"},
+        )
+        return None if not rows else WorkflowCase.model_validate(rows[0])
 
     def _mark_notifications(self, keys: list[str], *, status: str, error: str | None) -> None:
         for key in keys:

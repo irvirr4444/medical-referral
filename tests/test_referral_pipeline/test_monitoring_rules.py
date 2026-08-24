@@ -71,6 +71,19 @@ def test_visit_transition_counts_only_explicit_not_seen() -> None:
     assert "noncompliance_discharge_review_required" in transition.event_types
 
 
+def test_visit_transition_recognizes_master_sheet_not_seen_label() -> None:
+    config = load_monitoring_config()
+    transition = evaluate_visit_transition(
+        _snapshot(visit_status="Scheduled"),
+        _snapshot(visit_status="ATTEMPTED TO SEE THE PATIENT BUT NOT SEEN"),
+        config=config,
+        consecutive_not_seen=0,
+    )
+
+    assert transition.consecutive_not_seen == 1
+    assert transition.event_types == ("visit_not_seen",)
+
+
 def test_seen_resets_counter_and_hold_return_is_detected() -> None:
     config = load_monitoring_config()
     previous = _snapshot(visit_status="On Holds List")

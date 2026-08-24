@@ -11,7 +11,10 @@
   },
   "visits": {
     "seen_statuses": ["Seen"],
-    "not_seen_statuses": ["Not Seen"],
+    "not_seen_statuses": [
+      "Not Seen",
+      "ATTEMPTED TO SEE THE PATIENT BUT NOT SEEN"
+    ],
     "hold_statuses": ["On Holds List", "Hospitalized"],
     "healed_statuses": ["Healed", "QA - WX HEALED"],
     "expired_statuses": ["Deceased", "Expired"],

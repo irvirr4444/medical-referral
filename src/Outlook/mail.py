@@ -34,6 +34,19 @@ class InboundPdfAttachment:
         return cleaned or "referral.pdf"
 
 
+@dataclass(frozen=True)
+class InboundPdfMetadata:
+    """Attachment identity shown in the console without downloading PHI bytes."""
+
+    message_id: str
+    attachment_id: str
+    filename: str
+    received_at: str | None = None
+    subject: str | None = None
+    sender: str | None = None
+    size: int | None = None
+
+
 def is_pdf_file(filename: str | None, content: bytes) -> bool:
     """Require both a PDF filename and file signature, not just a MIME label."""
     return bool(filename and filename.lower().endswith(".pdf") and content.lstrip().startswith(b"%PDF-"))

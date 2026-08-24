@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from referral_pipeline.monitoring.models import PatientLink
+from referral_pipeline.monitoring.models import PatientLink, WorkflowCase
 from referral_pipeline.monitoring.supabase_store import SupabaseWorkflowStore
 
 
@@ -82,3 +82,50 @@ def test_list_patient_links_paginates_past_supabase_default(monkeypatch) -> None
 
     assert len(links) == 1001
     assert ranges == ["0-999", "1000-1999"]
+
+
+def test_stage_one_case_uses_service_store_contract(monkeypatch) -> None:
+    store = SupabaseWorkflowStore(url="https://example.supabase.co", service_role_key="test-key")
+    case = WorkflowCase(
+        case_id="case_123",
+        source_ref="123",
+        source="outlook-graph",
+        current_stage=1,
+        status="discovered",
+        created_at=NOW,
+        updated_at=NOW,
+    )
+    calls: list[tuple[str, str, dict]] = []
+
+    def fake_request(method, table, **kwargs):
+        calls.append((method, table, kwargs))
+        if method == "GET":
+            return [case.model_dump(mode="json")]
+        return []
+
+    monkeypatch.setattr(store, "_request", fake_request)
+
+    assert store.upsert_workflow_case(case) == case
+    assert calls[0][1] == "wcw_workflow_cases"
+    assert calls[0][2]["params"] == {"on_conflict": "case_id"}
+
+
+def test_acknowledgement_claim_uses_atomic_rpc(monkeypatch) -> None:
+    store = SupabaseWorkflowStore(url="https://example.supabase.co", service_role_key="test-key")
+    seen: list[tuple[str, str, dict]] = []
+
+    def fake_request(method, table, **kwargs):
+        seen.append((method, table, kwargs))
+        return "claimed"
+
+    monkeypatch.setattr(store, "_request", fake_request)
+
+    result = store.claim_acknowledgement(
+        "case_123",
+        recipient="Partner@Example.Test",
+        payload_digest="a" * 64,
+    )
+
+    assert result == "claimed"
+    assert seen[0][1] == "rpc/claim_wcw_acknowledgement"
+    assert seen[0][2]["json_body"]["p_recipient"] == "partner@example.test"

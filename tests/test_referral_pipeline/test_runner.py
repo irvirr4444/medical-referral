@@ -1,15 +1,17 @@
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
 
 from Outlook.mail import InboundPdfAttachment
 from intake_extractor.canonical_referral import CanonicalExtractionError
 from intake_extractor.llm.reliability import CapacityExhaustedError
 from referral_pipeline import runner
+from referral_pipeline.failure_policy import ReferralSubmissionError
 from referral_pipeline.state import InboxState, STATUS_FAILED, STATUS_PENDING_RETRY
 
 
-def test_review_recipient_defaults_to_referral_sender(monkeypatch) -> None:
+def test_review_recipient_never_defaults_to_referral_sender(monkeypatch) -> None:
     monkeypatch.delenv("REVIEW_RECIPIENT_EMAIL", raising=False)
     args = runner._parse_args(
         [
@@ -34,7 +36,28 @@ def test_review_recipient_defaults_to_referral_sender(monkeypatch) -> None:
         args=args,
         attachment=attachment,
         manifest={"source_sender": "external@example.test"},
-    ) == "external@example.test"
+    ) == ""
+
+
+def test_review_store_backend_matches_workflow_case_backend() -> None:
+    assert runner._review_uses_supabase(
+        {
+            "synthetic_persistence_allowed": True,
+            "workflow_database_backend": "supabase",
+        }
+    )
+    assert not runner._review_uses_supabase(
+        {
+            "synthetic_persistence_allowed": True,
+            "workflow_database_backend": "sqlite",
+        }
+    )
+    assert not runner._review_uses_supabase(
+        {
+            "synthetic_persistence_allowed": False,
+            "workflow_database_backend": "supabase",
+        }
+    )
 
 
 def test_outlook_poll_includes_unfinished_ledger_jobs(tmp_path) -> None:
@@ -57,7 +80,7 @@ def test_outlook_poll_includes_unfinished_ledger_jobs(tmp_path) -> None:
     assert runner._attachment_needs_processing(state, attachment)
 
 
-def test_permanent_review_failure_replies_in_original_thread(tmp_path, monkeypatch) -> None:
+def test_sender_actionable_failure_replies_in_original_thread(tmp_path, monkeypatch) -> None:
     pdf = tmp_path / "referral.pdf"
     pdf.write_bytes(b"%PDF-1.4\nsynthetic")
     attachment = InboundPdfAttachment(
@@ -90,7 +113,9 @@ def test_permanent_review_failure_replies_in_original_thread(tmp_path, monkeypat
     monkeypatch.setattr(
         runner,
         "process_inbound_pdf",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(ValueError("unsupported referral")),
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            ReferralSubmissionError("unsupported referral document")
+        ),
     )
     args = runner._parse_args(
         [
@@ -114,7 +139,7 @@ def test_permanent_review_failure_replies_in_original_thread(tmp_path, monkeypat
     assert result["failure_reply_sent"] is True
     assert sent[0]["source_message_id"] == "message-1"
     assert sent[0]["recipient"] == "external@example.test"
-    assert "could not complete this referral" in sent[0]["text_body"]
+    assert "could not process the submitted referral document" in sent[0]["text_body"]
 
     monkeypatch.setenv("REVIEW_RECIPIENT_EMAIL", "internal@example.test")
     assert runner._review_recipient(
@@ -122,7 +147,129 @@ def test_permanent_review_failure_replies_in_original_thread(tmp_path, monkeypat
         args=args,
         attachment=attachment,
         manifest={"source_sender": "external@example.test"},
+    ) == "internal@example.test"
+    assert runner._source_recipient(
+        attachment,
+        {"source_sender": "external@example.test"},
     ) == "external@example.test"
+
+
+def test_database_failure_never_tells_sender_to_resend_pdf(tmp_path, monkeypatch) -> None:
+    pdf = tmp_path / "referral.pdf"
+    pdf.write_bytes(b"%PDF-1.4\nsynthetic")
+    attachment = InboundPdfAttachment(
+        "outlook-graph",
+        "message-1",
+        "attachment-1",
+        "referral.pdf",
+        pdf.read_bytes(),
+        sender="external@example.test",
+    )
+    state = InboxState(tmp_path / "state.sqlite")
+    state.enqueue(
+        attachment,
+        artifact_path=pdf,
+        options={"send_review": True, "source_sender": "external@example.test"},
+    )
+    job = state.claim_job(attachment)
+    assert job is not None
+    sent: list[dict] = []
+
+    class FakeMailbox:
+        def __init__(self, _client) -> None:
+            pass
+
+        def send_reply(self, **kwargs) -> None:
+            sent.append(kwargs)
+
+    monkeypatch.setattr(runner, "OutlookReviewMailbox", FakeMailbox)
+    monkeypatch.setattr(
+        runner,
+        "process_inbound_pdf",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            sqlite3.IntegrityError("duplicate workflow case")
+        ),
+    )
+    args = runner._parse_args(
+        [
+            "--process-retries",
+            "--send-review",
+            "--output-dir",
+            str(tmp_path / "out"),
+            "--state-db",
+            str(tmp_path / "state.sqlite"),
+        ]
+    )
+
+    result = runner.process_claimed_job(
+        job,
+        state=state,
+        args=args,
+        graph_client=object(),
+    )
+
+    assert result["status"] == STATUS_FAILED
+    assert result["failure_reply_sent"] is False
+    assert sent == []
+
+
+def test_internal_terminal_failure_never_replies_to_sender(tmp_path, monkeypatch) -> None:
+    pdf = tmp_path / "referral.pdf"
+    pdf.write_bytes(b"%PDF-1.4\nsynthetic")
+    attachment = InboundPdfAttachment(
+        "outlook-graph",
+        "message-1",
+        "attachment-1",
+        "referral.pdf",
+        pdf.read_bytes(),
+        sender="external@example.test",
+    )
+    state = InboxState(tmp_path / "state.sqlite")
+    state.enqueue(
+        attachment,
+        artifact_path=pdf,
+        options={"send_review": True, "source_sender": "external@example.test"},
+    )
+    job = state.claim_job(attachment)
+    assert job is not None
+    sent: list[dict] = []
+
+    class FakeMailbox:
+        def __init__(self, _client) -> None:
+            pass
+
+        def send_reply(self, **kwargs) -> None:
+            sent.append(kwargs)
+
+    monkeypatch.setattr(runner, "OutlookReviewMailbox", FakeMailbox)
+    monkeypatch.setattr(
+        runner,
+        "process_inbound_pdf",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            RuntimeError("internal integration failed")
+        ),
+    )
+    args = runner._parse_args(
+        [
+            "--process-retries",
+            "--send-review",
+            "--output-dir",
+            str(tmp_path / "out"),
+            "--state-db",
+            str(tmp_path / "state.sqlite"),
+        ]
+    )
+
+    result = runner.process_claimed_job(
+        job,
+        state=state,
+        args=args,
+        graph_client=object(),
+    )
+
+    assert result["status"] == STATUS_FAILED
+    assert result["failure_reply_sent"] is False
+    assert sent == []
 
 
 def test_process_claimed_job_defers_capacity_failures(tmp_path, monkeypatch) -> None:
@@ -206,6 +353,8 @@ def test_first_email_failure_does_not_block_later_emails(tmp_path, monkeypatch) 
             str(tmp_path / "out"),
             "--state-db",
             str(tmp_path / "state.sqlite"),
+            "--workflow-sqlite-path",
+            str(tmp_path / "workflow.sqlite"),
             "--verbose",
         ]
     )

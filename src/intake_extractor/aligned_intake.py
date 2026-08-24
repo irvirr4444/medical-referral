@@ -200,8 +200,6 @@ def _legacy_projection(canonical: CanonicalReferral) -> DrkPdfExtraction:
         insurances=[InsuranceCandidate(**item.model_dump()) for item in canonical.insurances],
         requested_services=[RequestedServiceCandidate(**item.model_dump()) for item in canonical.requested_services],
         other_clinical_notes=[
-            *([canonical.clinical.summary] if canonical.clinical.summary else []),
-            *canonical.clinical.notes,
             *(
                 [f"Wound order explicitly included: {'Yes' if canonical.clinical.wound_order_included else 'No'}"]
                 if canonical.clinical.wound_order_included is not None
@@ -220,7 +218,7 @@ def to_master_sheet_referral_from_canonical(canonical: CanonicalReferral) -> Ref
             "referring_facility": source.name,
             "agency_contact_name": source.contact_name,
             "agency_email": source.email,
-            "diagnosis_text": canonical.clinical.summary or referral.diagnosis_text,
+            "diagnosis_text": canonical.clinical.summary,
         }
     )
 

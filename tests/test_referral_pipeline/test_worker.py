@@ -41,10 +41,13 @@ def test_worker_once_runs_poll_retries_and_safe_approval_poll(tmp_path, monkeypa
     assert all(item["status"] == "ok" for item in results)
     assert "--process-retries" in calls[0]
     assert "--outlook-poll" in calls[1]
+    assert "--newest-only" in calls[1]
     assert calls[0][calls[0].index("--monday-mode") + 1] == "live-readonly"
     assert calls[1][calls[1].index("--monday-mode") + 1] == "live-readonly"
     assert str(tmp_path / "data" / "state.sqlite") in calls[0]
     assert str(tmp_path / "data" / "state.sqlite") in calls[1]
+    assert str(tmp_path / "data" / "workflow-monitor.sqlite") in calls[0]
+    assert str(tmp_path / "data" / "workflow-monitor.sqlite") in calls[1]
     health = SQLiteWorkflowStore(tmp_path / "data" / "workflow-monitor.sqlite")
     assert {item.component for item in health.list_component_health()} == {
         "poll",
@@ -67,6 +70,22 @@ def test_worker_cycle_survives_runner_exceptions(tmp_path) -> None:
     assert result["kind"] == "poll"
     assert result["status"] == "error"
     assert "mailbox auth failed" in result["error"]
+
+
+def test_worker_stage_one_side_effects_are_explicit_opt_ins(tmp_path) -> None:
+    calls: list[list[str]] = []
+
+    worker.run_poll_cycle(
+        data_root=tmp_path / "data",
+        max_messages=5,
+        quiet=True,
+        partner_acknowledgement=True,
+        stage_one_drk_check=True,
+        run_main=lambda argv: calls.append(list(argv)) or 0,
+    )
+
+    assert "--send-partner-acknowledgement" in calls[0]
+    assert "--drk-duplicate-check" in calls[0]
 
 
 def test_worker_execute_flag_is_restricted_to_dry_run(tmp_path) -> None:

@@ -67,6 +67,8 @@ class SupabaseReviewStore:
         monday_preview: dict[str, Any] | None = None,
         drk_draft: dict[str, Any] | None = None,
         status: str = "awaiting_confirmation",
+        purpose: str = "destination_write",
+        workflow_case_id: str | None = None,
         email_subject: str | None = None,
         email_body: str | None = None,
         email_html_body: str | None = None,
@@ -93,6 +95,8 @@ class SupabaseReviewStore:
                 "review_id": review_id,
                 "recipient": recipient.casefold(),
                 "status": status,
+                "review_purpose": purpose,
+                "workflow_case_id": workflow_case_id,
                 "source_message_id": source_message_id,
                 "source_conversation_id": source_conversation_id,
                 "source_attachment_sha256": source_attachment_sha256,
@@ -112,6 +116,7 @@ class SupabaseReviewStore:
         artifact_digest: str,
         source_message_id: str,
         recipient: str,
+        purpose: str = "destination_write",
     ) -> ReviewRequest | None:
         rows = self._get(
             "referral_reviews",
@@ -119,6 +124,7 @@ class SupabaseReviewStore:
                 "artifact_digest": f"eq.{artifact_digest}",
                 "source_message_id": f"eq.{source_message_id}",
                 "recipient": f"eq.{recipient.casefold()}",
+                "review_purpose": f"eq.{purpose}",
                 "status": "in.(awaiting_confirmation,needs_correction,review_send_failed)",
                 "order": "created_at.desc",
                 "limit": "1",
@@ -274,6 +280,7 @@ class SupabaseReviewStore:
                 "status": "eq.awaiting_confirmation",
                 "recipient": f"eq.{sender.casefold()}",
                 "source_conversation_id": f"eq.{conversation_id}",
+                "review_purpose": "eq.destination_write",
             },
             {
                 "status": "confirmed",
@@ -371,11 +378,69 @@ class SupabaseReviewStore:
             for row in self._get(
                 "referral_reviews",
                 {
+                    "review_purpose": "eq.destination_write",
                     "status": "in.(confirmed,dry_run_completed)",
                     "order": "created_at.asc",
                 },
             )
         ]
+
+    def pending_workflow_applies(self) -> list[ReviewRequest]:
+        return [
+            _request_from_row(row)
+            for row in self._get(
+                "referral_reviews",
+                {
+                    "review_purpose": "eq.partner_contact",
+                    "status": "eq.partner_contact_confirmed",
+                    "or": "(workflow_apply_status.is.null,workflow_apply_status.in.(pending,failed))",
+                    "order": "created_at.asc",
+                },
+            )
+        ]
+
+    def mark_workflow_apply(
+        self,
+        review_id: str,
+        *,
+        status: str,
+        error: str | None = None,
+    ) -> None:
+        if status not in {"pending", "applied", "failed", "not_required"}:
+            raise ValueError("invalid workflow apply status")
+        review = self.get(review_id)
+        attempts = review.workflow_apply_attempts
+        if status in {"applied", "failed"}:
+            attempts += 1
+        self._patch(
+            "referral_reviews",
+            {"review_id": f"eq.{review_id}"},
+            {
+                "workflow_apply_status": status,
+                "workflow_apply_attempts": attempts,
+                "workflow_apply_last_error": error,
+            },
+        )
+
+    def set_partner_contact_context(
+        self,
+        review_id: str,
+        *,
+        outcome: str,
+        sender: str,
+        message_id: str,
+    ) -> None:
+        self._patch(
+            "referral_reviews",
+            {"review_id": f"eq.{review_id}"},
+            {
+                "last_dry_run_result": {
+                    "contact_outcome": outcome,
+                    "confirmed_by": sender,
+                    "confirmation_message_id": message_id,
+                }
+            },
+        )
 
     def mark_monday_applied(self, review_id: str, *, item_id: str, drk_status: str) -> None:
         self._patch(
@@ -472,6 +537,8 @@ def _request_from_row(row: dict[str, Any]) -> ReviewRequest:
         source_message_id=str(row["source_message_id"]),
         source_conversation_id=str(row.get("source_conversation_id") or "") or None,
         created_at=str(row["created_at"]),
+        purpose=str(row.get("review_purpose") or "destination_write"),
+        workflow_case_id=_optional_text(row.get("workflow_case_id")),
         monday_item_id=_optional_text(row.get("monday_item_id")),
         drk_status=_optional_text(row.get("drk_status")),
         email_subject=_optional_text(row.get("email_subject")),
@@ -484,6 +551,9 @@ def _request_from_row(row: dict[str, Any]) -> ReviewRequest:
         drk_draft=_object(row.get("drk_draft")),
         last_dry_run_at=_optional_text(row.get("last_dry_run_at")),
         last_dry_run_result=_object(row.get("last_dry_run_result")),
+        workflow_apply_status=_optional_text(row.get("workflow_apply_status")),
+        workflow_apply_attempts=int(row.get("workflow_apply_attempts") or 0),
+        workflow_apply_last_error=_optional_text(row.get("workflow_apply_last_error")),
     )
 
 

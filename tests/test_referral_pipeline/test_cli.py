@@ -87,6 +87,29 @@ def test_approval_modes_are_explicit_and_mutually_exclusive() -> None:
         parser.parse_args(["approvals", "--dry-run", "--execute"])
 
 
+def test_cli_defaults_share_the_durable_intake_ledger(tmp_path, monkeypatch) -> None:
+    data_root = tmp_path / "intake-service"
+    monkeypatch.setenv("INTAKE_DATA_ROOT", str(data_root))
+
+    parser = intake._build_parser()
+    outlook = parser.parse_args(["outlook"])
+    api = parser.parse_args(["inbox-api"])
+    approvals = parser.parse_args(["approvals"])
+    retries = parser.parse_args(["retries"])
+    failures = parser.parse_args(["failures"])
+
+    assert outlook.output_root == data_root / "inbox-runs"
+    assert outlook.state_db == data_root / "state.sqlite"
+    assert outlook.workflow_sqlite_path == data_root / "workflow-monitor.sqlite"
+    assert api.data_root == data_root
+    assert api.workflow_sqlite_path == data_root / "workflow-monitor.sqlite"
+    assert approvals.state_db == data_root / "state.sqlite"
+    assert approvals.workflow_sqlite_path == data_root / "workflow-monitor.sqlite"
+    assert retries.state_db == data_root / "state.sqlite"
+    assert retries.workflow_sqlite_path == data_root / "workflow-monitor.sqlite"
+    assert failures.state_db == data_root / "state.sqlite"
+
+
 def test_failures_command_lists_and_requeues(tmp_path, capsys) -> None:
     from Outlook.mail import InboundPdfAttachment
     from referral_pipeline.state import InboxState
@@ -309,3 +332,24 @@ def test_retries_command_delegates_process_retries(tmp_path, monkeypatch) -> Non
     assert "--process-retries" in delegated
     assert delegated[delegated.index("--max-jobs") + 1] == "3"
     assert "--send-review" in delegated
+
+
+def test_handoff_preview_and_execute_parsers_require_explicit_confirmation() -> None:
+    parser = intake._build_parser()
+    preview = parser.parse_args(
+        ["handoff-preview", "--case-id", "case-1", "--operation-type", "create-monday-record"]
+    )
+    assert preview.command == "handoff-preview"
+    execute = parser.parse_args(
+        [
+            "handoff-execute",
+            "--case-id",
+            "case-1",
+            "--operation-type",
+            "create-monday-record",
+            "--confirm",
+            "--confirm-monday-write",
+        ]
+    )
+    assert execute.confirm is True
+    assert execute.confirm_monday_write is True

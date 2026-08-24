@@ -34,6 +34,7 @@ from master_sheet_writer import (
     load_master_sheet_write_config,
 )
 from referral_pipeline.monitoring.observer import record_lifecycle_event
+from referral_pipeline.persistence_policy import SyntheticPersistencePolicy
 
 Extractor = Callable[..., Any]
 
@@ -208,6 +209,9 @@ def process_inbound_pdf(
             "master_sheet_blocked": preview["blocked"],
             "master_sheet_blockers": preview["blockers"],
         },
+        allow_remote_persistence=SyntheticPersistencePolicy.from_environment().permits(
+            attachment.sha256
+        ),
     )
     return manifest
 

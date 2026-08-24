@@ -115,6 +115,45 @@ def test_response_processing_atomically_records_correction_and_duplicate(tmp_pat
     ) == "duplicate"
 
 
+def test_partner_contact_confirmation_cannot_enter_destination_write_queue(tmp_path) -> None:
+    store = ReviewStore(tmp_path / "state.sqlite")
+    store.add(
+        review_id="review_partner_contact",
+        token="internal-token",
+        recipient="reviewer@example.test",
+        artifact_digest="digest",
+        canonical_path="canonical.json",
+        intake_plan_path="plan.json",
+        monday_preview_path="monday.json",
+        drk_draft_path="drk.json",
+        source_message_id="source-message",
+        source_conversation_id="conversation-1",
+        purpose="partner_contact",
+        workflow_case_id="case-123",
+    )
+
+    result = store.process_response(
+        review_id="review_partner_contact",
+        message_id="reply-contacted",
+        sender="reviewer@example.test",
+        conversation_id="conversation-1",
+        received_at="2026-08-12T10:00:00+00:00",
+        text="Confirm",
+        intent="confirm",
+        classifier_source="local",
+        classifier_reason="exact confirmation",
+    )
+
+    review = store.get("review_partner_contact")
+    assert result == "partner_contact_confirmed"
+    assert review.status == "partner_contact_confirmed"
+    assert review.purpose == "partner_contact"
+    assert review.workflow_case_id == "case-123"
+    assert store.confirmed() == []
+    assert store.claim_for_monday_execution("review_partner_contact") == "wrong_purpose"
+    assert review.workflow_apply_status == "pending"
+
+
 def test_find_active_returns_reusable_review(tmp_path) -> None:
     store = ReviewStore(tmp_path / "state.sqlite")
     store.add(

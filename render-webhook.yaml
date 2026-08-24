@@ -1,0 +1,27 @@
+# Separate blueprint for the public webhook receiver. It is intentionally not
+# included in render.yaml until the callback URL and Monday subscription are
+# approved; importing this file never registers a webhook by itself.
+services:
+  - type: web
+    name: medical-referral-monday-webhook
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: PYTHONPATH=src python -m referral_pipeline.api.webhook_server
+    envVars:
+      - key: WORKFLOW_DATABASE_BACKEND
+        value: supabase
+      - key: INTAKE_DATA_ROOT
+        value: /var/data/intake
+      - key: MONDAY_WEBHOOK_BOARD_ID
+        value: "5815942462"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: MONDAY_DOT_COM_API_KEY
+        sync: false
+      - key: MONDAY_WEBHOOK_TOKEN
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
