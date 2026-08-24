@@ -172,3 +172,36 @@ def test_permanent_failure_is_preserved_until_explicit_requeue(tmp_path) -> None
     assert requeued.attempt_count == 0
     assert state.failed_count() == 0
     assert state.claim_job(attachment) is not None
+
+
+def test_requeue_preserves_options_until_explicit_refresh(tmp_path) -> None:
+    from Outlook.mail import InboundPdfAttachment
+
+    state = InboxState(tmp_path / "state.sqlite", random_source=lambda: 1.0, max_attempts=1)
+    attachment = InboundPdfAttachment(
+        "outlook-graph",
+        "message-1",
+        "attachment-1",
+        "referral.pdf",
+        b"%PDF-1.4\n",
+    )
+    pdf = tmp_path / "referral.pdf"
+    pdf.write_bytes(attachment.content)
+    state.enqueue(
+        attachment,
+        artifact_path=pdf,
+        options={"monday_mode": "disabled", "drk_duplicate_check": False, "workflow_database_backend": "sqlite"},
+    )
+    claimed = state.claim_job(attachment)
+    assert claimed is not None
+    state.mark_terminal_failure(claimed, error="temporary", error_kind="permanent")
+    requeued = state.requeue_failed(sha256=attachment.sha256)
+    assert requeued.options["monday_mode"] == "disabled"
+    assert requeued.options["drk_duplicate_check"] is False
+    refreshed = state.refresh_options(
+        sha256=attachment.sha256,
+        options={"monday_mode": "live-readonly", "drk_duplicate_check": True, "workflow_database_backend": "supabase"},
+    )
+    assert refreshed.options["monday_mode"] == "live-readonly"
+    assert refreshed.options["drk_duplicate_check"] is True
+    assert refreshed.options["workflow_database_backend"] == "sqlite"

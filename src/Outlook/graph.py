@@ -12,7 +12,7 @@ from urllib.parse import urlencode
 import requests
 from dotenv import load_dotenv
 
-from Outlook.mail import InboundPdfAttachment, is_pdf_file
+from Outlook.mail import InboundPdfAttachment, InboundPdfMetadata, is_pdf_file
 
 
 GRAPH_ROOT = "https://graph.microsoft.com/v1.0"
@@ -60,6 +60,7 @@ class OutlookGraphClient:
         *,
         max_messages: int = 25,
         include_attachment: Callable[[InboundPdfAttachment], bool] | None = None,
+        scan_past_ineligible: bool = True,
     ) -> list[InboundPdfAttachment]:
         """Return PDFs from the newest eligible referral emails.
 
@@ -76,17 +77,54 @@ class OutlookGraphClient:
             if not message.get("hasAttachments"):
                 continue
             pdfs = self._pdf_attachments_for_message(message)
+            if not pdfs:
+                continue
+            if not scan_past_ineligible:
+                eligible_messages += 1
             if include_attachment is not None:
                 pdfs = [attachment for attachment in pdfs if include_attachment(attachment)]
+            attachments.extend(pdfs)
+            if scan_past_ineligible and pdfs:
+                eligible_messages += 1
+            if eligible_messages >= max_messages:
+                break
+        # Selected batch is newest-first; process oldest-to-newest within the batch.
+        attachments.reverse()
+        return attachments
+
+    def list_inbox_pdf_metadata(self, *, max_messages: int = 25) -> list[InboundPdfMetadata]:
+        """Return PDF attachment metadata without downloading attachment bytes."""
+        if max_messages < 1:
+            raise ValueError("max_messages must be at least 1")
+
+        attachments: list[InboundPdfMetadata] = []
+        eligible_messages = 0
+        for message in self._iter_inbox_messages(limit=MAX_INBOX_SCAN):
+            if not message.get("hasAttachments"):
+                continue
+            pdfs = self._pdf_metadata_for_message(message)
             if not pdfs:
                 continue
             attachments.extend(pdfs)
             eligible_messages += 1
             if eligible_messages >= max_messages:
                 break
-        # Selected batch is newest-first; process oldest-to-newest within the batch.
-        attachments.reverse()
+        attachments.sort(key=lambda item: item.received_at or "", reverse=True)
         return attachments
+
+    def download_pdf_attachment(self, metadata: InboundPdfMetadata) -> InboundPdfAttachment:
+        """Download and signature-check one attachment selected from trusted metadata."""
+        matches = self._pdf_attachments_for_message(
+            {
+                "id": metadata.message_id,
+                "subject": metadata.subject,
+                "receivedDateTime": metadata.received_at,
+            }
+        )
+        for attachment in matches:
+            if attachment.attachment_id == metadata.attachment_id:
+                return attachment
+        raise OutlookGraphError("The selected PDF attachment is no longer available.", status_code=404)
 
     def _iter_inbox_messages(self, *, limit: int):
         """Yield inbox messages newest-first, following Graph pagination."""
@@ -152,6 +190,37 @@ class OutlookGraphClient:
                     subject=str(message.get("subject") or "") or None,
                     sender=_message_sender(message),
                     conversation_id=str(message.get("conversationId") or "") or None,
+                )
+            )
+        return accepted
+
+    def _pdf_metadata_for_message(self, message: dict[str, Any]) -> list[InboundPdfMetadata]:
+        message_id = str(message.get("id") or "")
+        if not message_id:
+            return []
+        query = urlencode({"$select": "id,name,contentType,size"})
+        payload = self._get(f"/users/{self.config.mailbox}/messages/{message_id}/attachments?{query}")
+        values = payload.get("value")
+        if not isinstance(values, list):
+            return []
+
+        accepted: list[InboundPdfMetadata] = []
+        for item in values:
+            if not isinstance(item, dict) or item.get("@odata.type") != "#microsoft.graph.fileAttachment":
+                continue
+            filename = str(item.get("name") or "")
+            if not filename.lower().endswith(".pdf"):
+                continue
+            raw_size = item.get("size")
+            accepted.append(
+                InboundPdfMetadata(
+                    message_id=message_id,
+                    attachment_id=str(item.get("id") or filename),
+                    filename=filename,
+                    received_at=str(message.get("receivedDateTime") or "") or None,
+                    subject=str(message.get("subject") or "") or None,
+                    sender=_message_sender(message),
+                    size=raw_size if isinstance(raw_size, int) else None,
                 )
             )
         return accepted

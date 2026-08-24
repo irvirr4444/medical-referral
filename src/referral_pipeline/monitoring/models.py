@@ -60,6 +60,105 @@ class WorkflowEvent(StrictModel):
     details: dict[str, Any] = Field(default_factory=dict)
 
 
+class WorkflowCase(StrictModel):
+    """Minimal cross-stage identity and current state for one referral."""
+
+    case_id: str
+    source_ref: str
+    source: Literal["outlook-graph", "eml-fixture"]
+    attachment_sha256: str | None = None
+    referral_id: str | None = None
+    patient_label: str | None = None
+    current_stage: int = Field(default=1, ge=1, le=7)
+    status: Literal[
+        "discovered",
+        "processing",
+        "awaiting_partner_contact",
+        "needs_attention",
+        "completed",
+        "failed",
+        "awaiting_assignment",
+        "awaiting_handoff",
+        "handoff_in_progress",
+        "handoff_blocked",
+    ]
+    source_received_at: datetime | None = None
+    monday_item_id: str | None = None
+    drk_patient_id: str | None = None
+    created_at: datetime
+    updated_at: datetime
+    completed_at: datetime | None = None
+    attention_due_at: datetime | None = None
+
+
+class WorkflowWorkItem(StrictModel):
+    """One operator-visible action, not a copy of a destination record."""
+
+    work_item_id: str
+    case_id: str
+    stage: int = Field(ge=2, le=7)
+    step_id: str
+    owner_role: Literal["case_manager", "intake_team", "system"]
+    status: Literal["waiting", "ready", "completed", "blocked", "failed"]
+    recommended_assignee: str | None = None
+    recommendation_reason: str | None = None
+    assigned_to: str | None = None
+    payload: dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime
+    updated_at: datetime
+    completed_at: datetime | None = None
+    due_at: datetime | None = None
+
+
+class WorkflowDecision(StrictModel):
+    """Append-only record of a person crossing a workflow gate."""
+
+    decision_id: str
+    idempotency_key: str
+    case_id: str
+    stage: int = Field(ge=2, le=7)
+    step_id: str
+    decision_type: str
+    selected_value: dict[str, Any]
+    decided_by: str
+    created_at: datetime
+
+
+class ExternalOperation(StrictModel):
+    """Independently retryable destination action."""
+
+    operation_id: str
+    idempotency_key: str
+    case_id: str
+    stage: int = Field(ge=2, le=7)
+    operation_type: str
+    status: Literal["ready", "running", "succeeded", "blocked", "failed", "uncertain"]
+    request_payload: dict[str, Any] = Field(default_factory=dict)
+    result: dict[str, Any] = Field(default_factory=dict)
+    attempts: int = Field(default=0, ge=0)
+    last_error: str | None = None
+    lease_until: datetime | None = None
+    claimed_by: str | None = None
+    created_at: datetime
+    updated_at: datetime
+    completed_at: datetime | None = None
+
+
+class OutboundAcknowledgement(StrictModel):
+    """Idempotency and delivery state for the one partner acknowledgement."""
+
+    case_id: str
+    recipient: str
+    payload_digest: str
+    status: Literal["pending", "sending", "sent", "failed"] = "pending"
+    attempts: int = Field(default=0, ge=0)
+    lease_until: datetime | None = None
+    sent_at: datetime | None = None
+    last_error: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
 class WorkflowException(StrictModel):
     exception_key: str
     exception_type: str
@@ -80,7 +179,7 @@ class NotificationRecord(StrictModel):
     body: str
     created_at: datetime
     status: Literal["pending", "sent", "failed"] = "pending"
-    attempts: int = 0
+    attempts: int = Field(default=0, ge=0)
     last_error: str | None = None
 
 
@@ -96,7 +195,7 @@ class PatientLink(StrictModel):
 class WorkflowCounter(StrictModel):
     entity_id: str
     counter_name: str
-    value: int
+    value: int = Field(ge=0)
     updated_at: datetime
 
 
@@ -105,7 +204,7 @@ class ComponentHealth(StrictModel):
     status: Literal["healthy", "degraded", "failed"]
     last_attempt_at: datetime
     last_success_at: datetime | None = None
-    consecutive_failures: int = 0
+    consecutive_failures: int = Field(default=0, ge=0)
     duration_seconds: float | None = None
     error_code: str | None = None
 

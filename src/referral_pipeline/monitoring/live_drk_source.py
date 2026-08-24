@@ -6,9 +6,8 @@ import time
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Protocol
+from typing import TYPE_CHECKING, Callable, Protocol
 
-from drk_emr.live_reader import DrkLiveReaderConfig, DrkPatientReader
 from referral_pipeline.monitoring.config import MonitoringConfig
 from referral_pipeline.monitoring.drk_capture import (
     DEFAULT_PROFILE_PATH,
@@ -53,7 +52,10 @@ class _Reader(Protocol):
     def read_patient(self, patient_id: str): ...
 
 
-ReaderFactory = Callable[[DrkLiveReaderConfig], _Reader]
+if TYPE_CHECKING:
+    from drk_emr.live_reader import DrkLiveReaderConfig
+
+ReaderFactory = Callable[["DrkLiveReaderConfig"], _Reader]
 
 
 def select_live_drk_targets(
@@ -106,6 +108,8 @@ def load_live_drk_snapshots(
     reader_config: DrkLiveReaderConfig | None = None,
     reader_factory: ReaderFactory | None = None,
 ) -> LiveDrkBatch:
+    from drk_emr.live_reader import DrkLiveReaderConfig, DrkPatientReader
+
     started = time.perf_counter()
     targets = select_live_drk_targets(
         monday_snapshots,

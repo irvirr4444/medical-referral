@@ -133,6 +133,18 @@ query ($boardId: ID!, $columns: [ItemsPageByColumnValuesQuery!]!, $limit: Int!) 
 }
 """
 
+ITEMS_BY_ID_QUERY = """
+query ($ids: [ID!]!) {
+  items(ids: $ids) {
+    id
+    name
+    updated_at
+    group { id title }
+    column_values { id text }
+  }
+}
+"""
+
 NAME_SEARCH_FIRST_PAGE_QUERY = """
 query ($boardIds: [ID!], $term: CompareValue!, $limit: Int!) {
   boards(ids: $boardIds) {
@@ -275,6 +287,30 @@ def fetch_items(
         cursor = page.get("cursor")
 
     return {key: value for key, value in board.items() if key != "items_page"}, items
+
+
+def fetch_items_by_ids(
+    *,
+    ids: list[str],
+    query_fn: QueryFn = monday_graphql,
+    api_version: str = DEFAULT_API_VERSION,
+    timeout_s: int = DEFAULT_TIMEOUT_S,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Fetch specific items by id.
+
+    Used by the webhook path to pull just the one row a column-change event
+    named, instead of the full-board scan fetch_items does.
+    """
+    if not ids:
+        raise ValueError("ids must not be empty")
+    response = query_fn(
+        ITEMS_BY_ID_QUERY,
+        variables={"ids": [str(item_id) for item_id in ids]},
+        api_version=api_version,
+        timeout_s=timeout_s,
+    )
+    items = list(response.get("data", {}).get("items") or [])
+    return {}, items
 
 
 def fetch_items_by_column_value(

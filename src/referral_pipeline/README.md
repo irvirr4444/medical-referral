@@ -21,18 +21,20 @@ Monday duplicate and agency checks
 Master Sheet preview
         |
         v
-Review reply on source thread and sender/thread-bound confirmation
+Internal review email with the extracted referral summary
         |
         v
-Monday/DRK confirmation dry run (destination writes disabled)
+Referral-partner outreach confirmation (destination writes disabled)
 ```
 
 The normal operator entry point is the repository-root `run_pipeline.py`. Intake
-does not write to Monday. The original sender can reply naturally (for example,
-`Confirm`); authorization remains deterministically bound to that sender, the
-Outlook conversation, a message newer than the review, and immutable JSON snapshots
-stored in Supabase. OpenAI classifies only ambiguous wording and cannot authorize a different
-sender or thread. Transient dependency failures are queued as `pending_retry`
+does not write to Monday. The configured internal reviewer receives the extracted
+summary, contacts the referral partner, and can reply naturally (for example,
+`Confirm`) to complete Referral Intake microstep 5. The response is bound to that
+reviewer, the Outlook conversation, and a message newer than the request. A partner-
+contact confirmation is stored separately from destination-write approvals and can
+never enter the Monday/DRK execution queue. OpenAI classifies only ambiguous wording.
+Transient dependency failures are queued as `pending_retry`
 instead of failing permanently.
 
 Supabase `referral_reviews` correlates each Outlook thread with the canonical
@@ -40,11 +42,52 @@ referral, intake plan, Monday preview, and DRK draft JSON. `review_responses`
 records one hashed, classified event per Outlook reply. The raw reply body remains
 in Outlook; the confirmation transition and response insert happen atomically.
 Both tables have RLS enabled and are accessed only with the backend service key.
+During synthetic testing, remote persistence is additionally restricted by the
+SHA-256 allowlist in `SYNTHETIC_DATASET_MANIFEST`. Unknown referrals fall back to
+local SQLite even when Supabase is configured; filenames are not trusted.
 
 ## Commands
 
-Process new Outlook PDF referrals, build destination drafts, and reply on each
-source thread to the original sender:
+Stage 1 can persist its case and microstep timeline in SQLite or Supabase. The
+partner acknowledgement and read-only DRK duplicate check are explicit opt-ins:
+
+```powershell
+python run_pipeline.py stage-one-doctor --live
+python run_pipeline.py outlook --max-messages 1 --monday-mode live-readonly --drk-duplicate-check --send-partner-acknowledgement --send-review
+python run_pipeline.py stage-one-email-preview --run tmp\inbox-runs\<timestamp>
+python run_pipeline.py inbox-api
+```
+
+Neither command writes to Monday or DRK. See
+[`docs/STAGE_ONE_INTAKE.md`](../../docs/STAGE_ONE_INTAKE.md) for schema setup,
+security boundaries, and continuous-worker settings.
+
+## Stages 2 and 3
+
+Apply `supabase/migrations/202608130002_create_workflow_execution.sql` before
+using Supabase for assignment or handoff state. It adds three shared execution
+tables: work items, human decisions, and idempotent external operations.
+
+After Stage 1 records a successful referral-partner contact outcome, the local
+API exposes the referral at `GET /api/workflow/assignments`. The Assignment page
+loads the configured case-manager roster and persists an explicit selection via
+`POST /api/workflow/assignments/{case_id}/confirm`. Live referrals do not receive
+a fabricated AI recommendation while WCW territory rules are unavailable.
+
+A confirmed assignment advances the case to Handoff and prepares three separate
+operations visible at `GET /api/workflow/handoffs`:
+
+- notify the assigned case manager
+- create the Monday.com record
+- open and prefill the DRK chart for employee review
+
+These operations initially have status `ready`. This implementation does not yet
+send the notification, write Monday.com, or submit DRK. Each destination will be
+connected behind its own idempotent action so one failure cannot repeat a
+successful write in another system.
+
+Process new Outlook PDF referrals, build destination drafts, and send the internal
+Stage 1 follow-up request:
 
 ```powershell
 python run_pipeline.py outlook --send-review
@@ -86,6 +129,31 @@ Workers never execute real Monday creates.
 
 Local one-shot commands (`outlook`, `retries`, `failures`, `approvals`) remain
 available for testing on any machine.
+
+## Local controllable Stage 1 service
+
+For an end-to-end testing infobox, run:
+
+```powershell
+python run_pipeline.py inbox-api
+```
+
+The Referral Intake UI can then start or stop one background worker. The controller
+prevents duplicate worker threads, publishes the active cycle and last result, and
+stops cooperatively after any in-flight PDF completes. It reuses the normal worker,
+attachment ledger, retry queue, Stage 1 event store, and review workflow.
+
+The testing controller is loopback-only and defaults to OFF after every service
+restart. Its worker sends the extracted summary and partner-contact request but cannot
+execute Monday or DRK writes. `REVIEW_RECIPIENT_EMAIL` must identify the internal reviewer before Start is
+accepted. To begin polling as soon as the local service starts, add `--start-monitor`.
+
+The API process is separate from the controlled worker. With monitoring OFF, the
+frontend still issues read-only inbox and monitor-status requests, so normal `GET`
+request logs continue in the API terminal. They do not poll Outlook or execute
+pipeline work. The DRK feed reports the check as disabled only when the API safety
+configuration explicitly disables it; enabled or unknown configuration remains
+queued, and persisted results remain visible.
 
 ## Workflow monitoring
 

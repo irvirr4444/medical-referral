@@ -44,7 +44,7 @@ def login_url_for(emr_url: str) -> str:
 
 def make_driver(profile_dir: Path, *, window_size: str = "1400,1100") -> webdriver.Chrome:
     options = ChromeOptions()
-    options.add_argument(f"--user-data-dir={profile_dir}")
+    options.add_argument(f"--user-data-dir={profile_dir.resolve()}")
     options.add_argument(f"--window-size={window_size}")
     options.add_argument("--no-first-run")
     options.add_argument("--disable-sync")

@@ -25,13 +25,16 @@ See [`.env.example`](.env.example). Put values in the **repo-root** `.env`.
 | `EMR_URL` | `string` (URL) | yes | EMR base or login URL, e.g. `https://drkemr.com` or `https://drkemr.com/Login/LoginView` |
 | `EMR_USERNAME` | `string` | yes | EMR login username |
 | `EMR_PASSWORD` | `string` | yes | EMR login password |
-| `TEST_PATIENT_NAME` | `string` | preferred | Patient display name for Dashboard search, e.g. `Alva Butler` |
+| `TEST_PATIENT_NAME` | `string` | preferred | Patient name; Last, First or First Last. Three-part names search the first two tokens. |
+| `TEST_PATIENT_DOB` | `string` | when search has multiple rows | DOB used to pick the correct dropdown row |
+| `TEST_PATIENT_PHONE` | `string` | optional | Phone used if DOB does not uniquely match |
+| `TEST_PATIENT_MRN` | `string` | optional | MRN used if name/DOB/phone are not unique |
 | `TEST_PATIENT_ID` | `string` | fallback | Numeric patient id if name is empty |
 
 ## What the script does
 
 1. Opens Chrome and logs in  
-2. On `/Dashboard`, clicks patient search, types `TEST_PATIENT_NAME`, clicks top match  
+2. On `/Dashboard`, searches given-name-first (three-part names use the first two tokens, e.g. `Anita Rodriguez Hernandez` → `Anita Rodriguez`), then opens the row that matches NAME / DOB / MRN / PHONE. It does not click the top match.
 3. Resolves `patientId` from the URL  
 4. Loads `/PatientDashboard/Index/?patientId=...`  
 5. Captures same-host `application/json` responses  

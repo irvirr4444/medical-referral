@@ -512,6 +512,51 @@ class InboxState:
             raise KeyError(f"No failed job found for sha256={digest}")
         return AttachmentJob(*row)
 
+    def refresh_options(self, *, sha256: str, options: dict[str, Any]) -> AttachmentJob:
+        """Replace stored operator flags for one job. Identity fields stay unchanged."""
+        from referral_pipeline.stage_one.recovery import merge_refreshed_options
+
+        digest = (sha256 or "").strip().lower()
+        if not digest:
+            raise ValueError("sha256 is required to refresh job options")
+        now = _iso(self._clock())
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT source, message_id, attachment_id, sha256, status, filename, subject, received_at,
+                       artifact_path, options_json, attempt_count, next_attempt_at, last_attempt_at,
+                       last_error, error_kind, lease_until, created_at, updated_at
+                FROM processed_attachments
+                WHERE sha256 = ?
+                """,
+                (digest,),
+            ).fetchone()
+            if row is None:
+                raise KeyError(f"No job found for sha256={digest}")
+            job = AttachmentJob(*row)
+            merged = merge_refreshed_options(job.options, options)
+            connection.execute(
+                """
+                UPDATE processed_attachments
+                SET options_json = ?, updated_at = ?
+                WHERE sha256 = ?
+                """,
+                (json.dumps(merged, sort_keys=True), now, digest),
+            )
+            row = connection.execute(
+                """
+                SELECT source, message_id, attachment_id, sha256, status, filename, subject, received_at,
+                       artifact_path, options_json, attempt_count, next_attempt_at, last_attempt_at,
+                       last_error, error_kind, lease_until, created_at, updated_at
+                FROM processed_attachments
+                WHERE sha256 = ?
+                """,
+                (digest,),
+            ).fetchone()
+        if row is None:
+            raise KeyError(f"No job found for sha256={digest}")
+        return AttachmentJob(*row)
+
     def get_job(self, attachment: InboundPdfAttachment) -> AttachmentJob | None:
         with self._connect() as connection:
             try:

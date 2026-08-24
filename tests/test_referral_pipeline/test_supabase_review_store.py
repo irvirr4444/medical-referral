@@ -82,8 +82,45 @@ def test_add_persists_correlated_json_snapshots() -> None:
     payload = session.calls[0][2]["json"]
     assert payload["recipient"] == "sender@example.test"
     assert payload["source_conversation_id"] == "conversation-1"
+    assert payload["review_purpose"] == "destination_write"
     assert payload["canonical_referral"]["patient"]["name"] == "Jane"
     assert review.monday_preview == {"blocked": False}
+
+
+def test_partner_contact_review_persists_scope_and_workflow_case() -> None:
+    session = Session(
+        [Response([_row(review_purpose="partner_contact", workflow_case_id="case-123")])]
+    )
+    store = SupabaseReviewStore(
+        url="https://project.supabase.co",
+        service_key="secret",
+        session=session,
+    )
+
+    review = store.add(
+        review_id="review-1",
+        token="unused",
+        recipient="reviewer@example.test",
+        artifact_digest="a" * 64,
+        canonical_path="canonical.json",
+        intake_plan_path="plan.json",
+        monday_preview_path="monday.json",
+        drk_draft_path="drk.json",
+        source_message_id="source-1",
+        source_conversation_id="conversation-1",
+        canonical_referral={},
+        intake_plan={},
+        monday_preview={},
+        drk_draft={},
+        purpose="partner_contact",
+        workflow_case_id="case-123",
+    )
+
+    payload = session.calls[0][2]["json"]
+    assert payload["review_purpose"] == "partner_contact"
+    assert payload["workflow_case_id"] == "case-123"
+    assert review.purpose == "partner_contact"
+    assert review.workflow_case_id == "case-123"
 
 
 def test_response_ledger_hashes_body_and_never_stores_raw_text() -> None:
