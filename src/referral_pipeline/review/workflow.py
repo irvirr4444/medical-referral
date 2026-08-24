@@ -11,11 +11,16 @@ from pathlib import Path
 from typing import Any, Callable
 
 from Outlook.review_mail import OutlookReviewMailbox
+from referral_pipeline.review.contact_outcome import classify_partner_contact
 from referral_pipeline.review.intent import IntentResult, classify_reply_intent
 from referral_pipeline.review.store import build_review_store
 from referral_pipeline.review.summary import render_review_email
 from referral_pipeline.monitoring.models import PatientLink, utc_now
 from referral_pipeline.monitoring.observer import record_lifecycle_event
+from referral_pipeline.monitoring.store import WorkflowStore, workflow_reads_existing_remote
+from referral_pipeline.persistence_policy import SyntheticPersistencePolicy
+from referral_pipeline.stage_one.tracker import StageOneTracker
+from referral_pipeline.workflow import WorkflowExecutionService
 
 
 class ReviewWorkflowError(RuntimeError):
@@ -29,6 +34,9 @@ def create_and_send_review(
     write_config_path: str | Path,
     state_db: str | Path,
     mailbox: OutlookReviewMailbox,
+    purpose: str = "destination_write",
+    workflow_case_id: str | None = None,
+    allow_supabase_store: bool | None = None,
 ) -> dict[str, Any]:
     recipient = recipient.strip()
     if not recipient:
@@ -48,11 +56,18 @@ def create_and_send_review(
     }
     digest = artifact_payload_digest(snapshots)
     entity_id = _workflow_entity_id(paths["canonical"], fallback_digest=digest)
-    store = build_review_store(state_db)
+    remote_persistence_allowed = SyntheticPersistencePolicy.from_environment().permits(
+        str(manifest.get("attachment_sha256") or "") or None
+    )
+    use_supabase = remote_persistence_allowed
+    if allow_supabase_store is not None:
+        use_supabase = use_supabase and allow_supabase_store
+    store = build_review_store(state_db, allow_supabase=use_supabase)
     existing = store.find_active(
         artifact_digest=digest,
         source_message_id=source_message_id,
         recipient=recipient,
+        purpose=purpose,
     )
     if existing is not None and (existing.email_html_body or existing.email_text_body or existing.email_body):
         subject = existing.email_subject or f"[WCW REFERRAL REVIEW] {existing.review_id}"
@@ -94,6 +109,7 @@ def create_and_send_review(
             source="outlook",
             event_key=f"review-requested:{review_id}",
             details={"review_id": review_id, "recipient": recipient, "status": review_status, "reused": True},
+            allow_remote_persistence=remote_persistence_allowed,
         )
         audit_path = _write_review_audit(
             paths["monday"].parent,
@@ -106,6 +122,7 @@ def create_and_send_review(
             text_body=text_body or "",
             content_type=content_type,
             reused=True,
+            purpose=purpose,
         )
         return {
             "review_id": review_id,
@@ -114,12 +131,13 @@ def create_and_send_review(
             "review_audit_path": str(audit_path),
             "review_reused": True,
             "review_content_type": content_type,
+            "review_purpose": purpose,
         }
 
     review_id = f"review_{digest[:12]}_{secrets.token_hex(3)}"
     token = secrets.token_urlsafe(18)
     preview = snapshots["monday"]
-    approval_allowed = not bool(preview.get("blocked"))
+    approval_allowed = purpose == "partner_contact" or not bool(preview.get("blocked"))
     review_status = "awaiting_confirmation" if approval_allowed else "needs_correction"
     email = render_review_email(
         review_id=review_id,
@@ -130,6 +148,7 @@ def create_and_send_review(
         drk_draft_path=paths["drk"],
         write_config_path=write_config_path,
         approval_allowed=approval_allowed,
+        purpose=purpose,
     )
     store.add(
         review_id=review_id,
@@ -148,6 +167,8 @@ def create_and_send_review(
         monday_preview=snapshots["monday"],
         drk_draft=snapshots["drk"],
         status=review_status,
+        purpose=purpose,
+        workflow_case_id=workflow_case_id,
         email_subject=email.subject,
         email_html_body=email.html_body,
         email_text_body=email.text_body,
@@ -179,6 +200,7 @@ def create_and_send_review(
         source="outlook",
         event_key=f"review-requested:{review_id}",
         details={"review_id": review_id, "recipient": recipient, "status": review_status, "reused": False},
+        allow_remote_persistence=remote_persistence_allowed,
     )
 
     audit_path = _write_review_audit(
@@ -192,6 +214,7 @@ def create_and_send_review(
         text_body=email.text_body,
         content_type=email.content_type,
         reused=False,
+        purpose=purpose,
     )
     return {
         "review_id": review_id,
@@ -200,6 +223,7 @@ def create_and_send_review(
         "review_audit_path": str(audit_path),
         "review_reused": False,
         "review_content_type": email.content_type,
+        "review_purpose": purpose,
     }
 
 
@@ -215,6 +239,7 @@ def _write_review_audit(
     text_body: str,
     content_type: str,
     reused: bool,
+    purpose: str,
 ) -> Path:
     audit_path = output_dir / "review-request.json"
     text_path = output_dir / "review-email.txt"
@@ -231,6 +256,7 @@ def _write_review_audit(
                 "artifact_digest": artifact_digest,
                 "subject": subject,
                 "content_type": content_type,
+                "purpose": purpose,
                 "email_path": str(text_path),
                 "html_email_path": str(html_path) if html_body else None,
                 "reused": reused,
@@ -250,11 +276,33 @@ class ApprovalProcessor:
         state_db: str | Path,
         mailbox: OutlookReviewMailbox,
         intent_classifier: Callable[[str], IntentResult] = classify_reply_intent,
+        workflow_store: WorkflowStore | None = None,
+        allow_supabase_store: bool = True,
     ) -> None:
         self.state_db = Path(state_db)
-        self.store = build_review_store(state_db)
+        self.store = build_review_store(state_db, allow_supabase=False)
+        remote = build_review_store(state_db, allow_supabase=True) if allow_supabase_store else self.store
+        if (
+            allow_supabase_store
+            and type(remote) is type(self.store)
+            and workflow_reads_existing_remote()
+        ):
+            from referral_pipeline.review.supabase_store import SupabaseReviewStore
+
+            try:
+                remote = SupabaseReviewStore.from_environment() or self.store
+            except Exception:
+                remote = self.store
+        self._remote_store = None if type(remote) is type(self.store) else remote
         self.mailbox = mailbox
         self.intent_classifier = intent_classifier
+        self.workflow_store = workflow_store
+
+    def _review_stores(self) -> list[Any]:
+        stores = [self.store]
+        if self._remote_store is not None:
+            stores.append(self._remote_store)
+        return stores
 
     def poll(
         self,
@@ -266,19 +314,108 @@ class ApprovalProcessor:
         if execute and dry_run:
             raise ReviewWorkflowError("execute and dry_run modes are mutually exclusive")
         accepted: list[str] = []
+        partner_contacts: list[str] = []
+        partner_contact_outcomes: list[dict[str, str]] = []
         corrections: list[str] = []
         unclear: list[str] = []
         duplicates: list[str] = []
         ignored: list[dict[str, str]] = []
-        for reply in self.mailbox.list_replies(max_messages=max_messages):
-            if self.store.response_exists(reply.message_id):
+        replies = self.mailbox.list_replies(max_messages=max_messages)
+        remote_errors: list[str] = []
+        for store in self._review_stores():
+            try:
+                self._ingest_replies(
+                    store,
+                    replies,
+                    accepted=accepted,
+                    partner_contacts=partner_contacts,
+                    partner_contact_outcomes=partner_contact_outcomes,
+                    corrections=corrections,
+                    unclear=unclear,
+                    duplicates=duplicates,
+                    ignored=ignored,
+                )
+            except Exception as error:  # noqa: BLE001 - keep local confirmation durable
+                if store is self.store:
+                    raise
+                remote_errors.append(str(error))
+        workflow_applies: list[dict[str, Any]] = []
+        for store in self._review_stores():
+            try:
+                workflow_applies.extend(self._apply_pending_partner_contacts(store))
+            except Exception as error:  # noqa: BLE001
+                if store is self.store:
+                    raise
+                remote_errors.append(str(error))
+        applied: list[dict[str, Any]] = []
+        if dry_run or execute:
+            original_store = self.store
+            try:
+                for store in self._review_stores():
+                    self.store = store
+                    for review in store.confirmed():
+                        if dry_run and review.status == "dry_run_completed":
+                            continue
+                        try:
+                            if dry_run:
+                                applied.append(self._dry_run(review.review_id))
+                            else:
+                                applied.append(self._execute(review.review_id))
+                        except Exception as error:
+                            if dry_run:
+                                store.record_dry_run_failure(
+                                    review.review_id,
+                                    error=str(error),
+                                )
+                            else:
+                                store.mark_failed(review.review_id, error=str(error))
+                            applied.append(
+                                {
+                                    "review_id": review.review_id,
+                                    "status": "failed",
+                                    "error": str(error),
+                                    "writes_performed": False,
+                                }
+                            )
+            finally:
+                self.store = original_store
+        return {
+            "mode": "execute" if execute else ("dry_run" if dry_run else "check_only"),
+            "writes_attempted": bool(execute),
+            "accepted_confirmations": accepted,
+            "partner_contact_confirmations": partner_contacts,
+            "partner_contact_outcomes": partner_contact_outcomes,
+            "correction_or_denial_reviews": corrections,
+            "unclear_reviews": unclear,
+            "duplicate_response_messages": duplicates,
+            "ignored_confirmations": ignored,
+            "workflow_applies": workflow_applies,
+            "remote_store_errors": remote_errors,
+            "executed": applied,
+        }
+
+    def _ingest_replies(
+        self,
+        store: Any,
+        replies: list[Any],
+        *,
+        accepted: list[str],
+        partner_contacts: list[str],
+        partner_contact_outcomes: list[dict[str, str]],
+        corrections: list[str],
+        unclear: list[str],
+        duplicates: list[str],
+        ignored: list[dict[str, str]],
+    ) -> None:
+        for reply in replies:
+            if store.response_exists(reply.message_id):
                 duplicates.append(reply.message_id)
                 continue
             conversation_id = (reply.conversation_id or "").strip()
             if not conversation_id:
                 ignored.append({"message_id": reply.message_id, "reason": "missing_conversation_id"})
                 continue
-            review = self.store.find_confirmable_for_reply(
+            review = store.find_confirmable_for_reply(
                 sender=reply.sender,
                 conversation_id=conversation_id,
             )
@@ -296,8 +433,16 @@ class ApprovalProcessor:
                 )
                 continue
 
-            intent = self.intent_classifier(reply.text)
-            response_result = self.store.process_response(
+            contact = (
+                classify_partner_contact(
+                    reply.text,
+                    intent_classifier=self.intent_classifier,
+                )
+                if review.purpose == "partner_contact"
+                else None
+            )
+            intent = contact.intent if contact is not None else self.intent_classifier(reply.text)
+            response_result = store.process_response(
                 review_id=review.review_id,
                 message_id=reply.message_id,
                 sender=reply.sender,
@@ -311,10 +456,30 @@ class ApprovalProcessor:
             if response_result == "duplicate":
                 duplicates.append(reply.message_id)
                 continue
-            if response_result == "confirmed":
-                accepted.append(review.review_id)
+            if response_result in {"confirmed", "partner_contact_confirmed"}:
+                if response_result == "partner_contact_confirmed":
+                    partner_contacts.append(review.review_id)
+                    outcome = contact.outcome if contact is not None else "reached"
+                    partner_contact_outcomes.append(
+                        {
+                            "review_id": review.review_id,
+                            "outcome": outcome,
+                        }
+                    )
+                    store.set_partner_contact_context(
+                        review.review_id,
+                        outcome=outcome,
+                        sender=reply.sender,
+                        message_id=reply.message_id,
+                    )
+                else:
+                    accepted.append(review.review_id)
                 record_lifecycle_event(
-                    "review_confirmed",
+                    (
+                        "partner_contact_confirmed"
+                        if response_result == "partner_contact_confirmed"
+                        else "review_confirmed"
+                    ),
                     entity_id=_workflow_entity_id(
                         Path(review.canonical_path),
                         fallback_digest=review.artifact_digest,
@@ -324,7 +489,13 @@ class ApprovalProcessor:
                     details={
                         "review_id": review.review_id,
                         "confirmation_message_id": reply.message_id,
+                        **(
+                            {"contact_outcome": contact.outcome}
+                            if contact is not None and contact.outcome is not None
+                            else {}
+                        ),
                     },
+                    allow_remote_persistence=_review_allows_remote_persistence(review),
                 )
             elif response_result == "needs_correction":
                 corrections.append(review.review_id)
@@ -341,42 +512,59 @@ class ApprovalProcessor:
                     {"message_id": reply.message_id, "reason": response_result}
                 )
 
+    def _apply_pending_partner_contacts(self, store: Any) -> list[dict[str, Any]]:
         applied: list[dict[str, Any]] = []
-        if dry_run or execute:
-            for review in self.store.confirmed():
-                if dry_run and review.status == "dry_run_completed":
-                    continue
-                try:
-                    if dry_run:
-                        applied.append(self._dry_run(review.review_id))
-                    else:
-                        applied.append(self._execute(review.review_id))
-                except Exception as error:
-                    if dry_run:
-                        self.store.record_dry_run_failure(
-                            review.review_id,
-                            error=str(error),
-                        )
-                    else:
-                        self.store.mark_failed(review.review_id, error=str(error))
-                    applied.append(
-                        {
-                            "review_id": review.review_id,
-                            "status": "failed",
-                            "error": str(error),
-                            "writes_performed": False,
-                        }
-                    )
-        return {
-            "mode": "execute" if execute else ("dry_run" if dry_run else "check_only"),
-            "writes_attempted": bool(execute),
-            "accepted_confirmations": accepted,
-            "correction_or_denial_reviews": corrections,
-            "unclear_reviews": unclear,
-            "duplicate_response_messages": duplicates,
-            "ignored_confirmations": ignored,
-            "executed": applied,
-        }
+        for review in store.pending_workflow_applies():
+            result = self._apply_partner_contact(store, review)
+            applied.append(result)
+        return applied
+
+    def _apply_partner_contact(self, store: Any, review: Any) -> dict[str, Any]:
+        context = review.last_dry_run_result if isinstance(review.last_dry_run_result, dict) else {}
+        outcome = str(context.get("contact_outcome") or "reached")
+        sender = str(context.get("confirmed_by") or review.recipient)
+        message_id = str(
+            context.get("confirmation_message_id")
+            or getattr(review, "source_message_id", "")
+            or ""
+        )
+        try:
+            if self.workflow_store is None:
+                raise ReviewWorkflowError(
+                    "workflow store is required to apply a partner-contact confirmation"
+                )
+            if not review.workflow_case_id:
+                raise ReviewWorkflowError(
+                    "workflow_case_id is required to apply a partner-contact confirmation"
+                )
+            completed_case = StageOneTracker(self.workflow_store).partner_contact_confirmed(
+                review.workflow_case_id,
+                confirmed_by=sender,
+                message_id=message_id,
+                outcome=outcome,
+            )
+            if completed_case is None:
+                raise ReviewWorkflowError(
+                    f"workflow case {review.workflow_case_id} was not found for confirmation apply"
+                )
+            service = WorkflowExecutionService(self.workflow_store)
+            service.start_assignment(completed_case.case_id, contact_outcome=outcome)
+            stored = self.workflow_store.workflow_case(completed_case.case_id)
+            items = self.workflow_store.list_work_items(case_id=completed_case.case_id, stage=2)
+            if stored is None or stored.current_stage < 2 or not items:
+                raise ReviewWorkflowError(
+                    "Stage 2 assignment state was not created after partner-contact confirmation"
+                )
+            store.mark_workflow_apply(review.review_id, status="applied")
+            return {"review_id": review.review_id, "status": "applied", "outcome": outcome}
+        except Exception as error:  # noqa: BLE001 - durable apply retries later
+            store.mark_workflow_apply(review.review_id, status="failed", error=str(error))
+            return {
+                "review_id": review.review_id,
+                "status": "failed",
+                "error": str(error),
+                "outcome": outcome,
+            }
 
     def _dry_run(self, review_id: str) -> dict[str, Any]:
         review = self.store.get(review_id)
@@ -559,6 +747,7 @@ class ApprovalProcessor:
                 patient_label=str(preview.get("item_name") or "") or None,
                 updated_at=utc_now(),
             ),
+            allow_remote_persistence=_review_allows_remote_persistence(review),
         )
         record_lifecycle_event(
             "drk_handoff_created",
@@ -566,6 +755,7 @@ class ApprovalProcessor:
             source="drk",
             event_key=f"drk-handoff:{review_id}",
             details={"review_id": review_id, "status": "pending_guarded_drk_execution"},
+            allow_remote_persistence=_review_allows_remote_persistence(review),
         )
         return {
             "review_id": review_id,
@@ -588,6 +778,12 @@ def artifact_digest(paths: Any) -> str:
         digest.update(path.read_bytes())
         digest.update(b"\0")
     return digest.hexdigest()
+
+
+def _review_allows_remote_persistence(review: Any) -> bool:
+    return SyntheticPersistencePolicy.from_environment().permits(
+        getattr(review, "source_attachment_sha256", None)
+    )
 
 
 def artifact_payload_digest(snapshots: dict[str, dict[str, Any]]) -> str:

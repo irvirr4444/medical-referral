@@ -16,7 +16,9 @@ REVIEW_SELECT = """
     SELECT review_id, recipient, status, artifact_digest, canonical_path,
            intake_plan_path, monday_preview_path, drk_draft_path, source_message_id,
            source_conversation_id, created_at, monday_item_id, drk_status, email_subject, email_body,
-           email_html_body, email_text_body, email_content_type, last_dry_run_at, last_dry_run_result
+           email_html_body, email_text_body, email_content_type, last_dry_run_at, last_dry_run_result,
+           review_purpose, workflow_case_id, workflow_apply_status, workflow_apply_attempts,
+           workflow_apply_last_error
     FROM referral_reviews
 """
 
@@ -87,6 +89,8 @@ class ReviewStore:
         monday_preview: dict | None = None,
         drk_draft: dict | None = None,
         status: str = "awaiting_confirmation",
+        purpose: str = "destination_write",
+        workflow_case_id: str | None = None,
         email_subject: str | None = None,
         email_body: str | None = None,
         email_html_body: str | None = None,
@@ -112,8 +116,9 @@ class ReviewStore:
                     review_id, recipient, status, token_hash, artifact_digest,
                     canonical_path, intake_plan_path, monday_preview_path, drk_draft_path,
                     source_message_id, source_conversation_id, created_at, email_subject, email_body,
-                    email_html_body, email_text_body, email_content_type
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    email_html_body, email_text_body, email_content_type, review_purpose,
+                    workflow_case_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     review_id,
@@ -133,6 +138,8 @@ class ReviewStore:
                     html_body,
                     text_body,
                     content_type,
+                    purpose,
+                    workflow_case_id,
                 ),
             )
         return self.get(review_id)
@@ -143,12 +150,14 @@ class ReviewStore:
         artifact_digest: str,
         source_message_id: str,
         recipient: str,
+        purpose: str = "destination_write",
     ) -> ReviewRequest | None:
         with self._connect() as connection:
             row = connection.execute(
                 REVIEW_SELECT
                 + """
                 WHERE artifact_digest = ? AND source_message_id = ? AND recipient = ?
+                  AND review_purpose = ?
                   AND status IN (?, ?, ?)
                 ORDER BY created_at DESC
                 LIMIT 1
@@ -157,6 +166,7 @@ class ReviewStore:
                     artifact_digest,
                     source_message_id,
                     recipient.casefold(),
+                    purpose,
                     "awaiting_confirmation",
                     "needs_correction",
                     "review_send_failed",
@@ -210,15 +220,17 @@ class ReviewStore:
         with self._connect() as connection:
             row = connection.execute(
                 """
-                SELECT recipient, token_hash, status FROM referral_reviews
+                SELECT recipient, token_hash, status, review_purpose FROM referral_reviews
                 WHERE review_id = ?
                 """,
                 (review_id,),
             ).fetchone()
             if row is None:
                 return False
-            recipient, expected_hash, status = row
+            recipient, expected_hash, status, purpose = row
             if status not in CONFIRMABLE_STATUSES:
+                return False
+            if purpose != "destination_write":
                 return False
             if str(recipient).casefold() != sender.casefold():
                 return False
@@ -230,6 +242,7 @@ class ReviewStore:
                     UPDATE referral_reviews
                     SET status = 'confirmed', confirmed_at = ?, confirmation_message_id = ?
                     WHERE review_id = ? AND status = 'awaiting_confirmation'
+                      AND review_purpose = 'destination_write'
                     """,
                     (_now(), message_id, review_id),
                 )
@@ -328,7 +341,7 @@ class ReviewStore:
                 return "duplicate"
             row = connection.execute(
                 """
-                SELECT status FROM referral_reviews
+                SELECT status, review_purpose FROM referral_reviews
                 WHERE review_id = ? AND recipient = ? AND source_conversation_id = ?
                 """,
                 (review_id, sender.casefold(), conversation_id),
@@ -337,6 +350,7 @@ class ReviewStore:
                 return "no_matching_review"
             if row[0] != "awaiting_confirmation":
                 return "review_state_changed"
+            purpose = str(row[1] or "destination_write")
             connection.execute(
                 """
                 INSERT INTO review_responses (
@@ -359,16 +373,24 @@ class ReviewStore:
                 ),
             )
             if intent == "confirm":
+                confirmed_status = (
+                    "partner_contact_confirmed"
+                    if purpose == "partner_contact"
+                    else "confirmed"
+                )
+                apply_status = "pending" if purpose == "partner_contact" else "not_required"
                 connection.execute(
                     """
                     UPDATE referral_reviews
-                    SET status = 'confirmed', confirmed_at = ?,
-                        confirmation_message_id = ?, error = NULL
+                    SET status = ?, confirmed_at = ?,
+                        confirmation_message_id = ?, error = NULL,
+                        workflow_apply_status = COALESCE(workflow_apply_status, ?),
+                        workflow_apply_attempts = COALESCE(workflow_apply_attempts, 0)
                     WHERE review_id = ?
                     """,
-                    (_now(), message_id, review_id),
+                    (confirmed_status, _now(), message_id, apply_status, review_id),
                 )
-                return "confirmed"
+                return confirmed_status
             if intent == "correction":
                 connection.execute(
                     """
@@ -397,6 +419,7 @@ class ReviewStore:
                     UPDATE referral_reviews
                     SET status = 'confirmed', confirmed_at = ?, confirmation_message_id = ?
                     WHERE review_id = ? AND status = 'awaiting_confirmation'
+                      AND review_purpose = 'destination_write'
                       AND recipient = ? AND source_conversation_id = ?
                     """,
                     (_now(), message_id, review_id, sender.casefold(), conversation_id),
@@ -469,12 +492,14 @@ class ReviewStore:
     def claim_for_monday_execution(self, review_id: str) -> str:
         with self._connect() as connection:
             row = connection.execute(
-                "SELECT status FROM referral_reviews WHERE review_id = ?",
+                "SELECT status, review_purpose FROM referral_reviews WHERE review_id = ?",
                 (review_id,),
             ).fetchone()
             if row is None:
                 return "missing"
-            status = row[0]
+            status, purpose = row
+            if purpose != "destination_write":
+                return "wrong_purpose"
             if status == "applying_monday":
                 return "already_claiming"
             if status == "monday_applied_drk_pending":
@@ -485,7 +510,8 @@ class ReviewStore:
                 """
                 UPDATE referral_reviews
                 SET status = 'applying_monday', error = NULL
-                WHERE review_id = ? AND status IN ('confirmed', 'dry_run_completed')
+                WHERE review_id = ? AND review_purpose = 'destination_write'
+                  AND status IN ('confirmed', 'dry_run_completed')
                 """,
                 (review_id,),
             )
@@ -507,9 +533,88 @@ class ReviewStore:
         with self._connect() as connection:
             rows = connection.execute(
                 REVIEW_SELECT
-                + " WHERE status IN ('confirmed', 'dry_run_completed') ORDER BY created_at"
+                + " WHERE review_purpose = 'destination_write' "
+                  "AND status IN ('confirmed', 'dry_run_completed') ORDER BY created_at"
             ).fetchall()
         return [_row_to_request(row) for row in rows]
+
+    def pending_workflow_applies(self) -> list[ReviewRequest]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                REVIEW_SELECT
+                + """
+                WHERE review_purpose = 'partner_contact'
+                  AND status = 'partner_contact_confirmed'
+                  AND COALESCE(workflow_apply_status, 'pending') IN ('pending', 'failed')
+                ORDER BY created_at
+                """
+            ).fetchall()
+        return [_row_to_request(row) for row in rows]
+
+    def mark_workflow_apply(
+        self,
+        review_id: str,
+        *,
+        status: str,
+        error: str | None = None,
+    ) -> None:
+        if status not in {"pending", "applied", "failed", "not_required"}:
+            raise ValueError("invalid workflow apply status")
+        with self._connect() as connection:
+            if status == "failed":
+                connection.execute(
+                    """
+                    UPDATE referral_reviews
+                    SET workflow_apply_status = ?,
+                        workflow_apply_attempts = COALESCE(workflow_apply_attempts, 0) + 1,
+                        workflow_apply_last_error = ?
+                    WHERE review_id = ?
+                    """,
+                    (status, error, review_id),
+                )
+                return
+            connection.execute(
+                """
+                UPDATE referral_reviews
+                SET workflow_apply_status = ?,
+                    workflow_apply_attempts = CASE
+                        WHEN ? = 'applied' THEN COALESCE(workflow_apply_attempts, 0) + 1
+                        ELSE COALESCE(workflow_apply_attempts, 0)
+                    END,
+                    workflow_apply_last_error = ?
+                WHERE review_id = ?
+                """,
+                (status, status, error, review_id),
+            )
+
+    def set_partner_contact_context(
+        self,
+        review_id: str,
+        *,
+        outcome: str,
+        sender: str,
+        message_id: str,
+    ) -> None:
+        import json
+
+        with self._connect() as connection:
+            connection.execute(
+                """
+                UPDATE referral_reviews
+                SET last_dry_run_result = ?
+                WHERE review_id = ?
+                """,
+                (
+                    json.dumps(
+                        {
+                            "contact_outcome": outcome,
+                            "confirmed_by": sender,
+                            "confirmation_message_id": message_id,
+                        }
+                    ),
+                    review_id,
+                ),
+            )
 
     def mark_monday_applied(self, review_id: str, *, item_id: str, drk_status: str) -> None:
         with self._connect() as connection:
@@ -545,6 +650,11 @@ class ReviewStore:
             "source_conversation_id": "TEXT",
             "last_dry_run_at": "TEXT",
             "last_dry_run_result": "TEXT",
+            "review_purpose": "TEXT NOT NULL DEFAULT 'destination_write'",
+            "workflow_case_id": "TEXT",
+            "workflow_apply_status": "TEXT",
+            "workflow_apply_attempts": "INTEGER NOT NULL DEFAULT 0",
+            "workflow_apply_last_error": "TEXT",
         }
         for name, declaration in additions.items():
             if name not in columns:
@@ -592,6 +702,11 @@ def _row_to_request(row: tuple) -> ReviewRequest:
         email_content_type=row[17],
         last_dry_run_at=row[18] if len(row) > 18 else None,
         last_dry_run_result=dry_run_result,
+        purpose=str(row[20] or "destination_write") if len(row) > 20 else "destination_write",
+        workflow_case_id=str(row[21]) if len(row) > 21 and row[21] else None,
+        workflow_apply_status=str(row[22]) if len(row) > 22 and row[22] else None,
+        workflow_apply_attempts=int(row[23] or 0) if len(row) > 23 else 0,
+        workflow_apply_last_error=str(row[24]) if len(row) > 24 and row[24] else None,
     )
 
 
@@ -609,12 +724,12 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def build_review_store(path: str | Path):
+def build_review_store(path: str | Path, *, allow_supabase: bool = True):
     """Use Supabase when configured; retain SQLite for offline tests and tools."""
     from referral_pipeline.review.supabase_store import SupabaseReviewStore
 
     backend = os.getenv("REFERRAL_REVIEW_STORE", "").strip().casefold()
-    if backend == "sqlite":
+    if backend == "sqlite" or not allow_supabase:
         return ReviewStore(path)
     supabase = SupabaseReviewStore.from_environment()
     if backend == "supabase" and supabase is None:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -267,7 +268,9 @@ def test_write_duplicate_check_audit_uses_restricted_permissions(tmp_path: Path)
     decision = evaluate_duplicate_snapshot(_snapshot(result_count=0, row_count=0), _payload())
     path = write_duplicate_check_audit(tmp_path / "drk-duplicate-check.json", decision)
     assert path.is_file()
-    assert (path.stat().st_mode & 0o777) == 0o600
+    if os.name != "nt":
+        # Windows ACLs are not represented as POSIX 0600 mode bits by pathlib.
+        assert (path.stat().st_mode & 0o777) == 0o600
     payload = json.loads(path.read_text(encoding="utf-8"))
     assert payload["status"] == "clear_to_create"
 

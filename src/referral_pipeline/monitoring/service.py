@@ -197,8 +197,26 @@ class WorkflowMonitoringService:
         return int(created), queued
 
     def _resolve_entity(self, snapshot: OperationalSnapshot) -> OperationalSnapshot:
+        """Attach this snapshot to the Stage 1-3 case it belongs to, if any.
+
+        wcw_workflow_cases.monday_item_id / .drk_patient_id are already the
+        real link (written during the Stage 3 handoff), so a case lookup by
+        either one is tried first -- when it hits, every downstream event and
+        exception for this snapshot lands on the same case_id Stages 1-3
+        already use, instead of a synthetic identity the rest of the app
+        never sees. The older patient-links bridge stays as a fallback only
+        for snapshots that don't match an existing case (e.g. a Monday row
+        this pipeline never created).
+        """
         if snapshot.referral_id:
             return snapshot
+        case = None
+        if snapshot.monday_item_id:
+            case = self.store.workflow_case_by_monday_item_id(snapshot.monday_item_id)
+        if case is None and snapshot.drk_patient_id:
+            case = self.store.workflow_case_by_drk_patient_id(snapshot.drk_patient_id)
+        if case is not None:
+            return snapshot.model_copy(update={"referral_id": case.case_id})
         entity_id = self.store.find_entity_id(
             monday_item_id=snapshot.monday_item_id,
             drk_patient_id=snapshot.drk_patient_id,

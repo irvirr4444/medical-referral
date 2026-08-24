@@ -11,6 +11,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Callable, Literal, Sequence
@@ -32,6 +33,17 @@ DEFAULT_EFFORT = "max"
 DEFAULT_PDF_TRANSPORT = "files-api"
 MAX_INLINE_PDF_BYTES = 23 * 1024 * 1024
 FILES_API_BETA = "files-api-2025-04-14"
+CLINICAL_SUMMARY_MAX_CHARS = 240
+_WOUND_TERMS = (
+    "pressure ulcer",
+    "pressure injury",
+    "wound",
+    "ulcer",
+    "cellulitis",
+)
+_FORM_CHROME_CLAUSE = re.compile(
+    r"(?i)^(type of care needed|care needed|care type|service(?:s)? needed)\b"
+)
 FieldStatus = Literal["present", "explicitly_none", "missing", "unclear"]
 Confidence = Literal["high", "medium", "low"]
 
@@ -161,7 +173,16 @@ class CanonicalAllergy(StrictModel):
 
 
 class CanonicalClinical(StrictModel):
-    summary: str | None = None
+    summary: str | None = Field(
+        default=None,
+        max_length=CLINICAL_SUMMARY_MAX_CHARS,
+        description=(
+            "One short wound or reason-for-referral line copied from the PDF "
+            "(wound type, site, and stage). Include an ICD code only when the PDF "
+            "prints it. Do not write hospital course, care team, start-of-care dates, "
+            "or non-wound comorbidity lists."
+        ),
+    )
     wound_order_included: bool | None = None
     diagnoses: list[CanonicalDiagnosis] = Field(default_factory=list)
     medications: list[CanonicalMedication] = Field(default_factory=list)
@@ -232,7 +253,7 @@ Accuracy rules:
 - Do not infer insurance order from display order.
 - An empty section means missing unless the PDF explicitly says none/NKA/NKDA.
 - Dates should be ISO YYYY-MM-DD when unambiguous; otherwise preserve the source text.
-- Clinical summary must describe the current referral reason without unsupported medical interpretation.
+- Clinical summary is one short wound or reason-for-referral line copied from the PDF (wound type, site, and stage). Include an ICD code only when the PDF prints it. Do not write hospital course, care team, start-of-care dates, or a comorbidity dump.
 - field_quality keys are dot paths. Use present, explicitly_none, missing, or unclear. Include direct
   one-indexed evidence pages for present/explicitly_none values and calibrated confidence.
 - At minimum assess: patient.name, patient.date_of_birth, patient.phones, patient.address,
@@ -523,7 +544,165 @@ def extract_referral_pdf(
             if progress:
                 progress("Deleted temporary Anthropic Files API upload")
 
+def _contains_wound_term(text: str) -> bool:
+    haystack = text.lower()
+    return any(re.search(rf"\b{re.escape(term)}\b", haystack) for term in _WOUND_TERMS)
+
+
+def _is_wound_diagnosis(item: CanonicalDiagnosis) -> bool:
+    haystack = " ".join(part for part in (item.code, item.description) if part)
+    return bool(haystack) and _contains_wound_term(haystack)
+
+
+def _render_wound_line(item: CanonicalDiagnosis) -> str | None:
+    code = (item.code or "").strip() or None
+    description = (item.description or "").strip() or None
+    if code and description:
+        return f"{code} {description}"
+    return description or code
+
+
+def _is_narrative(text: str) -> bool:
+    cleaned = " ".join(text.split())
+    if not cleaned:
+        return False
+    if len(cleaned) > CLINICAL_SUMMARY_MAX_CHARS:
+        return True
+    sentences = [part.strip() for part in re.split(r"(?<=[.!?])\s+", cleaned) if part.strip()]
+    return len(sentences) > 1
+
+
+def _truncate_reason(text: str) -> str | None:
+    cleaned = " ".join(text.split())
+    if not cleaned:
+        return None
+    sentences = [part.strip() for part in re.split(r"(?<=[.!?])\s+", cleaned) if part.strip()]
+    shortened = sentences[0] if sentences else cleaned
+    if len(shortened) <= CLINICAL_SUMMARY_MAX_CHARS:
+        return shortened
+    boundary = shortened.rfind(" ", 0, CLINICAL_SUMMARY_MAX_CHARS)
+    cutoff = boundary if boundary > CLINICAL_SUMMARY_MAX_CHARS // 2 else CLINICAL_SUMMARY_MAX_CHARS
+    return shortened[:cutoff].rstrip(" ,;:-") or None
+
+
+def _join_limited(parts: Sequence[str]) -> str | None:
+    cleaned = [part.strip() for part in parts if part and part.strip()]
+    if not cleaned:
+        return None
+    result = "; ".join(cleaned)
+    if len(result) <= CLINICAL_SUMMARY_MAX_CHARS:
+        return result
+    kept: list[str] = []
+    for part in cleaned:
+        candidate = "; ".join([*kept, part])
+        if len(candidate) > CLINICAL_SUMMARY_MAX_CHARS:
+            break
+        kept.append(part)
+    if kept:
+        return "; ".join(kept)
+    return _truncate_reason(cleaned[0])
+
+
+def _clause_key(text: str) -> str:
+    return re.sub(r"\s+", " ", text).strip().lower().rstrip(".;:")
+
+
+def _is_form_chrome_clause(text: str, service_names: Sequence[str]) -> bool:
+    cleaned = text.strip()
+    if _FORM_CHROME_CLAUSE.match(cleaned):
+        return True
+    key = _clause_key(cleaned)
+    return any(key == _clause_key(name) for name in service_names if name)
+
+
+def _normalize_reason_line(
+    text: str | None,
+    *,
+    service_names: Sequence[str] = (),
+) -> str | None:
+    """Drop form-label repeats so one wound/reason clause remains."""
+    cleaned = " ".join((text or "").split()) or None
+    if not cleaned:
+        return None
+    clauses = [part.strip(" -") for part in re.split(r"\s*;\s*", cleaned) if part.strip()]
+    kept: list[str] = []
+    for clause in clauses:
+        if _is_form_chrome_clause(clause, service_names):
+            continue
+        key = _clause_key(clause)
+        if not key or any(key == _clause_key(item) for item in kept):
+            continue
+        if any(key != _clause_key(item) and key in _clause_key(item) for item in kept):
+            continue
+        kept = [item for item in kept if not (_clause_key(item) != key and _clause_key(item) in key)]
+        kept.append(clause)
+    return _join_limited(kept)
+
+
+def _requested_service_reason(requested_services: Sequence[CanonicalRequestedService]) -> str | None:
+    service_names = [item.service for item in requested_services if item.service]
+    for item in requested_services:
+        text = _normalize_reason_line(item.instructions, service_names=service_names)
+        if text:
+            return text if not _is_narrative(text) else _truncate_reason(text)
+    for item in requested_services:
+        text = _normalize_reason_line(item.service)
+        if text:
+            return text if not _is_narrative(text) else _truncate_reason(text)
+    return None
+
+
+def intake_clinical_summary(
+    clinical: CanonicalClinical,
+    requested_services: Sequence[CanonicalRequestedService] | None = None,
+) -> str | None:
+    """Compose the seventh intake field: a short PDF-grounded wound/reason line."""
+    services = requested_services or []
+    service_names = [item.service for item in services if item.service]
+    summary = _normalize_reason_line(
+        " ".join((clinical.summary or "").split()) or None,
+        service_names=service_names,
+    )
+    wound_items = [item for item in clinical.diagnoses if _is_wound_diagnosis(item)]
+    wound_items.sort(key=lambda item: (not bool(item.is_primary), item.description or "", item.code or ""))
+    wound_lines = [line for line in (_render_wound_line(item) for item in wound_items) if line]
+    if (
+        summary
+        and len(summary) <= CLINICAL_SUMMARY_MAX_CHARS
+        and not _is_narrative(summary)
+        and (_contains_wound_term(summary) or not wound_lines)
+    ):
+        return summary
+    if wound_lines:
+        return _join_limited(wound_lines)
+    service_reason = _requested_service_reason(services)
+    if service_reason:
+        return service_reason
+    if summary:
+        return _truncate_reason(summary)
+    return None
+
+
+def _apply_intake_clinical_summary(record: CanonicalReferral) -> CanonicalReferral:
+    original = record.clinical.summary
+    composed = intake_clinical_summary(record.clinical, record.requested_services)
+    if composed == original:
+        return record
+    notes = list(record.clinical.notes)
+    original_text = (original or "").strip()
+    if (
+        original_text
+        and original_text != (composed or "")
+        and original_text not in notes
+        and (_is_narrative(original_text) or len(original_text) > CLINICAL_SUMMARY_MAX_CHARS)
+    ):
+        notes.append(original_text)
+    clinical = record.clinical.model_copy(update={"summary": composed, "notes": notes})
+    return record.model_copy(update={"clinical": clinical})
+
+
 def _ensure_core_quality(record: CanonicalReferral) -> CanonicalReferral:
+    record = _apply_intake_clinical_summary(record)
     quality = dict(record.field_quality)
     warnings = list(record.warnings)
     values = {

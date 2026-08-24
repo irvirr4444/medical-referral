@@ -22,6 +22,11 @@ NETWORK_ERROR_NAMES = frozenset(
         "URLError",
     }
 )
+DRK_TRANSIENT_ERROR_NAMES = frozenset(
+    {
+        "SessionNotCreatedException",
+    }
+)
 TRANSIENT_MESSAGE_MARKERS = (
     "complexity budget",
     "connection reset",
@@ -52,6 +57,8 @@ def classify_retry(error: Exception) -> RetryDecision | None:
 
     for exc in chain:
         dependency = _dependency(exc)
+        if type(exc).__name__ in DRK_TRANSIENT_ERROR_NAMES:
+            return RetryDecision(error_kind="drk_transient")
         if dependency == "anthropic" and (
             isinstance(exc, CapacityExhaustedError) or is_capacity_error(exc)
         ):
@@ -93,6 +100,8 @@ def _dependency(error: Exception) -> str:
         return "outlook"
     if name == "MondayAPIError" or "monday" in module:
         return "monday"
+    if module.startswith("selenium"):
+        return "drk"
     return "network"
 
 

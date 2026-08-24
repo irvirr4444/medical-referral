@@ -93,6 +93,48 @@ def test_outlook_adapter_accepts_only_real_pdf_attachments(monkeypatch) -> None:
     assert [(item.attachment_id, item.filename, item.content) for item in attachments] == [("good", "referral.pdf", valid_pdf)]
 
 
+def test_outlook_metadata_adapter_does_not_require_attachment_content(monkeypatch) -> None:
+    client = OutlookGraphClient(OutlookGraphConfig("tenant", "client", "secret", "inbox@example.test"))
+    monkeypatch.setattr(
+        client,
+        "_get",
+        lambda path: {
+            "value": [
+                {
+                    "@odata.type": "#microsoft.graph.fileAttachment",
+                    "id": "pdf",
+                    "name": "referral.pdf",
+                    "contentType": "application/pdf",
+                    "size": 1234,
+                },
+                {
+                    "@odata.type": "#microsoft.graph.fileAttachment",
+                    "id": "image",
+                    "name": "scan.png",
+                    "contentType": "image/png",
+                    "size": 456,
+                },
+            ]
+        }
+        if "select=" in path
+        else {"value": []},
+    )
+
+    attachments = client._pdf_metadata_for_message(
+        {
+            "id": "message-1",
+            "subject": "Referral",
+            "receivedDateTime": "2026-08-12T08:30:00Z",
+            "from": {"emailAddress": {"address": "sender@example.test"}},
+        }
+    )
+
+    assert [(item.attachment_id, item.filename, item.size) for item in attachments] == [
+        ("pdf", "referral.pdf", 1234)
+    ]
+    assert attachments[0].sender == "sender@example.test"
+
+
 def test_outlook_adapter_applies_durable_ledger_predicate(monkeypatch) -> None:
     client = OutlookGraphClient(OutlookGraphConfig("tenant", "client", "secret", "inbox@example.test"))
     messages = [
@@ -198,3 +240,25 @@ def test_list_inbox_paginates_and_counts_eligible_new_messages(monkeypatch) -> N
 
     assert [item.message_id for item in attachments] == ["eligible-2", "eligible-1"]
     assert [item.filename for item in attachments] == ["eligible-2.pdf", "eligible-1.pdf"]
+
+
+def test_newest_only_does_not_drain_older_processed_mail(monkeypatch) -> None:
+    client = OutlookGraphClient(OutlookGraphConfig("tenant", "client", "secret", "inbox@example.test"))
+    messages = [
+        {"id": "newest", "hasAttachments": True},
+        {"id": "older", "hasAttachments": True},
+    ]
+    monkeypatch.setattr(client, "_iter_inbox_messages", lambda **_kwargs: iter(messages))
+    monkeypatch.setattr(
+        client,
+        "_pdf_attachments_for_message",
+        lambda message: [type("A", (), {"message_id": message["id"]})()],
+    )
+
+    attachments = client.list_inbox_pdf_attachments(
+        max_messages=1,
+        include_attachment=lambda item: item.message_id != "newest",
+        scan_past_ineligible=False,
+    )
+
+    assert attachments == []

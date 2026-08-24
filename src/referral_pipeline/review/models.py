@@ -19,6 +19,8 @@ class ReviewRequest:
     source_message_id: str
     source_conversation_id: str | None
     created_at: str
+    purpose: str = "destination_write"
+    workflow_case_id: str | None = None
     monday_item_id: str | None = None
     drk_status: str | None = None
     email_subject: str | None = None
@@ -32,6 +34,9 @@ class ReviewRequest:
     drk_draft: dict[str, Any] | None = None
     last_dry_run_at: str | None = None
     last_dry_run_result: dict[str, Any] | None = None
+    workflow_apply_status: str | None = None
+    workflow_apply_attempts: int = 0
+    workflow_apply_last_error: str | None = None
 
 
 @dataclass(frozen=True)

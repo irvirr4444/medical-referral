@@ -23,9 +23,21 @@ for import_path in (SRC_ROOT, MONDAY_DIR):
 from Outlook.graph import OutlookGraphClient, OutlookGraphConfig
 from Outlook.mail import InboundPdfAttachment, materialize_attachments, read_eml_pdf_attachments
 from Outlook.review_mail import OutlookReviewMailbox
+from referral_pipeline.failure_policy import can_notify_referral_sender
 from referral_pipeline.retry_policy import classify_retry
 from referral_pipeline.review.workflow import create_and_send_review
 from referral_pipeline.service import process_inbound_pdf
+from referral_pipeline.monitoring.store import create_workflow_store
+from referral_pipeline.persistence_policy import SyntheticPersistencePolicy
+from referral_pipeline.stage_one.acknowledgement import send_partner_acknowledgement
+from referral_pipeline.stage_one.tracker import StageOneTracker
+from referral_pipeline.stage_one.recovery import (
+    completed_subsystems,
+    load_existing_manifest,
+    parse_retry_step,
+    should_run_step,
+    next_event_revision,
+)
 from referral_pipeline.state import (
     STATUS_DISCOVERED,
     STATUS_PENDING_RETRY,
@@ -49,6 +61,11 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Claim and process due durable retry jobs without polling Outlook.",
     )
     parser.add_argument("--max-messages", type=int, default=25, help="Maximum Outlook inbox messages to inspect.")
+    parser.add_argument(
+        "--newest-only",
+        action="store_true",
+        help="Inspect only the newest PDF email without draining older unprocessed mail.",
+    )
     parser.add_argument("--max-jobs", type=int, default=25, help="Maximum due retry jobs to claim in one run.")
     parser.add_argument("--input-mode", choices=("auto", "text", "image", "hybrid"), default="image")
     parser.add_argument("--max-pages", type=int, default=None)
@@ -64,11 +81,44 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--master-sheet-mode", choices=("dry-run", "apply"), default="dry-run")
     parser.add_argument("--confirm-master-sheet-write", action="store_true")
-    parser.add_argument("--send-review", action="store_true", help="Send an approval email after building the artifacts.")
+    parser.add_argument(
+        "--send-review",
+        action="store_true",
+        help="Send the referral summary and Stage 1 partner-contact confirmation request.",
+    )
+    parser.add_argument(
+        "--send-partner-acknowledgement",
+        action="store_true",
+        help="Reply once to the referral partner after Stage 1 checks complete.",
+    )
+    parser.add_argument(
+        "--drk-duplicate-check",
+        action="store_true",
+        help="Run the read-only Selenium DRK duplicate gate after extraction.",
+    )
     parser.add_argument("--review-recipient", help="Reviewer address; defaults to REVIEW_RECIPIENT_EMAIL.")
     parser.add_argument("--force", action="store_true", help="Reprocess an attachment even when its hash is already marked completed.")
+    parser.add_argument(
+        "--retry-step",
+        choices=("all", "extraction", "monday", "drk", "acknowledgement", "workflow"),
+        default="all",
+        help="Retry one Stage 1 subsystem; completed sibling results are preserved.",
+    )
+    parser.add_argument(
+        "--refresh-config",
+        action="store_true",
+        help="Replace stored job options with the current command flags before retrying.",
+    )
     parser.add_argument("--output-dir", type=Path, default=Path("tmp") / "inbox-runs")
     parser.add_argument("--state-db", type=Path, default=Path("tmp") / "inbox-state.sqlite")
+    parser.add_argument("--workflow-database-backend", choices=("sqlite", "supabase"))
+    parser.add_argument("--workflow-sqlite-path", type=Path)
+    parser.add_argument(
+        "--workflow-tracking",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Persist the Stage 1 case and timeline; enabled by default.",
+    )
     parser.add_argument("--verbose", action="store_true", help="Print pipeline progress and enable extractor INFO logs.")
     return parser.parse_args(argv)
 
@@ -86,6 +136,8 @@ def _processing_options(args: argparse.Namespace) -> dict[str, Any]:
         "master_sheet_mode": args.master_sheet_mode,
         "confirm_master_sheet_write": bool(args.confirm_master_sheet_write),
         "send_review": bool(args.send_review),
+        "send_partner_acknowledgement": bool(getattr(args, "send_partner_acknowledgement", False)),
+        "drk_duplicate_check": bool(getattr(args, "drk_duplicate_check", False)),
         "review_recipient": args.review_recipient,
     }
 
@@ -97,6 +149,7 @@ def _attachments(args: argparse.Namespace, *, state: InboxState) -> list[Inbound
     return OutlookGraphClient(OutlookGraphConfig.from_environment()).list_inbox_pdf_attachments(
         max_messages=args.max_messages,
         include_attachment=None if args.force else lambda attachment: _attachment_needs_processing(state, attachment),
+        scan_past_ineligible=not args.newest_only,
     )
 
 
@@ -133,14 +186,27 @@ def _review_recipient(
     attachment: InboundPdfAttachment,
     manifest: dict[str, Any],
 ) -> str:
-    """Prefer an explicit override; otherwise reply to the original sender."""
+    """Resolve only an explicitly configured internal review recipient."""
+    del attachment, manifest
     return (
         str(options.get("review_recipient") or "").strip()
         or str(getattr(args, "review_recipient", None) or "").strip()
-        or str(manifest.get("source_sender") or "").strip()
-        or str(getattr(attachment, "sender", None) or "").strip()
-        or str(options.get("source_sender") or "").strip()
         or os.getenv("REVIEW_RECIPIENT_EMAIL", "").strip()
+    )
+
+
+def _source_recipient(attachment: InboundPdfAttachment, options: dict[str, Any]) -> str:
+    return (
+        str(getattr(attachment, "sender", None) or "").strip()
+        or str(options.get("source_sender") or "").strip()
+    )
+
+
+def _review_uses_supabase(options: dict[str, Any]) -> bool:
+    """Keep a review and its workflow case in the same persistence backend."""
+    return (
+        bool(options.get("synthetic_persistence_allowed"))
+        and str(options.get("workflow_database_backend") or "").casefold() == "supabase"
     )
 
 
@@ -150,9 +216,21 @@ def process_claimed_job(
     state: InboxState,
     args: argparse.Namespace,
     graph_client: OutlookGraphClient | None,
+    tracker: StageOneTracker | None = None,
 ) -> dict[str, Any]:
     attachment = _attachment_from_job(job)
     options = job.options or _processing_options(args)
+    if bool(getattr(args, "refresh_config", False)):
+        from referral_pipeline.stage_one.recovery import merge_refreshed_options
+
+        options = merge_refreshed_options(job.options, _processing_options(args))
+        state.refresh_options(sha256=job.sha256, options=options)
+    retry_step = parse_retry_step(getattr(args, "retry_step", None))
+    workflow_case = tracker.discover(attachment) if tracker is not None else None
+    revision = 1
+    if tracker is not None and workflow_case is not None:
+        revision = next_event_revision(tracker.store.list_events(workflow_case.case_id, limit=100))
+        workflow_case = tracker.processing_started(workflow_case, revision=revision)
     pdf_path = Path(job.artifact_path) if job.artifact_path else None
     if pdf_path is None or not pdf_path.is_file():
         return _handle_terminal_failure(
@@ -167,28 +245,104 @@ def process_claimed_job(
 
     output_dir = pdf_path.parent
     attachment_started = time.perf_counter()
+    completed = set()
+    if tracker is not None and workflow_case is not None:
+        completed = completed_subsystems(tracker.store.list_events(workflow_case.case_id, limit=100))
     try:
         _progress(args, f"Processing attachment: {attachment.filename} (attempt {job.attempt_count})")
-        manifest = process_inbound_pdf(
-            attachment,
-            pdf_path=pdf_path,
-            output_dir=output_dir,
-            input_mode=str(options.get("input_mode") or args.input_mode),
-            max_pages=options.get("max_pages", args.max_pages),
-            monday_mode=str(options.get("monday_mode") or args.monday_mode),
-            monday_records_file=options.get("monday_records_file") or args.monday_records_file,
-            include_full_row=bool(options.get("include_full_row", args.include_full_row)),
-            write_config_path=options.get("config") or args.config,
-            agency_mode=str(options.get("agency_mode") or args.agency_mode),
-            agency_records_file=options.get("agency_records_file") or args.agency_records_file,
-            master_sheet_mode=str(options.get("master_sheet_mode") or args.master_sheet_mode),
-            confirm_master_sheet_write=bool(
-                options.get("confirm_master_sheet_write", args.confirm_master_sheet_write)
-            ),
-            progress=(lambda message: _progress(args, message)) if args.verbose else None,
+        manifest = load_existing_manifest(pdf_path)
+        run_extraction = should_run_step(
+            "extraction", retry_step=retry_step, completed=completed
         )
+        if retry_step == "all" and manifest is None:
+            run_extraction = True
+        if run_extraction:
+            manifest = process_inbound_pdf(
+                attachment,
+                pdf_path=pdf_path,
+                output_dir=output_dir,
+                input_mode=str(options.get("input_mode") or args.input_mode),
+                max_pages=options.get("max_pages", args.max_pages),
+                monday_mode=str(options.get("monday_mode") or args.monday_mode),
+                monday_records_file=options.get("monday_records_file") or args.monday_records_file,
+                include_full_row=bool(options.get("include_full_row", args.include_full_row)),
+                write_config_path=options.get("config") or args.config,
+                agency_mode=str(options.get("agency_mode") or args.agency_mode),
+                agency_records_file=options.get("agency_records_file") or args.agency_records_file,
+                master_sheet_mode=str(options.get("master_sheet_mode") or args.master_sheet_mode),
+                confirm_master_sheet_write=bool(
+                    options.get("confirm_master_sheet_write", args.confirm_master_sheet_write)
+                ),
+                progress=(lambda message: _progress(args, message)) if args.verbose else None,
+            )
+            if tracker is not None and workflow_case is not None:
+                workflow_case = tracker.extraction_completed(
+                    workflow_case, manifest, revision=revision
+                )
+        elif should_run_step("monday", retry_step=retry_step, completed=completed):
+            manifest = _rerun_monday_check(manifest, options=options, args=args)
+            if tracker is not None and workflow_case is not None:
+                tracker.monday_checked(workflow_case, manifest, revision=revision)
+        if retry_step == "workflow" and tracker is not None and workflow_case is not None:
+            from referral_pipeline.workflow import WorkflowExecutionService
+
+            outcome = WorkflowExecutionService(tracker.store)._partner_contact_outcome(
+                workflow_case.case_id
+            )
+            if outcome is not None:
+                WorkflowExecutionService(tracker.store).start_assignment(
+                    workflow_case.case_id,
+                    contact_outcome=outcome,
+                )
+            if manifest is None:
+                manifest = {
+                    "filename": attachment.filename,
+                    "outcome": "workflow_reconciled",
+                    "master_sheet_blocked": False,
+                }
+        elif retry_step != "all" and manifest is None:
+            raise RuntimeError("existing intake artifacts are missing for a targeted retry")
+
+        if should_run_step(
+            "drk",
+            retry_step=retry_step,
+            completed=completed,
+        ) and bool(options.get("drk_duplicate_check", getattr(args, "drk_duplicate_check", False))):
+            _progress(args, "Checking DRK for an existing chart")
+            decision = _run_drk_duplicate_check(manifest)
+            manifest["drk_duplicate_status"] = decision.get("status")
+            if tracker is not None and workflow_case is not None:
+                tracker.drk_checked(workflow_case, decision, revision=revision)
+
+        if should_run_step(
+            "acknowledgement",
+            retry_step=retry_step,
+            completed=completed,
+        ) and bool(
+            options.get(
+                "send_partner_acknowledgement",
+                getattr(args, "send_partner_acknowledgement", False),
+            )
+        ):
+            if tracker is None or workflow_case is None:
+                raise RuntimeError("partner acknowledgement requires workflow tracking")
+            recipient = str(getattr(attachment, "sender", None) or "").strip()
+            if not recipient:
+                raise ValueError("partner acknowledgement requires the original sender address")
+            if graph_client is None:
+                graph_client = OutlookGraphClient(OutlookGraphConfig.from_environment())
+            _progress(args, f"Sending referral acknowledgement to {recipient}")
+            manifest["partner_acknowledgement"] = send_partner_acknowledgement(
+                case=workflow_case,
+                manifest=manifest,
+                recipient=recipient,
+                source_message_id=attachment.message_id,
+                mailbox=OutlookReviewMailbox(graph_client),
+                store=tracker.store,
+                tracker=tracker,
+            )
         send_review = bool(options.get("send_review", args.send_review))
-        if send_review:
+        if send_review and retry_step == "all" and "review" not in completed:
             recipient = _review_recipient(
                 options=options,
                 args=args,
@@ -197,21 +351,29 @@ def process_claimed_job(
             )
             if not recipient:
                 raise ValueError(
-                    "--send-review requires the original sender address, "
-                    "--review-recipient, or REVIEW_RECIPIENT_EMAIL"
+                    "--send-review requires an internal --review-recipient "
+                    "or REVIEW_RECIPIENT_EMAIL"
                 )
             if graph_client is None:
                 graph_client = OutlookGraphClient(OutlookGraphConfig.from_environment())
             _progress(args, f"Sending review request to {recipient}")
-            manifest.update(
-                create_and_send_review(
-                    manifest,
-                    recipient=recipient,
-                    write_config_path=options.get("config") or args.config,
-                    state_db=args.state_db,
-                    mailbox=OutlookReviewMailbox(graph_client),
-                )
+            review_result = create_and_send_review(
+                manifest,
+                recipient=recipient,
+                write_config_path=options.get("config") or args.config,
+                state_db=args.state_db,
+                mailbox=OutlookReviewMailbox(graph_client),
+                purpose="partner_contact",
+                workflow_case_id=(workflow_case.case_id if workflow_case is not None else None),
+                allow_supabase_store=_review_uses_supabase(options),
             )
+            manifest.update(review_result)
+            if tracker is not None and workflow_case is not None:
+                workflow_case = tracker.contact_confirmation_requested(
+                    workflow_case,
+                    recipient=recipient,
+                    review_id=str(review_result["review_id"]),
+                )
     except Exception as error:
         elapsed_seconds = round(time.perf_counter() - attachment_started, 2)
         retry = classify_retry(error)
@@ -221,6 +383,27 @@ def process_claimed_job(
                 error=str(error),
                 error_kind=retry.error_kind,
             )
+            if (
+                updated.status == STATUS_PENDING_RETRY
+                and tracker is not None
+                and workflow_case is not None
+            ):
+                current_case = tracker.store.workflow_case(workflow_case.case_id)
+                if current_case is None or current_case.status != "completed":
+                    tracker.retry_scheduled(
+                        current_case or workflow_case,
+                        error_kind=retry.error_kind,
+                        attempt_count=updated.attempt_count,
+                    )
+            elif tracker is not None and workflow_case is not None:
+                current_case = tracker.store.workflow_case(workflow_case.case_id)
+                if current_case is None or current_case.status != "completed":
+                    tracker.failed(
+                        current_case or workflow_case,
+                        event_type="stage_one_failed",
+                        error_code=type(error).__name__,
+                        revision=revision,
+                    )
             _progress(
                 args,
                 f"Deferred after {elapsed_seconds:.2f}s: {attachment.filename} "
@@ -236,6 +419,15 @@ def process_claimed_job(
                 "elapsed_seconds": elapsed_seconds,
                 "artifact_path": str(pdf_path),
             }
+        if tracker is not None and workflow_case is not None:
+            current_case = tracker.store.workflow_case(workflow_case.case_id)
+            if current_case is None or current_case.status != "completed":
+                tracker.failed(
+                    current_case or workflow_case,
+                    event_type="stage_one_failed",
+                    error_code=type(error).__name__,
+                    revision=revision,
+                )
         return _handle_terminal_failure(
             job,
             attachment=attachment,
@@ -275,17 +467,12 @@ def _handle_terminal_failure(
     elapsed_seconds: float,
     artifact_path: Path | None = None,
 ) -> dict[str, Any]:
-    """Record a permanent failure and ensure review-mode emails get a reply."""
+    """Record a terminal failure and notify only for sender-actionable problems."""
     options = job.options or _processing_options(args)
     notification_error: Exception | None = None
     failure_reply_sent = False
-    if bool(options.get("send_review", args.send_review)):
-        recipient = _review_recipient(
-            options=options,
-            args=args,
-            attachment=attachment,
-            manifest={},
-        )
+    if bool(options.get("send_review", args.send_review)) and can_notify_referral_sender(error):
+        recipient = _source_recipient(attachment, options)
         try:
             if not recipient:
                 raise ValueError("original sender address is unavailable")
@@ -295,12 +482,14 @@ def _handle_terminal_failure(
                 recipient=recipient,
                 content_type="HTML",
                 html_body=(
-                    "<p>We could not complete this referral automatically.</p>"
-                    "<p>Please review the attached PDF and resend it, or contact the referral team for help.</p>"
+                    "<p>We could not process the submitted referral document.</p>"
+                    "<p>Please verify that the attached PDF opens correctly and resend it. "
+                    "If the issue continues, contact the referral team.</p>"
                 ),
                 text_body=(
-                    "We could not complete this referral automatically.\n\n"
-                    "Please review the attached PDF and resend it, or contact the referral team for help."
+                    "We could not process the submitted referral document.\n\n"
+                    "Please verify that the attached PDF opens correctly and resend it. "
+                    "If the issue continues, contact the referral team."
                 ),
             )
             failure_reply_sent = True
@@ -330,6 +519,85 @@ def _handle_terminal_failure(
     return result
 
 
+def _requested_workflow_backend(args: argparse.Namespace) -> str:
+    return (
+        args.workflow_database_backend or os.getenv("WORKFLOW_DATABASE_BACKEND") or "sqlite"
+    ).strip().casefold()
+
+
+def _workflow_tracker(
+    args: argparse.Namespace,
+    *,
+    backend: str | None = None,
+) -> StageOneTracker:
+    return StageOneTracker(
+        create_workflow_store(
+            backend=backend or _requested_workflow_backend(args),
+            sqlite_path=args.workflow_sqlite_path,
+        )
+    )
+
+
+def _tracker_for_job(
+    args: argparse.Namespace,
+    job: AttachmentJob,
+    policy: SyntheticPersistencePolicy,
+) -> StageOneTracker | None:
+    if not args.workflow_tracking:
+        return None
+    persisted_backend = str(job.options.get("workflow_database_backend") or "").strip()
+    # Retries must keep writing to the store that already has this case.
+    backend = persisted_backend or policy.stage_one_backend(
+        _requested_workflow_backend(args),
+        job.sha256,
+    )
+    return _workflow_tracker(args, backend=backend)
+
+
+def _rerun_monday_check(
+    manifest: dict[str, Any],
+    *,
+    options: dict[str, Any],
+    args: argparse.Namespace,
+) -> dict[str, Any]:
+    from referral_pipeline.service import _duplicate_check, _referral_from_extraction
+
+    canonical_path = manifest.get("canonical_referral_path")
+    if not canonical_path:
+        raise RuntimeError("Monday retry requires an existing canonical referral")
+    from intake_extractor.canonical_referral import CanonicalReferral
+
+    referral = CanonicalReferral.model_validate_json(Path(canonical_path).read_text(encoding="utf-8"))
+    duplicate = _duplicate_check(
+        _referral_from_extraction(referral),
+        mode=str(options.get("monday_mode") or args.monday_mode),
+        records_file=options.get("monday_records_file") or args.monday_records_file,
+        include_full_row=bool(options.get("include_full_row", args.include_full_row)),
+    )
+    updated = dict(manifest)
+    updated["duplicate_status"] = duplicate.get("status") if isinstance(duplicate, dict) else getattr(duplicate, "status", None)
+    if hasattr(duplicate, "model_dump"):
+        dumped = duplicate.model_dump(mode="json")
+        updated["duplicate_status"] = dumped.get("status")
+    return updated
+
+
+def _run_drk_duplicate_check(manifest: dict[str, Any]) -> dict[str, Any]:
+    from drk_emr.create_patient.duplicate_check import check_duplicates_for_payload
+    from drk_emr.create_patient.schema import DrkCreateDraftEnvelope
+
+    draft_path = manifest.get("drk_draft_path")
+    if not draft_path:
+        raise RuntimeError("DRK duplicate check requires a canonical DRK draft")
+    path = Path(draft_path)
+    draft = DrkCreateDraftEnvelope.model_validate_json(path.read_text(encoding="utf-8"))
+    decision = check_duplicates_for_payload(
+        draft.payload,
+        output_path=path.parent / "drk-duplicate-check.json",
+    )
+    return decision.model_dump(mode="json")
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     run_started = time.perf_counter()
@@ -341,6 +609,7 @@ def main(argv: list[str] | None = None) -> int:
         logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s:%(message)s")
 
     state = InboxState(args.state_db)
+    persistence_policy = SyntheticPersistencePolicy.from_environment()
     needs_graph = bool(args.outlook_poll or args.send_review or args.process_retries)
     graph_client = OutlookGraphClient(OutlookGraphConfig.from_environment()) if needs_graph else None
     summaries: list[dict] = []
@@ -361,7 +630,13 @@ def main(argv: list[str] | None = None) -> int:
                 processed_jobs += 1
                 _progress(args, f"Claimed due job {processed_jobs}/{max_jobs}")
                 summaries.append(
-                    process_claimed_job(jobs[0], state=state, args=args, graph_client=graph_client)
+                    process_claimed_job(
+                        jobs[0],
+                        state=state,
+                        args=args,
+                        graph_client=graph_client,
+                        tracker=_tracker_for_job(args, jobs[0], persistence_policy),
+                    )
                 )
             _progress(args, f"Processed {processed_jobs} due job(s)")
     else:
@@ -370,7 +645,27 @@ def main(argv: list[str] | None = None) -> int:
         _progress(args, f"Found {len(attachments)} genuine PDF attachment(s)")
         args.output_dir.mkdir(parents=True, exist_ok=True)
         for attachment, pdf_path in materialize_attachments(attachments, args.output_dir):
+            workflow_backend = persistence_policy.stage_one_backend(
+                _requested_workflow_backend(args),
+                attachment.sha256,
+            )
+            tracker = (
+                _workflow_tracker(args, backend=workflow_backend)
+                if args.workflow_tracking
+                else None
+            )
+            if workflow_backend == "sqlite" and _requested_workflow_backend(args) == "supabase":
+                _progress(
+                    args,
+                    f"Keeping non-allowlisted referral local: {attachment.filename}",
+                )
+            if tracker is not None:
+                tracker.discover(attachment)
             job_options = dict(options)
+            job_options["workflow_database_backend"] = workflow_backend
+            job_options["synthetic_persistence_allowed"] = persistence_policy.permits(
+                attachment.sha256
+            )
             if attachment.sender:
                 job_options["source_sender"] = attachment.sender
             if attachment.conversation_id:
@@ -434,7 +729,11 @@ def main(argv: list[str] | None = None) -> int:
                 _progress(args, f"Queued but not claimed: {attachment.filename}")
                 summaries.append({"filename": attachment.filename, "status": "queued"})
                 continue
-            summaries.append(process_claimed_job(claimed, state=state, args=args, graph_client=graph_client))
+            summaries.append(
+                process_claimed_job(
+                    claimed, state=state, args=args, graph_client=graph_client, tracker=tracker
+                )
+            )
 
     summary_path = args.output_dir / "run-summary.json"
     args.output_dir.mkdir(parents=True, exist_ok=True)
