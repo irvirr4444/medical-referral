@@ -1,0 +1,75 @@
+.dot-matrix {
+  margin: 0;
+  padding: 0.85rem 0.9rem;
+  display: grid;
+  gap: 0.65rem;
+  background: var(--sage-pale);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  min-width: 0;
+}
+
+.dot-matrix figcaption,
+.dot-matrix .mono-label {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.dot-matrix__plot {
+  display: grid;
+  gap: 0.35rem;
+  align-items: end;
+  min-height: 8.5rem;
+}
+
+.dot-matrix__column {
+  display: grid;
+  gap: 0.4rem;
+  align-content: end;
+  min-width: 0;
+}
+
+.dot-matrix__stack {
+  display: grid;
+  gap: 3px;
+  align-content: end;
+  height: 7.5rem;
+}
+
+.dot-matrix__dot {
+  width: 100%;
+  max-width: 0.7rem;
+  aspect-ratio: 1;
+  margin-inline: auto;
+  border-radius: 50%;
+  border: 1.5px solid var(--dot-empty);
+  background: transparent;
+}
+
+.dot-matrix__dot.is-filled {
+  border-color: var(--dot-fill);
+  background: var(--dot-fill);
+}
+
+.dot-matrix__column:nth-child(odd) .dot-matrix__dot.is-filled {
+  border-color: var(--dot-fill-soft);
+  background: var(--dot-fill-soft);
+}
+
+.dot-matrix__column:last-child .dot-matrix__dot.is-filled {
+  border-color: var(--dot-fill);
+  background: var(--dot-fill);
+}
+
+.dot-matrix__tick {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--gray);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

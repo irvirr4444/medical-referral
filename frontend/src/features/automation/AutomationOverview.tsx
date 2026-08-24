@@ -1,11 +1,29 @@
-import { ArrowRight, Target } from 'lucide-react'
-import { OverviewImpactBoard } from '../../components/OverviewImpactBoard'
+import { useEffect, useState } from 'react'
+import { ArrowRight } from 'lucide-react'
 import { useDemo } from '../../state/useDemo'
+import { OverviewNeedsYou } from './OverviewNeedsYou'
 import { AUTOMATION_STAGES } from './stages'
 import './AutomationOverview.css'
 
 export function AutomationOverview() {
   const { dispatch } = useDemo()
+  const [now, setNow] = useState(() => new Date())
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), 30_000)
+    return () => window.clearInterval(id)
+  }, [])
+
+  const dateLabel = now.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  })
+  const clockLabel = now.toLocaleTimeString([], {
+    hour: 'numeric',
+    minute: '2-digit',
+  })
 
   const openStage = (stageId: string) => {
     dispatch({ type: 'SET_ACTIVE_PAGE', page: stageId })
@@ -18,60 +36,49 @@ export function AutomationOverview() {
       className="automation-overview"
       aria-labelledby="automation-overview-title"
     >
-      <section className="automation-overview__hero panel">
-        <div>
-          <h1 id="automation-overview-title">
-            Referral Intake & Scheduling
-          </h1>
-          <div className="automation-overview__goal">
-            <span className="automation-overview__goal-label">
-              <Target size={18} aria-hidden="true" />
-              Goal
-            </span>
-            <p>
-              Ensure every valid referral becomes a scheduled, continuously
-              tracked patient case through treatment completion or discharge.
-            </p>
-          </div>
+      <header className="overview-masthead">
+        <div className="overview-masthead__copy">
+          <p className="mono-label">
+            {dateLabel} · {clockLabel}
+          </p>
+          <h1 id="automation-overview-title">Intake Automation</h1>
+          <p className="overview-masthead__desc">
+            Every referral is tracked automatically from inbox to scheduled
+            visit you only confirm the decisions below.
+          </p>
         </div>
-      </section>
+      </header>
 
-      <OverviewImpactBoard />
+      <OverviewNeedsYou />
 
-      <section
-        className="automation-stage-map panel"
-        aria-labelledby="automation-stage-map-title"
-      >
-        <div className="section-heading">
-          <div>
-            <h2 id="automation-stage-map-title">Six inspectable stages</h2>
-          </div>
-        </div>
-        <ol className="automation-stage-map__grid">
-          {AUTOMATION_STAGES.map((stage) => (
+      <nav className="overview-flow" aria-label="Steps">
+        <span className="overview-flow__label">How it works</span>
+        <ol className="overview-flow__list">
+          {AUTOMATION_STAGES.map((stage, index) => (
             <li key={stage.id}>
               <button
                 type="button"
-                className="automation-stage-card"
-                onClick={() => openStage(stage.id)}
+                className="overview-flow__link"
                 aria-label={`Inspect ${stage.shortTitle}`}
+                onClick={() => openStage(stage.id)}
               >
-                <span className="automation-stage-card__top">
-                  <span className="automation-stage-card__number">
-                    {AUTOMATION_STAGES.indexOf(stage) + 1}
-                  </span>
+                <span className="overview-flow__index">
+                  {String(index + 1).padStart(2, '0')}
                 </span>
-                <strong>{stage.shortTitle}</strong>
-                <span>{stage.purpose}</span>
-                <span className="automation-stage-card__footer">
-                  {stage.microsteps.length} steps
-                  <ArrowRight size={16} aria-hidden="true" />
-                </span>
+                {stage.shortTitle}
               </button>
+              {index < AUTOMATION_STAGES.length - 1 ? (
+                <ArrowRight
+                  size={12}
+                  strokeWidth={2}
+                  className="overview-flow__arrow"
+                  aria-hidden="true"
+                />
+              ) : null}
             </li>
           ))}
         </ol>
-      </section>
+      </nav>
     </main>
   )
 }

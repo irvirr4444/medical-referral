@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { ChevronDown, Search, X } from 'lucide-react'
 import { useEscapeDismiss } from '../../hooks/useEscapeDismiss'
 import { useDemo } from '../../state/useDemo'
@@ -353,9 +353,13 @@ function availabilityRequestTimes(requestedAt = new Date()) {
 export function StagePatientSteps({
   stageId,
   microsteps,
+  sidebarHeader,
+  mainHeader,
 }: {
   stageId: FlowOpsPageId
   microsteps: AutomationMicrostep[]
+  sidebarHeader?: ReactNode
+  mainHeader?: ReactNode
 }) {
   const { state, dispatch } = useDemo()
   const [selectedStepId, setSelectedStepId] = useState(() => {
@@ -1217,36 +1221,42 @@ export function StagePatientSteps({
     return detailForPatientStep(stageId, patientId, selectedStepId)
   }
 
-  return (
-    <div className="stage-ops-steps" aria-label="Patient steps">
-      <aside className="stage-ops-steps__rail">
-        <div className="stage-ops-steps__rail-copy">
-          <h2>{microsteps.length} steps</h2>
-          <p className="muted">Select a step to see patient updates.</p>
-        </div>
-        <MicrostepList
-          steps={microsteps}
-          selectedStepId={selectedStepId}
-          onSelect={selectStep}
-          stepStatuses={scopedStepStatuses}
-          overdueStepIds={overdueStepIds(state.actionTimers, stageId)}
-          overdueCounts={Object.values(state.actionTimers).reduce<
-            Record<string, number>
-          >((counts, timer) => {
-            if (timer.stageId !== stageId || timer.status !== 'overdue') {
-              return counts
-            }
-            counts[timer.stepId] = (counts[timer.stepId] ?? 0) + 1
-            return counts
-          }, {})}
-          warningStepIds={warningStepIds(state.actionTimers, stageId)}
-          unreadCounts={scopedPatient ? {} : stepUnreadCounts}
-          attentionStepIds={
-            scopedPatient ? [] : Object.keys(stepUnreadCounts)
-          }
-        />
-      </aside>
+  const composed = Boolean(sidebarHeader || mainHeader)
 
+  const stepsRail = (
+    <aside className="stage-ops-steps__rail">
+      <div className="stage-ops-steps__rail-copy">
+        <h2>
+          {microsteps.length}{' '}
+          {microsteps.length === 1 ? 'microstep' : 'microsteps'}
+        </h2>
+        <p className="muted">Select a step to see patient updates.</p>
+      </div>
+      <MicrostepList
+        steps={microsteps}
+        selectedStepId={selectedStepId}
+        onSelect={selectStep}
+        stepStatuses={scopedStepStatuses}
+        overdueStepIds={overdueStepIds(state.actionTimers, stageId)}
+        overdueCounts={Object.values(state.actionTimers).reduce<
+          Record<string, number>
+        >((counts, timer) => {
+          if (timer.stageId !== stageId || timer.status !== 'overdue') {
+            return counts
+          }
+          counts[timer.stepId] = (counts[timer.stepId] ?? 0) + 1
+          return counts
+        }, {})}
+        warningStepIds={warningStepIds(state.actionTimers, stageId)}
+        unreadCounts={scopedPatient ? {} : stepUnreadCounts}
+        attentionStepIds={
+          scopedPatient ? [] : Object.keys(stepUnreadCounts)
+        }
+      />
+    </aside>
+  )
+
+  const stepsDetail = (
       <div className="stage-ops-steps__detail">
         <div className="stage-ops-steps__toolbar">
           <div className="stage-ops-steps__toolbar-copy">
@@ -2275,6 +2285,30 @@ export function StagePatientSteps({
           </p>
         )}
       </div>
+  )
+
+  if (composed) {
+    return (
+      <div
+        className="stage-ops-steps is-composed"
+        aria-label="Patient steps"
+      >
+        <div className="stage-page__sidebar">
+          {sidebarHeader}
+          {stepsRail}
+        </div>
+        <div className="stage-page__main">
+          {mainHeader}
+          {stepsDetail}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="stage-ops-steps" aria-label="Patient steps">
+      {stepsRail}
+      {stepsDetail}
     </div>
   )
 }

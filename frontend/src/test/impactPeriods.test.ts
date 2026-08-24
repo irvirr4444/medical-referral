@@ -3,6 +3,7 @@ import { BASELINE_METRICS, INBOX_BATCH_DELTA, addMetrics } from '../data/constan
 import {
   IMPACT_STAGES,
   allocateStageMinutes,
+  buildImpactTrendSeries,
   buildPeriodImpacts,
   impactBoardCopy,
 } from '../data/impactPeriods'
@@ -49,5 +50,20 @@ describe('period impact board', () => {
     const after = buildPeriodImpacts(afterToday, 'assignment')
     expect(after[0].patients).toBeGreaterThan(before[0].patients)
     expect(after[2].timeMinutes).toBeGreaterThan(before[2].timeMinutes)
+  })
+
+  it('builds a deterministic trend series that sums to the total', () => {
+    const week = buildImpactTrendSeries('overview', 'week', 100)
+    expect(week).toHaveLength(5)
+    expect(week.reduce((sum, point) => sum + point.value, 0)).toBe(100)
+    expect(buildImpactTrendSeries('overview', 'week', 100)).toEqual(week)
+
+    const month = buildImpactTrendSeries('intake', 'month', 40)
+    expect(month).toHaveLength(4)
+    expect(month.reduce((sum, point) => sum + point.value, 0)).toBe(40)
+
+    const custom = buildImpactTrendSeries('overview', 'custom', 21, 7)
+    expect(custom).toHaveLength(7)
+    expect(custom.reduce((sum, point) => sum + point.value, 0)).toBe(21)
   })
 })

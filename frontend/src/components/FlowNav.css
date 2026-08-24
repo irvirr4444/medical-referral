@@ -2,12 +2,12 @@
   width: 100%;
   min-width: 0;
   position: sticky;
-  top: 0;
+  top: 0.35rem;
   z-index: 20;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--border);
-  margin: 0 0 0.35rem;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--cream);
 }
 
 .flow-nav__inner {
@@ -15,170 +15,207 @@
   min-width: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
-  padding: 0.55rem 0.15rem;
-  max-width: 100%;
-  overflow-x: auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem 1rem;
+  padding: 0.55rem 0.75rem 0.55rem 0.85rem;
 }
 
-.flow-nav__link {
+.flow-nav__brand {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.55rem;
   border: 0;
   background: transparent;
-  color: var(--gray);
-  font-weight: 650;
-  font-size: 0.88rem;
-  padding: 0.55rem 0.85rem;
-  border-radius: 8px;
-  white-space: nowrap;
+  color: var(--ink);
+  padding: 0.15rem 0.25rem;
   cursor: pointer;
-  border-bottom: 2px solid transparent;
 }
 
-.flow-nav__link:hover {
-  background: rgba(18, 35, 63, 0.05);
-  color: var(--navy);
-}
-
-.flow-nav__link.is-active {
-  color: var(--navy);
-  background: rgba(18, 35, 63, 0.08);
-  border-bottom-color: var(--teal);
-}
-
-.flow-nav__label-row {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.flow-nav__badges {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  flex: 0 0 auto;
-}
-
-.flow-nav__attention-dot {
-  width: 0.5rem;
-  height: 0.5rem;
-  flex: 0 0 auto;
-  border: 2px solid #fff;
-  border-radius: 999px;
-  background: #dc2626;
-  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.2);
-  animation: flow-nav-attention-pulse 1.6s ease-out infinite;
-}
-
-@keyframes flow-nav-attention-pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.48);
-  }
-
-  70%,
-  100% {
-    box-shadow: 0 0 0 7px rgba(220, 38, 38, 0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .flow-nav__attention-dot {
-    animation: none;
-  }
-}
-
-.flow-nav__overdue-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 1.05rem;
-  height: 1.05rem;
-  flex: 0 0 auto;
-  padding: 0 0.28rem;
-  border-radius: 999px;
-  background: #b91c1c;
-  color: #fff;
-  font-size: 0.66rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
+.flow-nav__brand-mark {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   line-height: 1;
 }
 
-.flow-nav__unread-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 1.05rem;
-  height: 1.05rem;
-  flex: 0 0 auto;
-  padding: 0 0.28rem;
-  border-radius: 999px;
-  background: #2563eb;
-  color: #fff;
-  font-size: 0.66rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-}
-
-.flow-nav__link.is-overdue {
-  color: #b91c1c;
-}
-
-.flow-nav__link.is-unread {
-  color: #1d4ed8;
-}
-
-.overdue-confirmations-banner {
+.flow-nav__actions {
   display: flex;
   align-items: center;
-  gap: 0.7rem;
-  width: 100%;
-  border: 1px solid rgba(185, 28, 28, 0.4);
-  border-left: 4px solid #b91c1c;
-  border-radius: 8px;
-  background: rgba(254, 242, 242, 0.96);
-  color: #991b1b;
-  font-size: 0.86rem;
-  text-align: left;
-  padding: 0.55rem 0.85rem;
-  margin: 0 0 0.45rem;
+  gap: 0.2rem;
+}
+
+.flow-nav__icon-btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 2.15rem;
+  height: 2.15rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink);
   cursor: pointer;
 }
 
-.overdue-confirmations-banner__badge {
-  flex: 0 0 auto;
-  padding: 0.14rem 0.5rem;
+.flow-nav__icon-btn:hover {
+  background: var(--sage-pale);
+  color: var(--forest);
+}
+
+.flow-nav__icon-btn:focus-visible {
+  outline: 2px solid rgba(74, 92, 56, 0.55);
+  outline-offset: 2px;
+}
+
+.flow-nav__badge {
+  position: absolute;
+  top: 0.05rem;
+  right: 0.05rem;
+  min-width: 1rem;
+  height: 1rem;
+  display: grid;
+  place-items: center;
+  padding: 0 0.2rem;
   border-radius: 999px;
-  background: #b91c1c;
-  color: #fff;
-  font-size: 0.66rem;
+  background: var(--status-blocked);
+  color: var(--cream);
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.flow-nav__notif {
+  position: relative;
+}
+
+.flow-nav__notif-panel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  width: min(22rem, 86vw);
+  max-height: 24rem;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--cream);
+  box-shadow: 0 14px 30px rgba(26, 26, 24, 0.14);
+  z-index: 30;
+}
+
+.flow-nav__notif-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.7rem 0.85rem 0.55rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.flow-nav__notif-header h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.flow-nav__notif-header span {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  color: var(--status-blocked);
 }
 
-.overdue-confirmations-banner__copy {
+.flow-nav__notif-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.35rem;
   display: grid;
-  gap: 0.1rem;
+  gap: 0.15rem;
+}
+
+.flow-nav__notif-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.55rem 0.6rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.flow-nav__notif-item:hover,
+.flow-nav__notif-item:focus-visible {
+  background: var(--sage-pale);
+}
+
+.flow-nav__notif-dot {
+  flex: 0 0 auto;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+}
+
+.flow-nav__notif-dot--overdue {
+  background: var(--status-blocked);
+}
+
+.flow-nav__notif-dot--warning {
+  background: var(--status-attention);
+}
+
+.flow-nav__notif-copy {
+  display: grid;
+  gap: 0.12rem;
   min-width: 0;
   flex: 1 1 auto;
 }
 
-.overdue-confirmations-banner__meta {
-  flex: 0 0 auto;
-  font-size: 0.76rem;
+.flow-nav__notif-title {
+  font-size: 0.84rem;
   font-weight: 700;
+  line-height: 1.2;
+}
+
+.flow-nav__notif-meta {
+  font-size: 0.74rem;
+  color: var(--ink-soft);
+  line-height: 1.3;
+}
+
+.flow-nav__notif-state {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 
-.overdue-confirmations-banner:hover,
-.overdue-confirmations-banner:focus-visible {
-  background: rgba(254, 226, 226, 0.98);
+.flow-nav__notif-state--overdue {
+  color: var(--status-blocked);
 }
 
-@media (max-width: 800px) {
-  .flow-nav__inner {
-    flex-wrap: nowrap;
-    padding-bottom: 0.65rem;
-  }
+.flow-nav__notif-state--warning {
+  color: var(--status-attention);
 }
+
+.flow-nav__notif-empty {
+  margin: 0;
+  padding: 0.85rem;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}
+

@@ -499,7 +499,7 @@ describe('demoReducer', () => {
     )
   })
 
-  it('selects a slot, schedules the patient, and stays idempotent', () => {
+  it('selects a slot, toggles deselect, schedules the patient, and stays idempotent', () => {
     let state = createInitialState()
     const maria = state.patientSchedules['maria-alvarez']!
     expect(maria.status).toBe('waiting')
@@ -510,6 +510,22 @@ describe('demoReducer', () => {
       type: 'SELECT_SCHEDULING_SLOT',
       patientId: 'maria-alvarez',
       slotId: unavailable.id,
+    })
+    expect(state.patientSchedules['maria-alvarez']?.selectedSlotId).toBeNull()
+
+    state = demoReducer(state, {
+      type: 'SELECT_SCHEDULING_SLOT',
+      patientId: 'maria-alvarez',
+      slotId: 'maria-today-1530',
+    })
+    expect(state.patientSchedules['maria-alvarez']?.selectedSlotId).toBe(
+      'maria-today-1530',
+    )
+
+    state = demoReducer(state, {
+      type: 'SELECT_SCHEDULING_SLOT',
+      patientId: 'maria-alvarez',
+      slotId: 'maria-today-1530',
     })
     expect(state.patientSchedules['maria-alvarez']?.selectedSlotId).toBeNull()
 
@@ -549,6 +565,23 @@ describe('demoReducer', () => {
       occurredAt: 'August 14, 2026 at 4:00 PM',
     })
     expect(blockedAttempt).toBe(state)
+  })
+
+  it('schedules a patient from an explicit slot without a prior selection', () => {
+    const state = demoReducer(createInitialState(), {
+      type: 'COMPLETE_PATIENT_SCHEDULE',
+      patientId: 'thomas-reed',
+      scheduledAt: 'August 14, 2026 at 4:20 PM',
+      slotId: 'thomas-tomorrow-1015',
+    })
+    expect(state.patientSchedules['thomas-reed']?.status).toBe('scheduled')
+    expect(state.patientSchedules['thomas-reed']?.selectedSlotId).toBe(
+      'thomas-tomorrow-1015',
+    )
+    expect(state.patientSchedules['thomas-reed']?.appointmentTime).toBe('10:15 AM')
+    expect(state.actionTimers['thomas-reed:schedule-patient']?.status).toBe(
+      'resolved',
+    )
   })
 
   it('records a scheduling blocker without marking the patient scheduled', () => {
