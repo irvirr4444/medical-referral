@@ -256,7 +256,11 @@ class IntakeApiHandler(BaseHTTPRequestHandler):
         query = parse_qs(parsed.query)
         token = query.get("token", [None])[0]
         try:
-            verify_webhook_token(token, expected=os.environ.get("MONDAY_WEBHOOK_TOKEN"))
+            verify_webhook_token(
+                token,
+                header_token=self.headers.get("X-Monday-Webhook-Token"),
+                expected=os.environ.get("MONDAY_WEBHOOK_TOKEN"),
+            )
         except WebhookAuthError as error:
             self._send_json(HTTPStatus.FORBIDDEN, {"error": str(error)})
             return
@@ -269,6 +273,7 @@ class IntakeApiHandler(BaseHTTPRequestHandler):
             body,
             store=self.server.workflow_execution.store,
             config=load_monitoring_config(),
+            expected_board_id=os.environ.get("MONDAY_WEBHOOK_BOARD_ID"),
         )
         if result.get("processed"):
             self.server.workflow_cache.refresh_now()

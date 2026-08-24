@@ -13,9 +13,19 @@ from referral_pipeline.api.server import create_server
 from referral_pipeline.monitoring.config import load_monitoring_config
 from referral_pipeline.monitoring.sqlite_store import SQLiteWorkflowStore
 from referral_pipeline.monitoring.webhook import (
+    STAGE_WEBHOOK_COLUMN_ALIASES,
     WebhookAuthError,
     handle_webhook_payload,
     verify_webhook_token,
+)
+from referral_pipeline.integrations.monday.webhook_contract import parse_webhook_payload
+from referral_pipeline.integrations.monday.webhook_registry import (
+    MondayWebhookRegistry,
+    MondayWebhookSubscription,
+)
+from referral_pipeline.integrations.monday.write_gateway import (
+    MondayWriteGateway,
+    MondayWritePolicy,
 )
 from referral_pipeline.workflow.attention import workflow_attention
 from referral_pipeline.workflow.service import WorkflowExecutionService
@@ -90,6 +100,62 @@ def test_tracked_column_change_creates_stage_five_exception(tmp_path) -> None:
     assert exceptions[0]["step_id"] == "check-scheduling-status"
 
 
+def test_stage_webhook_allowlist_contains_all_eod_inputs() -> None:
+    assert {
+        "sent_to_cm",
+        "due_date",
+        "appointment_date",
+        "scheduling_complete",
+        "scheduled_status",
+    }.issubset(STAGE_WEBHOOK_COLUMN_ALIASES[5])
+
+
+def test_webhook_event_can_be_rejected_by_board() -> None:
+    result = parse_webhook_payload(
+        {"event": {"pulseId": "item-1", "columnId": SCHEDULED_STATUS_COLUMN, "boardId": "other"}},
+        expected_board_id="5815942462",
+    )
+    assert result == {"ignored": "board_not_tracked", "board_id": "other"}
+
+
+def test_webhook_event_type_is_filtered_before_fetching() -> None:
+    result = parse_webhook_payload(
+        {
+            "event": {
+                "pulseId": "item-1",
+                "columnId": SCHEDULED_STATUS_COLUMN,
+                "type": "create_pulse",
+            }
+        }
+    )
+    assert result["ignored"] == "event_type_not_tracked"
+
+
+def test_repeated_webhook_delivery_is_deduplicated(tmp_path) -> None:
+    store = SQLiteWorkflowStore(tmp_path / "workflow.sqlite")
+    fetch = Mock(side_effect=_fake_fetch({"item-1": _monday_item()}))
+    payload = {"event": {"pulseId": "item-1", "columnId": SCHEDULED_STATUS_COLUMN, "id": "evt-1"}}
+
+    first = handle_webhook_payload(
+        payload,
+        store=store,
+        config=load_monitoring_config(),
+        now=NOW,
+        fetch_items_fn=fetch,
+    )
+    second = handle_webhook_payload(
+        payload,
+        store=store,
+        config=load_monitoring_config(),
+        now=NOW,
+        fetch_items_fn=fetch,
+    )
+
+    assert first["processed"] is True
+    assert second["ignored"] == "duplicate_event"
+    fetch.assert_called_once_with(ids=["item-1"])
+
+
 def test_verify_webhook_token_rejects_missing_secret() -> None:
     with pytest.raises(WebhookAuthError):
         verify_webhook_token("anything", expected=None)
@@ -102,6 +168,74 @@ def test_verify_webhook_token_rejects_mismatch() -> None:
 
 def test_verify_webhook_token_accepts_match() -> None:
     verify_webhook_token("correct", expected="correct")  # does not raise
+
+
+def test_verify_webhook_token_accepts_header_without_query_token() -> None:
+    verify_webhook_token(None, header_token="correct", expected="correct")
+
+
+def test_webhook_registry_is_explicit_and_injectable() -> None:
+    calls = []
+
+    def fake_graphql(query, *, variables):
+        calls.append((query, variables))
+        if "create_webhook" in query:
+            return {"data": {"create_webhook": {"id": "wh-1"}}}
+        return {"data": {"delete_webhook": {"id": "wh-1"}}}
+
+    registry = MondayWebhookRegistry(graphql=fake_graphql)
+    created = registry.create(
+        MondayWebhookSubscription(board_id="5815942462", callback_url="https://example.test/hook?token=x")
+    )
+    deleted = registry.delete(created["id"])
+
+    assert created == {"id": "wh-1"}
+    assert deleted == {"id": "wh-1"}
+    assert calls[0][1]["boardId"] == "5815942462"
+    assert calls[1][1] == {"id": "wh-1"}
+
+
+def test_monday_write_gateway_is_disabled_by_default() -> None:
+    gateway = MondayWriteGateway(MondayWritePolicy(board_id="5815942462"))
+    with pytest.raises(PermissionError, match="disabled"):
+        gateway.change_columns(
+            item_id="item-1",
+            stage=5,
+            values_by_alias={"scheduled_status": {"label": "Scheduled"}},
+            confirm=True,
+        )
+
+
+def test_monday_write_gateway_requires_stage_allowlist_and_confirmation() -> None:
+    calls = []
+
+    def fake_graphql(query, *, variables):
+        calls.append((query, variables))
+        return {"data": {"change_multiple_column_values": {"id": "item-1"}}}
+
+    gateway = MondayWriteGateway(
+        MondayWritePolicy(
+            board_id="5815942462",
+            enabled=True,
+            stage_columns={5: frozenset({"scheduled_status"})},
+        ),
+        graphql=fake_graphql,
+    )
+    with pytest.raises(PermissionError, match="explicit confirmation"):
+        gateway.change_columns(
+            item_id="item-1",
+            stage=5,
+            values_by_alias={"scheduled_status": {"label": "Scheduled"}},
+        )
+
+    result = gateway.change_columns(
+        item_id="item-1",
+        stage=5,
+        values_by_alias={"scheduled_status": {"label": "Scheduled"}},
+        confirm=True,
+    )
+    assert result == {"id": "item-1"}
+    assert json.loads(calls[0][1]["columnValues"]) == {"color_mkq3gga": {"label": "Scheduled"}}
 
 
 def test_server_webhook_route_requires_token(tmp_path, monkeypatch) -> None:
