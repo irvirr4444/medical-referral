@@ -37,6 +37,12 @@ WEBHOOK_COLUMN_ALIASES: tuple[str, ...] = tuple(
 WEBHOOK_COLUMN_IDS: frozenset[str] = frozenset(
     FIELD_COLUMNS[alias] for alias in WEBHOOK_COLUMN_ALIASES
 )
+# Monday names the subscription `change_column_value`, but the documented
+# delivery payload uses `update_column_value`. Accept both so API-created and
+# Automations Center subscriptions share the same internal contract.
+COLUMN_CHANGE_EVENT_TYPES: frozenset[str] = frozenset(
+    {"change_column_value", "update_column_value"}
+)
 
 
 class WebhookPayloadError(ValueError):
@@ -71,7 +77,7 @@ def parse_webhook_payload(
         return {"ignored": "no_event"}
 
     event_type = str(raw_event.get("type") or raw_event.get("eventType") or "change_column_value")
-    if event_type != "change_column_value":
+    if event_type not in COLUMN_CHANGE_EVENT_TYPES:
         return {"ignored": "event_type_not_tracked", "event_type": event_type}
 
     column_id = str(raw_event.get("columnId") or raw_event.get("column_id") or "")
@@ -95,14 +101,21 @@ def parse_webhook_payload(
             "board_id": board_id or "",
         }
 
-    supplied_event_id = _first_string(raw_event, "id", "eventId", "event_id")
+    supplied_event_id = _first_string(
+        raw_event,
+        "id",
+        "eventId",
+        "event_id",
+        "triggerUuid",
+        "trigger_uuid",
+    )
     identity = supplied_event_id or _payload_digest(raw_event)
     return MondayWebhookEvent(
         event_key=f"monday-webhook:{identity}",
         item_id=item_id,
         column_id=column_id,
         board_id=board_id,
-        event_type=event_type,
+        event_type="change_column_value",
     )
 
 

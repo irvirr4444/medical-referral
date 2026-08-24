@@ -76,7 +76,7 @@ class MondayWebhookHandler(BaseHTTPRequestHandler):
         # BaseHTTPRequestHandler treats its first argument as a %-format
         # string, so pass a real placeholder rather than an empty argument
         # tuple. This method is called for both successful and error replies.
-        super().log_message("%s", "monday webhook request")
+        super().log_message("%s", _safe_request_log_label(self.command, self.path))
 
     def _log_processing_result(self, result: dict[str, object]) -> None:
         """Log only the non-PHI fields needed to diagnose webhook delivery."""
@@ -119,6 +119,18 @@ class MondayWebhookHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+
+def _safe_request_log_label(method: str, target: str) -> str:
+    """Identify known routes without ever logging query strings or tokens."""
+
+    path = urlparse(target).path
+    normalized_method = str(method or "HTTP").upper()
+    if path == "/health":
+        return f"{normalized_method} /health"
+    if path == "/api/monday/webhook":
+        return f"{normalized_method} /api/monday/webhook"
+    return f"{normalized_method} other route"
 
 
 def create_webhook_server(

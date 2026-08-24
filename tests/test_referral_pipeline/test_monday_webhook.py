@@ -10,7 +10,11 @@ from unittest.mock import Mock
 import pytest
 
 from referral_pipeline.api.server import create_server
-from referral_pipeline.api.webhook_server import MondayWebhookHandler, create_webhook_server
+from referral_pipeline.api.webhook_server import (
+    MondayWebhookHandler,
+    _safe_request_log_label,
+    create_webhook_server,
+)
 from referral_pipeline.monitoring.config import load_monitoring_config
 from referral_pipeline.monitoring.sqlite_store import SQLiteWorkflowStore
 from referral_pipeline.monitoring.webhook import (
@@ -96,6 +100,15 @@ def test_public_webhook_logs_ignored_reason_without_payload(monkeypatch) -> None
         "processed": False,
         "ignored": "board_id_missing",
     }
+
+
+def test_public_webhook_request_labels_do_not_expose_query_tokens() -> None:
+    assert _safe_request_log_label("GET", "/health") == "GET /health"
+    assert (
+        _safe_request_log_label("POST", "/api/monday/webhook?token=must-not-appear")
+        == "POST /api/monday/webhook"
+    )
+    assert _safe_request_log_label("GET", "/unknown?secret=must-not-appear") == "GET other route"
 NAME_COLUMN = "name"
 
 
@@ -148,9 +161,18 @@ def test_tracked_column_change_creates_stage_five_exception(tmp_path) -> None:
     store = SQLiteWorkflowStore(tmp_path / "workflow.sqlite")
     fetch = _fake_fetch({"item-1": _monday_item()})
     result = handle_webhook_payload(
-        {"event": {"pulseId": "item-1", "columnId": SCHEDULED_STATUS_COLUMN}},
+        {
+            "event": {
+                "type": "update_column_value",
+                "boardId": "5815942462",
+                "pulseId": "item-1",
+                "columnId": SCHEDULED_STATUS_COLUMN,
+                "triggerUuid": "trigger-1",
+            }
+        },
         store=store,
         config=load_monitoring_config(),
+        expected_board_id="5815942462",
         now=NOW,
         fetch_items_fn=fetch,
     )
@@ -192,6 +214,27 @@ def test_webhook_event_type_is_filtered_before_fetching() -> None:
         }
     )
     assert result["ignored"] == "event_type_not_tracked"
+
+
+def test_documented_update_column_value_event_is_normalized() -> None:
+    result = parse_webhook_payload(
+        {
+            "event": {
+                "type": "update_column_value",
+                "boardId": "5815942462",
+                "pulseId": "item-1",
+                "columnId": SCHEDULED_STATUS_COLUMN,
+                "triggerUuid": "trigger-1",
+            }
+        },
+        expected_board_id="5815942462",
+    )
+
+    assert not isinstance(result, dict)
+    assert result.event_type == "change_column_value"
+    assert result.event_key == "monday-webhook:trigger-1"
+    assert result.item_id == "item-1"
+    assert result.column_id == SCHEDULED_STATUS_COLUMN
 
 
 def test_repeated_webhook_delivery_is_deduplicated(tmp_path) -> None:
