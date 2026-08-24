@@ -70,9 +70,12 @@ class MondayWebhookHandler(BaseHTTPRequestHandler):
             return
         self._send_json(HTTPStatus.OK, result)
 
-    def log_message(self, format: str, *args: object) -> None:
+    def log_message(self, _format: str, *_args: object) -> None:
         # Keep request logs free of URLs, query tokens, and request bodies.
-        super().log_message("monday webhook request", ())
+        # BaseHTTPRequestHandler treats its first argument as a %-format
+        # string, so pass a real placeholder rather than an empty argument
+        # tuple. This method is called for both successful and error replies.
+        super().log_message("%s", "monday webhook request")
 
     def _read_json(self) -> dict[str, object]:
         content_type = self.headers.get("Content-Type", "").split(";", 1)[0].strip()

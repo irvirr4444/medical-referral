@@ -10,6 +10,7 @@ from unittest.mock import Mock
 import pytest
 
 from referral_pipeline.api.server import create_server
+from referral_pipeline.api.webhook_server import create_webhook_server
 from referral_pipeline.monitoring.config import load_monitoring_config
 from referral_pipeline.monitoring.sqlite_store import SQLiteWorkflowStore
 from referral_pipeline.monitoring.webhook import (
@@ -33,6 +34,30 @@ from referral_pipeline.workflow.service import WorkflowExecutionService
 
 NOW = datetime(2026, 8, 21, 1, 0, tzinfo=timezone.utc)  # 18:00 Pacific -- past the 17:00 EOD cutoff
 SCHEDULED_STATUS_COLUMN = "color_mkq3gga"
+
+
+def test_public_webhook_health_route_returns_json_without_logging_failure(tmp_path) -> None:
+    server = create_webhook_server(
+        host="127.0.0.1",
+        port=0,
+        database_backend="sqlite",
+        sqlite_path=tmp_path / "workflow.sqlite",
+    )
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        host, port = server.server_address[:2]
+        conn = http.client.HTTPConnection(host, int(port), timeout=5)
+        conn.request("GET", "/health")
+        response = conn.getresponse()
+        payload = json.loads(response.read())
+        conn.close()
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert response.status == HTTPStatus.OK
+    assert payload == {"status": "ok", "service": "monday-webhook"}
 NAME_COLUMN = "name"
 
 
