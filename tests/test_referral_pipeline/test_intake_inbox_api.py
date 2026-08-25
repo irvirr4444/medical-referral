@@ -516,9 +516,11 @@ def test_workflow_api_persists_assignment_and_prepares_handoff(tmp_path) -> None
         )
         notified = connection.getresponse()
         assert notified.status == 200
-        assert json.loads(notified.read())["status"] == "succeeded"
-        assert sent[0]["source_message_id"] == "source-message-api"
-        assert sent[0]["recipient"] == "manager@example.test"
+        notification_payload = json.loads(notified.read())
+        assert notification_payload["status"] == "succeeded"
+        assert notification_payload["result"]["channel"] == "gmail"
+        assert sent == []
+        assert len(store.pending_email_alerts()) == 1
     finally:
         connection.close()
         server.shutdown()

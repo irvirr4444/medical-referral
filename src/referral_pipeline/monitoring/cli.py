@@ -17,6 +17,10 @@ from referral_pipeline.monitoring.live_drk_source import (
     load_live_drk_snapshots,
 )
 from referral_pipeline.monitoring.monday_source import load_monday_snapshots
+from referral_pipeline.email_alerts import (
+    dispatch_pending_email_alerts,
+    queue_workflow_email_alerts,
+)
 from referral_pipeline.monitoring.notifications import dispatch_pending_notifications, outlook_sender
 from referral_pipeline.monitoring.service import WorkflowMonitoringService
 from referral_pipeline.monitoring.store import create_workflow_store
@@ -156,6 +160,7 @@ def run_monitoring_command(args: argparse.Namespace) -> int:
 
     service = WorkflowMonitoringService(store=store, config=monitoring_config)
     report = service.process(snapshots, now=now)
+    report["workflow_email_alerts"] = queue_workflow_email_alerts(store=store, now=now)
     if live_drk_report is not None:
         report["drk_live"] = live_drk_report
     if args.live_monday or args.monday_snapshot is not None:
@@ -168,8 +173,10 @@ def run_monitoring_command(args: argparse.Namespace) -> int:
             store=store,
             send_email=outlook_sender(),
         )
+        report["email_alerts"] = dispatch_pending_email_alerts(store=store)
     else:
         report["notifications"] = {"sent": 0, "mode": "outbox-only"}
+        report["email_alerts"] = {"sent": 0, "mode": "outbox-only"}
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

@@ -77,6 +77,10 @@ def test_confirm_assignment_is_idempotent_and_prepares_handoff(tmp_path) -> None
 
     assert first["status"] == second["status"] == "completed"
     assert first["assigned_case_manager"]["name"] == "Case Manager One"
+    alerts = store.pending_email_alerts()
+    assert len(alerts) == 1
+    assert alerts[0].action_id == "cm-assigned"
+    assert alerts[0].case_emails == {"assigned_cm": ("one@example.test",)}
     assert len(store.list_decisions(case.case_id)) == 1
     assert {operation.operation_type for operation in store.list_external_operations(case.case_id)} == {
         "notify-assigned-case-manager",

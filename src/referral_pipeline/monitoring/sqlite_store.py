@@ -9,6 +9,7 @@ from pathlib import Path
 
 from referral_pipeline.monitoring.models import (
     ComponentHealth,
+    EmailAlertRecord,
     ExternalOperation,
     NotificationRecord,
     OperationalSnapshot,
@@ -554,6 +555,62 @@ class SQLiteWorkflowStore:
     def mark_notifications_failed(self, keys: list[str], error: str) -> None:
         self._mark_notifications(keys, status="failed", error=error)
 
+    def enqueue_email_alert(self, alert: EmailAlertRecord) -> bool:
+        with self._connect() as connection:
+            cursor = connection.execute(
+                """
+                INSERT OR IGNORE INTO wcw_email_alert_outbox
+                    (alert_key, action_id, patient_id, subject, body_text, body_html,
+                     to_roles_json, cc_roles_json, case_emails_json, status, attempts,
+                     last_error, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    alert.alert_key,
+                    alert.action_id,
+                    alert.patient_id,
+                    alert.subject,
+                    alert.body_text,
+                    alert.body_html,
+                    _json(alert.to_roles),
+                    _json(alert.cc_roles),
+                    _json(alert.case_emails),
+                    alert.status,
+                    alert.attempts,
+                    alert.last_error,
+                    alert.created_at.isoformat(),
+                ),
+            )
+        return cursor.rowcount == 1
+
+    def pending_email_alerts(self, *, limit: int = 100) -> list[EmailAlertRecord]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT alert_key, action_id, patient_id, subject, body_text, body_html,
+                       to_roles_json, cc_roles_json, case_emails_json, created_at,
+                       status, attempts, last_error
+                FROM wcw_email_alert_outbox
+                WHERE status IN ('pending', 'failed')
+                ORDER BY created_at LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        alerts: list[EmailAlertRecord] = []
+        for row in rows:
+            payload = dict(row)
+            payload["to_roles"] = json.loads(payload.pop("to_roles_json"))
+            payload["cc_roles"] = json.loads(payload.pop("cc_roles_json"))
+            payload["case_emails"] = json.loads(payload.pop("case_emails_json"))
+            alerts.append(EmailAlertRecord.model_validate(payload))
+        return alerts
+
+    def mark_email_alerts_sent(self, keys: list[str]) -> None:
+        self._mark_email_alerts(keys, status="sent", error=None)
+
+    def mark_email_alerts_failed(self, keys: list[str], error: str) -> None:
+        self._mark_email_alerts(keys, status="failed", error=error)
+
     def upsert_patient_link(self, link: PatientLink) -> None:
         with self._connect() as connection:
             connection.execute(
@@ -695,6 +752,7 @@ class SQLiteWorkflowStore:
                 "events": connection.execute("SELECT COUNT(*) FROM wcw_workflow_events").fetchone()[0],
                 "open_exceptions": connection.execute("SELECT COUNT(*) FROM wcw_workflow_exceptions WHERE status = 'open'").fetchone()[0],
                 "pending_notifications": connection.execute("SELECT COUNT(*) FROM wcw_notification_outbox WHERE status IN ('pending', 'failed')").fetchone()[0],
+                "pending_email_alerts": connection.execute("SELECT COUNT(*) FROM wcw_email_alert_outbox WHERE status IN ('pending', 'failed')").fetchone()[0],
                 "patient_links": connection.execute("SELECT COUNT(*) FROM wcw_patient_links").fetchone()[0],
                 "unhealthy_components": connection.execute(
                     "SELECT COUNT(*) FROM wcw_component_health WHERE status != 'healthy'"
@@ -712,6 +770,20 @@ class SQLiteWorkflowStore:
                 UPDATE wcw_notification_outbox
                 SET status = ?, attempts = attempts + 1, last_error = ?
                 WHERE notification_key IN ({placeholders})
+                """,
+                (status, error, *keys),
+            )
+
+    def _mark_email_alerts(self, keys: list[str], *, status: str, error: str | None) -> None:
+        if not keys:
+            return
+        placeholders = ",".join("?" for _ in keys)
+        with self._connect() as connection:
+            connection.execute(
+                f"""
+                UPDATE wcw_email_alert_outbox
+                SET status = ?, attempts = attempts + 1, last_error = ?
+                WHERE alert_key IN ({placeholders})
                 """,
                 (status, error, *keys),
             )
@@ -999,6 +1071,23 @@ CREATE TABLE IF NOT EXISTS wcw_notification_outbox (
     last_error TEXT,
     created_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS wcw_email_alert_outbox (
+    alert_key TEXT PRIMARY KEY,
+    action_id TEXT NOT NULL,
+    patient_id TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    body_text TEXT NOT NULL,
+    body_html TEXT NOT NULL,
+    to_roles_json TEXT NOT NULL,
+    cc_roles_json TEXT NOT NULL,
+    case_emails_json TEXT NOT NULL,
+    status TEXT NOT NULL,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    last_error TEXT,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_wcw_email_alert_outbox_pending
+    ON wcw_email_alert_outbox(status, created_at);
 CREATE TABLE IF NOT EXISTS wcw_workflow_counters (
     entity_id TEXT NOT NULL,
     counter_name TEXT NOT NULL,

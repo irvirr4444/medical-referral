@@ -9,6 +9,7 @@ import requests
 
 from referral_pipeline.monitoring.models import (
     ComponentHealth,
+    EmailAlertRecord,
     ExternalOperation,
     NotificationRecord,
     OperationalSnapshot,
@@ -415,6 +416,42 @@ class SupabaseWorkflowStore:
     def mark_notifications_failed(self, keys: list[str], error: str) -> None:
         self._mark_notifications(keys, status="failed", error=error)
 
+    def enqueue_email_alert(self, alert: EmailAlertRecord) -> bool:
+        rows = self._request(
+            "POST",
+            "wcw_email_alert_outbox",
+            json_body={
+                **alert.model_dump(mode="json"),
+                "to_roles": list(alert.to_roles),
+                "cc_roles": list(alert.cc_roles),
+                "case_emails": {
+                    role: list(addresses) for role, addresses in alert.case_emails.items()
+                },
+            },
+            params={"on_conflict": "alert_key"},
+            prefer="resolution=ignore-duplicates,return=representation",
+        )
+        return bool(rows)
+
+    def pending_email_alerts(self, *, limit: int = 100) -> list[EmailAlertRecord]:
+        rows = self._request(
+            "GET",
+            "wcw_email_alert_outbox",
+            params={
+                "select": "alert_key,action_id,patient_id,subject,body_text,body_html,to_roles,cc_roles,case_emails,created_at,status,attempts,last_error",
+                "status": "in.(pending,failed)",
+                "order": "created_at.asc",
+                "limit": str(limit),
+            },
+        )
+        return [EmailAlertRecord.model_validate(row) for row in rows]
+
+    def mark_email_alerts_sent(self, keys: list[str]) -> None:
+        self._mark_email_alerts(keys, status="sent", error=None)
+
+    def mark_email_alerts_failed(self, keys: list[str], error: str) -> None:
+        self._mark_email_alerts(keys, status="failed", error=error)
+
     def upsert_patient_link(self, link: PatientLink) -> None:
         existing = self._request(
             "GET",
@@ -535,6 +572,9 @@ class SupabaseWorkflowStore:
             "pending_notifications": self._count(
                 "wcw_notification_outbox", status="in.(pending,failed)"
             ),
+            "pending_email_alerts": self._count(
+                "wcw_email_alert_outbox", status="in.(pending,failed)"
+            ),
             "patient_links": self._count("wcw_patient_links"),
             "unhealthy_components": self._count(
                 "wcw_component_health", status="neq.healthy"
@@ -576,11 +616,34 @@ class SupabaseWorkflowStore:
                 prefer="return=minimal",
             )
 
+    def _mark_email_alerts(self, keys: list[str], *, status: str, error: str | None) -> None:
+        for key in keys:
+            existing = self._request(
+                "GET",
+                "wcw_email_alert_outbox",
+                params={"select": "attempts", "alert_key": f"eq.{key}", "limit": "1"},
+            )
+            attempts = int(existing[0].get("attempts") or 0) + 1 if existing else 1
+            self._request(
+                "PATCH",
+                "wcw_email_alert_outbox",
+                params={"alert_key": f"eq.{key}"},
+                json_body={"status": status, "attempts": attempts, "last_error": error},
+                prefer="return=minimal",
+            )
+
     def _count(self, table: str, **filters: str) -> int:
         response = self._request_raw(
             "GET",
             table,
-            params={"select": "notification_key" if table == "wcw_notification_outbox" else "*", **filters},
+            params={
+                "select": (
+                    "notification_key"
+                    if table == "wcw_notification_outbox"
+                    else "alert_key" if table == "wcw_email_alert_outbox" else "*"
+                ),
+                **filters,
+            },
             prefer="count=exact",
             extra_headers={"Range": "0-0"},
         )

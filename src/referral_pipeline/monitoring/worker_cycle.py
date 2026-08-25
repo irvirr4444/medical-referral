@@ -9,6 +9,10 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
+from referral_pipeline.email_alerts import (
+    dispatch_pending_email_alerts,
+    queue_workflow_email_alerts,
+)
 from referral_pipeline.monitoring.config import DEFAULT_CONFIG_PATH, load_monitoring_config
 from referral_pipeline.monitoring.drk_capture import DEFAULT_PROFILE_PATH, load_drk_capture_snapshots
 from referral_pipeline.monitoring.drk_source import load_drk_snapshots
@@ -99,6 +103,10 @@ def run_monitor_cycle(
 
         service = WorkflowMonitoringService(store=store, config=monitoring_config)
         report = service.process(snapshots, now=now)
+        report["workflow_email_alerts"] = queue_workflow_email_alerts(
+            store=store,
+            now=now,
+        )
         if live_drk_report is not None:
             report["drk_live"] = live_drk_report
         store.record_cursor("monday", now.isoformat())
@@ -107,6 +115,11 @@ def run_monitor_cycle(
         report["database"] = store.status_summary()
         report["notifications"] = (
             dispatch_pending_notifications(store=store, send_email=outlook_sender())
+            if send_alerts
+            else {"sent": 0, "mode": "outbox-only"}
+        )
+        report["email_alerts"] = (
+            dispatch_pending_email_alerts(store=store)
             if send_alerts
             else {"sent": 0, "mode": "outbox-only"}
         )

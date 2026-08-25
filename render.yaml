@@ -62,3 +62,15 @@ services:
         sync: false
       - key: WORKFLOW_NOTIFICATION_RECIPIENTS
         sync: false
+      - key: GMAIL_CLIENT_ID
+        sync: false
+      - key: GMAIL_CLIENT_SECRET
+        sync: false
+      - key: GMAIL_REFRESH_TOKEN
+        sync: false
+      - key: GMAIL_ALERT_APP_BASE_URL
+        sync: false
+      - key: GMAIL_ALERT_ROLE_EMAILS
+        sync: false
+      - key: GMAIL_ALERT_DEFAULT_TO
+        sync: false

@@ -37,4 +37,4 @@ def test_intake_review_email_uses_gonzalez_platform_fields() -> None:
     assert "Wound or clinical information: Right groin unstageable pressure injury / wound cellulitis" in rendered.body_text
     assert "[ Confirm all information is correct ]" in rendered.body_text
     assert "OVERDUE" not in rendered.body_text
-    assert 'href="#"' in rendered.body_html
+    assert 'href="http://localhost:5173/automation?' in rendered.body_html

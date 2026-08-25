@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from referral_pipeline.monitoring.models import PatientLink, WorkflowCase
+from referral_pipeline.monitoring.models import EmailAlertRecord, PatientLink, WorkflowCase
 from referral_pipeline.monitoring.supabase_store import SupabaseWorkflowStore
 
 
@@ -129,3 +129,31 @@ def test_acknowledgement_claim_uses_atomic_rpc(monkeypatch) -> None:
     assert result == "claimed"
     assert seen[0][1] == "rpc/claim_wcw_acknowledgement"
     assert seen[0][2]["json_body"]["p_recipient"] == "partner@example.test"
+
+
+def test_email_alert_outbox_serializes_recipient_roles(monkeypatch) -> None:
+    store = SupabaseWorkflowStore(url="https://example.supabase.co", service_role_key="test-key")
+    alert = EmailAlertRecord(
+        alert_key="alert-1",
+        action_id="cm-assigned",
+        patient_id="case-1",
+        subject="New assignment · Test Patient",
+        body_text="Text",
+        body_html="<p>Text</p>",
+        to_roles=("assigned_cm",),
+        case_emails={"assigned_cm": ("cm@example.test",)},
+        created_at=NOW,
+    )
+    calls: list[tuple[str, str, dict]] = []
+
+    def fake_request(method, table, **kwargs):
+        calls.append((method, table, kwargs))
+        return [kwargs.get("json_body", {})]
+
+    monkeypatch.setattr(store, "_request", fake_request)
+
+    assert store.enqueue_email_alert(alert) is True
+    payload = calls[0][2]["json_body"]
+    assert calls[0][1] == "wcw_email_alert_outbox"
+    assert payload["to_roles"] == ["assigned_cm"]
+    assert payload["case_emails"] == {"assigned_cm": ["cm@example.test"]}

@@ -6,6 +6,7 @@ import hashlib
 from datetime import datetime
 from typing import Iterable
 
+from referral_pipeline.email_alerts import queue_snapshot_email_alert
 from referral_pipeline.monitoring.config import MonitoringConfig
 from referral_pipeline.monitoring.models import (
     NotificationRecord,
@@ -34,6 +35,7 @@ class WorkflowMonitoringService:
             "exceptions_created": 0,
             "exceptions_resolved": 0,
             "notifications_queued": 0,
+            "email_alerts_queued": 0,
         }
         scheduling_counts: dict[str, int] = {}
         for incoming in snapshots:
@@ -71,12 +73,35 @@ class WorkflowMonitoringService:
                     )
                     report["exceptions_created"] = int(report["exceptions_created"]) + created
                     report["notifications_queued"] = int(report["notifications_queued"]) + queued
+                    scheduling_occurrences = sum(
+                        1
+                        for exception in self.store.list_exceptions(limit=500)
+                        if exception.entity_id == snapshot.entity_id
+                        and exception.exception_type == "scheduling_exception"
+                    )
+                    action_id = (
+                        "eod-follow-up-cm"
+                        if scheduling_occurrences <= 1
+                        else "eod-escalate"
+                    )
+                    report["email_alerts_queued"] = int(report["email_alerts_queued"]) + int(
+                        queue_snapshot_email_alert(
+                            store=self.store,
+                            action_id=action_id,
+                            snapshot=snapshot,
+                            now=now,
+                            hours_overdue=24.0 if action_id == "eod-follow-up-cm" else 48.0,
+                        )
+                    )
 
             if changed and previous is not None:
-                events, exceptions, queued = self._process_visit_transition(previous, snapshot, now=now)
+                events, exceptions, queued, email_alerts = self._process_visit_transition(
+                    previous, snapshot, now=now
+                )
                 report["events_created"] = int(report["events_created"]) + events
                 report["exceptions_created"] = int(report["exceptions_created"]) + exceptions
                 report["notifications_queued"] = int(report["notifications_queued"]) + queued
+                report["email_alerts_queued"] = int(report["email_alerts_queued"]) + email_alerts
 
         report["scheduling"] = scheduling_counts
         return report
@@ -87,7 +112,7 @@ class WorkflowMonitoringService:
         current: OperationalSnapshot,
         *,
         now: datetime,
-    ) -> tuple[int, int, int]:
+    ) -> tuple[int, int, int, int]:
         counter_name = "consecutive_not_seen"
         current_count = self.store.get_counter(current.entity_id, counter_name)
         transition = evaluate_visit_transition(
@@ -109,6 +134,7 @@ class WorkflowMonitoringService:
         events_created = 0
         exceptions_created = 0
         notifications_queued = 0
+        email_alerts_queued = 0
         for event_type in transition.event_types:
             event = WorkflowEvent(
                 event_key=f"{current.entity_id}:{event_type}:{current.payload_digest[:20]}",
@@ -127,6 +153,43 @@ class WorkflowMonitoringService:
                 },
             )
             events_created += int(self.store.record_event(event))
+
+        if "visit_not_seen" in transition.event_types:
+            action_id = {
+                1: "not-seen-week-1",
+                2: "not-seen-week-2",
+            }.get(transition.consecutive_not_seen, "not-seen-week-3")
+            email_alerts_queued += int(
+                queue_snapshot_email_alert(
+                    store=self.store,
+                    action_id=action_id,
+                    snapshot=current,
+                    now=now,
+                )
+            )
+
+        if _became_sent_to_provider(previous, current):
+            event = WorkflowEvent(
+                event_key=f"{current.entity_id}:referral_sent_to_provider:{current.payload_digest[:20]}",
+                event_type="referral_sent_to_provider",
+                entity_id=current.entity_id,
+                source=current.source,
+                occurred_at=now,
+                details={
+                    "provider": current.provider,
+                    "case_manager": current.case_manager,
+                    "recorded_value": current.referral_sent_to_provider,
+                },
+            )
+            events_created += int(self.store.record_event(event))
+            email_alerts_queued += int(
+                queue_snapshot_email_alert(
+                    store=self.store,
+                    action_id="send-referral-provider",
+                    snapshot=current,
+                    now=now,
+                )
+            )
 
         exception_specs: list[tuple[str, str, str]] = []
         if transition.review_required:
@@ -166,7 +229,7 @@ class WorkflowMonitoringService:
             )
             exceptions_created += created
             notifications_queued += queued
-        return events_created, exceptions_created, notifications_queued
+        return events_created, exceptions_created, notifications_queued, email_alerts_queued
 
     def _record_exception(
         self,
@@ -289,4 +352,23 @@ def _operational_details(snapshot: OperationalSnapshot) -> dict[str, object]:
         "scheduled_status": snapshot.scheduled_status,
         "scheduling_complete": snapshot.scheduling_complete,
         "visit_status": snapshot.visit_status,
+    }
+
+
+def _became_sent_to_provider(
+    previous: OperationalSnapshot,
+    current: OperationalSnapshot,
+) -> bool:
+    return not _positive(previous.referral_sent_to_provider) and _positive(
+        current.referral_sent_to_provider
+    )
+
+
+def _positive(value: object) -> bool:
+    return " ".join(str(value or "").casefold().split()) in {
+        "yes",
+        "sent",
+        "complete",
+        "completed",
+        "true",
     }

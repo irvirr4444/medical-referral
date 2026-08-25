@@ -87,7 +87,11 @@ def test_decide_email_has_cta_and_reason() -> None:
             patient_id="gonzalez-eric",
             patient_name="Gonzalez, Eric",
             hours_overdue=22 / 60,
-            open_url=open_step_url(template, "gonzalez-eric"),
+            open_url=open_step_url(
+                template,
+                "gonzalez-eric",
+                base_url="https://app.example",
+            ),
             feed_fields=fields,
         ),
     )
@@ -97,7 +101,8 @@ def test_decide_email_has_cta_and_reason() -> None:
     assert "chart isn’t confirmed" in rendered.body_text.lower() or "chart isn't confirmed" in rendered.body_text.lower()
     assert "nothing can move" in rendered.body_text.lower()
     assert "[ Confirm all information is correct ]" in rendered.body_text
-    assert 'href="#"' in rendered.body_html
+    assert "https://app.example/automation?" in rendered.body_text
+    assert 'href="https://app.example/automation?' in rendered.body_html
     assert "http://localhost" not in rendered.body_html
 
 

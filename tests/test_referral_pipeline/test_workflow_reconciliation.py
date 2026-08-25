@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 import pytest
 
 from drk_emr.create_patient import fill as drk_fill
+from referral_pipeline.email_alerts import email_alert_key
 from referral_pipeline.monitoring.models import WorkflowCase, WorkflowEvent
 from referral_pipeline.monitoring.sqlite_store import SQLiteWorkflowStore
 from referral_pipeline.workflow import drk_prefill
@@ -183,7 +184,7 @@ def test_duplicate_confirmations_do_not_duplicate_side_effects(tmp_path) -> None
     assert len(store.list_external_operations(case.case_id)) == 3
 
 
-def test_one_failed_stage_three_operation_retries_without_repeating_success(tmp_path, monkeypatch) -> None:
+def test_stage_three_operations_do_not_repeat_queued_assignment_email(tmp_path, monkeypatch) -> None:
     store = SQLiteWorkflowStore(tmp_path / "workflow.sqlite")
     case = _completed_stage_one(store)
     service = WorkflowExecutionService(store, case_managers=MANAGERS)
@@ -233,13 +234,15 @@ def test_one_failed_stage_three_operation_retries_without_repeating_success(tmp_
         def send_reply(self, **kwargs):
             raise RuntimeError("notify failed")
 
-    with pytest.raises(WorkflowExecutionError, match="outcome is uncertain"):
-        service.execute_handoff_operation(
-            case.case_id,
-            "notify-assigned-case-manager",
-            execute=True,
-            mailbox=Mailbox(),
-        )
+    notified = service.execute_handoff_operation(
+        case.case_id,
+        "notify-assigned-case-manager",
+        execute=True,
+        mailbox=Mailbox(),
+    )
+    assert notified["status"] == "succeeded"
+    assert notified["result"]["channel"] == "gmail"
+    assert len(store.pending_email_alerts()) == 1
     monday = service.execute_handoff_operation(
         case.case_id,
         "create-monday-record",
@@ -287,12 +290,21 @@ def test_one_failed_stage_three_operation_retries_without_repeating_success(tmp_
         operator_retry=True,
     )
     assert retried["status"] == "succeeded"
-    assert len(sent) == 1
+    assert retried["mode"] == "queued"
+    assert sent == []
+    assert len(store.pending_email_alerts()) == 1
     unchanged = {item.operation_type: item for item in store.list_external_operations(case.case_id)}
     assert unchanged["create-monday-record"].attempts == 0
     assert unchanged["create-monday-record"].status == "ready"
     assert unchanged["prefill-drk-chart"].attempts == 1
-    assert unchanged["notify-assigned-case-manager"].attempts == 2
+    notification = unchanged["notify-assigned-case-manager"]
+    assert notification.attempts == 0
+    assert notification.status == "succeeded"
+    assert notification.result == {
+        "queued": True,
+        "channel": "gmail",
+        "alert_key": email_alert_key(case.case_id, "cm-assigned"),
+    }
 
 
 def test_handoff_executors_are_safe_by_default() -> None:

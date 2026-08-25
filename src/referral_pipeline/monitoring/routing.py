@@ -12,6 +12,7 @@ from typing import Any
 
 from referral_pipeline.monitoring.models import (
     ComponentHealth,
+    EmailAlertRecord,
     ExternalOperation,
     NotificationRecord,
     OperationalSnapshot,
@@ -184,6 +185,27 @@ class RoutingWorkflowStore:
 
     def mark_notifications_failed(self, keys: list[str], error: str) -> None:
         self.local.mark_notifications_failed(keys, error)
+
+    def enqueue_email_alert(self, alert: EmailAlertRecord) -> bool:
+        return self._store_for(alert.patient_id).enqueue_email_alert(alert)
+
+    def pending_email_alerts(self, *, limit: int = 100) -> list[EmailAlertRecord]:
+        return _unique(
+            [
+                *self.remote.pending_email_alerts(limit=limit),
+                *self.local.pending_email_alerts(limit=limit),
+            ],
+            key=lambda alert: alert.alert_key,
+            limit=limit,
+        )
+
+    def mark_email_alerts_sent(self, keys: list[str]) -> None:
+        self.local.mark_email_alerts_sent(keys)
+        self.remote.mark_email_alerts_sent(keys)
+
+    def mark_email_alerts_failed(self, keys: list[str], error: str) -> None:
+        self.local.mark_email_alerts_failed(keys, error)
+        self.remote.mark_email_alerts_failed(keys, error)
 
     def upsert_patient_link(self, link: PatientLink) -> None:
         store = self.remote if self.remote.find_entity_id(

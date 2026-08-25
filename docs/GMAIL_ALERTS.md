@@ -327,3 +327,27 @@ Provider / Case manager / Visit status / Consecutive / Last visit / Next step
 - HTML chrome: `src/gmail_alert/render.py`
 - Recipients: `AlertContext.case_emails` (demo seeds in `case_emails.py`)
 - Demo send: `PYTHONPATH=src python3.11 -m gmail_alert`
+
+## Referral pipeline integration
+
+The live integration renders each product email once per
+`{workflow case}:{action ID}` and persists it in `wcw_email_alert_outbox`.
+The monitoring worker resolves recipients only when delivery runs, sends HTML
+and text through Gmail, and leaves failures in the outbox for retry.
+
+Currently observable backend triggers:
+
+- overdue intake review and referral-partner confirmation deadlines;
+- case-manager assignment;
+- first and second end-of-day scheduling misses;
+- referral-sent-to-provider Monday transitions;
+- first, second, and third consecutive not-seen transitions.
+
+Case-manager addresses come from the assignment decision. Provider addresses
+must come from case/roster data. Organization roles are configured in the
+single `GMAIL_ALERT_ROLE_EMAILS` JSON variable. `REVIEW_RECIPIENT_EMAIL` remains
+the fallback for `intake_lead`.
+
+`GMAIL_ALERT_DEFAULT_TO` is a test-only safety sink. When present, it replaces
+all To/Cc destinations. `GMAIL_ALERT_APP_BASE_URL` supplies the frontend base
+URL for Decide-email buttons.

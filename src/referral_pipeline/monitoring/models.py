@@ -183,6 +183,24 @@ class NotificationRecord(StrictModel):
     last_error: str | None = None
 
 
+class EmailAlertRecord(StrictModel):
+    """Rendered product email waiting for retry-safe Gmail delivery."""
+
+    alert_key: str
+    action_id: str
+    patient_id: str
+    subject: str
+    body_text: str
+    body_html: str
+    to_roles: tuple[str, ...]
+    cc_roles: tuple[str, ...] = ()
+    case_emails: dict[str, tuple[str, ...]] = Field(default_factory=dict)
+    created_at: datetime
+    status: Literal["pending", "sent", "failed"] = "pending"
+    attempts: int = Field(default=0, ge=0)
+    last_error: str | None = None
+
+
 class PatientLink(StrictModel):
     entity_id: str
     monday_item_id: str | None = None

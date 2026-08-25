@@ -87,13 +87,14 @@ def _build_body_text(
     reason: str,
     fields: tuple[FeedField, ...],
     show_cta: bool,
+    open_url: str,
 ) -> str:
     lines = [name, reason, ""]
     for field_label, value in fields:
         if value:
             lines.append(f"{field_label}: {value}")
     if show_cta:
-        lines.extend(["", f"[ {label} ]"])
+        lines.extend(["", f"[ {label} ]", open_url])
     return "\n".join(lines) + "\n"
 
 
@@ -104,6 +105,7 @@ def _build_body_html(
     reason: str,
     fields: tuple[FeedField, ...],
     show_cta: bool,
+    open_url: str,
 ) -> str:
     field_rows = []
     for field_label, value in fields:
@@ -119,7 +121,8 @@ def _build_body_html(
         fields_html = f'<hr style="{_RULE_STYLE}">\n' + "\n".join(field_rows) + "\n"
     cta_html = (
         f'<p style="margin:28px 0 0 0;">'
-        f'<a href="#" style="{_BUTTON_STYLE}">{html.escape(label)}</a></p>\n'
+        f'<a href="{html.escape(open_url, quote=True)}" style="{_BUTTON_STYLE}">'
+        f"{html.escape(label)}</a></p>\n"
         if show_cta
         else ""
     )
@@ -145,6 +148,7 @@ def render_alert(action_id: ConfirmationActionId, context: AlertContext) -> Rend
         reason=template.reason,
         fields=fields,
         show_cta=show_cta,
+        open_url=context.open_url,
     )
     body_html = _build_body_html(
         label=template.label,
@@ -152,6 +156,7 @@ def render_alert(action_id: ConfirmationActionId, context: AlertContext) -> Rend
         reason=template.reason,
         fields=fields,
         show_cta=show_cta,
+        open_url=context.open_url,
     )
     return RenderedAlert(
         action_id=action_id,

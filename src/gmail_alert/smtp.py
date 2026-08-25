@@ -1,7 +1,6 @@
-"""Gmail SMTP send for SLA alerts.
+"""Gmail API/SMTP delivery for rendered SLA alerts.
 
-Dedup is the caller's job until a worker is wired: one send per
-``{patient_id}:{action_id}`` until the miss promotes to a later timer.
+The referral pipeline's durable email outbox owns deduplication and retries.
 """
 
 from __future__ import annotations
@@ -99,7 +98,7 @@ def send_alert(
     environ: dict[str, str] | None = None,
     smtp_factory=smtplib.SMTP,
 ) -> RenderedAlert:
-    """Render and send. Caller owns once-per-timer dedup: ``{patient_id}:{action_id}``."""
+    """Render and send one alert; durable callers own deduplication and retries."""
 
     rendered = render_alert(action_id, context)
     template = template_for(action_id)

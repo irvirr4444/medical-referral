@@ -15,9 +15,11 @@ from referral_pipeline.monitoring.models import (
 )
 from referral_pipeline.monitoring.routing import persistence_for
 from referral_pipeline.monitoring.store import WorkflowStore
+from referral_pipeline.email_alerts import email_alert_key, queue_assignment_email_alert
 from referral_pipeline.workflow.handoff import HandoffExecutionError, run_handoff
 from referral_pipeline.workflow.operation_policy import (
     MONDAY,
+    NOTIFY,
     is_false_preview_success,
     is_real_execution,
     public_operation_payload,
@@ -275,6 +277,14 @@ class WorkflowExecutionService:
                 details={"case_manager": manager, "decided_by": actor},
             )
         self._prepare_handoff(case_id, manager=manager, now=now)
+        current_case = self._case(case_id)
+        queue_assignment_email_alert(
+            store=self.store,
+            case_id=case_id,
+            patient_name=current_case.patient_label or case_id,
+            manager=manager,
+            now=now,
+        )
         return self._assignment_payload(item)
 
     def preview_handoff_operation(
@@ -342,6 +352,38 @@ class WorkflowExecutionService:
             )
 
         operation = self._handoff_operation(case_id, operation_type)
+        if operation_type == NOTIFY:
+            manager = operation.request_payload.get("case_manager")
+            if not isinstance(manager, dict):
+                raise WorkflowExecutionError("case-manager notification is missing assignment data")
+            case = self._case(case_id)
+            queue_assignment_email_alert(
+                store=self.store,
+                case_id=case_id,
+                patient_name=case.patient_label or case_id,
+                manager=manager,
+                now=_now(),
+            )
+            succeeded = self.store.upsert_external_operation(
+                operation.model_copy(
+                    update={
+                        "status": "succeeded",
+                        "result": {
+                            "queued": True,
+                            "channel": "gmail",
+                            "alert_key": email_alert_key(case_id, "cm-assigned"),
+                        },
+                        "last_error": None,
+                        "lease_until": None,
+                        "updated_at": _now(),
+                        "completed_at": operation.completed_at or _now(),
+                    }
+                )
+            )
+            return public_operation_payload(
+                succeeded,
+                extra={"consumed": True, "mode": "queued"},
+            )
         if operation.status == "succeeded" and is_false_preview_success(operation):
             operation = self.store.upsert_external_operation(
                 operation.model_copy(
