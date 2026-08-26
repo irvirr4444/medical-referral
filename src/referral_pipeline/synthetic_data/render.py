@@ -14,6 +14,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen.canvas import Canvas
 
 from .models import SyntheticReferral
+from .vocabulary import MEDICATIONS, NOTE_FRAGMENTS
 
 
 PAGE_W, PAGE_H = letter
@@ -32,17 +33,17 @@ def render_referral(case: SyntheticReferral, output: str | Path) -> Path:
 
 def _canvas(path: Path) -> Canvas:
     canvas = Canvas(str(path), pagesize=letter, pageCompression=1)
-    canvas.setTitle("Synthetic referral packet")
-    canvas.setAuthor("WCW automation test fixture generator")
+    canvas.setTitle("Patient referral packet")
+    canvas.setAuthor("Health Information Management")
     return canvas
 
 
+def _case_choice(case: SyntheticReferral, label: str, values: tuple[str, ...]) -> str:
+    return random.Random(f"{case.slug}:{label}").choice(values)
+
+
 def _synthetic_banner(c: Canvas) -> None:
-    c.saveState()
-    c.setFillColor(colors.HexColor("#B42318"))
-    c.setFont("Helvetica-Bold", 7)
-    c.drawCentredString(PAGE_W / 2, 18, "SYNTHETIC TEST DATA - NOT A REAL PATIENT")
-    c.restoreState()
+    """Compatibility hook; safety labeling lives in the external manifest."""
 
 
 def _header(c: Canvas, title: str, subtitle: str | None = None) -> float:
@@ -143,7 +144,7 @@ def _draw_wrapped(
 def _page_number(c: Canvas, page: int, total: int, source: str = "Secure Fax Gateway") -> None:
     c.setFont("Courier", 7)
     c.drawString(30, PAGE_H - 18, f"From: {source}")
-    c.drawCentredString(PAGE_W / 2, PAGE_H - 18, f"08/11/2026 14:32 PDT    Page {page} of {total}")
+    c.drawCentredString(PAGE_W / 2, PAGE_H - 18, f"Page {page} of {total}")
 
 
 def _services(case: SyntheticReferral) -> str:
@@ -200,7 +201,9 @@ def _draw_coverage(c: Canvas, case: SyntheticReferral, y: float) -> float:
 
 def _render_patient_chart(case: SyntheticReferral, path: Path) -> None:
     c = _canvas(path)
-    y = _header(c, f"PATIENT CHART - {case.patient_name}", "Generated clinical chart summary")
+    chart_title = _case_choice(case, "chart-title", ("PATIENT CHART", "PATIENT RECORD", "CLINICAL PROFILE"))
+    chart_subtitle = _case_choice(case, "chart-subtitle", ("Clinical chart summary", "Referral record summary", "Patient information report"))
+    y = _header(c, f"{chart_title} - {case.patient_name}", chart_subtitle)
     y = _draw_demographics(c, case, y)
     y = _draw_coverage(c, case, y)
     y = _draw_referral(c, case, y)
@@ -221,7 +224,8 @@ def _render_patient_chart(case: SyntheticReferral, path: Path) -> None:
         c.drawRightString(PAGE_W - MARGIN, y, "Current")
         y -= 28
     y = _section(c, y - 5, "Current medications")
-    for medication in ("Metformin 500 mg tablet", "Lisinopril 10 mg tablet", "Acetaminophen 500 mg as needed"):
+    medication_rng = random.Random(f"{case.slug}:medications")
+    for medication in medication_rng.sample(MEDICATIONS, k=3):
         c.setFont("Helvetica", 9)
         c.drawString(MARGIN + 5, y, medication)
         y -= 22
@@ -246,7 +250,11 @@ def _render_wcw_handwritten(case: SyntheticReferral, path: Path) -> None:
     c.drawString(67, PAGE_H - 70, "W O U N D  &  S K I N  C A R E")
     c.setFillColor(colors.black)
     c.setFont("Helvetica-Bold", 14)
-    c.drawCentredString(PAGE_W / 2, PAGE_H - 93, "Patient Referral Form")
+    c.drawCentredString(
+        PAGE_W / 2,
+        PAGE_H - 93,
+        _case_choice(case, "wcw-title", ("Patient Referral Form", "New Patient Referral", "Wound Care Referral Form")),
+    )
     c.setFont("Helvetica", 8)
     c.drawCentredString(PAGE_W / 2, PAGE_H - 106, "This referral form is for mobile wound-care services")
     y = PAGE_H - 135
@@ -261,8 +269,8 @@ def _render_wcw_handwritten(case: SyntheticReferral, path: Path) -> None:
     y -= 24
     _line_field(c, 58, y, "Type of care needed", "Wound Care", 535)
     y -= 30
-    _line_field(c, 58, y, "Reason for referral", case.diagnosis_text, 535)
-    y -= 30
+    _wrapped_line_field(c, 58, y, "Reason for referral", case.diagnosis_text, 535, max_lines=2)
+    y -= 42
     _line_field(c, 58, y, "ICD", ", ".join(case.icd10_codes), 535)
     y -= 38
     c.setFont("Helvetica-Bold", 10)
@@ -299,7 +307,7 @@ def _fax_cover(c: Canvas, case: SyntheticReferral, page: int, total: int, title:
     c.drawCentredString(PAGE_W / 2, PAGE_H - 112, case.referring_facility)
     y = PAGE_H - 165
     for label, value in (
-        ("To", "West Coast Wound Intake"),
+        ("To", _case_choice(case, "fax-to", ("West Coast Wound Intake", "WCW Intake Department", "West Coast Wound & Skin Care"))),
         ("From", case.referring_provider_name),
         ("Return fax", case.referring_fax),
         ("Date", case.referral_date),
@@ -315,7 +323,8 @@ def _fax_cover(c: Canvas, case: SyntheticReferral, page: int, total: int, title:
     y -= 10
     _draw_wrapped(
         c,
-        "CONFIDENTIAL HEALTH INFORMATION: This synthetic training transmission is intended only for authorized workflow testing.",
+        "CONFIDENTIAL HEALTH INFORMATION: This transmission may contain protected health information. "
+        "If received in error, notify the sender and securely destroy all copies.",
         75,
         y,
         width=455,
@@ -335,21 +344,32 @@ def _packet_page(c: Canvas, case: SyntheticReferral, page: int, total: int, titl
         _draw_referral(c, case, y)
     else:
         y = _section(c, y, "Clinical notes")
-        narrative = (
-            f"Patient evaluated for {case.diagnosis_text or 'wound concern'}. "
-            "Wound measurements and treatment tolerance were reviewed. No real clinical care is represented in this test document. "
-            f"Plan: {_services(case)}"
-        )
+        note_rng = random.Random(f"{case.slug}:note:{page}")
+        narrative = " ".join((
+            f"Patient evaluated for {case.diagnosis_text or 'wound concern'}",
+            *note_rng.sample(NOTE_FRAGMENTS, k=note_rng.randint(3, 6)),
+            f"Plan: {_services(case)}",
+        ))
         _draw_wrapped(c, narrative, MARGIN + 5, y, width=500, font_size=10, leading=15, max_lines=12)
     _synthetic_banner(c)
 
 
 def _render_hospital_fax(case: SyntheticReferral, path: Path) -> None:
-    _render_packet(case, path, "Hospital Referral Fax", 4)
+    _render_packet(
+        case,
+        path,
+        _case_choice(case, "hospital-cover", ("Hospital Referral Fax", "Patient Transfer Referral", "Clinical Referral Packet")),
+        4,
+    )
 
 
 def _render_discharge_packet(case: SyntheticReferral, path: Path) -> None:
-    _render_packet(case, path, "Discharge Planning Fax Cover Sheet", 5)
+    _render_packet(
+        case,
+        path,
+        _case_choice(case, "discharge-cover", ("Discharge Planning Fax Cover Sheet", "Post-Acute Referral Packet", "Discharge Referral Cover Sheet")),
+        5,
+    )
 
 
 def _render_packet(case: SyntheticReferral, path: Path, title: str, pages: int) -> None:
@@ -363,15 +383,15 @@ def _render_packet(case: SyntheticReferral, path: Path, title: str, pages: int) 
 
 def _render_hospital_facesheet(case: SyntheticReferral, path: Path) -> None:
     c = _canvas(path)
-    _page_number(c, 1, 3, "Providence Training Medical Center")
+    _page_number(c, 1, 3, case.referring_facility)
     c.setLineWidth(1)
     c.rect(55, PAGE_H - 160, PAGE_W - 110, 105, fill=0)
-    c.setFont("Helvetica-Bold", 13)
-    c.drawString(65, PAGE_H - 77, "PROVIDENCE TRAINING MEDICAL CENTER")
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(65, PAGE_H - 77, case.referring_facility.upper()[:48])
     c.setFont("Helvetica", 8)
-    c.drawString(65, PAGE_H - 93, "1300 W 7th Street, San Pedro, CA 90732")
-    _field(c, 330, PAGE_H - 80, "Admit date", case.admission_date)
-    _field(c, 330, PAGE_H - 113, "MRN", case.patient_mrn)
+    c.drawString(65, PAGE_H - 93, "Health Information Management - Patient Access")
+    _field(c, 390, PAGE_H - 80, "Admit date", case.admission_date, width=150)
+    _field(c, 390, PAGE_H - 113, "MRN", case.patient_mrn, width=150)
     y = PAGE_H - 180
     y = _draw_demographics(c, case, y)
     y = _draw_coverage(c, case, y)
@@ -390,9 +410,9 @@ def _render_home_health_fax(case: SyntheticReferral, path: Path) -> None:
     c.setFont("Helvetica-Bold", 18)
     c.drawString(50, PAGE_H - 72, case.referring_facility)
     c.setFont("Helvetica", 9)
-    c.drawString(50, PAGE_H - 88, "18425 Training Boulevard, Suite 417, Tarzana, CA 91356")
+    c.drawString(50, PAGE_H - 88, f"Phone {case.referring_phone}  Fax {case.referring_fax}")
     c.setFont("Helvetica-Bold", 24)
-    c.drawString(50, PAGE_H - 145, "FAX")
+    c.drawString(50, PAGE_H - 145, _case_choice(case, "home-health-title", ("FAX", "REFERRAL", "PATIENT INTAKE")))
     y = PAGE_H - 190
     for label, value in (
         ("From", case.referring_provider_name),
