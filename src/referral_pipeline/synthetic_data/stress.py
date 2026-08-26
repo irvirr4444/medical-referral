@@ -37,6 +37,8 @@ from .vocabulary import (
     LAST_NAMES,
     MEDICATIONS,
     NOTE_FRAGMENTS,
+    SERVICE_FREQUENCIES,
+    SERVICE_INSTRUCTIONS,
     STREET_NAMES,
 )
 
@@ -79,10 +81,78 @@ SUPPLEMENT_TITLES = (
     "Discharge Instructions", "Plan of Care", "Clinical Consultation",
 )
 
+# Weighted scenario mix for extraction training (sums to 100).
+SCENARIO_WEIGHTS: tuple[tuple[str, int], ...] = (
+    ("complete", 40),
+    ("missing_phone", 10),
+    ("missing_address", 10),
+    ("missing_insurance", 8),
+    ("partial_insurance", 7),
+    ("empty_services", 5),
+    ("missing_diagnosis", 5),
+    ("conflicting_dates", 5),
+    ("messy_formats", 5),
+    ("multi_wound", 5),
+)
+SCENARIO_IDS = tuple(name for name, _ in SCENARIO_WEIGHTS)
+
+SCAN_PROFILE_WEIGHTS: tuple[tuple[str, int], ...] = (
+    ("native", 25),
+    ("office_scan", 20),
+    ("fax_clean", 18),
+    ("fax_noisy", 15),
+    ("photocopy", 10),
+    ("low_toner", 7),
+    ("mixed_fax", 5),
+)
+
+
+def _pick_scenario(index: int, *, seed: int) -> str:
+    rng = random.Random(f"{seed}:scenario:{index}")
+    roll = rng.randrange(100)
+    cumulative = 0
+    for name, weight in SCENARIO_WEIGHTS:
+        cumulative += weight
+        if roll < cumulative:
+            return name
+    return SCENARIO_WEIGHTS[-1][0]
+
+
+def _pick_scan_profile(index: int, *, seed: int, profiles: tuple[str, ...]) -> str:
+    allowed = {name for name, _ in SCAN_PROFILE_WEIGHTS}
+    chosen = tuple(profile for profile in profiles if profile in allowed) or profiles
+    if len(chosen) == 1:
+        return chosen[0]
+    weights = {name: weight for name, weight in SCAN_PROFILE_WEIGHTS if name in chosen}
+    # Any CLI-only profile not in the table gets a small default weight.
+    for profile in chosen:
+        weights.setdefault(profile, 5)
+    rng = random.Random(f"{seed}:profile:{index}")
+    names = list(weights)
+    total = sum(weights[name] for name in names)
+    roll = rng.randrange(total)
+    cumulative = 0
+    for name in names:
+        cumulative += weights[name]
+        if roll < cumulative:
+            return name
+    return names[-1]
+
+
+def _format_dob(value: date, *, style: int) -> str:
+    formats = (
+        value.strftime("%m/%d/%Y"),
+        value.strftime("%Y-%m-%d"),
+        value.strftime("%m-%d-%Y"),
+        value.strftime("%m.%d.%Y"),
+    )
+    return formats[style % len(formats)]
+
 
 def synthetic_case(index: int, *, seed: int, layout: str | None = None) -> SyntheticReferral:
     rng = random.Random(f"{seed}:case:{index}")
     selected_layout = layout or LAYOUTS[index % len(LAYOUTS)]
+    scenario = _pick_scenario(index, seed=seed)
     first, last, middle = _person_identity(index, seed=seed)
     birth = date(1931, 1, 1) + timedelta(days=rng.randrange(18_500))
     referral = date(2026, 1, 1) + timedelta(days=rng.randrange(300))
@@ -98,45 +168,102 @@ def synthetic_case(index: int, *, seed: int, layout: str | None = None) -> Synth
     mrn = _medical_record_number(selected_layout, serial, rng)
     insurance_id, group_number = _coverage_identifiers(serial, rng)
     emergency_first, emergency_last, _ = _person_identity(index * 5 + 13, seed=seed + 4409)
+
+    patient_phone: str | None = _phone(index, seed=seed, style=index % 5)
+    patient_address: str | None = _address(index, seed=seed)
+    insurance_provider: str | None = rng.choice(INSURERS)
+    diagnosis_text: str | None = diagnosis
+    icd10_codes = list(codes)
+    patient_dob = birth.strftime("%m/%d/%Y")
+    admission_date = (referral - timedelta(days=rng.randrange(0, 7))).strftime("%m/%d/%Y")
+    referral_date = referral.strftime("%m/%d/%Y")
+    requested_services = [
+        SyntheticService(
+            service="Skilled wound care",
+            frequency=rng.choice(SERVICE_FREQUENCIES),
+            instructions=rng.choice(SERVICE_INSTRUCTIONS),
+        )
+    ]
+    expected_outcome = "ready_for_human_approval"
+
+    if scenario == "missing_phone":
+        patient_phone = None
+        expected_outcome = "blocked_missing_threshold"
+    elif scenario == "missing_address":
+        patient_address = None
+        expected_outcome = "blocked_missing_threshold"
+    elif scenario == "missing_insurance":
+        insurance_provider = None
+        insurance_id = None
+        group_number = None
+        expected_outcome = "manual_review_required"
+    elif scenario == "partial_insurance":
+        insurance_id = None
+        group_number = None
+        expected_outcome = "manual_review_required"
+    elif scenario == "empty_services":
+        requested_services = []
+        expected_outcome = "manual_review_required"
+    elif scenario == "missing_diagnosis":
+        diagnosis_text = None
+        icd10_codes = []
+        expected_outcome = "manual_review_required"
+    elif scenario == "conflicting_dates":
+        admission_date = (referral + timedelta(days=1 + rng.randrange(0, 5))).strftime("%m/%d/%Y")
+        expected_outcome = "manual_review_required"
+    elif scenario == "messy_formats":
+        patient_dob = _format_dob(birth, style=1 + (index % 3))
+        patient_phone = _phone(index, seed=seed, style=(index + 3) % 5)
+        expected_outcome = "ready_for_human_approval"
+    elif scenario == "multi_wound":
+        second, second_codes = rng.choice(DIAGNOSES)
+        while second.casefold() == diagnosis.casefold():
+            second, second_codes = rng.choice(DIAGNOSES)
+        diagnosis_text = f"{diagnosis.rstrip('.')} Also: {second}"
+        merged = list(dict.fromkeys([*codes, *second_codes]))
+        icd10_codes = merged
+        requested_services = [
+            SyntheticService(
+                service="Skilled wound care",
+                frequency=rng.choice(SERVICE_FREQUENCIES),
+                instructions=rng.choice(SERVICE_INSTRUCTIONS),
+            ),
+            SyntheticService(
+                service="Wound Care",
+                frequency=rng.choice(SERVICE_FREQUENCIES),
+                instructions=rng.choice(SERVICE_INSTRUCTIONS),
+            ),
+        ]
+        expected_outcome = "ready_for_human_approval"
+
     return SyntheticReferral(
         slug=f"case-{index:09d}",
         layout=selected_layout,
-        scenario=f"deidentification stress case {index}",
+        scenario=scenario,
         scan_style="clean",
         patient_name=f"{last.upper()}, {first.upper()} {middle}",
-        patient_dob=birth.strftime("%m/%d/%Y"),
+        patient_dob=patient_dob,
         patient_sex=rng.choice(("Female", "Male")),
-        patient_phone=_phone(index, seed=seed, style=index % 5),
-        patient_address=_address(index, seed=seed),
+        patient_phone=patient_phone,
+        patient_address=patient_address,
         patient_mrn=mrn,
-        referral_date=referral.strftime("%m/%d/%Y"),
-        admission_date=(referral - timedelta(days=rng.randrange(0, 7))).strftime("%m/%d/%Y"),
+        referral_date=referral_date,
+        admission_date=admission_date,
         referring_facility=rng.choice(FACILITIES),
         referring_provider_name=provider,
         referring_phone=_phone(index * 3 + 1, seed=seed + 41, style=(index + 2) % 5),
         referring_fax=_phone(index * 3 + 2, seed=seed + 73, style=(index + 4) % 5),
-        diagnosis_text=diagnosis,
-        icd10_codes=list(codes),
-        insurance_provider=rng.choice(INSURERS),
+        diagnosis_text=diagnosis_text,
+        icd10_codes=icd10_codes,
+        insurance_provider=insurance_provider,
         insurance_id=insurance_id,
         insurance_group_number=group_number,
-        requested_services=[
-            SyntheticService(
-                service="Skilled wound care",
-                frequency=rng.choice(("Initial evaluation", "Twice weekly", "Three times weekly")),
-                instructions=rng.choice((
-                    "Assess, measure, photograph, cleanse, and dress wound per physician order.",
-                    "Evaluate wound etiology and recommend a treatment plan.",
-                    "Complete wound assessment and coordinate supplies with home-health nursing.",
-                    "Measure and photograph wound; notify ordering provider of significant change.",
-                )),
-            )
-        ],
+        requested_services=requested_services,
         emergency_contact=(
             f"{emergency_first} {emergency_last} ({rng.choice(('Daughter', 'Son', 'Spouse', 'Caregiver'))}), "
             f"{_phone(index * 5 + 3, seed=seed + 101, style=(index + 1) % 5)}"
         ),
-        expected_outcome="ready_for_human_approval",
+        expected_outcome=expected_outcome,
         expected_monday_duplicate="no_candidates_found",
         expected_drk_duplicate="clear_to_create",
     )
@@ -425,7 +552,7 @@ def _generate_one(
     shard_size: int,
 ) -> dict[str, Any]:
     case = synthetic_case(index, seed=seed)
-    profile = profiles[index % len(profiles)]
+    profile = _pick_scan_profile(index, seed=seed, profiles=profiles)
     rng = random.Random(f"{seed}:pages:{index}")
     page_min, page_max = PAGE_RANGES[case.layout]
     target_pages = rng.randint(page_min, page_max)
@@ -433,10 +560,11 @@ def _generate_one(
     shard.mkdir(parents=True, exist_ok=True)
     filename = f"referral-{case.slug}-{case.layout}-{profile}.pdf"
     destination = shard / filename
+    layout_variant = int(hashlib.sha256(f"{seed}:{index}:layout".encode()).hexdigest()[:8], 16) % 6
 
     with TemporaryDirectory(prefix="wcw-synthetic-") as temporary:
         temporary_dir = Path(temporary)
-        base = render_referral(case, temporary_dir / "base.pdf")
+        base = render_referral(case, temporary_dir / "base.pdf", variant=layout_variant)
         expanded = temporary_dir / "expanded.pdf"
         _expand_packet(base, expanded, case=case, target_pages=target_pages, seed=f"{seed}:{index}")
         render_scan_variant(expanded, destination, profile=profile, seed=f"{seed}:{index}:{profile}")
@@ -452,8 +580,10 @@ def _generate_one(
         "size_bytes": destination.stat().st_size,
         "page_count": page_count,
         "layout": case.layout,
-        "layout_variant": int(hashlib.sha256(f"{seed}:{index}:layout".encode()).hexdigest()[:8], 16) % 6,
+        "layout_variant": layout_variant,
         "scan_profile": profile,
+        "scenario": case.scenario,
+        "expected_outcome": case.expected_outcome,
         "text_layer_expected": profile == "native",
         "synthetic_only": True,
         "gold": case.gold_record(filename),
@@ -484,9 +614,12 @@ def _diversity_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
     layouts = {layout: 0 for layout in LAYOUTS}
     profiles = {profile: 0 for profile in DEFAULT_PROFILES}
+    scenarios = {name: 0 for name in SCENARIO_IDS}
     for row in rows:
         layouts[row["layout"]] = layouts.get(row["layout"], 0) + 1
         profiles[row["scan_profile"]] = profiles.get(row["scan_profile"], 0) + 1
+        scenario = row.get("scenario") or "complete"
+        scenarios[scenario] = scenarios.get(scenario, 0) + 1
     return {
         "unique_values": unique,
         "uniqueness_ratio": {
@@ -495,6 +628,7 @@ def _diversity_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
         },
         "layout_counts": layouts,
         "scan_profile_counts": profiles,
+        "scenario_counts": scenarios,
     }
 
 

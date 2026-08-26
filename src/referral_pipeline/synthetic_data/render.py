@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import random
+from contextvars import ContextVar
+from dataclasses import dataclass
 from pathlib import Path
 from textwrap import wrap
 from typing import Callable
@@ -21,14 +23,46 @@ PAGE_W, PAGE_H = letter
 MARGIN = 48
 
 
-def render_referral(case: SyntheticReferral, output: str | Path) -> Path:
+@dataclass(frozen=True)
+class RenderStyle:
+    margin: float = MARGIN
+    section_font: int = 10
+    swap_columns: bool = False
+    abbreviate_labels: bool = False
+
+
+_STYLE: ContextVar[RenderStyle] = ContextVar("synthetic_render_style", default=RenderStyle())
+
+
+def render_referral(case: SyntheticReferral, output: str | Path, *, variant: int = 0) -> Path:
     path = Path(output)
     path.parent.mkdir(parents=True, exist_ok=True)
-    renderer = RENDERERS[case.layout]
-    renderer(case, path)
-    if case.scan_style == "fax":
-        _flatten_with_fax_artifacts(path, seed=case.slug)
+    rng = random.Random(f"{case.slug}:layout:{variant}")
+    style = RenderStyle(
+        margin=float(MARGIN + rng.choice((-14, -10, -6, 0, 6, 10, 14))),
+        section_font=int(rng.choice((9, 10, 11))),
+        swap_columns=bool(
+            variant % 2 == 1 and case.layout in {"patient_chart", "agency_summary"}
+        ),
+        abbreviate_labels=bool(variant % 2 == 1 and case.layout == "wcw_handwritten"),
+    )
+    token = _STYLE.set(style)
+    try:
+        renderer = RENDERERS[case.layout]
+        renderer(case, path)
+        if case.scan_style == "fax":
+            _flatten_with_fax_artifacts(path, seed=case.slug)
+    finally:
+        _STYLE.reset(token)
     return path
+
+
+def _style() -> RenderStyle:
+    return _STYLE.get()
+
+
+def _margin() -> float:
+    return _style().margin
 
 
 def _canvas(path: Path) -> Canvas:
@@ -46,29 +80,49 @@ def _synthetic_banner(c: Canvas) -> None:
     """Compatibility hook; safety labeling lives in the external manifest."""
 
 
+def _label(text: str) -> str:
+    if not _style().abbreviate_labels:
+        return text
+    abbrev = {
+        "Phone": "Ph",
+        "Address": "Addr",
+        "Patient name": "Pt name",
+        "Primary insurance": "Ins",
+        "Subscriber ID": "Sub ID",
+        "Reason for referral": "Reason",
+        "Requested service": "Service",
+        "Emergency contact": "E-contact",
+        "PCP / ordering provider": "Ordering",
+    }
+    return abbrev.get(text, text)
+
+
 def _header(c: Canvas, title: str, subtitle: str | None = None) -> float:
+    margin = _margin()
     c.setFillColor(colors.black)
     c.setFont("Helvetica-Bold", 18)
-    c.drawString(MARGIN, PAGE_H - 55, title)
+    c.drawString(margin, PAGE_H - 55, title)
     if subtitle:
         c.setFont("Helvetica", 9)
-        c.drawString(MARGIN, PAGE_H - 70, subtitle)
+        c.drawString(margin, PAGE_H - 70, subtitle)
     c.setLineWidth(1)
-    c.line(MARGIN, PAGE_H - 79, PAGE_W - MARGIN, PAGE_H - 79)
+    c.line(margin, PAGE_H - 79, PAGE_W - margin, PAGE_H - 79)
     return PAGE_H - 102
 
 
 def _section(c: Canvas, y: float, title: str, *, dark: bool = False) -> float:
+    margin = _margin()
+    font_size = _style().section_font
     if dark:
         c.setFillColor(colors.black)
-        c.rect(MARGIN, y - 13, PAGE_W - 2 * MARGIN, 17, fill=1, stroke=0)
+        c.rect(margin, y - 13, PAGE_W - 2 * margin, 17, fill=1, stroke=0)
         c.setFillColor(colors.white)
     else:
         c.setFillColor(colors.HexColor("#E8ECEE"))
-        c.rect(MARGIN, y - 13, PAGE_W - 2 * MARGIN, 17, fill=1, stroke=0)
+        c.rect(margin, y - 13, PAGE_W - 2 * margin, 17, fill=1, stroke=0)
         c.setFillColor(colors.black)
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(MARGIN + 5, y - 9, title.upper())
+    c.setFont("Helvetica-Bold", font_size)
+    c.drawString(margin + 5, y - 9, title.upper())
     c.setFillColor(colors.black)
     return y - 28
 
@@ -76,15 +130,16 @@ def _section(c: Canvas, y: float, title: str, *, dark: bool = False) -> float:
 def _field(c: Canvas, x: float, y: float, label: str, value: object, *, width: float = 230) -> None:
     text = "Not provided" if value in (None, "") else str(value)
     c.setFont("Helvetica-Bold", 7)
-    c.drawString(x, y, label.upper())
+    c.drawString(x, y, _label(label).upper())
     c.setFont("Helvetica", 9)
     _draw_wrapped(c, text, x, y - 13, width=width, font_size=9, leading=11, max_lines=2)
 
 
 def _line_field(c: Canvas, x: float, y: float, label: str, value: object, width: float) -> None:
+    shown = _label(label)
     c.setFont("Helvetica-Bold", 8)
-    c.drawString(x, y, f"{label}:")
-    label_width = pdfmetrics.stringWidth(f"{label}:", "Helvetica-Bold", 8) + 6
+    c.drawString(x, y, f"{shown}:")
+    label_width = pdfmetrics.stringWidth(f"{shown}:", "Helvetica-Bold", 8) + 6
     c.line(x + label_width, y - 2, x + width, y - 2)
     c.setFont(_hand_font(), 11)
     text = "" if value in (None, "") else str(value)
@@ -101,9 +156,10 @@ def _wrapped_line_field(
     *,
     max_lines: int = 2,
 ) -> None:
+    shown = _label(label)
     c.setFont("Helvetica-Bold", 8)
-    c.drawString(x, y, f"{label}:")
-    label_width = pdfmetrics.stringWidth(f"{label}:", "Helvetica-Bold", 8) + 6
+    c.drawString(x, y, f"{shown}:")
+    label_width = pdfmetrics.stringWidth(f"{shown}:", "Helvetica-Bold", 8) + 6
     text = "" if value in (None, "") else str(value)
     _draw_wrapped(
         c,
@@ -165,37 +221,44 @@ def _insurance(case: SyntheticReferral) -> str:
 
 
 def _draw_demographics(c: Canvas, case: SyntheticReferral, y: float) -> float:
+    margin = _margin()
     y = _section(c, y, "Patient demographics")
-    _field(c, MARGIN + 5, y, "Patient", case.patient_name, width=220)
-    _field(c, 320, y, "DOB / Sex", f"{case.patient_dob} / {case.patient_sex}", width=210)
+    left = margin + 5
+    right = 320
+    if _style().swap_columns:
+        left, right = right, left
+    _field(c, left, y, "Patient", case.patient_name, width=220)
+    _field(c, right, y, "DOB / Sex", f"{case.patient_dob} / {case.patient_sex}", width=210)
     y -= 44
-    _field(c, MARGIN + 5, y, "Address", case.patient_address, width=310)
+    _field(c, margin + 5, y, "Address", case.patient_address, width=310)
     _field(c, 390, y, "Phone", case.patient_phone, width=150)
     y -= 48
-    _field(c, MARGIN + 5, y, "MRN", case.patient_mrn)
+    _field(c, margin + 5, y, "MRN", case.patient_mrn)
     _field(c, 320, y, "Emergency contact", case.emergency_contact, width=220)
     return y - 42
 
 
 def _draw_referral(c: Canvas, case: SyntheticReferral, y: float) -> float:
+    margin = _margin()
     y = _section(c, y, "Referral and clinical information")
-    _field(c, MARGIN + 5, y, "Referring facility", case.referring_facility, width=245)
+    _field(c, margin + 5, y, "Referring facility", case.referring_facility, width=245)
     _field(c, 330, y, "Referral date", case.referral_date, width=100)
     _field(c, 450, y, "Admitted", case.admission_date, width=100)
     y -= 44
-    _field(c, MARGIN + 5, y, "Provider", case.referring_provider_name, width=220)
+    _field(c, margin + 5, y, "Provider", case.referring_provider_name, width=220)
     _field(c, 320, y, "Facility phone / fax", f"{case.referring_phone} / {case.referring_fax}", width=230)
     y -= 44
-    _field(c, MARGIN + 5, y, "Diagnosis / wound", case.diagnosis_text, width=370)
+    _field(c, margin + 5, y, "Diagnosis / wound", case.diagnosis_text, width=370)
     _field(c, 440, y, "ICD-10", ", ".join(case.icd10_codes), width=110)
     y -= 55
-    _field(c, MARGIN + 5, y, "Requested services", _services(case), width=500)
+    _field(c, margin + 5, y, "Requested services", _services(case), width=500)
     return y - 55
 
 
 def _draw_coverage(c: Canvas, case: SyntheticReferral, y: float) -> float:
+    margin = _margin()
     y = _section(c, y, "Insurance coverage")
-    _field(c, MARGIN + 5, y, "Primary insurance / member / group", _insurance(case), width=500)
+    _field(c, margin + 5, y, "Primary insurance / member / group", _insurance(case), width=500)
     return y - 42
 
 

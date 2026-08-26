@@ -1,0 +1,5108 @@
+{
+  "first_names": [
+    "Adriana",
+    "Alejandro",
+    "Alina",
+    "Amara",
+    "Anita",
+    "Armando",
+    "Beatriz",
+    "Bernard",
+    "Bianca",
+    "Caleb",
+    "Camille",
+    "Carina",
+    "Carmen",
+    "Cassandra",
+    "Cecilia",
+    "Clara",
+    "Dalia",
+    "Damian",
+    "Darius",
+    "Delia",
+    "Desmond",
+    "Diana",
+    "Edgar",
+    "Elena",
+    "Elias",
+    "Emilia",
+    "Esteban",
+    "Evelyn",
+    "Farrah",
+    "Felix",
+    "Francis",
+    "Gabriel",
+    "Gloria",
+    "Guillermo",
+    "Hector",
+    "Helena",
+    "Imani",
+    "Inez",
+    "Isabel",
+    "Javier",
+    "Jerome",
+    "Joanna",
+    "Julian",
+    "Karina",
+    "Kiara",
+    "Leandro",
+    "Leonard",
+    "Leticia",
+    "Lucia",
+    "Manuel",
+    "Maribel",
+    "Marina",
+    "Mateo",
+    "Naomi",
+    "Nathaniel",
+    "Nora",
+    "Octavia",
+    "Omar",
+    "Opal",
+    "Patricia",
+    "Preston",
+    "Raquel",
+    "Rafael",
+    "Renata",
+    "Rochelle",
+    "Ruben",
+    "Samuel",
+    "Selena",
+    "Solomon",
+    "Sonia",
+    "Teresa",
+    "Tomas",
+    "Valeria",
+    "Vicente",
+    "Vincent",
+    "Wanda",
+    "Xavier",
+    "Yolanda",
+    "Zenaida",
+    "Zoe",
+    "Aaliyah",
+    "Amir",
+    "Angelina",
+    "Antonio",
+    "Asha",
+    "Brandon",
+    "Camila",
+    "Carlos",
+    "Chandra",
+    "Chen",
+    "Dante",
+    "Deepak",
+    "Delores",
+    "Diego",
+    "Dominique",
+    "Eduardo",
+    "Esperanza",
+    "Fatima",
+    "Fernando",
+    "Francisco",
+    "Gabriela",
+    "Jasmine",
+    "Jamal",
+    "Jin",
+    "Jorge",
+    "Juanita",
+    "Keisha",
+    "Kwame",
+    "Lakshmi",
+    "Leonardo",
+    "Li",
+    "Lorenzo",
+    "Maria",
+    "Marlene",
+    "Miguel",
+    "Miriam",
+    "Mohamed",
+    "Nguyen",
+    "Octavio",
+    "Ramon",
+    "Rosa",
+    "Santiago",
+    "Thanh",
+    "Tyrone",
+    "Andre",
+    "Anjali",
+    "Aisha",
+    "Benjamin",
+    "Brenda",
+    "Catalina",
+    "Christina",
+    "Christopher",
+    "Claudia",
+    "Denise",
+    "Derek",
+    "Dolores",
+    "Emmanuel",
+    "Enrique",
+    "Geneva",
+    "Georgina",
+    "Giovanni",
+    "Joaquin",
+    "Jordan",
+    "Jose",
+    "Kenya",
+    "Lakisha",
+    "Luis",
+    "Luz",
+    "Malcolm",
+    "Marcus",
+    "Marisol",
+    "Martin",
+    "Maurice",
+    "Maya",
+    "Nadia",
+    "Natalia",
+    "Kenji",
+    "Nalani",
+    "Priya",
+    "Quan",
+    "Rafaela",
+    "Sasha",
+    "Tariq",
+    "Uma",
+    "Winona",
+    "Xiomara",
+    "Yasmin",
+    "Zara",
+    "Ernest",
+    "George",
+    "Hilda",
+    "Isaiah",
+    "Kenneth",
+    "Nina",
+    "Oscar",
+    "Quincy",
+    "Thelma",
+    "Ulises",
+    "Veronica",
+    "Walter",
+    "Zachary",
+    "Dominic",
+    "Eileen",
+    "Franklin",
+    "Giselle",
+    "Hassan",
+    "Mei",
+    "DeShawn",
+    "Yuki",
+    "Rashid",
+    "Linh",
+    "Vanessa",
+    "Malik",
+    "Terrence",
+    "Ming",
+    "Rodrigo",
+    "Tamara",
+    "Raphael",
+    "Sienna",
+    "Kamala"
+  ],
+  "last_names": [
+    "Abarca",
+    "Acevedo",
+    "Aguilar",
+    "Alvarado",
+    "Barrera",
+    "Benton",
+    "Bishop",
+    "Bradshaw",
+    "Cabrera",
+    "Calderon",
+    "Carrillo",
+    "Castillo",
+    "Delaney",
+    "Dominguez",
+    "Duarte",
+    "Estrada",
+    "Fletcher",
+    "Fuentes",
+    "Galindo",
+    "Garza",
+    "Givens",
+    "Hawkins",
+    "Hendrix",
+    "Ibarra",
+    "Jefferson",
+    "Kimura",
+    "Langston",
+    "Lozano",
+    "Maldonado",
+    "Mendoza",
+    "Montoya",
+    "Navarro",
+    "Nguyen",
+    "Okafor",
+    "Ortega",
+    "Paredes",
+    "Pritchard",
+    "Quintero",
+    "Ramirez",
+    "Rasmussen",
+    "Renteria",
+    "Salazar",
+    "Sandoval",
+    "Serrano",
+    "Solis",
+    "Townsend",
+    "Trujillo",
+    "Valencia",
+    "Vasquez",
+    "Velasco",
+    "Villanueva",
+    "Whitaker",
+    "Wilkins",
+    "Ybarra",
+    "Zamora",
+    "Zuniga",
+    "Whitfield",
+    "Velasquez",
+    "Brewer",
+    "Cortez",
+    "Guerrero",
+    "Mckinney",
+    "Rollins",
+    "Patel",
+    "Thornton",
+    "Cervantes",
+    "Nichols",
+    "Vazquez",
+    "Masterson",
+    "Ridley",
+    "Samuels",
+    "Moreno",
+    "Blackwell",
+    "Ochoa",
+    "Garrison",
+    "Reeves",
+    "Ferreira",
+    "Callahan",
+    "Soto",
+    "Dawson",
+    "Rosales",
+    "Zimmerman",
+    "Pacheco",
+    "Vega",
+    "Stafford",
+    "Mercado",
+    "Larson",
+    "Contreras",
+    "Malone",
+    "Herrera",
+    "Tran",
+    "Walton",
+    "Cardenas",
+    "Figueroa",
+    "Haynes",
+    "Campos",
+    "Booker",
+    "Shepherd",
+    "Mata",
+    "Kaufman",
+    "Rivas",
+    "Strickland",
+    "Miranda",
+    "Cruz",
+    "Chen",
+    "Cordova",
+    "Huffman",
+    "Delgado",
+    "Winters",
+    "Pham",
+    "Reyes",
+    "Morse",
+    "Espinoza",
+    "Galloway",
+    "Chambers",
+    "Mora",
+    "Lawson",
+    "Henson",
+    "Rojas",
+    "Burnett",
+    "Flores",
+    "Medina",
+    "Bridges",
+    "Silva",
+    "Beasley",
+    "Vargas",
+    "Rowland",
+    "Jimenez",
+    "Santos",
+    "Mejia",
+    "Chang",
+    "Lindsey",
+    "Watkins",
+    "Palmer",
+    "Morales",
+    "Vaughn",
+    "Villalobos",
+    "Mercer",
+    "Yates",
+    "Morrow",
+    "Salinas",
+    "Sutton",
+    "Ponce",
+    "Cavanaugh",
+    "Reyna",
+    "Gallegos",
+    "Weeks",
+    "Marquez",
+    "Holden",
+    "Kirby",
+    "Bolton",
+    "Maddox",
+    "Goodwin",
+    "Drummond",
+    "Rubio",
+    "Chandler",
+    "Sutherland",
+    "Whitmore",
+    "Kirkland",
+    "Hartman",
+    "Caldwell",
+    "Ramos",
+    "Holbrook",
+    "Stamford",
+    "Dalton",
+    "Pennington",
+    "Westbrook",
+    "Copeland",
+    "Nunez",
+    "Buchanan",
+    "Griswold",
+    "Templeton",
+    "Ruiz",
+    "Ashford",
+    "Sheffield",
+    "Torres",
+    "Bellamy",
+    "Esposito",
+    "Fitzgerald",
+    "Gillespie",
+    "Jacobson",
+    "Kaplan",
+    "Nicholson",
+    "Orozco",
+    "Underwood",
+    "Valdez",
+    "Wallace",
+    "Pearson",
+    "Saunders",
+    "Whitney",
+    "Mathison",
+    "Blanchard",
+    "Brennan",
+    "Harding",
+    "Holloway",
+    "Villegas",
+    "Sullivan",
+    "Sorensen",
+    "Mackenzie",
+    "Silverman",
+    "Wojcik",
+    "Takahashi",
+    "Kowalski"
+  ],
+  "street_names": [
+    "Alamitos Avenue",
+    "Arlington Place",
+    "Atlantic Avenue",
+    "Banning Street",
+    "Bay View Drive",
+    "Bellflower Boulevard",
+    "Cabrillo Avenue",
+    "Carson Street",
+    "Catalina Avenue",
+    "Cedar Avenue",
+    "Cherry Avenue",
+    "Cypress Street",
+    "Del Amo Boulevard",
+    "Dominguez Way",
+    "Elm Avenue",
+    "Figueroa Street",
+    "Gaffey Street",
+    "Harbor View Avenue",
+    "Hawthorne Boulevard",
+    "Junipero Avenue",
+    "Lakewood Boulevard",
+    "Linden Avenue",
+    "Lomita Boulevard",
+    "Magnolia Avenue",
+    "Main Street",
+    "Mariposa Avenue",
+    "Normandie Avenue",
+    "Orange Avenue",
+    "Pacific Coast Highway",
+    "Palos Verdes Drive",
+    "Pine Avenue",
+    "Redondo Beach Boulevard",
+    "Sepulveda Boulevard",
+    "Signal Hill Road",
+    "Spring Street",
+    "Temple Avenue",
+    "Vermont Avenue",
+    "Victoria Street",
+    "Wardlow Road",
+    "Willow Street",
+    "Ocean Boulevard",
+    "Sunset Drive",
+    "Harbor Avenue",
+    "Coastal Way",
+    "Marina Drive",
+    "Seaside Boulevard",
+    "Camino Real",
+    "Vista Street",
+    "Canyon Road",
+    "Esplanade Avenue",
+    "Bayshore Drive",
+    "Santiago Avenue",
+    "Rosecrans Avenue",
+    "Artesia Boulevard",
+    "Avalon Boulevard",
+    "Broadway",
+    "Burnett Street",
+    "Crenshaw Boulevard",
+    "Cypress Avenue",
+    "Gardena Boulevard",
+    "Hill Street",
+    "Imperial Highway",
+    "Orizaba Avenue",
+    "Park Avenue",
+    "Plaza Drive",
+    "Prospect Avenue",
+    "San Pedro Street",
+    "Torrance Boulevard",
+    "Western Avenue",
+    "Alameda Street",
+    "Anaheim Street",
+    "Corona Avenue",
+    "Eucalyptus Avenue",
+    "Granada Avenue",
+    "Long Beach Boulevard",
+    "Mesa Drive",
+    "Olive Avenue",
+    "Paseo Del Mar",
+    "Pier Avenue",
+    "Silverado Street",
+    "Sycamore Avenue",
+    "Walnut Avenue",
+    "Acacia Avenue",
+    "Camelia Avenue",
+    "Diamond Street",
+    "Emerald Street",
+    "Hermosa Avenue",
+    "Pacific Avenue",
+    "Pershing Drive",
+    "Redondo Avenue",
+    "Burbank Boulevard",
+    "California Avenue",
+    "Canyon Drive",
+    "El Segundo Boulevard",
+    "Grand Avenue",
+    "Hamilton Avenue",
+    "Inglewood Avenue",
+    "La Brea Avenue",
+    "Laurel Canyon Boulevard",
+    "Marine Avenue",
+    "Oxnard Street",
+    "Pico Boulevard",
+    "Plaza del Amo",
+    "Santa Fe Avenue",
+    "Slauson Avenue",
+    "Valencia Avenue",
+    "Van Ness Avenue",
+    "Venice Boulevard",
+    "Westminster Avenue",
+    "Whittier Boulevard",
+    "Winnetka Avenue",
+    "Seaside Avenue",
+    "Shoreline Drive",
+    "Lincoln Avenue",
+    "Carson Boulevard",
+    "Coronado Boulevard",
+    "Ocean View Drive",
+    "Sycamore Street",
+    "Marina Way",
+    "Acacia Street"
+  ],
+  "cities": [
+    {
+      "city": "Long Beach",
+      "state": "CA",
+      "zip": "90802"
+    },
+    {
+      "city": "Long Beach",
+      "state": "CA",
+      "zip": "90806"
+    },
+    {
+      "city": "Torrance",
+      "state": "CA",
+      "zip": "90501"
+    },
+    {
+      "city": "Carson",
+      "state": "CA",
+      "zip": "90745"
+    },
+    {
+      "city": "Inglewood",
+      "state": "CA",
+      "zip": "90301"
+    },
+    {
+      "city": "San Pedro",
+      "state": "CA",
+      "zip": "90731"
+    },
+    {
+      "city": "Lakewood",
+      "state": "CA",
+      "zip": "90712"
+    },
+    {
+      "city": "Compton",
+      "state": "CA",
+      "zip": "90220"
+    },
+    {
+      "city": "Gardena",
+      "state": "CA",
+      "zip": "90247"
+    },
+    {
+      "city": "Hawthorne",
+      "state": "CA",
+      "zip": "90250"
+    },
+    {
+      "city": "Lomita",
+      "state": "CA",
+      "zip": "90717"
+    },
+    {
+      "city": "Redondo Beach",
+      "state": "CA",
+      "zip": "90277"
+    },
+    {
+      "city": "Wilmington",
+      "state": "CA",
+      "zip": "90744"
+    },
+    {
+      "city": "Signal Hill",
+      "state": "CA",
+      "zip": "90755"
+    },
+    {
+      "city": "Bellflower",
+      "state": "CA",
+      "zip": "90706"
+    },
+    {
+      "city": "Downey",
+      "state": "CA",
+      "zip": "90241"
+    },
+    {
+      "city": "Norwalk",
+      "state": "CA",
+      "zip": "90650"
+    },
+    {
+      "city": "Paramount",
+      "state": "CA",
+      "zip": "90723"
+    },
+    {
+      "city": "Los Angeles",
+      "state": "CA",
+      "zip": "90044"
+    },
+    {
+      "city": "Los Angeles",
+      "state": "CA",
+      "zip": "90047"
+    },
+    {
+      "city": "Pasadena",
+      "state": "CA",
+      "zip": "91101"
+    },
+    {
+      "city": "Glendale",
+      "state": "CA",
+      "zip": "91205"
+    },
+    {
+      "city": "Burbank",
+      "state": "CA",
+      "zip": "91502"
+    },
+    {
+      "city": "Santa Monica",
+      "state": "CA",
+      "zip": "90401"
+    },
+    {
+      "city": "Culver City",
+      "state": "CA",
+      "zip": "90232"
+    },
+    {
+      "city": "Beverly Hills",
+      "state": "CA",
+      "zip": "90210"
+    },
+    {
+      "city": "West Hollywood",
+      "state": "CA",
+      "zip": "90069"
+    },
+    {
+      "city": "Manhattan Beach",
+      "state": "CA",
+      "zip": "90266"
+    },
+    {
+      "city": "Hermosa Beach",
+      "state": "CA",
+      "zip": "90254"
+    },
+    {
+      "city": "El Segundo",
+      "state": "CA",
+      "zip": "90245"
+    },
+    {
+      "city": "Inglewood",
+      "state": "CA",
+      "zip": "90302"
+    },
+    {
+      "city": "Whittier",
+      "state": "CA",
+      "zip": "90601"
+    },
+    {
+      "city": "Montebello",
+      "state": "CA",
+      "zip": "90640"
+    },
+    {
+      "city": "Pico Rivera",
+      "state": "CA",
+      "zip": "90660"
+    },
+    {
+      "city": "Santa Fe Springs",
+      "state": "CA",
+      "zip": "90670"
+    },
+    {
+      "city": "La Mirada",
+      "state": "CA",
+      "zip": "90638"
+    },
+    {
+      "city": "Cerritos",
+      "state": "CA",
+      "zip": "90703"
+    },
+    {
+      "city": "Artesia",
+      "state": "CA",
+      "zip": "90701"
+    },
+    {
+      "city": "La Habra",
+      "state": "CA",
+      "zip": "90631"
+    },
+    {
+      "city": "Fullerton",
+      "state": "CA",
+      "zip": "92832"
+    },
+    {
+      "city": "Anaheim",
+      "state": "CA",
+      "zip": "92805"
+    },
+    {
+      "city": "Orange",
+      "state": "CA",
+      "zip": "92866"
+    },
+    {
+      "city": "Santa Ana",
+      "state": "CA",
+      "zip": "92701"
+    },
+    {
+      "city": "Garden Grove",
+      "state": "CA",
+      "zip": "92840"
+    },
+    {
+      "city": "Westminster",
+      "state": "CA",
+      "zip": "92683"
+    },
+    {
+      "city": "Huntington Beach",
+      "state": "CA",
+      "zip": "92647"
+    },
+    {
+      "city": "Fountain Valley",
+      "state": "CA",
+      "zip": "92708"
+    },
+    {
+      "city": "Costa Mesa",
+      "state": "CA",
+      "zip": "92626"
+    },
+    {
+      "city": "Newport Beach",
+      "state": "CA",
+      "zip": "92660"
+    },
+    {
+      "city": "Irvine",
+      "state": "CA",
+      "zip": "92614"
+    },
+    {
+      "city": "Tustin",
+      "state": "CA",
+      "zip": "92780"
+    },
+    {
+      "city": "Mission Viejo",
+      "state": "CA",
+      "zip": "92691"
+    },
+    {
+      "city": "Lake Forest",
+      "state": "CA",
+      "zip": "92630"
+    },
+    {
+      "city": "Laguna Niguel",
+      "state": "CA",
+      "zip": "92677"
+    },
+    {
+      "city": "San Clemente",
+      "state": "CA",
+      "zip": "92672"
+    },
+    {
+      "city": "Dana Point",
+      "state": "CA",
+      "zip": "92629"
+    },
+    {
+      "city": "Pomona",
+      "state": "CA",
+      "zip": "91766"
+    },
+    {
+      "city": "Ontario",
+      "state": "CA",
+      "zip": "91761"
+    },
+    {
+      "city": "Rancho Cucamonga",
+      "state": "CA",
+      "zip": "91730"
+    },
+    {
+      "city": "Upland",
+      "state": "CA",
+      "zip": "91786"
+    },
+    {
+      "city": "Claremont",
+      "state": "CA",
+      "zip": "91711"
+    },
+    {
+      "city": "Chino",
+      "state": "CA",
+      "zip": "91710"
+    },
+    {
+      "city": "Chino Hills",
+      "state": "CA",
+      "zip": "91709"
+    },
+    {
+      "city": "Corona",
+      "state": "CA",
+      "zip": "92882"
+    },
+    {
+      "city": "Riverside",
+      "state": "CA",
+      "zip": "92501"
+    },
+    {
+      "city": "Moreno Valley",
+      "state": "CA",
+      "zip": "92553"
+    },
+    {
+      "city": "Redlands",
+      "state": "CA",
+      "zip": "92373"
+    },
+    {
+      "city": "San Bernardino",
+      "state": "CA",
+      "zip": "92404"
+    },
+    {
+      "city": "Fontana",
+      "state": "CA",
+      "zip": "92335"
+    },
+    {
+      "city": "Rialto",
+      "state": "CA",
+      "zip": "92376"
+    },
+    {
+      "city": "Huntington Beach",
+      "state": "CA",
+      "zip": "92648"
+    },
+    {
+      "city": "Irvine",
+      "state": "CA",
+      "zip": "92618"
+    },
+    {
+      "city": "Laguna Beach",
+      "state": "CA",
+      "zip": "92651"
+    },
+    {
+      "city": "Aliso Viejo",
+      "state": "CA",
+      "zip": "92656"
+    },
+    {
+      "city": "Orange",
+      "state": "CA",
+      "zip": "92868"
+    },
+    {
+      "city": "Buena Park",
+      "state": "CA",
+      "zip": "90621"
+    },
+    {
+      "city": "Cypress",
+      "state": "CA",
+      "zip": "90630"
+    },
+    {
+      "city": "Alhambra",
+      "state": "CA",
+      "zip": "91801"
+    },
+    {
+      "city": "Arcadia",
+      "state": "CA",
+      "zip": "91006"
+    },
+    {
+      "city": "Pomona",
+      "state": "CA",
+      "zip": "91768"
+    },
+    {
+      "city": "San Bernardino",
+      "state": "CA",
+      "zip": "92401"
+    },
+    {
+      "city": "Torrance",
+      "state": "CA",
+      "zip": "90503"
+    }
+  ],
+  "facilities": [
+    "Harbor Crest Medical Center",
+    "South Bay Regional Hospital",
+    "Pacific Horizon Home Health",
+    "Valley Pointe Rehabilitation Center",
+    "Coastal Community Clinic",
+    "MetroCare Medical Group",
+    "St. Maren Medical Pavilion",
+    "Los Robles Post-Acute Center",
+    "Cabrillo Family Medicine",
+    "Seaside Transitional Care",
+    "Paloma Home Health Services",
+    "Westbridge Community Hospital",
+    "Providence Harbor Medical Group",
+    "Magnolia Skilled Nursing Center",
+    "Golden Shore Hospice",
+    "Linden Primary Care Associates",
+    "Carson Valley Medical Center",
+    "Arbor Gate Home Health",
+    "Pacific Crest Internal Medicine",
+    "San Gabriel Continuity Clinic",
+    "Sunset Ridge Medical Center",
+    "Bayside Community Hospital",
+    "Oakmont Skilled Nursing Facility",
+    "Sierra Vista Home Health Agency",
+    "Riverside Wellness Clinic",
+    "Meadowbrook Rehabilitation Institute",
+    "Cypress Point Medical Associates",
+    "Mountain View Post-Acute Care",
+    "Redwood Valley Hospital",
+    "Elmhurst Home Health Services",
+    "Clearwater Regional Medical Center",
+    "Maplewood Skilled Nursing",
+    "Desert Springs Community Clinic",
+    "Willowbrook Family Practice",
+    "Foothill Transitional Care Center",
+    "Laguna Verde Home Health",
+    "Bayshore Internal Medicine Group",
+    "Parkview Rehabilitation Hospital",
+    "Pinecrest Medical Pavilion",
+    "Ocean Breeze Skilled Nursing",
+    "Silver Lake Home Health Agency",
+    "Cedarwood Community Hospital",
+    "Hillside Primary Care Center",
+    "Marina Del Sol Medical Group",
+    "Brookstone Post-Acute Facility",
+    "Sycamore Valley Clinic",
+    "Timberline Home Health Services",
+    "Canyon Ridge Medical Center",
+    "Rosewood Skilled Nursing Center",
+    "Fairmont Community Health",
+    "Lakeshore Rehabilitation Services",
+    "Harmony Hills Medical Associates",
+    "Silverado Home Health Care",
+    "Greenfield Family Medicine",
+    "Vista Grande Hospital",
+    "Aspen Grove Skilled Nursing",
+    "Northgate Medical Center",
+    "Coral Bay Home Health Agency",
+    "Mountainside Wellness Clinic",
+    "Evergreen Post-Acute Center",
+    "Sunrise Community Hospital",
+    "Bellview Primary Care Group",
+    "Heritage Home Health Services",
+    "Cascade Regional Medical",
+    "Whispering Pines Skilled Nursing",
+    "Shoreline Family Health Clinic",
+    "Summit Ridge Medical Plaza",
+    "Hearthstone Transitional Care",
+    "Windermere Home Health",
+    "Crescent Bay Medical Center",
+    "Brookstone Wound Care Institute",
+    "Silverleaf Rehabilitation Hospital",
+    "Amber Heights Skilled Nursing",
+    "Cottonwood Medical Associates",
+    "Valencia Springs Home Health",
+    "Northpoint Community Medical Center",
+    "Heritage Park Post-Acute Facility",
+    "Sycamore Lane Family Clinic",
+    "Summit Ridge Home Health Agency",
+    "Crescent Bay Specialty Hospital",
+    "Greenfield Extended Care Center",
+    "Montecito Wellness Pavilion",
+    "Rosewood Transitional Hospital",
+    "Cedar Grove Nursing Center",
+    "Horizon Gate Primary Care Clinic"
+  ],
+  "insurers": [
+    "Blue Shield of California",
+    "Anthem Blue Cross",
+    "Health Net",
+    "UnitedHealthcare",
+    "Humana Medicare Advantage",
+    "Aetna Medicare",
+    "Alignment Health Plan",
+    "SCAN Health Plan",
+    "L.A. Care Health Plan",
+    "Molina Healthcare",
+    "Original Medicare",
+    "Central Health Plan",
+    "Kaiser Permanente",
+    "Cigna HealthSpring",
+    "WellCare Health Plans",
+    "Devoted Health",
+    "Clover Health",
+    "Bright Health",
+    "Oscar Health",
+    "Centene Medicare",
+    "Mutual of Omaha Medicare",
+    "UPMC Health Plan",
+    "Highmark Blue Cross Blue Shield",
+    "Independence Blue Cross",
+    "Premera Blue Cross",
+    "Regence BlueCross BlueShield",
+    "CareCentrix Advantage",
+    "Optima Health",
+    "Sentara Health Plans",
+    "CareFirst BlueCross BlueShield",
+    "AmeriHealth Caritas",
+    "Horizon Blue Cross Blue Shield",
+    "Gateway Health Plan",
+    "Priority Health",
+    "BlueCross BlueShield of Tennessee",
+    "Florida Blue Medicare",
+    "AvMed Health Plans",
+    "Simply Healthcare Plans",
+    "Community Health Group",
+    "Sharp Health Plan",
+    "Western Health Advantage",
+    "Brand New Day",
+    "Easy Choice Health Plan",
+    "Aspire Health Plan",
+    "Clevidence Health Partners"
+  ],
+  "diagnoses": [
+    {
+      "text": "Stage 3 pressure injury of the sacral region.",
+      "icd10": [
+        "L89.153"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the right heel with fat layer exposed.",
+      "icd10": [
+        "E11.621",
+        "L97.412"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the left lower leg with edema.",
+      "icd10": [
+        "I83.023",
+        "L97.321"
+      ]
+    },
+    {
+      "text": "Non-healing surgical wound of the lower abdomen.",
+      "icd10": [
+        "T81.89XA"
+      ]
+    },
+    {
+      "text": "Open wound of the left foot following cellulitis admission.",
+      "icd10": [
+        "S91.302A",
+        "L03.116"
+      ]
+    },
+    {
+      "text": "Unstageable pressure injury of the right hip.",
+      "icd10": [
+        "L89.210"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the left buttock.",
+      "icd10": [
+        "L89.322"
+      ]
+    },
+    {
+      "text": "Chronic ulcer of the right ankle with skin breakdown.",
+      "icd10": [
+        "L97.311"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the left midfoot with fat layer exposed.",
+      "icd10": [
+        "E11.621",
+        "L97.422"
+      ]
+    },
+    {
+      "text": "Dehisced surgical incision requiring skilled wound management.",
+      "icd10": [
+        "T81.31XA"
+      ]
+    },
+    {
+      "text": "Skin tear of the right forearm without foreign body.",
+      "icd10": [
+        "S51.811A"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the coccygeal region.",
+      "icd10": [
+        "L89.154"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the right calf with inflammation.",
+      "icd10": [
+        "I83.212",
+        "L97.212"
+      ]
+    },
+    {
+      "text": "Open wound of the right lower leg after traumatic injury.",
+      "icd10": [
+        "S81.801A"
+      ]
+    },
+    {
+      "text": "Moisture-associated skin damage of the gluteal cleft.",
+      "icd10": [
+        "L30.8"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the left lateral ankle.",
+      "icd10": [
+        "I70.243",
+        "L97.322"
+      ]
+    },
+    {
+      "text": "Delayed healing of postoperative wound of the right groin.",
+      "icd10": [
+        "T81.89XD"
+      ]
+    },
+    {
+      "text": "Pressure injury of the right heel, deep tissue presentation.",
+      "icd10": [
+        "L89.616"
+      ]
+    },
+    {
+      "text": "Chronic ulcer of the left great toe with necrosis of muscle.",
+      "icd10": [
+        "L97.523"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the left elbow with exposed subcutaneous tissue.",
+      "icd10": [
+        "L89.023"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the right scapular region.",
+      "icd10": [
+        "L89.112"
+      ]
+    },
+    {
+      "text": "Skin tear of the left upper arm with partial tissue loss.",
+      "icd10": [
+        "S41.112A"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the right ischial tuberosity with exposed bone.",
+      "icd10": [
+        "L89.304"
+      ]
+    },
+    {
+      "text": "Moisture-associated dermatitis of the perineal region with erosion.",
+      "icd10": [
+        "L30.4"
+      ]
+    },
+    {
+      "text": "Traumatic wound of the right thigh with delayed healing.",
+      "icd10": [
+        "S71.111D"
+      ]
+    },
+    {
+      "text": "Stage 1 pressure injury of the left trochanteric region.",
+      "icd10": [
+        "L89.221"
+      ]
+    },
+    {
+      "text": "Dehisced abdominal surgical wound with superficial separation.",
+      "icd10": [
+        "T81.31XA"
+      ]
+    },
+    {
+      "text": "Skin tear of the right lower leg without complication.",
+      "icd10": [
+        "S81.811A"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the left heel with slough present.",
+      "icd10": [
+        "L89.623"
+      ]
+    },
+    {
+      "text": "Unstageable pressure injury of the left buttock with eschar coverage.",
+      "icd10": [
+        "L89.209"
+      ]
+    },
+    {
+      "text": "Open wound of the right knee following total joint arthroplasty.",
+      "icd10": [
+        "T84.51XA"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the occiput with partial thickness loss.",
+      "icd10": [
+        "L89.812"
+      ]
+    },
+    {
+      "text": "Skin tear of the left forearm with moderate bleeding.",
+      "icd10": [
+        "S51.812A"
+      ]
+    },
+    {
+      "text": "Moisture-associated skin damage of the bilateral inguinal folds.",
+      "icd10": [
+        "L30.4"
+      ]
+    },
+    {
+      "text": "Chronic ulcer of the right medial ankle with fibrin slough.",
+      "icd10": [
+        "L97.319"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the left greater trochanter with undermining.",
+      "icd10": [
+        "L89.224"
+      ]
+    },
+    {
+      "text": "Dehisced surgical incision of the right chest wall.",
+      "icd10": [
+        "T81.31XA"
+      ]
+    },
+    {
+      "text": "Traumatic avulsion wound of the left hand with tissue loss.",
+      "icd10": [
+        "S61.412A"
+      ]
+    },
+    {
+      "text": "Deep tissue injury of the right heel with purple discoloration.",
+      "icd10": [
+        "L89.619"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the right malleolus with tunneling.",
+      "icd10": [
+        "L89.513"
+      ]
+    },
+    {
+      "text": "Skin tear of the bilateral upper extremities from mechanical trauma.",
+      "icd10": [
+        "S41.119A"
+      ]
+    },
+    {
+      "text": "Non-healing wound of the left lower extremity with persistent drainage.",
+      "icd10": [
+        "L97.929"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the right ear with blister formation.",
+      "icd10": [
+        "L89.012"
+      ]
+    },
+    {
+      "text": "Surgical site infection with wound breakdown of the sternotomy.",
+      "icd10": [
+        "T81.41XA"
+      ]
+    },
+    {
+      "text": "Moisture-associated incontinence dermatitis of the sacrococcygeal region.",
+      "icd10": [
+        "L30.4"
+      ]
+    },
+    {
+      "text": "Stage 1 pressure injury of the bilateral heels with non-blanchable erythema.",
+      "icd10": [
+        "L89.611"
+      ]
+    },
+    {
+      "text": "Traumatic laceration of the left shin with delayed closure.",
+      "icd10": [
+        "S81.812D"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the left ischial region with granulation tissue.",
+      "icd10": [
+        "L89.323"
+      ]
+    },
+    {
+      "text": "Skin tear of the right dorsal hand with flap necrosis.",
+      "icd10": [
+        "S61.411A"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the right hip with partial thickness skin loss.",
+      "icd10": [
+        "L89.211"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the left third toe with exposed tendon.",
+      "icd10": [
+        "E11.621",
+        "L97.523"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the left buttock with undermining and tunneling.",
+      "icd10": [
+        "L89.324"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the right lateral foot with peripheral vascular disease.",
+      "icd10": [
+        "I70.233",
+        "L97.514"
+      ]
+    },
+    {
+      "text": "Traumatic laceration of the left shin with tissue loss requiring reconstruction.",
+      "icd10": [
+        "S81.812A"
+      ]
+    },
+    {
+      "text": "Skin tear of the left forearm with moderate tissue loss.",
+      "icd10": [
+        "S51.812A"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the right plantar midfoot with muscle involvement.",
+      "icd10": [
+        "E11.621",
+        "L97.514"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the right lateral malleolus with eschar formation.",
+      "icd10": [
+        "L89.513"
+      ]
+    },
+    {
+      "text": "Moisture-associated skin damage of the bilateral buttocks with maceration.",
+      "icd10": [
+        "L30.9"
+      ]
+    },
+    {
+      "text": "Non-healing surgical wound of the right knee following arthroplasty.",
+      "icd10": [
+        "T81.31XA"
+      ]
+    },
+    {
+      "text": "Stage 1 pressure injury of the right occipital scalp with non-blanchable erythema.",
+      "icd10": [
+        "L89.811"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the left fifth metatarsal with osteomyelitis present.",
+      "icd10": [
+        "E11.621",
+        "L97.525",
+        "M86.672"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the left toes with ischemic changes.",
+      "icd10": [
+        "I70.242",
+        "L97.529"
+      ]
+    },
+    {
+      "text": "Dehisced sternotomy wound with sternal instability.",
+      "icd10": [
+        "T81.31XA"
+      ]
+    },
+    {
+      "text": "Skin tear of the right hand with flap necrosis.",
+      "icd10": [
+        "S61.411A"
+      ]
+    },
+    {
+      "text": "Unstageable pressure injury of the left heel obscured by eschar.",
+      "icd10": [
+        "L89.620"
+      ]
+    },
+    {
+      "text": "Neuropathic ulcer of the right medial midfoot with callus rim.",
+      "icd10": [
+        "E11.621",
+        "L97.414"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the left lateral ankle with blistering.",
+      "icd10": [
+        "L89.522"
+      ]
+    },
+    {
+      "text": "Traumatic avulsion wound of the right upper arm with muscle exposed.",
+      "icd10": [
+        "S41.112A"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the right trochanter with copious drainage.",
+      "icd10": [
+        "L89.213"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the left hallux with exposed bone and probe to bone positive.",
+      "icd10": [
+        "E11.621",
+        "L97.521"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the right fourth toe with dry gangrene.",
+      "icd10": [
+        "I70.263",
+        "L97.514"
+      ]
+    },
+    {
+      "text": "Delayed healing of surgical wound following right mastectomy.",
+      "icd10": [
+        "T81.31XA"
+      ]
+    },
+    {
+      "text": "Moisture-associated dermatitis of the intertriginous abdominal fold with denudement.",
+      "icd10": [
+        "L30.4"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the right scapula with exposed cartilage.",
+      "icd10": [
+        "L89.144"
+      ]
+    },
+    {
+      "text": "Skin tear of the left lower leg with skin flap present.",
+      "icd10": [
+        "S81.812A"
+      ]
+    },
+    {
+      "text": "Neuropathic ulcer of the left second toe with surrounding erythema.",
+      "icd10": [
+        "E11.621",
+        "L97.522"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the right ear with partial thickness tissue loss.",
+      "icd10": [
+        "L89.012"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the right lateral malleolus with charcot deformity.",
+      "icd10": [
+        "E11.621",
+        "L97.414"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the left fifth toe with critical limb ischemia.",
+      "icd10": [
+        "I70.242",
+        "L97.525"
+      ]
+    },
+    {
+      "text": "Traumatic wound of the left knee with exposed patellar tendon.",
+      "icd10": [
+        "S81.002A"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the left ischial tuberosity with sinus tract formation.",
+      "icd10": [
+        "L89.323"
+      ]
+    },
+    {
+      "text": "Skin tear of the right thigh with linear configuration.",
+      "icd10": [
+        "S71.111A"
+      ]
+    },
+    {
+      "text": "Deep tissue pressure injury of the left scapular region with purple discoloration.",
+      "icd10": [
+        "L89.146"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the right dorsum of foot with Wagner grade 3 classification.",
+      "icd10": [
+        "E11.621",
+        "L97.514"
+      ]
+    },
+    {
+      "text": "Moisture-associated skin damage of the left inguinal fold with fungal colonization.",
+      "icd10": [
+        "L30.4",
+        "B37.2"
+      ]
+    },
+    {
+      "text": "Stage 1 pressure injury of the left posterior heel with intact skin.",
+      "icd10": [
+        "L89.621"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the right anterior tibial area with absent pedal pulses.",
+      "icd10": [
+        "I70.233",
+        "L97.413"
+      ]
+    },
+    {
+      "text": "Dehisced surgical wound of the right chest wall with seroma formation.",
+      "icd10": [
+        "T81.31XA"
+      ]
+    },
+    {
+      "text": "Skin tear of the bilateral upper arms with ecchymosis.",
+      "icd10": [
+        "S41.119A"
+      ]
+    },
+    {
+      "text": "Neuropathic ulcer of the right fourth metatarsal head with hyperkeratosis.",
+      "icd10": [
+        "E11.621",
+        "L97.414"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the left medial malleolus with shallow crater.",
+      "icd10": [
+        "L89.522"
+      ]
+    },
+    {
+      "text": "Traumatic degloving injury of the right lower extremity with extensive tissue loss.",
+      "icd10": [
+        "S71.111A"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the right heel with partial thickness skin loss.",
+      "icd10": [
+        "L89.614"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the left ischial region with exposed joint capsule.",
+      "icd10": [
+        "L89.324"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the right trochanter with undermining present.",
+      "icd10": [
+        "L89.213"
+      ]
+    },
+    {
+      "text": "Moisture-associated skin damage of the bilateral inguinal folds with maceration.",
+      "icd10": [
+        "L30.4"
+      ]
+    },
+    {
+      "text": "Traumatic laceration of the left shin with tissue avulsion and contamination.",
+      "icd10": [
+        "S81.812A"
+      ]
+    },
+    {
+      "text": "Stage 1 pressure injury of the occiput with non-blanchable erythema.",
+      "icd10": [
+        "L89.811"
+      ]
+    },
+    {
+      "text": "Non-healing surgical wound of the left hip following arthroplasty with drainage.",
+      "icd10": [
+        "T81.30XA"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the left lateral malleolus with partial thickness loss.",
+      "icd10": [
+        "L89.522"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the right occipital region with exposed adipose.",
+      "icd10": [
+        "L89.813"
+      ]
+    },
+    {
+      "text": "Moisture-associated incontinence dermatitis of the buttocks with erosion and satellite lesions.",
+      "icd10": [
+        "L30.4"
+      ]
+    },
+    {
+      "text": "Traumatic wound of the left thigh with muscle damage and delayed epithelialization.",
+      "icd10": [
+        "S71.112A"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the left sacral area with exposed vertebra.",
+      "icd10": [
+        "L89.154"
+      ]
+    },
+    {
+      "text": "Skin tear of the left lower leg with significant undermining and bruising.",
+      "icd10": [
+        "S81.812A"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the right iliac crest with blister formation.",
+      "icd10": [
+        "L89.212"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the right lateral ankle with tunneling to tendon.",
+      "icd10": [
+        "L89.513"
+      ]
+    },
+    {
+      "text": "Traumatic abrasion of the left knee with secondary infection and purulent exudate.",
+      "icd10": [
+        "S80.212A"
+      ]
+    },
+    {
+      "text": "Deep tissue pressure injury of the left buttock with purple discoloration.",
+      "icd10": [
+        "L89.329"
+      ]
+    },
+    {
+      "text": "Moisture-associated skin damage of the inframammary folds with fungal colonization.",
+      "icd10": [
+        "L30.4"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the right elbow with exposed olecranon process.",
+      "icd10": [
+        "L89.014"
+      ]
+    },
+    {
+      "text": "Skin tear of the right anterior tibia with linear pattern and edges approximated.",
+      "icd10": [
+        "S81.811A"
+      ]
+    },
+    {
+      "text": "Non-healing surgical wound of the left lower leg saphenous vein harvest site.",
+      "icd10": [
+        "T81.30XA"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the left scapula with exposed fascia and moderate slough.",
+      "icd10": [
+        "L89.113"
+      ]
+    },
+    {
+      "text": "Traumatic puncture wound of the right foot with retained debris and infection.",
+      "icd10": [
+        "S91.341A"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the left greater trochanter with serous exudate.",
+      "icd10": [
+        "L89.222"
+      ]
+    },
+    {
+      "text": "Unstageable pressure injury of the coccyx with thick black eschar covering.",
+      "icd10": [
+        "L89.159"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the right elbow with partial thickness loss.",
+      "icd10": [
+        "L89.011"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the right lateral malleolus with exposed muscle.",
+      "icd10": [
+        "E11.621",
+        "L97.414"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the left ankle with severe edema and drainage.",
+      "icd10": [
+        "I87.313",
+        "L97.329"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the right midfoot with vascular insufficiency.",
+      "icd10": [
+        "I70.233",
+        "L97.514"
+      ]
+    },
+    {
+      "text": "Traumatic laceration of the left knee with muscle damage.",
+      "icd10": [
+        "S81.012A",
+        "L98.499"
+      ]
+    },
+    {
+      "text": "Skin tear of the left forearm with significant tissue loss.",
+      "icd10": [
+        "S51.812A"
+      ]
+    },
+    {
+      "text": "Diabetic neuropathic ulcer of the left fifth toe with necrosis.",
+      "icd10": [
+        "E11.621",
+        "L97.526"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the right buttock with granulation tissue.",
+      "icd10": [
+        "L89.313"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the left gaiter region with fibrinous base.",
+      "icd10": [
+        "I87.313",
+        "L97.323"
+      ]
+    },
+    {
+      "text": "Pressure injury of the left heel with unstageable eschar covering.",
+      "icd10": [
+        "L89.629"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the left lateral leg with critical limb ischemia.",
+      "icd10": [
+        "I70.243",
+        "L97.829"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the right plantar metatarsal area with cellulitis.",
+      "icd10": [
+        "E11.621",
+        "L97.513"
+      ]
+    },
+    {
+      "text": "Dehisced surgical wound of the left hip arthroplasty site.",
+      "icd10": [
+        "T81.31XA",
+        "T84.020A"
+      ]
+    },
+    {
+      "text": "Skin tear of the right hand dorsum with flap necrosis.",
+      "icd10": [
+        "S61.411A"
+      ]
+    },
+    {
+      "text": "Chronic venous ulcer of the right posterior calf with heavy exudate.",
+      "icd10": [
+        "I87.313",
+        "L97.213"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the left malleolus with blistering.",
+      "icd10": [
+        "L89.522"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the left fourth toe with joint exposure.",
+      "icd10": [
+        "E11.621",
+        "L97.525"
+      ]
+    },
+    {
+      "text": "Traumatic avulsion injury of the right anterior shin with bone visible.",
+      "icd10": [
+        "S81.831A"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the right first toe with dry gangrene.",
+      "icd10": [
+        "I70.261",
+        "L97.511"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the right lateral ankle with exposed fascia.",
+      "icd10": [
+        "L89.513"
+      ]
+    },
+    {
+      "text": "Non-healing surgical wound of the left below-knee amputation stump.",
+      "icd10": [
+        "T87.81",
+        "T81.31XA"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the right shin with venous dermatitis.",
+      "icd10": [
+        "I87.313",
+        "L97.213"
+      ]
+    },
+    {
+      "text": "Pressure injury of the right ischium with deep tissue involvement.",
+      "icd10": [
+        "L89.306"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the right medial midfoot with abscess formation.",
+      "icd10": [
+        "E11.621",
+        "L97.414"
+      ]
+    },
+    {
+      "text": "Skin tear of the left shin with muscle exposure.",
+      "icd10": [
+        "S81.812A"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the left ischial region with osteomyelitis.",
+      "icd10": [
+        "L89.324",
+        "M86.28"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the left third toe with peripheral vascular disease.",
+      "icd10": [
+        "I70.243",
+        "L97.523"
+      ]
+    },
+    {
+      "text": "Traumatic puncture wound of the right foot with delayed closure.",
+      "icd10": [
+        "S91.331A"
+      ]
+    },
+    {
+      "text": "Dehisced cesarean section incision with fascial involvement.",
+      "icd10": [
+        "O90.0",
+        "T81.31XA"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the left medial leg with stasis pigmentation.",
+      "icd10": [
+        "I87.313",
+        "L97.323"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the right greater trochanter with serosanguinous drainage.",
+      "icd10": [
+        "L89.212"
+      ]
+    },
+    {
+      "text": "Neuropathic ulcer of the right second metatarsal with Charcot deformity.",
+      "icd10": [
+        "E11.621",
+        "L97.512"
+      ]
+    },
+    {
+      "text": "Skin tear of the bilateral upper arms with extensive bruising.",
+      "icd10": [
+        "S41.119A"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the left lateral malleolus with muscle necrosis.",
+      "icd10": [
+        "E11.621",
+        "L97.522"
+      ]
+    },
+    {
+      "text": "Arterial insufficiency ulcer of the right plantar surface with exposed tendon.",
+      "icd10": [
+        "I70.233",
+        "L97.514"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the left lateral malleolus with partial thickness skin loss.",
+      "icd10": [
+        "L89.622"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the right medial ankle with heavy drainage.",
+      "icd10": [
+        "I83.011",
+        "L97.411"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the right first toe with bone exposure.",
+      "icd10": [
+        "E11.621",
+        "L97.513"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the left ischial region with undermining.",
+      "icd10": [
+        "L89.323"
+      ]
+    },
+    {
+      "text": "Skin tear of the right dorsal hand with significant bleeding.",
+      "icd10": [
+        "S61.401A"
+      ]
+    },
+    {
+      "text": "Chronic arterial ulcer of the left fifth toe with gangrene.",
+      "icd10": [
+        "I70.243",
+        "L97.525"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the left sacral region with exposed muscle.",
+      "icd10": [
+        "L89.154"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the left thigh with moderate exudate.",
+      "icd10": [
+        "I83.021",
+        "L97.122"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the left plantar midfoot with exposed subcutaneous tissue.",
+      "icd10": [
+        "E11.621",
+        "L97.421"
+      ]
+    },
+    {
+      "text": "Unstageable pressure injury of the right greater trochanter obscured by slough.",
+      "icd10": [
+        "L89.210"
+      ]
+    },
+    {
+      "text": "Skin tear of the left shin with avulsion flap.",
+      "icd10": [
+        "S81.812A"
+      ]
+    },
+    {
+      "text": "Stage 1 pressure injury of the right buttock with non-blanchable erythema.",
+      "icd10": [
+        "L89.311"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the left calf with periwound maceration.",
+      "icd10": [
+        "I83.021",
+        "L97.221"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the left heel with blister formation.",
+      "icd10": [
+        "L89.622"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the right dorsal foot with fascia visible.",
+      "icd10": [
+        "E11.621",
+        "L97.522"
+      ]
+    },
+    {
+      "text": "Deep tissue pressure injury of the left occipital region with purple discoloration.",
+      "icd10": [
+        "L89.816"
+      ]
+    },
+    {
+      "text": "Traumatic laceration of the right calf with delayed closure.",
+      "icd10": [
+        "S81.811A"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the right lateral ankle with slough present.",
+      "icd10": [
+        "L89.513"
+      ]
+    },
+    {
+      "text": "Skin tear of the bilateral forearms with tissue loss.",
+      "icd10": [
+        "S51.812A"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the right lower leg with fibrinous base.",
+      "icd10": [
+        "I83.011",
+        "L97.211"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the left heel with calcaneal osteomyelitis.",
+      "icd10": [
+        "E11.621",
+        "L97.423"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the right elbow with exposed bone and joint.",
+      "icd10": [
+        "L89.014"
+      ]
+    },
+    {
+      "text": "Arterial insufficiency ulcer of the left lateral foot with tendon exposure.",
+      "icd10": [
+        "I70.243",
+        "L97.522"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the left scapula with partial dermis loss.",
+      "icd10": [
+        "L89.122"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the right medial malleolus with granulation tissue present.",
+      "icd10": [
+        "E11.621",
+        "L97.411"
+      ]
+    },
+    {
+      "text": "Skin tear of the right anterior thigh without foreign body.",
+      "icd10": [
+        "S71.111A"
+      ]
+    },
+    {
+      "text": "Chronic venous ulcer of the right shin with biofilm present.",
+      "icd10": [
+        "I83.011",
+        "L97.212"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the left trochanter with tunneling to bone.",
+      "icd10": [
+        "L89.223"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the left second toe with bone involvement.",
+      "icd10": [
+        "E11.621",
+        "L97.523"
+      ]
+    },
+    {
+      "text": "Unstageable pressure injury of the coccyx with thick eschar.",
+      "icd10": [
+        "L89.150"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the right dorsal foot with surrounding cellulitis.",
+      "icd10": [
+        "I70.233",
+        "L97.521"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the left lateral ankle with hypergranulation.",
+      "icd10": [
+        "I83.021",
+        "L97.422"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the right buttock with extensive undermining.",
+      "icd10": [
+        "L89.314"
+      ]
+    },
+    {
+      "text": "Skin tear of the left posterior calf with full thickness loss.",
+      "icd10": [
+        "S81.812A"
+      ]
+    },
+    {
+      "text": "Dehisced amputation stump of the right below-knee with wound separation.",
+      "icd10": [
+        "T81.33XA"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the right plantar heel with exposed fat layer.",
+      "icd10": [
+        "E11.621",
+        "L97.411"
+      ]
+    },
+    {
+      "text": "Stage 1 pressure injury of the left ear with intact skin.",
+      "icd10": [
+        "L89.011"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the right medial calf with yellow slough covering.",
+      "icd10": [
+        "I83.011",
+        "L97.212"
+      ]
+    },
+    {
+      "text": "Traumatic avulsion injury of the right ankle with exposed periosteum.",
+      "icd10": [
+        "S91.011A"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the right posterior heel with blister.",
+      "icd10": [
+        "L89.612"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the left third toe with necrotic muscle tissue.",
+      "icd10": [
+        "E11.621",
+        "L97.524"
+      ]
+    },
+    {
+      "text": "Arterial insufficiency ulcer of the right medial ankle with dry wound bed.",
+      "icd10": [
+        "I70.233",
+        "L97.411"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the left buttock with purulent drainage.",
+      "icd10": [
+        "L89.323"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the left heel with bone involvement.",
+      "icd10": [
+        "E11.621",
+        "L97.422"
+      ]
+    },
+    {
+      "text": "Venous insufficiency ulcer of the right medial malleolus with moderate drainage.",
+      "icd10": [
+        "I87.2",
+        "L97.314"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the left ischial tuberosity with undermining.",
+      "icd10": [
+        "L89.223"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the right plantar surface with tendon exposure.",
+      "icd10": [
+        "E11.621",
+        "L97.513"
+      ]
+    },
+    {
+      "text": "Arterial insufficiency ulcer of the right foot dorsum with gangrene.",
+      "icd10": [
+        "I70.263",
+        "L97.524"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the left lateral malleolus with blister formation.",
+      "icd10": [
+        "L89.622"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the left lateral ankle with muscle necrosis.",
+      "icd10": [
+        "E11.621",
+        "L97.323"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the right buttock with extensive tissue loss.",
+      "icd10": [
+        "L89.314"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the left calf with hemosiderin staining.",
+      "icd10": [
+        "I87.2",
+        "L97.222"
+      ]
+    },
+    {
+      "text": "Unstageable pressure injury of the right elbow obscured by slough.",
+      "icd10": [
+        "L89.010"
+      ]
+    },
+    {
+      "text": "Traumatic laceration of the right foot with delayed closure.",
+      "icd10": [
+        "S91.311A"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the right first toe with osteomyelitis.",
+      "icd10": [
+        "E11.621",
+        "L97.514"
+      ]
+    },
+    {
+      "text": "Stage 1 pressure injury of the right scapula with non-blanchable erythema.",
+      "icd10": [
+        "L89.811"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the left fifth toe with dry necrosis.",
+      "icd10": [
+        "I70.243",
+        "L97.524"
+      ]
+    },
+    {
+      "text": "Skin tear of the right hand with complete tissue separation.",
+      "icd10": [
+        "S61.411A"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the left greater trochanter with purulent drainage.",
+      "icd10": [
+        "L89.223"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the left fourth toe with exposed joint capsule.",
+      "icd10": [
+        "E11.621",
+        "L97.423"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the right lower leg with periwound cellulitis.",
+      "icd10": [
+        "I87.2",
+        "L97.114",
+        "L03.116"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the left heel with partial dermis loss.",
+      "icd10": [
+        "L89.622"
+      ]
+    },
+    {
+      "text": "Traumatic avulsion of the right calf with muscle exposure.",
+      "icd10": [
+        "S81.811A"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the right medial midfoot with subcutaneous involvement.",
+      "icd10": [
+        "E11.621",
+        "L97.412"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the left sacrum with sinus tract formation.",
+      "icd10": [
+        "L89.154"
+      ]
+    },
+    {
+      "text": "Arterial insufficiency ulcer of the left lateral leg with pale base.",
+      "icd10": [
+        "I70.233",
+        "L97.223"
+      ]
+    },
+    {
+      "text": "Skin tear of the bilateral forearms with extensive bruising.",
+      "icd10": [
+        "S51.811A"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the right posterior heel with fibrinous slough.",
+      "icd10": [
+        "L89.613"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the left plantar heel with calcaneal osteomyelitis.",
+      "icd10": [
+        "E11.621",
+        "L97.424"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the left medial ankle with lipodermatosclerosis.",
+      "icd10": [
+        "I87.2",
+        "L97.322"
+      ]
+    },
+    {
+      "text": "Deep tissue pressure injury of the left ischial region with intact skin.",
+      "icd10": [
+        "L89.226"
+      ]
+    },
+    {
+      "text": "Traumatic puncture wound of the left foot with foreign material retention.",
+      "icd10": [
+        "S91.342A"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the right ankle with serous drainage.",
+      "icd10": [
+        "L89.512"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the right lateral foot with Wagner grade 3 depth.",
+      "icd10": [
+        "E11.621",
+        "L97.523"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the right toe with critical limb ischemia.",
+      "icd10": [
+        "I70.263",
+        "L97.514"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the left trochanteric area with exposed fascia.",
+      "icd10": [
+        "L89.224"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the right medial malleolus with moderate exudate.",
+      "icd10": [
+        "I83.013",
+        "L97.311"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the right great toe with exposed tendon.",
+      "icd10": [
+        "I70.233",
+        "L97.511"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the left ischial tuberosity with necrotic tissue.",
+      "icd10": [
+        "L89.223"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the right lateral ankle with muscle necrosis.",
+      "icd10": [
+        "E11.621",
+        "L97.323"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the left sacral region with extensive undermining.",
+      "icd10": [
+        "L89.154"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the left lateral ankle with hemosiderin staining.",
+      "icd10": [
+        "I83.023",
+        "L97.322"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the left lateral midfoot with exposed fat.",
+      "icd10": [
+        "E11.621",
+        "L97.422"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the right lateral malleolus with blistering.",
+      "icd10": [
+        "L89.512"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the left heel with gangrene.",
+      "icd10": [
+        "I70.243",
+        "L97.424"
+      ]
+    },
+    {
+      "text": "Traumatic wound of the left ankle with persistent drainage.",
+      "icd10": [
+        "S91.002A"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the right greater trochanter with purulent exudate.",
+      "icd10": [
+        "L89.213"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the right medial midfoot with breakdown to fascia.",
+      "icd10": [
+        "E11.621",
+        "L97.413"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the left calf with chronic inflammation.",
+      "icd10": [
+        "I83.223",
+        "L97.221"
+      ]
+    },
+    {
+      "text": "Skin tear of the right hand with avulsion flap.",
+      "icd10": [
+        "S61.411A"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the left heel with exposed calcaneus.",
+      "icd10": [
+        "L89.624"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the left lateral ankle with osteomyelitis.",
+      "icd10": [
+        "E11.621",
+        "L97.324"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the right medial ankle with exposed bone.",
+      "icd10": [
+        "I70.233",
+        "L97.314"
+      ]
+    },
+    {
+      "text": "Stage 1 pressure injury of the left scapular region with non-blanchable erythema.",
+      "icd10": [
+        "L89.021"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the right lower leg with lipodermosclerosis.",
+      "icd10": [
+        "I83.013",
+        "L97.911"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the right plantar surface with fat layer exposed.",
+      "icd10": [
+        "E11.621",
+        "L97.512"
+      ]
+    },
+    {
+      "text": "Deep tissue injury of the left buttock with suspected underlying damage.",
+      "icd10": [
+        "L89.306"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the right ankle with partial dermal loss.",
+      "icd10": [
+        "L89.512"
+      ]
+    },
+    {
+      "text": "Skin tear of the left dorsal hand with complete flap loss.",
+      "icd10": [
+        "S61.412A"
+      ]
+    },
+    {
+      "text": "Postoperative wound dehiscence of the right knee with exposed joint capsule.",
+      "icd10": [
+        "T81.32XA"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the left fourth toe with dry gangrene.",
+      "icd10": [
+        "I70.243",
+        "L97.524"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the right occiput with granulation tissue.",
+      "icd10": [
+        "L89.813"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the left medial ankle with muscle involvement.",
+      "icd10": [
+        "E11.621",
+        "L97.313"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the right medial leg with heavy fibrin.",
+      "icd10": [
+        "I83.013",
+        "L97.311"
+      ]
+    },
+    {
+      "text": "Traumatic laceration of the right calf with tissue devitalization.",
+      "icd10": [
+        "S81.011A"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the left trochanter with extensive bone exposure.",
+      "icd10": [
+        "L89.224"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the right second toe with exposed tendon.",
+      "icd10": [
+        "E11.621",
+        "L97.523"
+      ]
+    },
+    {
+      "text": "Dehisced abdominal wound with fascial disruption.",
+      "icd10": [
+        "T81.32XA"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the left plantar foot with necrotic margin.",
+      "icd10": [
+        "I70.243",
+        "L97.513"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the left lateral heel with blister formation.",
+      "icd10": [
+        "L89.622"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the left lateral ankle with exposed tendon.",
+      "icd10": [
+        "E11.621",
+        "L97.429"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the right medial malleolus with dry gangrene.",
+      "icd10": [
+        "I70.233",
+        "L97.411"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the right lower leg with circumferential involvement.",
+      "icd10": [
+        "I87.2",
+        "L97.911"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the right first metatarsal head with bone exposure.",
+      "icd10": [
+        "E11.621",
+        "L97.513"
+      ]
+    },
+    {
+      "text": "Skin tear of the bilateral lower legs with flap avulsion.",
+      "icd10": [
+        "S81.812A",
+        "S81.811A"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the left plantar surface with ischemic changes.",
+      "icd10": [
+        "I70.243",
+        "L97.521"
+      ]
+    },
+    {
+      "text": "Dehisced knee surgical wound with fascial exposure.",
+      "icd10": [
+        "T81.31XA"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the right elbow with joint capsule visible.",
+      "icd10": [
+        "L89.014"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the left plantar heel with purulent drainage.",
+      "icd10": [
+        "E11.621",
+        "L97.423"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the left medial ankle with hyperpigmentation.",
+      "icd10": [
+        "I83.019",
+        "L97.321"
+      ]
+    },
+    {
+      "text": "Moisture-associated skin damage of the sacrococcygeal area with maceration.",
+      "icd10": [
+        "L30.4"
+      ]
+    },
+    {
+      "text": "Traumatic laceration of the right dorsal foot with persistent drainage.",
+      "icd10": [
+        "S91.301D"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the right lateral midfoot with exposed ligament.",
+      "icd10": [
+        "E11.621",
+        "L97.413"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the right fifth toe with necrotic tissue.",
+      "icd10": [
+        "I70.243",
+        "L97.514"
+      ]
+    },
+    {
+      "text": "Skin tear of the dorsal left hand with partial thickness loss.",
+      "icd10": [
+        "S61.412A"
+      ]
+    },
+    {
+      "text": "Unstageable pressure injury of the right scapula obscured by eschar.",
+      "icd10": [
+        "L89.130"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the right medial ankle with moderate exudate.",
+      "icd10": [
+        "I87.2",
+        "L97.312"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the left dorsal foot with cellulitis extending proximally.",
+      "icd10": [
+        "E11.621",
+        "L97.522"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the right posterior calf with slough coverage.",
+      "icd10": [
+        "L89.513"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the left fourth toe with dry eschar.",
+      "icd10": [
+        "I70.243",
+        "L97.524"
+      ]
+    },
+    {
+      "text": "Skin tear of the right anterior thigh with hematoma formation.",
+      "icd10": [
+        "S71.111A"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the right medial malleolus with osteomyelitis suspected.",
+      "icd10": [
+        "E11.621",
+        "L97.411"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the right posterior heel with blister intact.",
+      "icd10": [
+        "L89.612"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the left lateral calf with lipodermatosclerosis.",
+      "icd10": [
+        "I83.012",
+        "L97.222"
+      ]
+    },
+    {
+      "text": "Traumatic abrasion of the left shin with secondary infection.",
+      "icd10": [
+        "S80.812D"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the left lateral ankle with tunneling present.",
+      "icd10": [
+        "L89.523"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the left second toe with amputation site breakdown.",
+      "icd10": [
+        "E11.621",
+        "L97.524"
+      ]
+    },
+    {
+      "text": "Dehisced hip surgical incision with serous drainage.",
+      "icd10": [
+        "T81.32XA"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the right dorsal foot with claudication history.",
+      "icd10": [
+        "I70.233",
+        "L97.512"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the right occiput with calvarium exposure.",
+      "icd10": [
+        "L89.814"
+      ]
+    },
+    {
+      "text": "Skin tear of the left lateral shin with linear configuration.",
+      "icd10": [
+        "S81.812A"
+      ]
+    },
+    {
+      "text": "Deep tissue injury of the left heel with intact skin and maroon discoloration.",
+      "icd10": [
+        "L89.626"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the right gaiter area with heavy fibrin slough.",
+      "icd10": [
+        "I87.2",
+        "L97.913"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the left heel with muscle necrosis.",
+      "icd10": [
+        "E11.621",
+        "L97.422"
+      ]
+    },
+    {
+      "text": "Venous insufficiency ulcer of the right medial malleolus with granulation tissue.",
+      "icd10": [
+        "I87.2",
+        "L97.411"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the right heel with blister formation.",
+      "icd10": [
+        "L89.614"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the right foot with exposed tendon.",
+      "icd10": [
+        "I70.233",
+        "L97.513"
+      ]
+    },
+    {
+      "text": "Diabetic ulcer of the right plantar surface with bone involvement.",
+      "icd10": [
+        "E11.621",
+        "L97.524"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the left ischial region with subcutaneous exposure.",
+      "icd10": [
+        "L89.223"
+      ]
+    },
+    {
+      "text": "Skin tear of the left hand with flap necrosis.",
+      "icd10": [
+        "S61.412A"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the left posterior calf with heavy drainage.",
+      "icd10": [
+        "I87.2",
+        "L97.229"
+      ]
+    },
+    {
+      "text": "Dehisced knee arthrotomy with superficial wound breakdown.",
+      "icd10": [
+        "T81.31XA"
+      ]
+    },
+    {
+      "text": "Arterial insufficiency ulcer of the left great toe with necrosis.",
+      "icd10": [
+        "I70.243",
+        "L97.523"
+      ]
+    },
+    {
+      "text": "Traumatic laceration of the left calf with muscle exposure.",
+      "icd10": [
+        "S81.012A"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the left malleolus with partial skin loss.",
+      "icd10": [
+        "L89.522"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the right shin with surrounding hyperpigmentation.",
+      "icd10": [
+        "I87.2",
+        "L97.111"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the right elbow with joint capsule exposure.",
+      "icd10": [
+        "L89.014"
+      ]
+    },
+    {
+      "text": "Skin tear of the right hand with significant tissue avulsion.",
+      "icd10": [
+        "S61.411A"
+      ]
+    },
+    {
+      "text": "Unstageable pressure injury of the coccyx obscured by slough.",
+      "icd10": [
+        "L89.150"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the right lateral foot with minimal granulation.",
+      "icd10": [
+        "I70.233",
+        "L97.512"
+      ]
+    },
+    {
+      "text": "Diabetic neuropathic ulcer of the left plantar metatarsal head.",
+      "icd10": [
+        "E11.621",
+        "L97.521"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the right trochanter with moderate exudate.",
+      "icd10": [
+        "L89.213"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the left medial ankle with fibrinous base.",
+      "icd10": [
+        "I87.2",
+        "L97.321"
+      ]
+    },
+    {
+      "text": "Chronic non-healing surgical wound of the right lower abdomen.",
+      "icd10": [
+        "T81.89XA"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the left scapula with serous drainage.",
+      "icd10": [
+        "L89.122"
+      ]
+    },
+    {
+      "text": "Diabetic foot ulcer of the right fifth toe with tendon exposure.",
+      "icd10": [
+        "E11.621",
+        "L97.513"
+      ]
+    },
+    {
+      "text": "Skin tear of the bilateral upper extremities with flap preservation.",
+      "icd10": [
+        "S41.011A"
+      ]
+    },
+    {
+      "text": "Deep tissue pressure injury of the left heel with intact skin.",
+      "icd10": [
+        "L89.626"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the left plantar foot with dry gangrene.",
+      "icd10": [
+        "I70.243",
+        "L97.524"
+      ]
+    },
+    {
+      "text": "Stage 1 pressure injury of the right occiput with persistent redness.",
+      "icd10": [
+        "L89.811"
+      ]
+    },
+    {
+      "text": "Venous insufficiency ulcer of the right lower leg with venous dermatitis.",
+      "icd10": [
+        "I87.2",
+        "L97.119"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the left gluteal region with purulent drainage.",
+      "icd10": [
+        "L89.323"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the right buttock with osteomyelitis suspected.",
+      "icd10": [
+        "L89.314"
+      ]
+    },
+    {
+      "text": "Traumatic abrasion of the right shin with secondary infection.",
+      "icd10": [
+        "S80.811A"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the right medial ankle with peripheral vascular disease.",
+      "icd10": [
+        "I70.233",
+        "L97.312"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the right foot dorsum with necrotic tissue present.",
+      "icd10": [
+        "I70.233",
+        "L97.521"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the right medial malleolus with heavy drainage.",
+      "icd10": [
+        "I87.2",
+        "L97.319"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the left sacral region with exposed tendon.",
+      "icd10": [
+        "L89.154"
+      ]
+    },
+    {
+      "text": "Non-healing traumatic laceration of the left lateral leg.",
+      "icd10": [
+        "S81.812D"
+      ]
+    },
+    {
+      "text": "Dehisced surgical wound of the left knee following ligament repair.",
+      "icd10": [
+        "T81.31XA"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the left ankle with maceration and periwound erythema.",
+      "icd10": [
+        "I83.019",
+        "L97.329"
+      ]
+    },
+    {
+      "text": "Skin tear of the dorsal left hand with flap necrosis.",
+      "icd10": [
+        "S61.412A"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the left ankle with blister formation.",
+      "icd10": [
+        "L89.522"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the left fifth toe with gangrene.",
+      "icd10": [
+        "I70.263",
+        "L97.529"
+      ]
+    },
+    {
+      "text": "Chronic venous ulcer of the right shin with fibrous base.",
+      "icd10": [
+        "I87.319",
+        "L97.219"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the right occipital scalp with slough.",
+      "icd10": [
+        "L89.813"
+      ]
+    },
+    {
+      "text": "Postoperative wound disruption of the right lower abdomen superficial layers.",
+      "icd10": [
+        "T81.32XD"
+      ]
+    },
+    {
+      "text": "Unstageable pressure injury of the left ischial tuberosity with thick eschar.",
+      "icd10": [
+        "L89.320"
+      ]
+    },
+    {
+      "text": "Skin tear of the right anterior shin with moderate tissue loss.",
+      "icd10": [
+        "S81.811A"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the right elbow with exposed joint capsule.",
+      "icd10": [
+        "L89.014"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the left gaiter region with biofilm present.",
+      "icd10": [
+        "I87.2",
+        "L97.229"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the right lateral malleolus with pale wound bed.",
+      "icd10": [
+        "I70.243",
+        "L97.319"
+      ]
+    },
+    {
+      "text": "Stage 1 pressure injury of the right greater trochanter with non-blanchable erythema.",
+      "icd10": [
+        "L89.211"
+      ]
+    },
+    {
+      "text": "Traumatic wound of the left calf with foreign body retained.",
+      "icd10": [
+        "S81.822A"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the left scapular region with undermining.",
+      "icd10": [
+        "L89.223"
+      ]
+    },
+    {
+      "text": "Dehisced cesarean section incision with fascial separation.",
+      "icd10": [
+        "T81.31XA"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the right plantar foot with maceration.",
+      "icd10": [
+        "I83.009",
+        "L97.519"
+      ]
+    },
+    {
+      "text": "Skin tear of the left posterior calf with partial thickness loss.",
+      "icd10": [
+        "S81.821A"
+      ]
+    },
+    {
+      "text": "Deep tissue pressure injury of the left heel with purple marbling.",
+      "icd10": [
+        "L89.626"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the right plantar surface with dry necrosis.",
+      "icd10": [
+        "I70.233",
+        "L97.513"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the left coccyx with sinus tract formation.",
+      "icd10": [
+        "L89.154"
+      ]
+    },
+    {
+      "text": "Chronic venous ulcer of the left pretibial region with hypergranulation.",
+      "icd10": [
+        "I87.2",
+        "L97.129"
+      ]
+    },
+    {
+      "text": "Postoperative wound infection of the right hip surgical site with dehiscence.",
+      "icd10": [
+        "T81.31XA",
+        "T81.4XXA"
+      ]
+    },
+    {
+      "text": "Skin tear of the right dorsal hand with flap viability concerns.",
+      "icd10": [
+        "S61.411A"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the right trochanteric region with tunneling present.",
+      "icd10": [
+        "L89.213"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the left medial ankle with exposed fascia.",
+      "icd10": [
+        "I70.243",
+        "L97.324"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the right medial malleolus with undermining.",
+      "icd10": [
+        "I87.2",
+        "L97.311"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the left sacral region with exposed fascia.",
+      "icd10": [
+        "L89.154"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the right plantar surface of the midfoot.",
+      "icd10": [
+        "I70.233",
+        "L97.514"
+      ]
+    },
+    {
+      "text": "Skin tear of the left shin with significant tissue loss.",
+      "icd10": [
+        "S81.812A"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the left posterior calf with maceration.",
+      "icd10": [
+        "I83.012",
+        "L97.221"
+      ]
+    },
+    {
+      "text": "Dehisced surgical wound of the left lower abdomen with drainage.",
+      "icd10": [
+        "T81.31XA"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the left ischial tuberosity with blister formation.",
+      "icd10": [
+        "L89.312"
+      ]
+    },
+    {
+      "text": "Skin tear of the right hand with exposed dermis.",
+      "icd10": [
+        "S61.411A"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the left ankle with osteomyelitis.",
+      "icd10": [
+        "L89.524"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the right lower leg with hyperpigmentation.",
+      "icd10": [
+        "I87.2",
+        "L97.111"
+      ]
+    },
+    {
+      "text": "Chronic arterial ulcer of the right dorsal foot with exposed muscle.",
+      "icd10": [
+        "I70.243",
+        "L97.512"
+      ]
+    },
+    {
+      "text": "Dehisced surgical incision of the right knee with fascial exposure.",
+      "icd10": [
+        "T81.32XA"
+      ]
+    },
+    {
+      "text": "Skin tear of the bilateral forearms with bleeding.",
+      "icd10": [
+        "S51.811A"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the right ear with partial thickness loss.",
+      "icd10": [
+        "L89.012"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the left lateral ankle with biofilm.",
+      "icd10": [
+        "I83.222",
+        "L97.321"
+      ]
+    },
+    {
+      "text": "Traumatic wound of the left calf with muscle damage.",
+      "icd10": [
+        "S81.012A"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the right trochanteric region with necrotic tissue.",
+      "icd10": [
+        "L89.214"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the left great toe with ischemic changes.",
+      "icd10": [
+        "I70.243",
+        "L97.521"
+      ]
+    },
+    {
+      "text": "Stage 1 pressure injury of the right shoulder blade with non-blanchable erythema.",
+      "icd10": [
+        "L89.111"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the right ankle with moderate exudate.",
+      "icd10": [
+        "I87.2",
+        "L97.311"
+      ]
+    },
+    {
+      "text": "Skin tear of the left calf with flap necrosis.",
+      "icd10": [
+        "S81.812A"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the right coccyx with sinus tract formation.",
+      "icd10": [
+        "L89.153"
+      ]
+    },
+    {
+      "text": "Deep tissue injury of the left heel with purple marbling.",
+      "icd10": [
+        "L89.626"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the right lateral foot with dry gangrene.",
+      "icd10": [
+        "I70.243",
+        "L97.522"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the left malleolus with serous drainage.",
+      "icd10": [
+        "L89.522"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the left shin with circumferential involvement.",
+      "icd10": [
+        "I83.012",
+        "L97.221"
+      ]
+    },
+    {
+      "text": "Traumatic avulsion of the right forearm with devitalized tissue.",
+      "icd10": [
+        "S51.811A"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the right greater trochanter with blistering.",
+      "icd10": [
+        "L89.212"
+      ]
+    },
+    {
+      "text": "Arterial insufficiency ulcer of the right lateral malleolus with exposed tendon.",
+      "icd10": [
+        "I70.233",
+        "L97.322"
+      ]
+    },
+    {
+      "text": "Dehisced sternotomy wound with deep separation requiring packing.",
+      "icd10": [
+        "T81.31XA"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the left lateral ankle with moderate drainage.",
+      "icd10": [
+        "I87.2",
+        "L97.429"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the right calcaneus with bone exposure.",
+      "icd10": [
+        "L89.613"
+      ]
+    },
+    {
+      "text": "Traumatic laceration of the right posterior calf with contamination.",
+      "icd10": [
+        "S81.801A"
+      ]
+    },
+    {
+      "text": "Unstageable pressure injury of the right buttock obscured by eschar.",
+      "icd10": [
+        "L89.200"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the left fifth toe with dry gangrene developing.",
+      "icd10": [
+        "I70.243",
+        "L97.525"
+      ]
+    },
+    {
+      "text": "Skin tear of the right shin with substantial tissue avulsion.",
+      "icd10": [
+        "S81.811A"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the left lateral malleolus with serous drainage.",
+      "icd10": [
+        "L89.522"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the right pretibial region with heavy exudate production.",
+      "icd10": [
+        "I87.2",
+        "L97.911"
+      ]
+    },
+    {
+      "text": "Traumatic wound of the left posterior thigh with muscle exposure.",
+      "icd10": [
+        "S71.102A"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the left ischial region with sinus tract formation.",
+      "icd10": [
+        "L89.304"
+      ]
+    },
+    {
+      "text": "Arterial insufficiency ulcer of the left heel with minimal granulation.",
+      "icd10": [
+        "I70.243",
+        "L97.429"
+      ]
+    },
+    {
+      "text": "Skin tear of the bilateral lower legs following mechanical trauma.",
+      "icd10": [
+        "S81.891A"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the right lateral ankle with slough formation.",
+      "icd10": [
+        "L89.513"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the right gaiter region with lipodermatosclerosis.",
+      "icd10": [
+        "I87.2",
+        "L97.911"
+      ]
+    },
+    {
+      "text": "Deep tissue injury of the left calcaneus with intact skin and firmness.",
+      "icd10": [
+        "L89.426"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the right posterior shoulder blade.",
+      "icd10": [
+        "L89.112"
+      ]
+    },
+    {
+      "text": "Skin tear of the right dorsal forearm with extensive bruising.",
+      "icd10": [
+        "S51.811A"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the right medial malleolus with ischemic margins.",
+      "icd10": [
+        "I70.233",
+        "L97.311"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the left greater trochanter with fibrin base.",
+      "icd10": [
+        "L89.223"
+      ]
+    },
+    {
+      "text": "Moisture-associated skin damage of the intertriginous neck folds with maceration.",
+      "icd10": [
+        "L30.4"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the right occiput with cranial bone visible.",
+      "icd10": [
+        "L89.814"
+      ]
+    },
+    {
+      "text": "Venous insufficiency ulcer of the left pretibial area with hyperpigmentation.",
+      "icd10": [
+        "I87.2",
+        "L97.921"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the right medial malleolus with thick exudate.",
+      "icd10": [
+        "I83.013",
+        "L97.314"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the left lateral malleolus with blistering.",
+      "icd10": [
+        "L89.522"
+      ]
+    },
+    {
+      "text": "Dehisced sternotomy wound with purulent drainage.",
+      "icd10": [
+        "T81.31XA"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the left calf with hyperpigmentation and induration.",
+      "icd10": [
+        "I83.012",
+        "L97.224"
+      ]
+    },
+    {
+      "text": "Traumatic laceration of the left shin with undermining.",
+      "icd10": [
+        "S81.812A"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the right buttock with extensive necrosis.",
+      "icd10": [
+        "L89.314"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the left dorsal foot with dry gangrene.",
+      "icd10": [
+        "I70.242",
+        "L97.523"
+      ]
+    },
+    {
+      "text": "Unstageable pressure injury of the right trochanter obscured by slough.",
+      "icd10": [
+        "L89.210"
+      ]
+    },
+    {
+      "text": "Skin tear of the left lower leg with hematoma formation.",
+      "icd10": [
+        "S81.812A"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the left lateral ankle with blister.",
+      "icd10": [
+        "L89.522"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the right gaiter region with fibrin base.",
+      "icd10": [
+        "I83.013",
+        "L97.313"
+      ]
+    },
+    {
+      "text": "Stage 1 pressure injury of the right occiput with non-blanchable erythema.",
+      "icd10": [
+        "L89.811"
+      ]
+    },
+    {
+      "text": "Traumatic wound of the left lateral thigh with devitalized tissue.",
+      "icd10": [
+        "S71.112A"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the right medial ankle with punched-out appearance.",
+      "icd10": [
+        "I70.243",
+        "L97.312"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the right scapula with tunneling present.",
+      "icd10": [
+        "L89.133"
+      ]
+    },
+    {
+      "text": "Dehisced laparotomy wound with evisceration risk.",
+      "icd10": [
+        "T81.32XA"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the left sacrum with sinus tract.",
+      "icd10": [
+        "L89.154"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the left anterior shin with heavy exudate.",
+      "icd10": [
+        "I83.012",
+        "L97.224"
+      ]
+    },
+    {
+      "text": "Moisture-associated skin damage of the left axillary region with erosion.",
+      "icd10": [
+        "L30.4"
+      ]
+    },
+    {
+      "text": "Deep tissue injury of the left heel with purple bruising.",
+      "icd10": [
+        "L89.626"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the left fifth toe with dry eschar.",
+      "icd10": [
+        "I70.242",
+        "L97.523"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the right elbow with partial dermis loss.",
+      "icd10": [
+        "L89.012"
+      ]
+    },
+    {
+      "text": "Traumatic avulsion of the right calf with muscle herniation.",
+      "icd10": [
+        "S81.011A"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the right posterior calf with lipodermatosclerosis.",
+      "icd10": [
+        "I83.013",
+        "L97.323"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the left greater trochanter with slough.",
+      "icd10": [
+        "L89.223"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the right plantar heel with ischemic margins.",
+      "icd10": [
+        "I70.243",
+        "L97.413"
+      ]
+    },
+    {
+      "text": "Venous insufficiency ulcer of the right medial malleolus with heavy exudate.",
+      "icd10": [
+        "I87.2",
+        "L97.311"
+      ]
+    },
+    {
+      "text": "Arterial insufficiency ulcer of the right lateral malleolus with dry gangrene.",
+      "icd10": [
+        "I70.233",
+        "L97.313"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the right ankle with partial dermis loss.",
+      "icd10": [
+        "L89.512"
+      ]
+    },
+    {
+      "text": "Dehisced surgical wound of the left thigh with exposed fascia.",
+      "icd10": [
+        "T81.31XA"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the left sacral region with extensive tunneling.",
+      "icd10": [
+        "L89.154"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the left medial ankle with moderate edema.",
+      "icd10": [
+        "I87.2",
+        "L97.322"
+      ]
+    },
+    {
+      "text": "Traumatic wound of the left calf with muscle exposure.",
+      "icd10": [
+        "S81.812A"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the right buttock with slough and odor.",
+      "icd10": [
+        "L89.313"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the left dorsal foot with claudication history.",
+      "icd10": [
+        "I70.243",
+        "L97.522"
+      ]
+    },
+    {
+      "text": "Unstageable pressure injury of the right sacrum with thick eschar.",
+      "icd10": [
+        "L89.150"
+      ]
+    },
+    {
+      "text": "Moisture-associated skin breakdown of the intergluteal fold with maceration.",
+      "icd10": [
+        "L30.4"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the right lower leg with lipodermatosclerosis.",
+      "icd10": [
+        "I87.2",
+        "L97.912"
+      ]
+    },
+    {
+      "text": "Deep tissue injury of the left heel with intact skin and purple hue.",
+      "icd10": [
+        "L89.626"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the left elbow with exposed olecranon.",
+      "icd10": [
+        "L89.024"
+      ]
+    },
+    {
+      "text": "Arterial insufficiency ulcer of the right toe with critical limb ischemia.",
+      "icd10": [
+        "I70.261",
+        "L97.513"
+      ]
+    },
+    {
+      "text": "Traumatic wound of the right dorsal hand with tendon exposure.",
+      "icd10": [
+        "S61.401A"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the right occiput with bone visible.",
+      "icd10": [
+        "L89.813"
+      ]
+    },
+    {
+      "text": "Venous insufficiency ulcer of the left gaiter area with hyperpigmentation.",
+      "icd10": [
+        "I87.2",
+        "L97.922"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the left scapula with shallow crater.",
+      "icd10": [
+        "L89.222"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the coccyx with fistula formation.",
+      "icd10": [
+        "L89.154"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the left fifth toe with dry eschar covering.",
+      "icd10": [
+        "I70.243",
+        "L97.524"
+      ]
+    },
+    {
+      "text": "Unstageable pressure injury of the right posterior heel obscured by slough.",
+      "icd10": [
+        "L89.610"
+      ]
+    },
+    {
+      "text": "Venous insufficiency ulcer of the right medial malleolus with drainage.",
+      "icd10": [
+        "I87.2",
+        "L97.314"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the right first toe with gangrene.",
+      "icd10": [
+        "I70.261",
+        "L97.511"
+      ]
+    },
+    {
+      "text": "Dehisced wound of the left lower extremity following vascular surgery.",
+      "icd10": [
+        "T81.31XA"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the right lateral ankle with granulation.",
+      "icd10": [
+        "L89.513"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the left calf with hyperpigmentation.",
+      "icd10": [
+        "I87.2",
+        "L97.223"
+      ]
+    },
+    {
+      "text": "Open wound of the right dorsal foot with exposed fascia.",
+      "icd10": [
+        "S91.301A"
+      ]
+    },
+    {
+      "text": "Diabetic neuropathic ulcer of the left heel with probe to bone.",
+      "icd10": [
+        "E11.621",
+        "L97.424"
+      ]
+    },
+    {
+      "text": "Unstageable pressure injury of the right elbow obscured by necrotic tissue.",
+      "icd10": [
+        "L89.010"
+      ]
+    },
+    {
+      "text": "Arterial insufficiency ulcer of the left fifth toe with exposed bone.",
+      "icd10": [
+        "I70.268",
+        "L97.524"
+      ]
+    },
+    {
+      "text": "Traumatic laceration of the right calf with contamination.",
+      "icd10": [
+        "S81.011A"
+      ]
+    },
+    {
+      "text": "Stage 1 pressure injury of the left posterior heel with non-blanchable erythema.",
+      "icd10": [
+        "L89.621"
+      ]
+    },
+    {
+      "text": "Diabetic foot ulcer of the right third toe with osteomyelitis.",
+      "icd10": [
+        "E11.621",
+        "L97.514"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the left ischium with extensive undermining.",
+      "icd10": [
+        "L89.304"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the right lower leg with fibrinous exudate.",
+      "icd10": [
+        "I87.2",
+        "L97.113"
+      ]
+    },
+    {
+      "text": "Deep tissue pressure injury of the left scapula with intact skin.",
+      "icd10": [
+        "L89.126"
+      ]
+    },
+    {
+      "text": "Moisture lesion of the intergluteal fold with maceration.",
+      "icd10": [
+        "L30.4"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the right greater trochanter with partial dermis loss.",
+      "icd10": [
+        "L89.212"
+      ]
+    },
+    {
+      "text": "Arterial ulcer of the right lateral foot with ischemic margins.",
+      "icd10": [
+        "I70.262",
+        "L97.512"
+      ]
+    },
+    {
+      "text": "Open wound of the left knee following debridement procedure.",
+      "icd10": [
+        "S81.002A"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the right coccyx with undermining to muscle.",
+      "icd10": [
+        "L89.153"
+      ]
+    },
+    {
+      "text": "Diabetic plantar ulcer of the left first metatarsal head with infection.",
+      "icd10": [
+        "E11.621",
+        "L97.521"
+      ]
+    },
+    {
+      "text": "Venous insufficiency ulcer of the left medial ankle with lipodermatosclerosis.",
+      "icd10": [
+        "I87.2",
+        "L97.323"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the left calcaneus with exposed bone and eschar.",
+      "icd10": [
+        "L89.624"
+      ]
+    },
+    {
+      "text": "Traumatic abrasion of the right elbow with full thickness skin loss.",
+      "icd10": [
+        "S51.011A"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the left ischial tuberosity with serous drainage.",
+      "icd10": [
+        "L89.302"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the right gaiter region with heavy exudate.",
+      "icd10": [
+        "I87.2",
+        "L97.114"
+      ]
+    },
+    {
+      "text": "Unstageable pressure injury of the right buttock covered by thick eschar.",
+      "icd10": [
+        "L89.200"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the right medial calf with circumferential erythema.",
+      "icd10": [
+        "I87.2",
+        "L97.211"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the right occipital region with granulation tissue.",
+      "icd10": [
+        "L89.813"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the left gaiter region with maceration.",
+      "icd10": [
+        "I83.012",
+        "L97.122"
+      ]
+    },
+    {
+      "text": "Traumatic laceration of the right plantar heel with delayed closure.",
+      "icd10": [
+        "S91.311A"
+      ]
+    },
+    {
+      "text": "Unstageable pressure injury of the right greater trochanter with thick eschar.",
+      "icd10": [
+        "L89.210"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the left ischial region with moderate exudate.",
+      "icd10": [
+        "L89.223"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the right anterior shin with hemosiderin staining.",
+      "icd10": [
+        "I87.2",
+        "L97.213"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the right posterior calf with partial dermis loss.",
+      "icd10": [
+        "L89.512"
+      ]
+    },
+    {
+      "text": "Open traumatic wound of the left lateral thigh with muscle exposure.",
+      "icd10": [
+        "S71.112A"
+      ]
+    },
+    {
+      "text": "Diabetic neuropathic ulcer of the right fourth toe with osteomyelitis.",
+      "icd10": [
+        "E11.621",
+        "L97.513"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the right lateral malleolus with visible bone.",
+      "icd10": [
+        "L89.614"
+      ]
+    },
+    {
+      "text": "Moisture-associated skin damage of the sacrococcygeal fold with superficial erosion.",
+      "icd10": [
+        "L30.4"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the left lateral ankle with heavy drainage.",
+      "icd10": [
+        "I83.013",
+        "L97.323"
+      ]
+    },
+    {
+      "text": "Deep tissue injury of the left sacral area with non-blanchable purple area.",
+      "icd10": [
+        "L89.156"
+      ]
+    },
+    {
+      "text": "Stage 1 pressure injury of the right scapular region with intact erythema.",
+      "icd10": [
+        "L89.011"
+      ]
+    },
+    {
+      "text": "Traumatic avulsion of the right anterior tibial region with tissue deficit.",
+      "icd10": [
+        "S81.011A"
+      ]
+    },
+    {
+      "text": "Stage 3 pressure injury of the right buttock with yellow slough covering.",
+      "icd10": [
+        "L89.313"
+      ]
+    },
+    {
+      "text": "Arterial insufficiency ulcer of the left pretibial surface with punch-out appearance.",
+      "icd10": [
+        "I70.242",
+        "L97.122"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the right distal lower leg with lipodermatosclerosis.",
+      "icd10": [
+        "I87.2",
+        "L97.113"
+      ]
+    },
+    {
+      "text": "Diabetic foot ulcer of the right lateral border with copious exudate.",
+      "icd10": [
+        "E11.621",
+        "L97.411"
+      ]
+    },
+    {
+      "text": "Stage 2 pressure injury of the left trochanter with serous drainage.",
+      "icd10": [
+        "L89.222"
+      ]
+    },
+    {
+      "text": "Open wound of the right medial knee following excisional debridement.",
+      "icd10": [
+        "S81.011A"
+      ]
+    },
+    {
+      "text": "Unstageable pressure injury of the coccyx with adherent black eschar.",
+      "icd10": [
+        "L89.150"
+      ]
+    },
+    {
+      "text": "Chronic venous ulcer of the left posterior calf with fibrinous base.",
+      "icd10": [
+        "I83.012",
+        "L97.223"
+      ]
+    },
+    {
+      "text": "Arterial insufficiency ulcer of the right medial malleolus with granulation tissue.",
+      "icd10": [
+        "I70.233",
+        "L97.311"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the right lower leg with hyperpigmentation and drainage.",
+      "icd10": [
+        "I87.313",
+        "L97.911"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the left ischial tuberosity with extensive undermining.",
+      "icd10": [
+        "L89.224"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the left medial ankle with moderate exudate and odor.",
+      "icd10": [
+        "I83.013",
+        "L97.321"
+      ]
+    },
+    {
+      "text": "Traumatic laceration of the right posterior calf with muscle exposure.",
+      "icd10": [
+        "S81.011A"
+      ]
+    },
+    {
+      "text": "Dehiscence of right knee arthrotomy with serous drainage.",
+      "icd10": [
+        "T81.32XA"
+      ]
+    },
+    {
+      "text": "Unstageable pressure injury of the left sacrum obscured by thick eschar.",
+      "icd10": [
+        "L89.150"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the left heel with calcaneal bone exposure.",
+      "icd10": [
+        "L89.624"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the left calf with lipodermatosclerosis and edema.",
+      "icd10": [
+        "I87.333",
+        "L97.221"
+      ]
+    },
+    {
+      "text": "Moisture-associated skin damage of the sacrococcygeal region with denudement.",
+      "icd10": [
+        "L30.4"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the right medial ankle with biofilm and infection.",
+      "icd10": [
+        "I83.013",
+        "L97.312"
+      ]
+    },
+    {
+      "text": "Deep tissue injury of the left greater trochanter with suspected undermining.",
+      "icd10": [
+        "L89.226"
+      ]
+    },
+    {
+      "text": "Arterial insufficiency ulcer of the right dorsal foot with claudication.",
+      "icd10": [
+        "I70.243",
+        "L97.513"
+      ]
+    },
+    {
+      "text": "Traumatic avulsion injury of the right anterior thigh with tissue deficit.",
+      "icd10": [
+        "S71.111A"
+      ]
+    },
+    {
+      "text": "Unstageable pressure injury of the right occiput covered by stable eschar.",
+      "icd10": [
+        "L89.810"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the left anterior shin with maceration and weeping.",
+      "icd10": [
+        "I87.313",
+        "L97.221"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the left sacral region with extensive bone involvement.",
+      "icd10": [
+        "L89.154"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the left medial malleolus with granulation tissue.",
+      "icd10": [
+        "I83.012",
+        "L97.322"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the left ankle with exposed joint capsule.",
+      "icd10": [
+        "L89.524"
+      ]
+    },
+    {
+      "text": "Dehisced cesarean section wound with purulent drainage.",
+      "icd10": [
+        "T81.31XA",
+        "O90.0"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the right posterior calf with heavy exudate.",
+      "icd10": [
+        "I87.2",
+        "L97.211"
+      ]
+    },
+    {
+      "text": "Pressure injury of the left greater trochanter, unstageable with stable eschar.",
+      "icd10": [
+        "L89.220"
+      ]
+    },
+    {
+      "text": "Open traumatic wound of the left lateral malleolus with bone exposure.",
+      "icd10": [
+        "S91.352A"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the right shin with surrounding stasis dermatitis.",
+      "icd10": [
+        "I83.211",
+        "L97.212"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the sacrum with extensive tunneling to coccyx.",
+      "icd10": [
+        "L89.154"
+      ]
+    },
+    {
+      "text": "Stage 1 pressure injury of the right posterior heel with non-blanchable erythema.",
+      "icd10": [
+        "L89.611"
+      ]
+    },
+    {
+      "text": "Postoperative dehiscence of knee arthroscopy portal site.",
+      "icd10": [
+        "T81.32XA"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the left gaiter area with lipodermatosclerosis.",
+      "icd10": [
+        "I83.022",
+        "L97.322"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of right medial ankle with maceration of wound edges.",
+      "icd10": [
+        "I83.011",
+        "L97.312"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the left heel with calcaneus involvement.",
+      "icd10": [
+        "L89.624"
+      ]
+    },
+    {
+      "text": "Venous insufficiency ulcer of the right medial malleolus with fibrin base.",
+      "icd10": [
+        "I87.2",
+        "L97.311"
+      ]
+    },
+    {
+      "text": "Chronic venous ulcer of the left calf with surrounding hyperpigmentation.",
+      "icd10": [
+        "I87.2",
+        "L97.221"
+      ]
+    },
+    {
+      "text": "Arterial insufficiency ulcer of the left heel with dry gangrene.",
+      "icd10": [
+        "I70.243",
+        "L97.424"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the right lower leg with heavy exudate.",
+      "icd10": [
+        "I87.2",
+        "L97.111"
+      ]
+    },
+    {
+      "text": "Stage 1 pressure injury of the right heel with non-blanchable erythema.",
+      "icd10": [
+        "L89.611"
+      ]
+    },
+    {
+      "text": "Chronic arterial ulcer of the right lateral ankle with fibrous base.",
+      "icd10": [
+        "I70.233",
+        "L97.314"
+      ]
+    },
+    {
+      "text": "Stage 4 pressure injury of the left heel with exposed calcaneus bone.",
+      "icd10": [
+        "L89.624"
+      ]
+    },
+    {
+      "text": "Unstageable pressure injury of the right buttock obscured by slough.",
+      "icd10": [
+        "L89.309"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the left medial ankle with maceration of surrounding skin.",
+      "icd10": [
+        "I87.2",
+        "L97.322"
+      ]
+    },
+    {
+      "text": "Traumatic wound of the left lower leg with foreign body embedded.",
+      "icd10": [
+        "S81.822A"
+      ]
+    },
+    {
+      "text": "Dehisced sternotomy wound with sternal wire exposure.",
+      "icd10": [
+        "T81.32XA"
+      ]
+    },
+    {
+      "text": "Moisture-associated skin damage of the posterior neck folds with erosion.",
+      "icd10": [
+        "L30.4"
+      ]
+    },
+    {
+      "text": "Venous insufficiency ulcer of the right ankle with lipodermatosclerosis.",
+      "icd10": [
+        "I87.2",
+        "L97.313"
+      ]
+    },
+    {
+      "text": "Deep tissue injury of the left ischial tuberosity with purple marbling.",
+      "icd10": [
+        "L89.326"
+      ]
+    },
+    {
+      "text": "Chronic arterial ulcer of the left lateral malleolus with pale wound base.",
+      "icd10": [
+        "I70.243",
+        "L97.324"
+      ]
+    },
+    {
+      "text": "Traumatic laceration of the right calf with delayed primary closure.",
+      "icd10": [
+        "S81.011A"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the right distal leg with moderate bioburden.",
+      "icd10": [
+        "I87.2",
+        "L97.112"
+      ]
+    },
+    {
+      "text": "Arterial insufficiency ulcer of the right heel with exposed tendon.",
+      "icd10": [
+        "I70.233",
+        "L97.419"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the right medial malleolus with heavy exudate.",
+      "icd10": [
+        "I83.012",
+        "L97.311"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the left posterior calf with surrounding cellulitis.",
+      "icd10": [
+        "I83.222",
+        "L97.222"
+      ]
+    },
+    {
+      "text": "Neuropathic ulcer of the left fifth toe with exposed subcutaneous tissue.",
+      "icd10": [
+        "E11.621",
+        "L97.522"
+      ]
+    },
+    {
+      "text": "Unstageable pressure injury of the right occiput obscured by eschar.",
+      "icd10": [
+        "L89.810"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the right shin with maceration of surrounding skin.",
+      "icd10": [
+        "I83.011",
+        "L97.211"
+      ]
+    },
+    {
+      "text": "Traumatic laceration of the left lower leg with exposed fascia.",
+      "icd10": [
+        "S81.812A"
+      ]
+    },
+    {
+      "text": "Dehisced inguinal hernia repair with superficial fascial separation.",
+      "icd10": [
+        "T81.32XA"
+      ]
+    },
+    {
+      "text": "Arterial insufficiency ulcer of the left dorsal foot with dry gangrene.",
+      "icd10": [
+        "I70.262",
+        "L97.524"
+      ]
+    },
+    {
+      "text": "Moisture-associated incontinence dermatitis of the buttocks with erosion.",
+      "icd10": [
+        "L30.4"
+      ]
+    },
+    {
+      "text": "Venous ulcer of the left gaiter area with fibrinous slough.",
+      "icd10": [
+        "I83.222",
+        "L97.223"
+      ]
+    },
+    {
+      "text": "Deep tissue pressure injury of the left greater trochanter with maroon discoloration.",
+      "icd10": [
+        "L89.226"
+      ]
+    },
+    {
+      "text": "Venous stasis ulcer of the left anterior ankle with hemosiderin staining.",
+      "icd10": [
+        "I83.012",
+        "L97.321"
+      ]
+    },
+    {
+      "text": "Traumatic avulsion of the right foot with extensive skin loss.",
+      "icd10": [
+        "S91.311A"
+      ]
+    },
+    {
+      "text": "Unstageable pressure injury of the right scapula covered with black eschar.",
+      "icd10": [
+        "L89.110"
+      ]
+    },
+    {
+      "text": "Stage 1 pressure injury of the left heel with non-blanchable erythema.",
+      "icd10": [
+        "L89.621"
+      ]
+    }
+  ],
+  "note_fragments": [
+    "Referral received after recent hospitalization for worsening skin breakdown.",
+    "Family reports increased drainage during the past several days.",
+    "Patient requires assistance with transfers and spends most of the day in a chair.",
+    "Home-health nursing has been completing dressing changes between visits.",
+    "Wound bed contains mixed granulation and slough with moderate serous drainage.",
+    "Periwound skin is fragile with mild maceration and no active bleeding.",
+    "Pain is reported primarily during cleansing and repositioning.",
+    "No fever or chills were reported during the intake call.",
+    "Current treatment includes saline cleanse and bordered foam dressing.",
+    "Off-loading and pressure redistribution were reviewed with the caregiver.",
+    "Photographs and most recent measurements are included in the fax packet.",
+    "Ordering clinician requests evaluation and treatment recommendations.",
+    "Medication reconciliation was completed from the discharge list.",
+    "Patient is homebound because of limited endurance and impaired mobility.",
+    "Follow-up with primary care is scheduled within two weeks.",
+    "Skilled assessment is requested for change in wound appearance.",
+    "Caregiver is available in the mornings and assists with dressing supplies.",
+    "The patient uses a walker for short distances inside the residence.",
+    "Vascular studies are pending and will be forwarded when available.",
+    "Nutritional intake has been variable since the recent admission.",
+    "Stage three pressure injury to the left heel noted upon admission to home-health services.",
+    "Daughter states that the wound has not improved despite multiple antibiotic courses.",
+    "Patient declined wound assessment during the initial visit citing fatigue.",
+    "Applied calcium alginate dressing to absorb copious exudate from the venous ulcer.",
+    "Edema is noted bilaterally in the lower extremities with pitting to the mid-calf.",
+    "Resident at Meadowbrook Assisted Living requires weekly wound evaluation per facility policy.",
+    "Previous debridement was performed in the hospital three weeks prior to discharge.",
+    "The diabetic foot ulcer measures two point four centimeters at the widest diameter.",
+    "Insurance authorization from Cascade Health Partners was obtained for eight visits.",
+    "Wound culture was collected and sent to the lab for sensitivity testing.",
+    "Patient reports throbbing pain rated seven out of ten without medication.",
+    "Compression therapy was initiated following duplex ultrasound ruling out deep vein thrombosis.",
+    "The surgical site exhibits signs of dehiscence along the inferior margin.",
+    "Hypergranulation tissue is present and silver nitrate application is recommended.",
+    "Patient's spouse was instructed on proper hand hygiene before dressing changes.",
+    "The sacral wound has tunneling at the nine o'clock position extending two centimeters.",
+    "Odor is noted upon removal of the previous dressing suggesting possible infection.",
+    "Patient is non-compliant with elevation instructions per family interview.",
+    "Transparent film dressing was applied to the stage two pressure injury on the coccyx.",
+    "Blood glucose levels have been erratic ranging from sixty to three hundred this week.",
+    "Wound care supplies were delivered by Northgate Medical Supply yesterday afternoon.",
+    "The arterial ulcer on the lateral ankle shows poor granulation and requires vascular consult.",
+    "Patient ambulates independently but has difficulty reaching the wound site.",
+    "Cellulitis surrounding the wound has decreased since starting oral clindamycin.",
+    "Negative pressure wound therapy device is functioning properly with no alarms reported.",
+    "Physician order received for collagenase ointment to be applied daily.",
+    "The abdominal wound from the recent surgery is approximated with staples intact.",
+    "Patient reports compliance with protein supplementation twice daily as instructed.",
+    "Wound dimensions have decreased by fifteen percent compared to measurements from last week.",
+    "Skin tear on the right forearm is superficial with minimal bleeding present.",
+    "Advanced practice nurse recommends transition to a hydrocolloid dressing for the shallow wound.",
+    "The patient's insurance plan with Summit Benefits requires prior authorization for specialty products.",
+    "Eschar is present on the plantar surface and requires sharp debridement by qualified clinician.",
+    "Family member demonstrates correct technique for applying tubular compression bandage.",
+    "Wound irrigation was performed using sterile technique with warmed normal saline solution.",
+    "Patient expresses anxiety about the healing process and fears requiring another hospitalization.",
+    "The venous stasis ulcer has irregular borders with a ruddy wound bed.",
+    "Case manager at Riverside Hospital contacted regarding need for durable medical equipment.",
+    "Undermining extends three centimeters at the twelve o'clock position beneath intact skin.",
+    "Patient's hemoglobin A1C result of nine point two indicates suboptimal diabetes management.",
+    "Wound bed is pale pink with minimal drainage and no signs of biofilm.",
+    "The pressure redistribution cushion arrived but patient finds it uncomfortable to use.",
+    "Telehealth visit completed and wound photos uploaded to the electronic medical record.",
+    "Patient's albumin level is low at two point six which may impair wound healing.",
+    "Foam dressing with silicone border changed every three days per protocol.",
+    "Ankle-brachial index measurement scheduled to assess peripheral arterial circulation.",
+    "Patient lives alone and has difficulty adhering to the prescribed dressing change schedule.",
+    "The postoperative incision shows approximation without erythema or purulent discharge.",
+    "Skilled nursing recommendation includes twice weekly visits for wound assessment and treatment.",
+    "Patient's pain management regimen was reviewed and adjustments suggested to the prescriber.",
+    "Unstageable pressure wound to the right trochanter with thick eschar obscuring depth assessment.",
+    "Patient ambulates independently with a cane but reports increased fatigue after minimal activity.",
+    "Granddaughter demonstrates correct technique for applying hydrocolloid border dressing.",
+    "Bilateral lower extremity wounds attributed to chronic venous insufficiency per vascular consultation.",
+    "Periwound erythema extending approximately three centimeters from wound margin raises concern for cellulitis.",
+    "Patient resides alone in a second-floor apartment with no elevator access limiting community mobility.",
+    "Arterial insufficiency noted with absent dorsalis pedis pulse on the affected extremity.",
+    "Wound dimensions decreased from initial assessment showing progress toward closure.",
+    "Zinc and vitamin C supplementation initiated per registered dietitian recommendations.",
+    "Patient covered by Horizon Care Insurance with prior authorization valid through end of quarter.",
+    "Foam bolster placed under right leg to maintain heel suspension and reduce pressure.",
+    "Malodorous green drainage observed consistent with pseudomonas colonization pending culture results.",
+    "Son expresses concern about mother's declining appetite and unintentional weight loss.",
+    "Full-thickness tissue loss on the lateral malleolus consistent with stage four classification.",
+    "Patient reports burning sensation at wound site that intensifies during evening hours.",
+    "Wound irrigation performed using sixty milliliters of sterile normal saline solution.",
+    "Topical antimicrobial ointment discontinued after development of contact dermatitis reaction.",
+    "Transfer from wheelchair to bed requires two-person assist due to weakness and deconditioning.",
+    "The abdominal wound from exploratory laparotomy continues to drain serosanguineous fluid.",
+    "Electric hospital bed obtained through durable medical equipment supplier for positioning support.",
+    "Wound margins are well-defined with epithelialization occurring along the periphery.",
+    "Patient hospitalized at Riverside Medical Center four weeks ago for sepsis management.",
+    "Black necrotic tissue covering approximately forty percent of the plantar surface.",
+    "Hydrogel sheet applied to maintain moist wound environment and facilitate autolytic debridement.",
+    "Twenty-four hour caregiver present in the home assists with all activities of daily living.",
+    "Undermining measured at the three o'clock position extending one point five centimeters.",
+    "Patient lives at Harmony Gardens Senior Community with medication administration provided by staff.",
+    "Wound tissue appears pale and boggy suggesting excessive moisture exposure.",
+    "Foul odor absent today after completing fourteen-day course of oral antibiotics.",
+    "Lower extremity Doppler scheduled for next Tuesday at Parkview Diagnostic Imaging.",
+    "Skin tear to the right forearm with partial flap loss requiring non-adherent dressing.",
+    "Patient's hemoglobin level is eight point two prompting discussion with ordering provider.",
+    "Negative pressure wound therapy recommended for management of complex abdominal dehiscence.",
+    "Wound bed is one hundred percent granular with bright red healthy tissue present.",
+    "Patient declined photography stating cultural beliefs prohibit images of body wounds.",
+    "Significant slough burden requires sharp conservative debridement at bedside next visit.",
+    "Butterfly closure strips applied to approximated wound edges following suture removal.",
+    "Insurance plan through Summit Community Health requires wound care specialty referral documentation.",
+    "Patient transported by medical van service to wound center for monthly provider assessment.",
+    "Quarter-sized area of exposed bone visible at the base of the heel ulcer.",
+    "Dressing change frequency increased to twice daily due to heavy exudate production.",
+    "Home environment assessment reveals safety hazards including poor lighting and loose rugs.",
+    "Silicone adhesive remover used to minimize trauma during dressing removal process.",
+    "Patient's daughter works night shift and is unavailable for morning visit supervision.",
+    "Contact layer dressing placed directly on wound bed before secondary absorbent cover.",
+    "Patient reports anxiety about wound appearance and asks repeatedly about healing timeline.",
+    "Enzymatic debriding agent applied to devitalized yellow slough covering wound surface.",
+    "Coordination of care discussion held with case manager from Coastal Community Services.",
+    "Wound consultant from Ridgemont Medical Group recommends sharp debridement at bedside next visit.",
+    "Granddaughter demonstrates proper technique for foam dressing application and securement.",
+    "Arterial insufficiency ulcer on the right lateral malleolus shows minimal improvement since last assessment.",
+    "Patient expressed concern about the cost of advanced wound care supplies not covered by insurance.",
+    "Periwound erythema extends approximately three centimeters from the wound margin with warmth noted.",
+    "Resident transferred from Sunnyvale Rehabilitation Center with full-thickness abdominal wound.",
+    "Negative pressure wound therapy system is functioning properly with good seal integrity.",
+    "The venous stasis ulcer on the medial lower leg has decreased in size by fifteen percent.",
+    "Patient admits to removing compression wraps at night due to discomfort.",
+    "Hydrofiber dressing with silver was chosen due to moderate bioburden and exudate levels.",
+    "Wound irrigation was performed using sterile normal saline and a thirty-five milliliter syringe.",
+    "The trochanteric pressure injury has progressed to expose underlying fascia.",
+    "Patient is currently enrolled with Horizon Community Health Plan for wound management services.",
+    "Epithelial tissue is advancing from all wound edges indicating appropriate healing progression.",
+    "Caregiver reports compliance with twice-daily dressing changes as instructed.",
+    "Lower extremity pulses are diminished bilaterally with capillary refill time of four seconds.",
+    "Referral indicates history of peripheral vascular disease and prior bypass surgery.",
+    "The surgical wound to the abdomen is approximated with staples intact and no drainage.",
+    "Son requests information about long-term prognosis and expected healing timeline.",
+    "Foam bolster dressing applied to off-load pressure from the right lateral foot ulcer.",
+    "Patient has albumin level of two point eight indicating possible malnutrition.",
+    "Medical adhesive-related skin injury noted on bilateral upper arms from previous tape application.",
+    "Wound dimensions documented as three point one by two point seven centimeters with depth of zero point five.",
+    "Skilled nursing visit scheduled three times weekly for wound assessment and treatment.",
+    "The post-surgical incision demonstrates purulent drainage with surrounding induration.",
+    "Patient lives alone and has difficulty reaching the wound site on the posterior calf.",
+    "Prior authorization for specialty mattress overlay was submitted to Summit Care Insurance.",
+    "Clinical signs suggest critical colonization requiring antimicrobial dressing intervention.",
+    "Cellulitis surrounding the wound was treated with oral antibiotics prescribed by telehealth provider.",
+    "The burn injury to the forearm is healing by secondary intention with healthy granulation.",
+    "Patient canceled two consecutive appointments citing transportation challenges.",
+    "Collagen dressing applied to stimulate cellular activity in the stalled venous wound.",
+    "Physical therapy consulted for progressive mobility plan and strengthening exercises.",
+    "Wound vac canister changed after collecting one hundred twenty milliliters of serosanguineous fluid.",
+    "Fungal infection suspected in the groin area adjacent to the primary wound site.",
+    "Niece was educated on signs of infection requiring immediate notification to nursing.",
+    "Hemoglobin A1C result of nine point two suggests inadequate diabetes management.",
+    "The pressure redistribution cushion shows visible wear and replacement is recommended.",
+    "Barrier cream applied to intact periwound skin to prevent moisture-associated damage.",
+    "Patient maintains a high-protein diet with supplemental nutrition shakes twice daily.",
+    "Coordination of care phone call placed to wound specialist at Parkside Medical Associates.",
+    "Sharp debridement of loose necrotic tissue performed with minimal bleeding noted.",
+    "Wound bed is one hundred percent granular with no signs of infection present.",
+    "Home safety evaluation reveals need for bedside commode to reduce transfer frequency.",
+    "Insurance case manager from Unity Healthcare Solutions contacted regarding continued services.",
+    "Patient reports improved pain control with current medication regimen adjustments.",
+    "The chronic wound has been present for fourteen months per patient interview.",
+    "Enzymatic debriding ointment applied to soften remaining eschar on the heel ulcer.",
+    "Next physician follow-up scheduled at Riverside Primary Care in ten days.",
+    "Documentation photographs uploaded to the electronic medical record system for comparison.",
+    "Granddaughter describes increased redness spreading outward from the wound margins over the last forty-eight hours.",
+    "Patient ambulates independently with a quad cane but requires standby assistance on stairs.",
+    "Hydrofiber dressing with silver was selected due to heavy exudate and biofilm concerns.",
+    "Wound irrigation performed using commercial sterile saline spray at moderate pressure.",
+    "Perimeter tracing completed on transparent grid paper for baseline comparison.",
+    "Negative pressure therapy unit settings reviewed and verified at one hundred twenty-five millimeters mercury.",
+    "Local pharmacist confirmed availability of specialty foam bolsters for heel protection.",
+    "Epithelial tissue migration observed along the medial border since previous evaluation.",
+    "Patient tolerates dressing removal without need for premedication or breakthrough analgesia.",
+    "Arterial insufficiency suspected based on diminished pedal pulses and delayed capillary refill.",
+    "Insurance case manager at Summit Valley Plan contacted regarding extended therapy approval.",
+    "Collagen matrix sheet applied to stimulate cellular proliferation in the stalled ulcer bed.",
+    "The wound measured five point one by three point eight centimeters at longest axes today.",
+    "Malodorous purulent discharge present with greenish hue consistent with pseudomonal colonization.",
+    "Patient resides alone and manages most activities of daily living with minimal adaptive equipment.",
+    "Right lateral malleolus abrasion with partial-thickness tissue loss secondary to fall last Sunday.",
+    "Sanguineous staining noted on outer layers of the multi-layer compression bandage system.",
+    "Home environment assessment reveals cluttered pathways presenting additional fall risk factors.",
+    "The referring physician at Cornerstone Medical Group requests photographs with each progress note.",
+    "Foam border adherence compromised by diaphoresis and recommended product switch to silicone-backed variety.",
+    "Barrier cream containing zinc oxide applied liberally to intact periwound area for moisture protection.",
+    "Patient expresses anxiety about ability to afford ongoing wound supply costs after benefits expire.",
+    "Tunneling reassessed using sterile cotton applicator revealing decreased depth from four to two centimeters.",
+    "Previous gentian violet markings still visible allowing accurate week-to-week wound dimension trending.",
+    "Eschar present on approximately thirty percent of wound base with stable adherence and no fluctuance.",
+    "Skilled nurse provided education on signs of systemic infection requiring immediate medical attention.",
+    "Plantar surface ulceration overlies the first metatarsal head with probing positive to bone structure.",
+    "The part-time caregiver returns from vacation on Friday and will resume assisting with afternoon hygiene.",
+    "Consent obtained for telehealth consultation with specialty wound physician scheduled next Tuesday.",
+    "Patient recently started on anticoagulation therapy requiring extra caution during debridement procedures.",
+    "Wound bed beefy red with brisk bleeding upon gentle manipulation indicating healthy granulation response.",
+    "Secondary dressing consists of abdominal pad secured with hypoallergenic tape along all four edges.",
+    "Patient verbalizes understanding of the importance of protein intake for optimal tissue repair.",
+    "Arrangements made with durable medical equipment vendor for upgraded pressure-relieving mattress overlay delivery.",
+    "Undermining detected at the three o'clock position measuring approximately one point five centimeters in depth.",
+    "The venous stasis ulcer location on the gaiter region shows fibrinous slough requiring enzymatic debridement consideration.",
+    "Patient covered under benefits through Riverbend Insurance Services with copayment waived for home visits."
+  ],
+  "medications": [
+    "Metformin 500 mg tablet",
+    "Lisinopril 10 mg tablet",
+    "Amlodipine 5 mg tablet",
+    "Atorvastatin 20 mg tablet",
+    "Gabapentin 300 mg capsule",
+    "Furosemide 20 mg tablet",
+    "Apixaban 5 mg tablet",
+    "Insulin glargine 100 unit/mL",
+    "Acetaminophen 500 mg tablet",
+    "Clopidogrel 75 mg tablet",
+    "Levothyroxine 50 mcg tablet",
+    "Carvedilol 6.25 mg tablet",
+    "Omeprazole 20 mg capsule",
+    "Aspirin 81 mg tablet",
+    "Simvastatin 40 mg tablet",
+    "Losartan 50 mg tablet",
+    "Hydrochlorothiazide 25 mg tablet",
+    "Metoprolol 50 mg tablet",
+    "Prednisone 10 mg tablet",
+    "Warfarin 5 mg tablet",
+    "Allopurinol 300 mg tablet",
+    "Tramadol 50 mg tablet",
+    "Amoxicillin 500 mg capsule",
+    "Pantoprazole 40 mg tablet",
+    "Sertraline 50 mg tablet",
+    "Escitalopram 10 mg tablet",
+    "Rosuvastatin 10 mg tablet",
+    "Pravastatin 40 mg tablet",
+    "Valsartan 160 mg tablet",
+    "Spironolactone 25 mg tablet",
+    "Digoxin 0.25 mg tablet",
+    "Glipizide 5 mg tablet",
+    "Sitagliptin 100 mg tablet",
+    "Insulin aspart 100 unit/mL",
+    "Duloxetine 60 mg capsule",
+    "Celecoxib 200 mg capsule",
+    "Meloxicam 15 mg tablet",
+    "Oxycodone 5 mg tablet",
+    "Hydrocodone 5 mg tablet",
+    "Montelukast 10 mg tablet",
+    "Fluticasone 50 mcg nasal spray",
+    "Albuterol 90 mcg inhaler",
+    "Tiotropium 18 mcg inhaler",
+    "Tamsulosin 0.4 mg capsule",
+    "Finasteride 5 mg tablet",
+    "Doxycycline 100 mg capsule",
+    "Ciprofloxacin 500 mg tablet",
+    "Azithromycin 250 mg tablet",
+    "Baclofen 10 mg tablet",
+    "Cyclobenzaprine 10 mg tablet",
+    "Trazodone 50 mg tablet",
+    "Zolpidem 10 mg tablet",
+    "Clonazepam 1 mg tablet",
+    "Bupropion 150 mg tablet",
+    "Fluoxetine 20 mg capsule",
+    "Paroxetine 20 mg tablet",
+    "Potassium chloride 20 mEq tablet",
+    "Vitamin D3 1000 IU capsule",
+    "Colchicine 0.6 mg tablet",
+    "Rivaroxaban 20 mg tablet",
+    "Cephalexin 500 mg capsule"
+  ],
+  "service_instructions": [
+    "Assess, measure, photograph, cleanse, and dress wound per physician order.",
+    "Evaluate wound etiology and recommend a treatment plan.",
+    "Complete wound assessment and coordinate supplies with home-health nursing.",
+    "Measure and photograph wound; notify ordering provider of significant change.",
+    "Apply enzymatic debriding ointment to necrotic tissue and cover with non-adherent dressing.",
+    "Perform sharp debridement of devitalized tissue and apply antimicrobial foam dressing.",
+    "Initiate negative pressure wound therapy at 125 mmHg continuous mode with dressing changes every 72 hours.",
+    "Apply calcium alginate to wound bed, cover with foam border dressing, and secure edges.",
+    "Irrigate wound with sterile saline, pack lightly with antimicrobial gauze, and apply secondary dressing.",
+    "Apply collagen matrix sheet to wound base and secure with transparent film dressing.",
+    "Pack undermined areas with hydrogel-impregnated gauze and cover with absorbent pad.",
+    "Apply silver-impregnated contact layer and cover with superabsorbent polymer dressing.",
+    "Perform wound irrigation with 200mL sterile saline and apply hydrocolloid border dressing.",
+    "Debride hyperkeratotic wound edges and apply total contact multilayer compression bandaging.",
+    "Apply bioengineered skin substitute and secure with non-adherent silicone dressing.",
+    "Instill wound filler paste into cavity and cover with foam dressing secured with retention tape.",
+    "Apply honey-based antimicrobial gel to wound surface and cover with absorbent island dressing.",
+    "Perform pulse lavage irrigation and apply cadexomer iodine paste with secondary foam.",
+    "Strip devitalized tissue with curette and apply petrolatum-impregnated gauze with wrap.",
+    "Apply growth factor gel to granulating tissue and cover with moisture-retentive dressing.",
+    "Perform enzymatic debridement and apply hydrogel sheet secured with conforming gauze.",
+    "Irrigate tunnel with antibacterial solution and loosely pack with silver alginate ribbon.",
+    "Apply absorbent gelling fiber dressing and secure with elastic tubular retention bandage.",
+    "Debride slough with sharp technique and apply antimicrobial foam with silicone border.",
+    "Pack sinus tract with iodoform gauze strip and cover with sterile gauze pad.",
+    "Apply composite island dressing with extended wear adhesive to periwound skin.",
+    "Perform mechanical debridement with wet-to-dry gauze and transition to moist healing.",
+    "Apply zinc oxide paste to periwound maceration and cover wound with absorbent foam.",
+    "Irrigate with hypochlorous acid solution and apply petroleum-free hydrogel contact layer.",
+    "Pack deep wound loosely with plain gauze moistened with normal saline.",
+    "Apply superabsorbent dressing with silicone wound contact layer and change every 72 hours.",
+    "Debride fibrinous exudate and apply oxidized regenerated cellulose matrix.",
+    "Perform whirlpool therapy followed by application of hydrophilic foam dressing.",
+    "Apply impregnated gauze strip to surgical dehiscence and cover with abdominal pad.",
+    "Irrigate wound pocket with quarter-strength Dakin solution and apply contact layer dressing.",
+    "Apply gentian violet marking to wound margins and initiate foam bolster dressing protocol.",
+    "Pack abscess cavity with plain packing strip and apply gauze fluff with tape.",
+    "Apply metronidazole gel for odor control and cover with charcoal-activated absorbent dressing.",
+    "Perform conservative sharp debridement and apply cellulose-based hydrofiber with border.",
+    "Apply antifungal powder to wound folds and secure with transparent adhesive film.",
+    "Irrigate fistula opening and apply drainage pouch system with barrier ring.",
+    "Apply cadexomer iodine ointment to infected tissue and cover with non-woven gauze.",
+    "Perform surgical site assessment and apply closed-incision negative pressure device.",
+    "Pack pilonidal sinus with antimicrobial ribbon and cover with tailbone relief dressing.",
+    "Apply medical-grade honey sheet and secure with cohesive elastic wrap.",
+    "Irrigate wound with polyhexamethylene biguanide solution and apply hydrogel amorphous gel.",
+    "Apply zinc-based barrier cream to wound periphery and dress with bordered silicone foam.",
+    "Perform monofilament debridement and apply collagen-alginate topical dressing.",
+    "Pack wound with kerlix fluff moistened with sterile water and wrap with conforming gauze.",
+    "Apply tissue-engineered cellular matrix and cover with petrolatum-based non-stick pad.",
+    "Irrigate with sterile water and apply triple-antibiotic ointment with telfa dressing.",
+    "Apply chitosan-based hemostatic dressing to bleeding wound bed and hold pressure.",
+    "Perform autolytic debridement using hydrogel under occlusive transparent membrane.",
+    "Apply silicone gel sheeting to hypertrophic scar tissue and secure with paper tape.",
+    "Cleanse wound with wound cleanser spray and apply foam dressing with adhesive border every other day.",
+    "Perform serial instrumental debridement and apply hydrophobic barrier cream to intact periwound skin.",
+    "Apply alginate rope to undermining areas and secure with transparent adhesive sheet.",
+    "Irrigate wound with normal saline using 35mL syringe and apply non-adhesive silicone foam.",
+    "Debride loose necrotic tissue with forceps and scissors then apply hydrocolloid paste.",
+    "Apply zinc-impregnated gauze to open ulcer and wrap with conforming stretch bandage.",
+    "Cleanse with sterile water and apply triple-layer compression therapy for venous insufficiency.",
+    "Pack wound loosely with chitosan hemostatic dressing and cover with absorbent pad.",
+    "Apply medical-grade honey dressing to infected wound and change daily for seven days.",
+    "Irrigate tunnel opening with 100mL sterile saline and insert antimicrobial ribbon loosely.",
+    "Perform autolytic debridement using amorphous hydrogel and occlusive secondary dressing.",
+    "Apply papain-urea ointment to eschar and cover with moisture-retentive bordered gauze.",
+    "Cleanse wound margins with antiseptic solution and apply silicone gel sheeting.",
+    "Pack wound void with antimicrobial hydrogel-saturated gauze and secure with retention net.",
+    "Apply cadexomer iodine ointment to sloughy tissue and cover with non-woven pad.",
+    "Perform pulsed lavage with sterile irrigation and apply absorbent fiber gelling dressing.",
+    "Debride callused edges with scalpel and apply offloading multilayer padding system.",
+    "Apply collagenase enzymatic debriding agent and cover with petrolatum gauze strip.",
+    "Irrigate with acetic acid solution for Pseudomonas and apply hydropolymer foam sheet.",
+    "Apply polymeric membrane dressing to partial-thickness burn and secure with netting.",
+    "Pack deep cavity with continuous alginate ribbon and apply secondary absorbent layer.",
+    "Perform bedside sharp debridement of fibrous slough and apply silver foam bolster.",
+    "Apply povidone-iodine ointment to contaminated wound and cover with gauze sponges.",
+    "Cleanse with saline-moistened gauze and apply bordered hydrophilic polyurethane dressing.",
+    "Irrigate sinus opening with chlorhexidine solution and insert iodine-impregnated packing strip.",
+    "Apply biosynthetic cellulose dressing to granulating wound and secure with tubular bandage.",
+    "Perform monofilament debridement pad scrubbing and apply moisture-balancing foam.",
+    "Pack wound base with xeroform petrolatum gauze and wrap with elastic gauze roll.",
+    "Apply dimethicone barrier spray to fragile periwound skin and secure low-adherent pad.",
+    "Irrigate with polyhexamethylene biguanide solution and apply gelling fiber rope dressing.",
+    "Debride hyperkeratosis with curette and apply total contact cast after foam application."
+  ],
+  "service_frequencies": [
+    "Initial evaluation",
+    "Twice weekly",
+    "Three times weekly",
+    "Weekly",
+    "Daily for 5 days",
+    "Every other day",
+    "One time evaluation",
+    "Two times weekly",
+    "Monday Wednesday Friday",
+    "Biweekly",
+    "As needed",
+    "Four times weekly"
+  ]
+}

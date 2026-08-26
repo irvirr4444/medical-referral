@@ -8,6 +8,15 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
+def _parse_flexible_date(value: str) -> datetime:
+    for fmt in ("%m/%d/%Y", "%Y-%m-%d", "%m-%d-%Y", "%m.%d.%Y"):
+        try:
+            return datetime.strptime(value, fmt)
+        except ValueError:
+            continue
+    raise ValueError(f"unrecognized date format: {value}")
+
+
 class SyntheticService(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -60,13 +69,13 @@ class SyntheticReferral(BaseModel):
 
     @model_validator(mode="after")
     def validate_consistency(self) -> "SyntheticReferral":
-        dob = datetime.strptime(self.patient_dob, "%m/%d/%Y")
-        referral = datetime.strptime(self.referral_date, "%m/%d/%Y")
+        dob = _parse_flexible_date(self.patient_dob)
+        referral = _parse_flexible_date(self.referral_date)
         if dob >= referral:
             raise ValueError("patient DOB must precede the referral date")
         if self.admission_date:
-            admitted = datetime.strptime(self.admission_date, "%m/%d/%Y")
-            if admitted > referral:
+            admitted = _parse_flexible_date(self.admission_date)
+            if admitted > referral and self.scenario != "conflicting_dates":
                 raise ValueError("admission date cannot follow the referral date")
         if self.expected_outcome == "blocked_missing_threshold" and all(
             (self.patient_name, self.patient_dob, self.patient_phone, self.patient_address)
