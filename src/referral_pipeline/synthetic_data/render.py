@@ -34,7 +34,13 @@ class RenderStyle:
 _STYLE: ContextVar[RenderStyle] = ContextVar("synthetic_render_style", default=RenderStyle())
 
 
-def render_referral(case: SyntheticReferral, output: str | Path, *, variant: int = 0) -> Path:
+def render_referral(
+    case: SyntheticReferral,
+    output: str | Path,
+    *,
+    variant: int = 0,
+    apply_scan_style: bool = True,
+) -> Path:
     path = Path(output)
     path.parent.mkdir(parents=True, exist_ok=True)
     rng = random.Random(f"{case.slug}:layout:{variant}")
@@ -50,7 +56,7 @@ def render_referral(case: SyntheticReferral, output: str | Path, *, variant: int
     try:
         renderer = RENDERERS[case.layout]
         renderer(case, path)
-        if case.scan_style == "fax":
+        if apply_scan_style and case.scan_style == "fax":
             _flatten_with_fax_artifacts(path, seed=case.slug)
     finally:
         _STYLE.reset(token)

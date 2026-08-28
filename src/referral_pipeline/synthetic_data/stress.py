@@ -26,6 +26,8 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen.canvas import Canvas
 
 from .models import SyntheticReferral, SyntheticService
+from .metadata import SCHEMA_VERSION as METADATA_SCHEMA_VERSION
+from .metadata import sha256_bytes, write_pdf_metadata
 from .render import render_referral
 from .scan import render_scan_variant, scan_profile_names
 from .vocabulary import (
@@ -536,6 +538,8 @@ def generate_stress_dataset(
         "profiles": list(profiles),
         "layouts": list(LAYOUTS),
         "family_descriptions": FAMILY_DESCRIPTIONS,
+        "metadata_schema_version": METADATA_SCHEMA_VERSION,
+        "metadata_description": "One lean evaluator JSON per PDF with clean source pages and typed PHI spans",
         "diversity": _diversity_summary(rows),
         "manifest": manifest_path.name,
         "failures": failures_path.name,
@@ -560,6 +564,7 @@ def _generate_one(
     shard.mkdir(parents=True, exist_ok=True)
     filename = f"referral-{case.slug}-{case.layout}-{profile}.pdf"
     destination = shard / filename
+    metadata_path = destination.with_suffix(".metadata.json")
     layout_variant = int(hashlib.sha256(f"{seed}:{index}:layout".encode()).hexdigest()[:8], 16) % 6
 
     with TemporaryDirectory(prefix="wcw-synthetic-") as temporary:
@@ -569,7 +574,15 @@ def _generate_one(
         _expand_packet(base, expanded, case=case, target_pages=target_pages, seed=f"{seed}:{index}")
         render_scan_variant(expanded, destination, profile=profile, seed=f"{seed}:{index}:{profile}")
 
-    digest = hashlib.sha256(destination.read_bytes()).hexdigest()
+        write_pdf_metadata(
+            metadata_path,
+            source_pdf=expanded,
+            final_pdf=destination,
+            case=case,
+        )
+
+    digest = sha256_bytes(destination.read_bytes())
+    metadata_digest = sha256_bytes(metadata_path.read_bytes())
     page_count = len(PdfReader(str(destination)).pages)
     relative = destination.relative_to(output).as_posix()
     return {
@@ -577,6 +590,9 @@ def _generate_one(
         "filename": filename,
         "path": relative,
         "sha256": digest,
+        "metadata_path": metadata_path.relative_to(output).as_posix(),
+        "metadata_sha256": metadata_digest,
+        "metadata_schema_version": METADATA_SCHEMA_VERSION,
         "size_bytes": destination.stat().st_size,
         "page_count": page_count,
         "layout": case.layout,

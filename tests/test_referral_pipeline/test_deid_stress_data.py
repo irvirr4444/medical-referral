@@ -150,7 +150,29 @@ def test_stress_generator_writes_native_and_image_only_gold(tmp_path: Path, capl
     assert rows[0]["sha256"] != rows[1]["sha256"]
     for row in rows:
         path = tmp_path / "stress" / row["path"]
+        metadata_path = tmp_path / "stress" / row["metadata_path"]
         assert path.read_bytes().startswith(b"%PDF-")
+        assert metadata_path.is_file()
+        assert hashlib.sha256(metadata_path.read_bytes()).hexdigest() == row["metadata_sha256"]
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+        assert set(metadata) == {
+            "schema_version",
+            "document_id",
+            "pdf_filename",
+            "source_pages",
+            "entities",
+        }
+        assert metadata["schema_version"] == "1.0"
+        assert metadata["pdf_filename"] == path.name
+        assert len(metadata["source_pages"]) == row["page_count"]
+        name_entity = next(entity for entity in metadata["entities"] if entity["type"] == "PATIENT_NAME")
+        assert name_entity["value"] == row["phi_values"]["patient_name"]
+        assert name_entity["occurrences"]
+        pages = {page["page"]: page["text"] for page in metadata["source_pages"]}
+        for entity in metadata["entities"]:
+            for occurrence in entity["occurrences"]:
+                page_text = pages[occurrence["page"]]
+                assert page_text[occurrence["char_start"] : occurrence["char_end"]] == entity["value"]
         assert row["page_count"] >= 1
         gold = row["gold"]
         assert gold["patient_phone"] == row["phi_values"]["phone"]

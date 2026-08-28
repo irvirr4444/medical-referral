@@ -27,6 +27,16 @@ def test_generator_writes_pdf_gold_and_hash_manifest(tmp_path: Path) -> None:
     for item in dataset["cases"]:
         pdf = tmp_path / "dataset" / "pdfs" / item["filename"]
         gold = tmp_path / "dataset" / item["gold_file"]
+        metadata = tmp_path / "dataset" / item["metadata_file"]
         assert pdf.read_bytes().startswith(b"%PDF-")
         assert gold.is_file()
+        assert metadata.is_file()
+        metadata_payload = json.loads(metadata.read_text(encoding="utf-8"))
+        assert metadata_payload["pdf_filename"] == pdf.name
+        assert metadata_payload["source_pages"]
+        assert next(
+            entity["value"]
+            for entity in metadata_payload["entities"]
+            if entity["type"] == "PATIENT_NAME"
+        ) == item["patient_name"]
         assert len(item["sha256"]) == 64
