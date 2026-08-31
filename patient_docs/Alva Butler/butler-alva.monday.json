@@ -1,0 +1,985 @@
+{
+  "item_id": "12529486880",
+  "name": "Butler, Alva",
+  "created_at": "2026-07-14T15:11:06Z",
+  "updated_at": "2026-08-18T14:28:42Z",
+  "state": "active",
+  "group": {
+    "id": "group_mkwstjtf",
+    "title": "Discharged Patients (Seen/Not Seen)"
+  },
+  "columns": [
+    {
+      "id": "name",
+      "title": "Name",
+      "type": "name",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "subitems__1",
+      "title": "Subitems",
+      "type": "subtasks",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "deal_owner",
+      "title": "Case Manager",
+      "type": "people",
+      "text": "Jucelle Sayson",
+      "value": {
+        "changed_at": "2026-07-14T15:12:16.014Z",
+        "personsAndTeams": [
+          {
+            "id": 71675486,
+            "kind": "person"
+          }
+        ]
+      }
+    },
+    {
+      "id": "status7__1",
+      "title": "Sent to CM",
+      "type": "status",
+      "text": "Yes",
+      "value": {
+        "index": 1,
+        "post_id": null,
+        "changed_at": "2026-07-14T15:12:16.969Z"
+      }
+    },
+    {
+      "id": "lookup_mm4m58bm",
+      "title": "Date/Time of Referral Received",
+      "type": "mirror",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "time_sent_to_cm__1",
+      "title": "Time Sent to CM",
+      "type": "date",
+      "text": "2026-07-14 18:12",
+      "value": {
+        "date": "2026-07-14",
+        "time": "15:12:17",
+        "changed_at": "2026-07-14T15:12:24.172Z"
+      }
+    },
+    {
+      "id": "status693",
+      "title": "Active?",
+      "type": "status",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "date12",
+      "title": "Patient DoB",
+      "type": "date",
+      "text": "1940-10-04",
+      "value": {
+        "date": "1940-10-04",
+        "changed_at": "2026-07-14T15:11:17.314Z"
+      }
+    },
+    {
+      "id": "email2",
+      "title": "Pt Email",
+      "type": "email",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "connect_boards8",
+      "title": "Referring Agency",
+      "type": "board_relation",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "lookup_mm4mvzxq",
+      "title": "Address",
+      "type": "mirror",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "lookup_mm4mz18y",
+      "title": "City",
+      "type": "mirror",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "lookup_mm4mxhrb",
+      "title": "Zip",
+      "type": "mirror",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "lookup_mm4myta5",
+      "title": "State",
+      "type": "mirror",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "lookup_mm4m7qx9",
+      "title": "Main Phone Number",
+      "type": "mirror",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "lookup_mm4mn07s",
+      "title": "Fax Number",
+      "type": "mirror",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "lookup_mm17tpbz",
+      "title": "Comm Pref",
+      "type": "mirror",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "mirror0",
+      "title": "Comm Status",
+      "type": "mirror",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "mirror3",
+      "title": "Agency Type",
+      "type": "mirror",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "text3__1",
+      "title": "Thank Agency Contact",
+      "type": "text",
+      "text": "Unable to reach",
+      "value": "Unable to reach"
+    },
+    {
+      "id": "email61__1",
+      "title": "Agency Email",
+      "type": "email",
+      "text": "emilym@olivehealthfl.com",
+      "value": {
+        "text": "emilym@olivehealthfl.com",
+        "email": "emilym@olivehealthfl.com",
+        "changed_at": "2026-07-14T15:11:46.720Z"
+      }
+    },
+    {
+      "id": "color_mkzdev37",
+      "title": "Wx Order Included?",
+      "type": "status",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "mirror4",
+      "title": "Primary Contact",
+      "type": "mirror",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "connect_boards__1",
+      "title": "Current HH/Hospice",
+      "type": "board_relation",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "mirror__1",
+      "title": "HH/Agency Type",
+      "type": "mirror",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "mirror",
+      "title": "Marketer",
+      "type": "mirror",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "text2__1",
+      "title": "Territory",
+      "type": "text",
+      "text": "Apollo Beach, FL",
+      "value": "Apollo Beach, FL"
+    },
+    {
+      "id": "color_mm51kkcm",
+      "title": "Marketer Follow up?",
+      "type": "status",
+      "text": "NOT NEEDED",
+      "value": {
+        "index": 3,
+        "post_id": null,
+        "changed_at": "2026-07-14T15:12:49.646Z"
+      }
+    },
+    {
+      "id": "connect_boards",
+      "title": "*Rep Name",
+      "type": "board_relation",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "mirror32",
+      "title": "Rep's Team",
+      "type": "mirror",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "text8",
+      "title": "*Company",
+      "type": "text",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "date2",
+      "title": "Next Appt Date",
+      "type": "date",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "date3",
+      "title": "Last Appointment",
+      "type": "date",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "connect_boards31",
+      "title": "🏢 *Accounts",
+      "type": "board_relation",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "email",
+      "title": "*Main contact's email address",
+      "type": "email",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "formula",
+      "title": "Priority",
+      "type": "formula",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "date1",
+      "title": "*Current stage start date",
+      "type": "date",
+      "text": "2026-07-14",
+      "value": {
+        "date": "2026-07-14",
+        "changed_at": "2026-07-14T15:11:14.428Z"
+      }
+    },
+    {
+      "id": "deal_stage",
+      "title": "Stage",
+      "type": "status",
+      "text": "In intake",
+      "value": {
+        "index": 0,
+        "invalid": false,
+        "changed_at": "2026-07-14T15:11:12.642Z"
+      }
+    },
+    {
+      "id": "label99",
+      "title": "QA Hold Reason",
+      "type": "status",
+      "text": "Not on Hold",
+      "value": null
+    },
+    {
+      "id": "date10",
+      "title": "QA Hold Date",
+      "type": "date",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "color_mkxwsx63",
+      "title": "LEAD FOLLOWUP",
+      "type": "status",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "text1",
+      "title": "UPLOAD Agency",
+      "type": "text",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "status01",
+      "title": "Intake/sched complete",
+      "type": "status",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "phone",
+      "title": "Pt Phone",
+      "type": "phone",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "location",
+      "title": "Pt Address",
+      "type": "location",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "date7",
+      "title": "Date/Time Referral Received",
+      "type": "date",
+      "text": "2026-07-14 16:17",
+      "value": {
+        "date": "2026-07-14",
+        "time": "13:17:23",
+        "changed_at": "2026-07-14T15:11:27.167Z"
+      }
+    },
+    {
+      "id": "status_1__1",
+      "title": "POS",
+      "type": "status",
+      "text": "HOME",
+      "value": {
+        "index": 2,
+        "post_id": null,
+        "changed_at": "2026-07-14T15:24:32.910Z"
+      }
+    },
+    {
+      "id": "status4__1",
+      "title": "Status",
+      "type": "status",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "date88",
+      "title": "Time Entered",
+      "type": "date",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "text",
+      "title": "Who spoke to/to thank",
+      "type": "text",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "status63",
+      "title": "Sent to case mgr?",
+      "type": "status",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "date24",
+      "title": "Time Sent",
+      "type": "date",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "people0",
+      "title": "Sent By",
+      "type": "people",
+      "text": "jlalviola@westcoastwound.com",
+      "value": {
+        "changed_at": "2026-07-14T15:12:33.682Z",
+        "personsAndTeams": [
+          {
+            "id": 76282254,
+            "kind": "person"
+          }
+        ]
+      }
+    },
+    {
+      "id": "text6__1",
+      "title": "Agency Contact",
+      "type": "text",
+      "text": "Emily",
+      "value": "Emily"
+    },
+    {
+      "id": "text41__1",
+      "title": "Agency Phone Number",
+      "type": "text",
+      "text": "Olive Health (813-417-4767)",
+      "value": "Olive Health (813-417-4767)"
+    },
+    {
+      "id": "status__1",
+      "title": "Patient Contacted",
+      "type": "status",
+      "text": "LVM",
+      "value": {
+        "index": 0,
+        "post_id": null,
+        "changed_at": "2026-07-14T15:24:28.015Z"
+      }
+    },
+    {
+      "id": "status3__1",
+      "title": "Referral Sent to Provider",
+      "type": "status",
+      "text": "Yes",
+      "value": {
+        "index": 1,
+        "post_id": null,
+        "changed_at": "2026-07-14T15:24:30.985Z"
+      }
+    },
+    {
+      "id": "date9__1",
+      "title": "Appointment Date",
+      "type": "date",
+      "text": "2026-07-22",
+      "value": {
+        "date": "2026-07-22",
+        "changed_at": "2026-07-16T12:47:07.875Z"
+      }
+    },
+    {
+      "id": "numbers__1",
+      "title": "Appointment Length (Minutes)",
+      "type": "numbers",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "status0__1",
+      "title": "Scheduling Complete",
+      "type": "status",
+      "text": "Yes",
+      "value": {
+        "index": 1,
+        "post_id": null,
+        "changed_at": "2026-07-14T15:24:29.558Z"
+      }
+    },
+    {
+      "id": "status5__1",
+      "title": "Visit Status",
+      "type": "status",
+      "text": "DC - EXISTING PTS",
+      "value": {
+        "index": 16,
+        "changed_at": "2026-08-10T14:40:46.071Z"
+      }
+    },
+    {
+      "id": "color_mkq3gga",
+      "title": "Scheduled Status",
+      "type": "status",
+      "text": "Not Scheduled",
+      "value": null
+    },
+    {
+      "id": "text00__1",
+      "title": "Comments",
+      "type": "text",
+      "text": "Butler, Alva | 10/4/1940 5316 FISHERSOUND LN, APOLLO BEACH, FL 33572 Primary no. (260) 438-4646  07/14 referral from Olive Health. Please reach out to Emily (Olive Health - 813-417-4767) to confirm address, pri#, and HH.  Emailed Emily advised we will see tomorrow Wednesday. Called pt routed to VM left VM. Will call again later for time of appt tomorrow.",
+      "value": "Butler, Alva | 10/4/1940 5316 FISHERSOUND LN, APOLLO BEACH, FL 33572 Primary no. (260) 438-4646  07/14 referral from Olive Health. Please reach out to Emily (Olive Health - 813-417-4767) to confirm address, pri#, and HH.  Emailed Emily advised we will see tomorrow Wednesday. Called pt routed to VM left VM. Will call again later for time of appt tomorrow."
+    },
+    {
+      "id": "text81__1",
+      "title": "F/up Comments",
+      "type": "text",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "status89",
+      "title": "Sent to Nexus",
+      "type": "status",
+      "text": "Yes",
+      "value": {
+        "index": 1,
+        "post_id": null,
+        "changed_at": "2026-07-14T15:12:25.405Z"
+      }
+    },
+    {
+      "id": "date5__1",
+      "title": "Time Sent to Nexus",
+      "type": "date",
+      "text": "2026-07-14 18:12",
+      "value": {
+        "date": "2026-07-14",
+        "time": "15:12:28",
+        "changed_at": "2026-07-14T15:12:31.587Z"
+      }
+    },
+    {
+      "id": "date4",
+      "title": "Hold Date",
+      "type": "date",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "deal_close_probability",
+      "title": "Close Probability",
+      "type": "formula",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "deal_value",
+      "title": "Deal Value",
+      "type": "numbers",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "deal_forecast_value",
+      "title": "Forecast value",
+      "type": "formula",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "dup__of_deal_age",
+      "title": "Stage length",
+      "type": "formula",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "deal_length",
+      "title": "Deal length",
+      "type": "formula",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "deal_creation_date",
+      "title": "*Deal Creation Date",
+      "type": "date",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "deal_expected_close_date",
+      "title": "*Expected Close Date",
+      "type": "date",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "deal_close_date",
+      "title": "*Actual Close Date",
+      "type": "date",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "connect_boards41",
+      "title": "Legal Request",
+      "type": "board_relation",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "mirror27",
+      "title": "Legal Status",
+      "type": "mirror",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "formula8",
+      "title": "Activities",
+      "type": "formula",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "deal_actual_value",
+      "title": "*Actual Deal Value",
+      "type": "formula",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "deal_jan_actual",
+      "title": "*Jan - Actual",
+      "type": "formula",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "deal_feb_actual",
+      "title": "*Feb - Actual",
+      "type": "formula",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "deal_mar_actual",
+      "title": "*Mar - Actual",
+      "type": "formula",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "deal_apr_actual",
+      "title": "*Apr - Actual",
+      "type": "formula",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "deal_may_actual",
+      "title": "*May - Actual",
+      "type": "formula",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "deal_jun_actual",
+      "title": "*Jun - Actual",
+      "type": "formula",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "deal_jul_actual",
+      "title": "*Jul - Actual",
+      "type": "formula",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "jul___actual",
+      "title": "*Aug - Actual",
+      "type": "formula",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "deal_sep_actual",
+      "title": "*Sep - Actual",
+      "type": "formula",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "deal_oct_actual",
+      "title": "*Oct - Actual",
+      "type": "formula",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "deal_nov_actual",
+      "title": "*Nov - Actual",
+      "type": "formula",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "deal_dec_actual",
+      "title": "*Dec - Actual",
+      "type": "formula",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "formula1",
+      "title": "This Month's Forecast",
+      "type": "formula",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "formula3",
+      "title": "*Is Open",
+      "type": "formula",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "date",
+      "title": "Last update",
+      "type": "date",
+      "text": "2026-08-18 17:28",
+      "value": {
+        "date": "2026-08-18",
+        "time": "14:28:40",
+        "changed_at": "2026-08-18T14:28:41.649Z"
+      }
+    },
+    {
+      "id": "time_tracking",
+      "title": "Time Since Entry",
+      "type": "time_tracking",
+      "text": "1145:21:59",
+      "value": {
+        "running": "true",
+        "duration": 4123319,
+        "startDate": 1784041867,
+        "changed_at": "2026-07-14T15:11:09.567Z"
+      }
+    },
+    {
+      "id": "status",
+      "title": "Agency Contacted?",
+      "type": "status",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "email0",
+      "title": "Kathy Email",
+      "type": "email",
+      "text": "kbrown@westcoastwound.com",
+      "value": {
+        "text": "kbrown@westcoastwound.com",
+        "email": "kbrown@westcoastwound.com",
+        "changed_at": "2024-01-30T18:37:42.686Z"
+      }
+    },
+    {
+      "id": "status8",
+      "title": "Add to Route Mgr",
+      "type": "status",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "status6",
+      "title": "Send to Provider",
+      "type": "status",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "connect_boards7",
+      "title": "Provider",
+      "type": "board_relation",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "mirror03__1",
+      "title": "Provider name",
+      "type": "mirror",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "mirror8",
+      "title": "Provider Email",
+      "type": "mirror",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "label",
+      "title": "Provider Change",
+      "type": "status",
+      "text": "OK",
+      "value": null
+    },
+    {
+      "id": "status3",
+      "title": "Provider Confirmation",
+      "type": "status",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "status0",
+      "title": "Send to Outsource Team (only for returning pts)",
+      "type": "status",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "status58",
+      "title": "Scheduling",
+      "type": "status",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "status5",
+      "title": "Outsource Complete",
+      "type": "status",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "status2",
+      "title": "Respond to Email (if any outsource issues)",
+      "type": "status",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "status7",
+      "title": "Provider Schedule Confirmed?",
+      "type": "status",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "date5",
+      "title": "Appointment date",
+      "type": "date",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "status72",
+      "title": "Visit Complete?",
+      "type": "status",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "status69",
+      "title": "Progress Note Sent",
+      "type": "status",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "connect_boards9",
+      "title": "WCW Outsource",
+      "type": "board_relation",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "connect_boards0",
+      "title": "Outsource 3 - Prog Notes",
+      "type": "board_relation",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "connect_boards2",
+      "title": "Intake process",
+      "type": "board_relation",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "status_11__1",
+      "title": "Intake Group Copy",
+      "type": "status",
+      "text": ".",
+      "value": null
+    },
+    {
+      "id": "board_relation__1",
+      "title": "link to Subitems of Accounts",
+      "type": "board_relation",
+      "text": null,
+      "value": null
+    },
+    {
+      "id": "color_mm1mssvv",
+      "title": "DC reason",
+      "type": "status",
+      "text": "NOT DISCHARGED",
+      "value": null
+    },
+    {
+      "id": "color_mm1ms88r",
+      "title": "Visit Status TEST",
+      "type": "status",
+      "text": "TEST",
+      "value": null
+    },
+    {
+      "id": "dropdown_mm1t7rd3",
+      "title": "Discharge Reason",
+      "type": "dropdown",
+      "text": "ANOTHER WX CARE CO",
+      "value": {
+        "ids": [
+          6
+        ],
+        "changed_at": "2026-08-10T14:40:46.069Z",
+        "override_all_ids": "true"
+      }
+    },
+    {
+      "id": "date_mm2gybh5",
+      "title": "Due Date",
+      "type": "date",
+      "text": "2026-07-16",
+      "value": {
+        "date": "2026-07-16",
+        "time": null,
+        "changed_at": "2026-07-14T15:24:42.924Z"
+      }
+    },
+    {
+      "id": "duration_mm2g9nj6",
+      "title": "Time tracking",
+      "type": "time_tracking",
+      "text": "",
+      "value": {
+        "duration": 0
+      }
+    },
+    {
+      "id": "hour_mm2gmmbc",
+      "title": "Hour",
+      "type": "hour",
+      "text": "",
+      "value": null
+    },
+    {
+      "id": "color_mm5bx27n",
+      "title": "ACT Ready",
+      "type": "status",
+      "text": "ACT Ready",
+      "value": {
+        "index": 1,
+        "changed_at": "2026-07-23T11:31:45.226Z"
+      }
+    }
+  ]
+}
