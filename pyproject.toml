@@ -23,6 +23,8 @@ dependencies = [
   "selenium-wire>=5.1.0",
   "blinker<1.8",
   "pyOpenSSL<25",
+  "pymupdf>=1.28.0",
+  "opencv-python-headless>=4.10,<5",
 ]
 
 [project.optional-dependencies]
