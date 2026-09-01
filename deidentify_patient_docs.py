@@ -718,7 +718,16 @@ def finalize_known(known: dict[str, str], persona: dict,
         elif ph == "{DATE}":
             out[value] = fake_dob(value)
         elif ph == "{PHONE}":
-            out[value] = fake_phone(value)
+            if re.search(r"[A-Za-z]{2,}", value):
+                # harvested "phone" fields sometimes hold prose around the
+                # number ("N 813-... ext. 102 Amedisys TAN HH spoke"); the
+                # format-preserving fake would keep every word, and mapping
+                # the full string would shadow the org/name replacements
+                # inside it. Fake only the number-shaped substrings.
+                for m in re.finditer(r"(?<!\d)\d[\d\s().\-]{7,17}\d(?!\d)", value):
+                    out.setdefault(m.group(0), fake_phone(m.group(0)))
+            else:
+                out[value] = fake_phone(value)
         elif ph == "{EMAIL}":
             out[value] = persona["email"]
         elif ph == "{STREET}":
@@ -752,6 +761,10 @@ def finalize_known(known: dict[str, str], persona: dict,
                 out.setdefault(" ".join(toks[:2]), fake)
         elif ph == "{USERNAME}":
             out[value] = fake_id(value)
+        elif re.fullmatch(r"[A-Za-z'\-]{2,}(?: [A-Za-z'\-]{2,}){1,2}", value):
+            # a person-shaped value tagged as a generic ID (e.g. an emergency
+            # contact): a fake NAME, not a letter-scramble ("Mlypx Upjgln")
+            out[value] = fake_person(value)
         else:  # [ID] and any other unique number/code
             out[value] = fake_id(value)
     return out
@@ -759,29 +772,45 @@ def finalize_known(known: dict[str, str], persona: dict,
 
 def collect_page_jobs(text: str, known: dict[str, str],
                       name_rx: list[re.Pattern]) -> dict[str, str]:
-    """Decide which literal strings on this page get which replacement."""
-    jobs: dict[str, str] = {}
+    """Decide which literal strings on this page get which replacement.
+
+    Matches are gathered as text spans and overlaps resolved BEFORE returning:
+    two patterns matching overlapping text (e.g. a phone caught by two rules
+    with different spans) would otherwise both locate rects and draw twice.
+    """
+    spans: list[tuple[int, int, str, str]] = []  # start, end, literal, replacement
     for rx in name_rx:
         for m in rx.finditer(text):
-            jobs[m.group(0)] = "{ALIAS}"
-    lower = text.lower()
+            spans.append((m.start(), m.end(), m.group(0), "{ALIAS}"))
     for value, replacement in known.items():
         if " " in value:
             # tolerate variable whitespace between words ("Arnaldo  Gomez")
             pat = r"[\s,]+".join(re.escape(t) for t in re.split(r"[\s,]+", value) if t)
-            for m in re.finditer(pat, text, re.IGNORECASE):
-                jobs.setdefault(m.group(0), replacement)
-        elif value.lower() in lower:
-            jobs[value] = replacement
+        else:
+            pat = re.escape(value)
+        if value[:1].isalnum():
+            pat = r"(?<![A-Za-z0-9])" + pat
+        if value[-1:].isalnum():
+            pat = pat + r"(?![A-Za-z0-9])"
+        for m in re.finditer(pat, text, re.IGNORECASE):
+            spans.append((m.start(), m.end(), m.group(0), replacement))
     for rx, group, fn in GENERIC_PATTERNS:
         for m in rx.finditer(text):
             replacement = fn(m)
             if replacement is None:
                 continue
-            literal = m.group(group)
-            # known values win (e.g. DOB already mapped to its surrogate)
-            if literal not in jobs:
-                jobs[literal] = replacement
+            spans.append((m.start(group), m.end(group), m.group(group), replacement))
+    # earliest start wins; ties prefer longer spans, then earlier source
+    # (name regex > known value > generic pattern, by insertion order)
+    spans.sort(key=lambda t: (t[0], -(t[1] - t[0])))
+    jobs: dict[str, str] = {}
+    pos = 0
+    for start, end, literal, replacement in spans:
+        if start < pos:
+            continue  # overlaps a span already claimed
+        if replacement != literal:  # no-op replacements (sentinel dates) skipped
+            jobs.setdefault(literal, replacement)
+        pos = end
     return jobs
 
 
@@ -852,12 +881,19 @@ def locate_literal(page, textpage, literal: str, page_words) -> list[list[pymupd
     occurrences word matching can't segment; single tokens use search_for."""
     toks = [t.lower() for t in re.split(r"[\s,]+", literal) if t]
     groups: list[list[pymupdf.Rect]] = []
+    wl = [w[4].strip(",.;:()").lower() for w in page_words]
     if len(toks) > 1:
-        wl = [w[4].strip(",.;:()").lower() for w in page_words]
         for i in range(len(wl) - len(toks) + 1):
             if all(wl[i + j] == toks[j] for j in range(len(toks))):
                 groups.append([pymupdf.Rect(page_words[i + j][:4])
                                for j in range(len(toks))])
+    elif len(literal) < 6:
+        # short single tokens must match whole words only: search_for is a
+        # substring search, and e.g. "AB" would hit inside "Lab"/"about"
+        for i, w in enumerate(page_words):
+            if wl[i] == literal.lower():
+                groups.append([pymupdf.Rect(w[:4])])
+        return groups
     for r in page.search_for(literal, textpage=textpage):
         if not any(overlaps(r, o) for grp in groups for o in grp):
             groups.append([r])
@@ -897,9 +933,33 @@ def match_font(page, rect: pymupdf.Rect, text: str) -> tuple[str, float]:
     return fontname, size
 
 
+def _expand_adjacent(group: list[pymupdf.Rect], page_words,
+                     already: list[pymupdf.Rect]) -> list[pymupdf.Rect]:
+    """Grow a scan wipe group with immediately adjacent same-line word boxes
+    (tiny gaps = fragments of the same written value)."""
+    out = list(group)
+    changed = True
+    while changed:
+        changed = False
+        for w in page_words:
+            r = pymupdf.Rect(w[:4])
+            if any(overlaps(r, o) for o in out + already):
+                continue
+            for o in out:
+                same_line = r.y0 < o.y1 and r.y1 > o.y0
+                gap = min(abs(r.x0 - o.x1), abs(o.x0 - r.x1))
+                if same_line and gap < o.height * 0.45:
+                    out.append(r)
+                    changed = True
+                    break
+    return out
+
+
 def deidentify_pdf(src: Path, dst: Path, known: dict[str, str], token: str,
                    alias: str, report: dict, rel: Path, name_rx: list[re.Pattern],
-                   initials_map: dict[str, str]):
+                   initials_map: dict[str, str], canonical: dict[str, str] | None = None,
+                   vision_detect=None):
+    canonical = canonical or {}
     doc = pymupdf.open(src)
     replaced = 0
     flags: list[str] = []
@@ -916,32 +976,52 @@ def deidentify_pdf(src: Path, dst: Path, known: dict[str, str], token: str,
                     widget.update()
                     replaced += 1
 
-        ocr_page = not page.get_text().strip() and bool(page.get_images(full=True))
+        # OCR treatment for any page whose visible text the text layer cannot
+        # account for: no text at all (scan, vector line art, or a font with
+        # no usable encoding), or a text layer UNDER a page-sized scan image
+        # (searchable fax: replacing the invisible text leaves the visible
+        # pixels intact). Native digital pages keep the redaction path.
+        native_text = page.get_text().strip()
+        big_scan = any(
+            abs(r) >= 0.55 * abs(page.rect)
+            for im in page.get_images(full=True)
+            for r in page.get_image_rects(im[0]))
+        ocr_page = not native_text or big_scan
         # Scanned pages iterate wipe -> re-OCR -> wipe: OCR output varies with
         # resolution, so a second read at another dpi catches stragglers the
         # first pass segmented differently. Surrogate text overlays are drawn
         # only AFTER the last pass, so re-OCR never re-reads a fake value.
+        # A dpi of 0 means "use the page's own text layer" (searchable faxes:
+        # their invisible OCR layer is often better than our re-OCR).
         wiped: list[pymupdf.Rect] = []
         overlays: list[tuple[pymupdf.Rect, str]] = []
         ocr_failed = False
-        last_textpage = None
-        for attempt, dpi in enumerate((300, 200, 400, 150) if ocr_page else (0,)):
+        first_textpage = None  # the 300-dpi read: most reliable geometry
+        if not ocr_page:
+            dpis: tuple[int, ...] = (0,)
+        elif native_text:
+            dpis = (0, 300, 200, 400, 150)
+        else:
+            dpis = (300, 200, 400, 150)
+        for dpi in dpis:
             textpage = None
-            if ocr_page:
+            if dpi:
                 try:
                     textpage = page.get_textpage_ocr(dpi=dpi, full=True)
                 except (RuntimeError, ValueError) as exc:
-                    flags.append(f"p{page.number + 1}: image-only page, OCR unavailable "
-                                 f"({exc}) - NOT de-identified, must be excluded")
+                    flags.append(f"p{page.number + 1}: OCR unavailable ({exc}) - "
+                                 f"page NOT fully de-identified, must be reviewed")
                     ocr_failed = True
                     break
-                last_textpage = textpage
+                if first_textpage is None:
+                    first_textpage = textpage
             text = page.get_text(textpage=textpage)
             if not text.strip():
                 break
 
             jobs = collect_page_jobs(text, known, name_rx)
             page_words = page.get_text("words", textpage=textpage)
+            widget_rects = [pymupdf.Rect(w.rect) for w in page.widgets() or []]
             groups: list[tuple[list[pymupdf.Rect], str]] = []
             placed: list[pymupdf.Rect] = []
             for literal, replacement in sorted(jobs.items(), key=lambda kv: -len(kv[0])):
@@ -949,16 +1029,26 @@ def deidentify_pdf(src: Path, dst: Path, known: dict[str, str], token: str,
                 for group in locate_literal(page, textpage, literal, page_words):
                     if any(overlaps(r, p) for r in group for p in placed + wiped):
                         continue
+                    # a form widget already renders this value (scrubbed above);
+                    # drawing page-level text too would double-print
+                    if any(overlaps(group[0], wr) for wr in widget_rects):
+                        continue
+                    if ocr_page:
+                        # OCR segmentation can split one written value into
+                        # fragments ("EMILY M" + "ARTIN"); pull in adjacent
+                        # same-line fragments so no tail survives the wipe
+                        group = _expand_adjacent(group, page_words, placed + wiped)
                     groups.append((group, replacement))
                     placed.extend(group)
-            # patient initials (name-derived, e.g. avatar badges): exact word
-            # match only, so words like "LAB" or blood type notes stay intact
-            for x0, y0, x1, y1, word, *_ in page.get_text("words", textpage=textpage):
-                if word in initials_map:
-                    rect = pymupdf.Rect(x0, y0, x1, y1)
-                    if not any(overlaps(rect, p) for p in placed + wiped):
-                        groups.append(([rect], initials_map[word]))
-                        placed.append(rect)
+            if not ocr_page:
+                # patient initials (name-derived avatar badges on digital pages
+                # only): exact word match, so "LAB"/blood types stay intact
+                for x0, y0, x1, y1, word, *_ in page_words:
+                    if word in initials_map:
+                        rect = pymupdf.Rect(x0, y0, x1, y1)
+                        if not any(overlaps(rect, p) for p in placed + wiped):
+                            groups.append(([rect], initials_map[word]))
+                            placed.append(rect)
             replaced += len(groups)
             wiped.extend(placed)
 
@@ -975,6 +1065,17 @@ def deidentify_pdf(src: Path, dst: Path, known: dict[str, str], token: str,
                             if r.y0 < group[0].y1 and r.y1 > group[0].y0:
                                 line_rect |= r
                         fontname, fontsize = match_font(page, line_rect, replacement)
+                        # overflow may not collide with a neighboring word:
+                        # shrink to the exact rect if one sits just right of us
+                        neighbor = any(
+                            w[0] > line_rect.x1 - 1 and w[0] < line_rect.x1 + line_rect.width * 0.2
+                            and w[1] < line_rect.y1 and w[3] > line_rect.y0
+                            for w in page_words)
+                        if neighbor:
+                            while fontsize > 4 and pymupdf.get_text_length(
+                                    replacement, fontname=fontname,
+                                    fontsize=fontsize) > line_rect.width:
+                                fontsize *= 0.94
                         for rect in group:
                             page.add_redact_annot(rect, fill=(1, 1, 1))
                         draws.append((line_rect, replacement, fontname, fontsize))
@@ -992,37 +1093,83 @@ def deidentify_pdf(src: Path, dst: Path, known: dict[str, str], token: str,
             # no early exit: wiping is deferred, so every dpi pass is a pure
             # detection union and each can catch words the others misread
 
-        if ocr_page and not ocr_failed:
+        if ocr_page and (not ocr_failed or wiped):
             # identifiers 16/17: faces and signature handwriting - auto-blank + flag
             faces: list[pymupdf.Rect] = []
             sigs: list[pymupdf.Rect] = []
             bands: list[pymupdf.Rect] = []
+            critical_bands: list[pymupdf.Rect] = []
+            refills: list[tuple[pymupdf.Rect, str]] = []
             try:
-                from deid.images import (detect_faces, labeled_value_regions,
-                                         signature_regions)
+                from deid.images import (CRITICAL_LABELS, detect_faces,
+                                         labeled_value_regions, signature_regions)
                 faces = detect_faces(page)
-                sigs = signature_regions(page, last_textpage) if last_textpage else []
-                # handwritten values after identifier labels: OCR can't read
-                # them, so blank the band unless a readable value was already
-                # located (and replaced) inside it
-                for label, band in (labeled_value_regions(page, last_textpage)
-                                    if last_textpage else []):
-                    if not any(overlaps(band, r) for r in wiped):
+                sigs = signature_regions(page, first_textpage) if first_textpage else []
+                for label, band in (labeled_value_regions(page, first_textpage)
+                                    if first_textpage else []):
+                    if label in CRITICAL_LABELS:
+                        # name/DOB fields: ALWAYS wipe the band (OCR misreads of
+                        # handwriting leave tails and garbage) and refill with
+                        # the canonical fake value
+                        bands.append(band)
+                        critical_bands.append(band)
+                        if canonical.get(label):
+                            refills.append((band, canonical[label]))
+                    elif not any(overlaps(band, r) for r in wiped):
                         bands.append(band)
                         flags.append(f"p{page.number + 1}: unreadable value after "
                                      f"'{label}' label blanked - confirm")
             except Exception as exc:
                 flags.append(f"p{page.number + 1}: face/signature pass failed ({exc})")
-            wipe_rects = wiped + faces + sigs + bands
-            if wipe_rects:
-                # single inpaint per page (background-matching fill);
-                # white-box redaction is the fallback
+            # ink OCR could not fully read (handwriting/signatures/logos):
+            # locate the components locally, then ask the vision model per crop
+            # whether each carries identifying information. Components are NOT
+            # skipped for overlapping earlier wipes - OCR boxes on handwriting
+            # rarely cover the full ink extent, and tails would survive.
+            if vision_detect is not None:
                 try:
-                    from deid.images import inpaint_page_rects
-                    inpainted = inpaint_page_rects(page, wipe_rects)
+                    from deid.images import unrecognized_ink_components
+                    comps = unrecognized_ink_components(page, first_textpage)
+                    hw = 0
+                    for comp in comps:
+                        if any(overlaps(comp, b) for b in bands):
+                            continue
+                        if vision_detect(page, comp):
+                            bands.append(comp)
+                            hw += 1
+                    if hw:
+                        flags.append(f"p{page.number + 1}: {hw} unreadable-ink "
+                                     f"region(s) with PHI blanked by vision check")
+                except Exception as exc:
+                    flags.append(f"p{page.number + 1}: vision check failed ({exc})")
+            # fax banner strip: transmission headers carry a date/time, phone
+            # and sender in a dotted fax font OCR reads unreliably - wipe the
+            # whole strip and re-type its scrubbed text instead
+            banner_redraw = None
+            if first_textpage is not None:
+                strip = pymupdf.Rect(page.rect.x0, page.rect.y0, page.rect.x1,
+                                     page.rect.y0 + min(30.0, page.rect.height * 0.05))
+                strip_words = sorted(
+                    (w for w in page.get_text("words", textpage=first_textpage)
+                     if w[1] < strip.y1), key=lambda w: w[0])
+                strip_text = " ".join(w[4] for w in strip_words)
+                if re.search(r"(?i)\bfax\b", strip_text) and re.search(r"\d{4}", strip_text):
+                    bands.append(strip)
+                    critical_bands.append(strip)  # overlays there are replaced too
+                    banner_redraw = scrub_string(strip_text, known, name_rx, alias)
+                    flags.append(f"p{page.number + 1}: fax banner strip rewritten")
+            wipe_rects = wiped + faces + sigs + bands
+            wiped_ok = False
+            if wipe_rects:
+                # single background-fill wipe in RENDER space, replacing the
+                # whole page content (kills scan pixels, vector text and any
+                # invisible text layer at once); white boxes are the fallback
+                try:
+                    from deid.images import wipe_page_render
+                    wiped_ok = wipe_page_render(page, wipe_rects, dpi=200)
                 except Exception:
-                    inpainted = False
-                if not inpainted:
+                    wiped_ok = False
+                if not wiped_ok:
                     for rect in wipe_rects:
                         page.add_redact_annot(rect, fill=(1, 1, 1))
                     page.apply_redactions(images=pymupdf.PDF_REDACT_IMAGE_PIXELS)
@@ -1032,10 +1179,37 @@ def deidentify_pdf(src: Path, dst: Path, known: dict[str, str], token: str,
                 if sigs:
                     flags.append(f"p{page.number + 1}: {len(sigs)} signature band(s) "
                                  f"auto-blanked - confirm")
+            # overlays: drop any inside an always-wiped band (the canonical
+            # refill replaces them) and merge near-duplicates from different
+            # OCR resolutions
+            final_overlays: list[tuple[pymupdf.Rect, str]] = []
             for rect, txt in overlays:
+                if any(rect.intersects(b) for b in critical_bands):
+                    continue  # the canonical refill replaces these
+                if any(rect.intersects(r2) and t2 == txt for r2, t2 in final_overlays):
+                    continue
+                final_overlays.append((rect, txt))
+            for band, txt in refills:
+                fs = max(6.0, min(band.height * 0.5, 11.0))
+                page.insert_text((band.x0 + 4, band.y0 + band.height * 0.62), txt,
+                                 fontsize=fs, color=(0.05, 0.05, 0.05), overlay=True)
+            if banner_redraw:
+                page.insert_text((page.rect.x0 + 20, page.rect.y0 + 15),
+                                 banner_redraw[:200], fontsize=7,
+                                 color=(0.15, 0.15, 0.15), overlay=True)
+            for rect, txt in final_overlays:
                 fs = max(5.0, min(rect.height * 0.78, 13.0))
                 page.insert_text((rect.x0, rect.y1 - rect.height * 0.18), txt,
                                  fontsize=fs, color=(0, 0, 0), overlay=True)
+            if not wiped_ok:
+                # content not already replaced by the render wipe (fallback
+                # white boxes, or nothing to wipe): flatten so no original
+                # text/image object survives in the file
+                try:
+                    from deid.images import flatten_page
+                    flatten_page(page, dpi=200)
+                except Exception as exc:
+                    flags.append(f"p{page.number + 1}: flatten failed ({exc})")
             flags.append(f"p{page.number + 1}: scanned page de-identified via OCR "
                          f"- manual QA recommended for residual handwriting/photos")
 
@@ -1099,11 +1273,22 @@ def shift_filename_dates(name: str, *, compact_only: bool = False) -> str:
         s = dt + timedelta(days=DATE_OFFSET)
         return f"{s.month:02d}{s.day:02d}{s.year}"
 
+    def sub_us2(m):  # underscore dates with 2-digit year: "7_25_26"
+        yy = int(m.group(3))
+        try:
+            dt = datetime(1900 + yy if yy >= 70 else 2000 + yy,
+                          int(m.group(1)), int(m.group(2)))
+        except ValueError:
+            return m.group(0)
+        s = dt + timedelta(days=DATE_OFFSET)
+        return f"{s.month}_{s.day}_{s.year % 100:02d}"
+
     seps = "_" if compact_only else "_\\-/"
     name = re.sub(rf"(?<!\d)(\d{{1,2}})[{seps}](\d{{1,2}})[{seps}]((?:19|20)\d{{2}})(?!\d)",
                   lambda m: sub_sep(m), name)
     name = re.sub(r"(?<!\d)((?:19|20)\d{2})([01]\d)([0-3]\d)(?!\d)", sub_ymd, name)
     name = re.sub(r"(?<!\d)([01]\d)([0-3]\d)((?:19|20)\d{2})(?!\d)", sub_mdy, name)
+    name = re.sub(r"(?<!\d)(\d{1,2})_(\d{1,2})_(\d{2})(?!\d)", sub_us2, name)
     return name
 
 
@@ -1138,7 +1323,9 @@ def load_or_init_key(key_path: Path, display: str, gender: str, folder: Path,
         if f"{first} {last}" not in taken:
             break
     city, zc = rng.choice(FL_CITIES)
-    offset = rng.choice([-1, 1]) * rng.randint(60, 364)
+    # always shift into the past: a future date of death or visit would
+    # immediately mark the record as synthetic (and confuse reviewers)
+    offset = -rng.randint(60, 364)
     return {
         "WARNING": "Re-identification key. Store separately from the "
                    "de-identified documents. Do not distribute.",
@@ -1159,8 +1346,218 @@ def load_or_init_key(key_path: Path, display: str, gender: str, folder: Path,
     }
 
 
-def main() -> int:
+def _enable_provider_patterns() -> None:
+    """Idempotent: called from main() and from spawned workers."""
+    if PROVIDER_ID_PATTERNS[0] not in GENERIC_PATTERNS:
+        GENERIC_PATTERNS.extend(PROVIDER_ID_PATTERNS)
+
+
+def process_patient(folder: Path, args: argparse.Namespace) -> None:
+    """De-identify one patient folder end to end.
+
+    Self-contained per-patient unit: all module-level state (surrogate store,
+    persona, date offset) is (re)set here, so independent patients may run in
+    separate PROCESSES - never threads, the globals would collide. The persona
+    key file must already exist when running in parallel (main() pre-assigns
+    them sequentially to keep persona names unique)."""
     global S, PERSONA, DATE_OFFSET, AGE_JITTER
+    if args.scrub_providers:
+        _enable_provider_patterns()
+
+    known_ph, display, name_parts, name_rx, id_map, gender = \
+        harvest_phi(folder, scrub_staff=args.scrub_providers,
+                    scrub_facilities=not args.keep_facilities)
+    slug = re.sub(r"[^a-z0-9]+", "-", display.lower()).strip("-")
+
+    key_path = args.keys / f"{slug}.json"
+    key = load_or_init_key(key_path, display, gender, folder, set())
+    token, PERSONA = key["token"], dict(key["persona"])
+    if "age_jitter_years" not in key:  # older key files: derive from seed
+        rng = random.Random(key["seed"] ^ 0xA6E)
+        key["age_jitter_years"] = rng.choice([-1, 1]) * rng.randint(2, 3)
+    AGE_JITTER = key["age_jitter_years"]
+    DATE_OFFSET = key["date_offset_days"]
+    PERSONA["nominal_year"] = datetime.now().year
+    S = SurrogateStore(key.get("surrogates", {}), key["seed"])
+
+    known = finalize_known(known_ph, PERSONA, name_parts)
+    id_map = {v: fake_id(v) for v in id_map}
+    if args.scrub_providers:
+        for v, fake in discover_providers(folder).items():
+            known.setdefault(v, fake)
+
+    llm_review: list[dict] = []
+    llm_flags: list[str] = []
+    if not args.no_llm:
+        from deid.llm_detect import detect_phi_for_folder
+
+        def surrogate_for(category: str, value: str) -> str | None:
+            if category in ("person", "provider") and name_parts:
+                # The LLM sometimes returns the patient's own name wrapped
+                # in an honorific ("Mr Khojagul Zadran"), which misses the
+                # known-value map; minting a random person here would give
+                # the patient a second identity in the same bundle.
+                m = re.match(r"\s*(?:mr|mrs|ms|miss)\b\.?\s*", value,
+                             re.IGNORECASE)
+                core = value[m.end():] if m else value
+                toks = {t for t in re.split(r"[^A-Za-z]+", core.lower())
+                        if len(t) > 1}
+                if toks and toks <= {p.lower() for p in name_parts}:
+                    prefix = value[:m.end()] if m else ""
+                    return prefix + render_name(core, PERSONA, name_parts)
+            factories = {
+                "person": fake_person, "provider": fake_person,
+                "org": fake_org, "street": fake_street, "city": fake_city,
+                "zip": fake_zip, "date": fake_date, "phone": fake_phone,
+                "email": fake_email, "ssn": fake_ssn, "id": fake_id,
+                "url": lambda _v: "https://www.example.com",
+                "ip": lambda _v: "203.0.113.7",
+            }
+            fn = factories.get(category)
+            return fn(value) if fn else None
+
+        additions, llm_review, llm_flags = detect_phi_for_folder(
+            folder, cache=key.setdefault("llm_cache", {}),
+            keep_providers=not args.scrub_providers,
+            keep_facilities=args.keep_facilities,
+            surrogate_for=surrogate_for)
+        for v, replacement in additions.items():
+            known.setdefault(v, replacement)
+        for fl in llm_flags:
+            print(f"  ! {fl}")
+        print(f"  LLM detection: +{len(additions)} values, "
+              f"{len(llm_review)} review items")
+
+    alias = f"{PERSONA['last']}, {PERSONA['first']}"
+    # canonical fake values for always-wiped labeled fields on scans
+    canonical = {"patient name": f"{PERSONA['first']} {PERSONA['last']}",
+                 "name": f"{PERSONA['first']} {PERSONA['last']}"}
+    dob_variants = [v for v, ph in known_ph.items() if ph == "{DATE}"
+                    and re.fullmatch(r"\d{1,2}/\d{1,2}/\d{4}", v)]
+    if dob_variants:
+        dob_str = fake_dob(dob_variants[0])
+        canonical.update({"dob": dob_str, "date of birth": dob_str,
+                          "birth date": dob_str})
+
+    vision_cb = None
+    if not args.no_llm:
+        from deid.vision_qa import make_handwriting_classifier
+        vision_cb = make_handwriting_classifier(
+            cache=key.setdefault("llm_cache", {}),
+            include_orgs=not args.keep_facilities)
+
+    initials_map = {}
+    if len(name_parts) == 2:
+        rf, rl = (p[0].upper() for p in name_parts)
+        pf, pl = PERSONA["first"][0].upper(), PERSONA["last"][0].upper()
+        initials_map = {rf + rl: pf + pl, rl + rf: pl + pf}
+
+    out_dir = args.output / f"{PERSONA['first']} {PERSONA['last']}"
+    report = {"root": str(folder), "files": {}}
+    total = 0
+    print(f"\n{display}  ->  {PERSONA['first']} {PERSONA['last']}  ({token}, "
+          f"dates shifted {DATE_OFFSET:+d} days)")
+    print(f"  known identifier values: {len(known)}")
+
+    for pdf in sorted(folder.rglob("*.pdf")):
+        rel = pdf.relative_to(folder)
+        new_parts = [sanitize_filename(p, name_parts, PERSONA, id_map)
+                     for p in rel.parts]
+        dst = out_dir.joinpath(*new_parts)
+        n, flags = deidentify_pdf(pdf, dst, known, token, alias, report,
+                                  rel, name_rx, initials_map,
+                                  canonical=canonical, vision_detect=vision_cb)
+        total += n
+        print(f"  {rel}  ({n} replacements)")
+        for fl in flags:
+            print(f"      ! {fl}")
+
+    # sidecar JSONs: same crosswalk, so PDFs and JSONs stay consistent
+    from deid.json_deid import audit_json_output, deidentify_jsons
+
+    def _sanitize_json_name(name: str) -> str:
+        out = sanitize_filename(name, name_parts, PERSONA, id_map)
+        if name == name.lower():  # keep slug-style filenames slug-style
+            out = re.sub(r"[ ,]+", "-", out.lower()).replace("--", "-")
+        return out
+
+    real_slug = f"{name_parts[1]}-{name_parts[0]}".lower() if len(name_parts) == 2 else ""
+    fake_slug = f"{PERSONA['last']}-{PERSONA['first']}".lower()
+    json_results = deidentify_jsons(
+        folder, out_dir,
+        scrub=lambda s: scrub_string(s, known, name_rx, alias),
+        fake_id=fake_id, id_map=id_map,
+        slug_pair=(real_slug, fake_slug),
+        known_ids={v for v in known if v.isdigit()},
+        sanitize_name=_sanitize_json_name,
+        sanitize_text=lambda s: sanitize_filename(s, name_parts, PERSONA, id_map,
+                                                  compact_dates=True),
+        age_jitter=AGE_JITTER,
+    )
+    json_residuals = {}
+    for src_name, info in json_results.items():
+        hits = audit_json_output(Path(info["output"]), list(known))
+        if hits:
+            json_residuals[src_name] = hits
+        print(f"  {src_name} -> {Path(info['output']).name}"
+              + (f"  !! RESIDUAL: {hits[:5]}" if hits else ""))
+    report["files"].update(json_results)
+
+    args.keys.mkdir(parents=True, exist_ok=True)
+    key["surrogates"] = S.map
+    key["generated"] = datetime.now().isoformat(timespec="seconds")
+    key["values_replaced"] = known
+    key_path.write_text(json.dumps(key, indent=2))
+
+    (out_dir / "_deid_report.json").write_text(json.dumps({
+        "subject_alias": f"{PERSONA['first']} {PERSONA['last']}",
+        "token": token,
+        "method": "HIPAA Safe Harbor 164.514(b)(2), realistic surrogate "
+                  "replacement with uniform date shifting",
+        "total_replacements": total,
+        "files": report["files"],
+        "llm_detection": ("skipped (--no-llm)" if args.no_llm else "enabled"),
+        "llm_review_items": llm_review,
+        "llm_flags": llm_flags,
+        "notes": [
+            "All 18 Safe Harbor identifier categories replaced with "
+            "consistent fabricated surrogates; no real PHI remains.",
+            "Dates shifted by one secret per-patient offset (intervals "
+            "preserved); ages >=90 aggregated to 90+.",
+            "Provider/clinician names and NPIs retained (not patient "
+            "identifiers under Safe Harbor).",
+            "PDF metadata wiped, hyperlinks removed, form fields rewritten, "
+            "scanned pages OCR-redacted.",
+            "Pages flagged for manual QA may contain handwriting, photos or "
+            "stylized facility logos OCR cannot read (identifiers 16/17; "
+            "logos matter when facilities are scrubbed).",
+        ],
+    }, indent=2))
+    print(f"  total: {total} replacements  ->  {out_dir}/")
+    print(f"  key:   {key_path}  (store separately!)")
+
+
+def _worker(folder: str, opts: dict) -> str:
+    """One patient in a spawned process, stdout captured, so the parent can
+    print each patient's log as a single uninterleaved block."""
+    import contextlib
+    import io
+    import traceback
+
+    args = argparse.Namespace(**opts)
+    for name in ("input", "output", "keys"):
+        setattr(args, name, Path(getattr(args, name)))
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        try:
+            process_patient(Path(folder), args)
+        except Exception:
+            traceback.print_exc(file=buf)
+            print(f"!! FAILED: {folder}", file=buf)
+    return buf.getvalue()
+
+
+def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--input", default="patient_docs", type=Path)
     ap.add_argument("--output", default="patient_docs_deid", type=Path)
@@ -1176,10 +1573,21 @@ def main() -> int:
     ap.add_argument("--no-llm", action="store_true",
                     help="Skip the Claude-based secondary PHI detection pass "
                          "(regex/harvest coverage only).")
+    ap.add_argument("--workers", type=int, default=1,
+                    help="De-identify up to N patients in parallel (separate "
+                         "processes; default 1 = sequential).")
+    ap.add_argument("--skip-existing", action="store_true",
+                    help="Skip patients whose de-identified bundle already has "
+                         "a _deid_report.json (resume an interrupted batch).")
     args = ap.parse_args()
 
+    try:
+        sys.stdout.reconfigure(line_buffering=True)  # live progress through pipes
+    except AttributeError:
+        pass
+
     if args.scrub_providers:
-        GENERIC_PATTERNS.extend(PROVIDER_ID_PATTERNS)
+        _enable_provider_patterns()
 
     if not args.input.is_dir():
         print(f"error: input folder not found: {args.input}", file=sys.stderr)
@@ -1198,148 +1606,44 @@ def main() -> int:
         except (json.JSONDecodeError, OSError):
             continue
 
+    # Personas/keys are assigned SEQUENTIALLY before any worker starts: two
+    # parallel workers could otherwise draw the same persona and their bundle
+    # folders would merge. This loop also applies --skip-existing.
+    work: list[Path] = []
     for folder in patient_dirs:
-        known_ph, display, name_parts, name_rx, id_map, gender = \
-            harvest_phi(folder, scrub_staff=args.scrub_providers,
-                        scrub_facilities=not args.keep_facilities)
+        _, display, _, _, _, gender = harvest_phi(
+            folder, scrub_staff=args.scrub_providers,
+            scrub_facilities=not args.keep_facilities)
         slug = re.sub(r"[^a-z0-9]+", "-", display.lower()).strip("-")
-
         key_path = args.keys / f"{slug}.json"
+        is_new = not key_path.exists()
         key = load_or_init_key(key_path, display, gender, folder, taken_personas)
-        token, PERSONA = key["token"], dict(key["persona"])
-        taken_personas.add(f"{PERSONA['first']} {PERSONA['last']}")
-        if "age_jitter_years" not in key:  # older key files: derive from seed
-            rng = random.Random(key["seed"] ^ 0xA6E)
-            key["age_jitter_years"] = rng.choice([-1, 1]) * rng.randint(2, 3)
-        AGE_JITTER = key["age_jitter_years"]
-        DATE_OFFSET = key["date_offset_days"]
-        PERSONA["nominal_year"] = datetime.now().year
-        S = SurrogateStore(key.get("surrogates", {}), key["seed"])
+        persona = f"{key['persona']['first']} {key['persona']['last']}"
+        taken_personas.add(persona)
+        if is_new:
+            args.keys.mkdir(parents=True, exist_ok=True)
+            key_path.write_text(json.dumps(key, indent=2))
+        if args.skip_existing and (args.output / persona
+                                   / "_deid_report.json").exists():
+            print(f"skipping {display} -> {persona} (bundle already exists)")
+            continue
+        work.append(folder)
 
-        known = finalize_known(known_ph, PERSONA, name_parts)
-        id_map = {v: fake_id(v) for v in id_map}
-        if args.scrub_providers:
-            for v, fake in discover_providers(folder).items():
-                known.setdefault(v, fake)
+    if args.workers > 1 and len(work) > 1:
+        from concurrent.futures import ProcessPoolExecutor, as_completed
 
-        llm_review: list[dict] = []
-        llm_flags: list[str] = []
-        if not args.no_llm:
-            from deid.llm_detect import detect_phi_for_folder
-
-            def surrogate_for(category: str, value: str) -> str | None:
-                factories = {
-                    "person": fake_person, "provider": fake_person,
-                    "org": fake_org, "street": fake_street, "city": fake_city,
-                    "zip": fake_zip, "date": fake_date, "phone": fake_phone,
-                    "email": fake_email, "ssn": fake_ssn, "id": fake_id,
-                    "url": lambda _v: "https://www.example.com",
-                    "ip": lambda _v: "203.0.113.7",
-                }
-                fn = factories.get(category)
-                return fn(value) if fn else None
-
-            additions, llm_review, llm_flags = detect_phi_for_folder(
-                folder, cache=key.setdefault("llm_cache", {}),
-                keep_providers=not args.scrub_providers,
-                keep_facilities=args.keep_facilities,
-                surrogate_for=surrogate_for)
-            for v, replacement in additions.items():
-                known.setdefault(v, replacement)
-            for fl in llm_flags:
-                print(f"  ! {fl}")
-            print(f"  LLM detection: +{len(additions)} values, "
-                  f"{len(llm_review)} review items")
-
-        alias = f"{PERSONA['last']}, {PERSONA['first']}"
-        initials_map = {}
-        if len(name_parts) == 2:
-            rf, rl = (p[0].upper() for p in name_parts)
-            pf, pl = PERSONA["first"][0].upper(), PERSONA["last"][0].upper()
-            initials_map = {rf + rl: pf + pl, rl + rf: pl + pf}
-
-        out_dir = args.output / f"{PERSONA['first']} {PERSONA['last']}"
-        report = {"root": str(folder), "files": {}}
-        total = 0
-        print(f"\n{display}  ->  {PERSONA['first']} {PERSONA['last']}  ({token}, "
-              f"dates shifted {DATE_OFFSET:+d} days)")
-        print(f"  known identifier values: {len(known)}")
-
-        for pdf in sorted(folder.rglob("*.pdf")):
-            rel = pdf.relative_to(folder)
-            new_parts = [sanitize_filename(p, name_parts, PERSONA, id_map)
-                         for p in rel.parts]
-            dst = out_dir.joinpath(*new_parts)
-            n, flags = deidentify_pdf(pdf, dst, known, token, alias, report,
-                                      rel, name_rx, initials_map)
-            total += n
-            print(f"  {rel}  ({n} replacements)")
-            for fl in flags:
-                print(f"      ! {fl}")
-
-        # sidecar JSONs: same crosswalk, so PDFs and JSONs stay consistent
-        from deid.json_deid import audit_json_output, deidentify_jsons
-
-        def _sanitize_json_name(name: str) -> str:
-            out = sanitize_filename(name, name_parts, PERSONA, id_map)
-            if name == name.lower():  # keep slug-style filenames slug-style
-                out = re.sub(r"[ ,]+", "-", out.lower()).replace("--", "-")
-            return out
-
-        real_slug = f"{name_parts[1]}-{name_parts[0]}".lower() if len(name_parts) == 2 else ""
-        fake_slug = f"{PERSONA['last']}-{PERSONA['first']}".lower()
-        json_results = deidentify_jsons(
-            folder, out_dir,
-            scrub=lambda s: scrub_string(s, known, name_rx, alias),
-            fake_id=fake_id, id_map=id_map,
-            slug_pair=(real_slug, fake_slug),
-            known_ids={v for v in known if v.isdigit()},
-            sanitize_name=_sanitize_json_name,
-            sanitize_text=lambda s: sanitize_filename(s, name_parts, PERSONA, id_map,
-                                                      compact_dates=True),
-            age_jitter=AGE_JITTER,
-        )
-        json_residuals = {}
-        for src_name, info in json_results.items():
-            hits = audit_json_output(Path(info["output"]), list(known))
-            if hits:
-                json_residuals[src_name] = hits
-            print(f"  {src_name} -> {Path(info['output']).name}"
-                  + (f"  !! RESIDUAL: {hits[:5]}" if hits else ""))
-        report["files"].update(json_results)
-
-        args.keys.mkdir(parents=True, exist_ok=True)
-        key["surrogates"] = S.map
-        key["generated"] = datetime.now().isoformat(timespec="seconds")
-        key["values_replaced"] = known
-        key_path.write_text(json.dumps(key, indent=2))
-
-        (out_dir / "_deid_report.json").write_text(json.dumps({
-            "subject_alias": f"{PERSONA['first']} {PERSONA['last']}",
-            "token": token,
-            "method": "HIPAA Safe Harbor 164.514(b)(2), realistic surrogate "
-                      "replacement with uniform date shifting",
-            "total_replacements": total,
-            "files": report["files"],
-            "llm_detection": ("skipped (--no-llm)" if args.no_llm else "enabled"),
-            "llm_review_items": llm_review,
-            "llm_flags": llm_flags,
-            "notes": [
-                "All 18 Safe Harbor identifier categories replaced with "
-                "consistent fabricated surrogates; no real PHI remains.",
-                "Dates shifted by one secret per-patient offset (intervals "
-                "preserved); ages >=90 aggregated to 90+.",
-                "Provider/clinician names and NPIs retained (not patient "
-                "identifiers under Safe Harbor).",
-                "PDF metadata wiped, hyperlinks removed, form fields rewritten, "
-                "scanned pages OCR-redacted.",
-                "Pages flagged for manual QA may contain handwriting, photos or "
-                "stylized facility logos OCR cannot read (identifiers 16/17; "
-                "logos matter when facilities are scrubbed).",
-            ],
-        }, indent=2))
-        print(f"  total: {total} replacements  ->  {out_dir}/")
-        print(f"  key:   {key_path}  (store separately!)")
+        opts = dict(vars(args))
+        for name in ("input", "output", "keys"):
+            opts[name] = str(opts[name])
+        print(f"running {len(work)} patients across "
+              f"{min(args.workers, len(work))} worker processes")
+        with ProcessPoolExecutor(max_workers=min(args.workers, len(work))) as pool:
+            futures = {pool.submit(_worker, str(f), opts): f for f in work}
+            for fut in as_completed(futures):
+                print(fut.result(), end="", flush=True)
+    else:
+        for folder in work:
+            process_patient(folder, args)
 
     return 0
 

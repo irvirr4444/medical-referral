@@ -90,7 +90,16 @@ def extract_document_text(pdf: Path) -> str:
     doc = pymupdf.open(pdf)
     chunks = []
     for page in doc:
-        chunks.append(page.get_text())
+        text = page.get_text()
+        if not text.strip():
+            # scan / vector line art / undecodable font: OCR the render,
+            # otherwise the detector never sees the page at all
+            try:
+                tp = page.get_textpage_ocr(dpi=200, full=True)
+                text = page.get_text(textpage=tp)
+            except (RuntimeError, ValueError):
+                text = ""
+        chunks.append(text)
         for w in page.widgets() or []:
             if isinstance(w.field_value, str):
                 chunks.append(w.field_value)
@@ -177,7 +186,14 @@ def detect_phi_for_folder(
     # phase 2: convert detections into replacement-map additions
     for doc_name, entities in per_doc:
         for ent in entities:
-            etype, value = ent["type"], ent["value"].strip()
+            etype, value = ent["type"], ent["value"].strip().strip(".,;:()[]")
+            if len(value) < 4:
+                # too short to auto-replace safely ("AB" would hit every
+                # 'ab' fragment on OCR'd pages) - surface for review instead
+                review.append({"file": doc_name, "type": etype,
+                               "value_sha256": _sha(value),
+                               "note": "too short to auto-replace - review"})
+                continue
             if keep_providers and (etype == "PROVIDER_NAME" or (
                     etype in ("STAFF_NAME", "PATIENT_NAME", "RELATIVE_NAME")
                     and norm_person(value) in provider_names)):
@@ -185,6 +201,18 @@ def detect_phi_for_folder(
             if etype == "FACILITY" and keep_facilities:
                 continue
             category = TYPE_TO_CATEGORY[etype]
+            if category == "phone" and re.search(r"[A-Za-z]{2,}", value):
+                # Verbatim PHONE/FAX detections sometimes swallow surrounding
+                # prose ("N 813-677-9629 (Phone) ext. 102 Amedisys TAN HH
+                # spoke"). The format-preserving phone fake keeps every letter,
+                # so any identifier in that prose would survive inside the
+                # replacement. Map only the number-shaped substrings.
+                for m in re.finditer(r"(?<!\d)\d[\d\s().\-]{7,17}\d(?!\d)", value):
+                    num = m.group(0)
+                    rep = surrogate_for("phone", num)
+                    if rep and rep != num:
+                        additions.setdefault(num, rep)
+                continue
             replacement = surrogate_for(category, value)
             if replacement is None or replacement == value:
                 review.append({"file": doc_name, "type": etype, "value_sha256":
