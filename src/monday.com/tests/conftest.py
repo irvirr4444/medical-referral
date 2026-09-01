@@ -9,12 +9,12 @@ from pathlib import Path
 
 import pytest
 
-# Ensure `src/` is importable when running pytest against this folder.
+from referral_pipeline.integrations.monday.transport import MondayAPIError, monday_graphql
+
+# Ensure `src/monday.com` sibling modules are importable when running pytest against this folder.
 _MONDAY_DIR = Path(__file__).resolve().parents[1]
 if str(_MONDAY_DIR) not in sys.path:
     sys.path.insert(0, str(_MONDAY_DIR))
-
-from monday_api import MondayAPIError, monday_graphql  # noqa: E402
 
 
 def pytest_configure(config: pytest.Config) -> None:

@@ -13,16 +13,23 @@ import os
 from pathlib import Path
 from typing import Any
 
-from intake_duplicate_check import check_duplicates_disabled, check_duplicates_from_snapshot, check_duplicates_live
 from intake_extractor.aligned_intake import AlignedIntakeBundle, build_aligned_intake_bundle
 from intake_extractor.canonical_referral import CanonicalReferral, extract_referral_pdf
-from intake_plan import build_intake_plan
-from master_sheet_agency_lookup import find_agency_matches_from_snapshot, find_agency_matches_live
-from master_sheet_writer import (
+from referral_pipeline.intake_plan import build_intake_plan
+from referral_pipeline.integrations.monday.agency_lookup import (
+    find_agency_matches_from_snapshot,
+    find_agency_matches_live,
+)
+from referral_pipeline.integrations.monday.duplicate_check import (
+    check_duplicates_disabled,
+    check_duplicates_from_snapshot,
+    check_duplicates_live,
+)
+from referral_pipeline.integrations.monday.master_sheet_writer import (
     apply_master_sheet_create,
     build_master_sheet_create_preview,
-    load_master_sheet_write_config,
 )
+from referral_pipeline.integrations.monday.write_config import load_master_sheet_write_config
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:

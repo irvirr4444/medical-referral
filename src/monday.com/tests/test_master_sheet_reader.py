@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from master_sheet_reader import (
+from referral_pipeline.integrations.monday.reader import (
     count_field_values,
     fetch_items,
     fetch_items_by_column_value,

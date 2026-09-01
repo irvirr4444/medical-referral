@@ -2,21 +2,14 @@
 
 from __future__ import annotations
 
-import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any, Callable, Literal
 
 from patient_profile.slug import search_names_from_slug, slugify_patient_key
-
-MONDAY_DIR = Path(__file__).resolve().parents[1] / "monday.com"
-if str(MONDAY_DIR) not in sys.path:
-    sys.path.insert(0, str(MONDAY_DIR))
-
-from master_sheet_reader import (  # noqa: E402
+from referral_pipeline.integrations.monday.reader import (
     _name_match_key,
     find_patients,
     item_values,

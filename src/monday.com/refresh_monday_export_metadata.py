@@ -8,7 +8,11 @@ from pathlib import Path
 from typing import Any
 
 from export_monday_boards import SCHEMA_QUERY
-from monday_api import DEFAULT_API_VERSION, DEFAULT_TIMEOUT_S, monday_graphql
+from referral_pipeline.integrations.monday.transport import (
+    DEFAULT_API_VERSION,
+    DEFAULT_TIMEOUT_S,
+    monday_graphql,
+)
 from monday_board_metadata import build_board_metadata
 
 

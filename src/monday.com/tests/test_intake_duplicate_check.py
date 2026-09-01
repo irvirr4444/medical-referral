@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import json
 
-from intake_duplicate_check import check_duplicates_disabled, check_duplicates_from_snapshot
+from referral_pipeline.integrations.monday.duplicate_check import (
+    check_duplicates_disabled,
+    check_duplicates_from_snapshot,
+)
 from intake_extractor.schema import ReferralIntake
 
 

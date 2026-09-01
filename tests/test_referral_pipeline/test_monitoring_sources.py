@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from referral_pipeline.monitoring.drk_source import load_drk_snapshots
 from referral_pipeline.monitoring.drk_capture import load_drk_capture_snapshots
 from referral_pipeline.monitoring.monday_source import monday_item_to_snapshot
-from master_sheet_reader import FIELD_COLUMNS
+from referral_pipeline.integrations.monday.reader import FIELD_COLUMNS
 
 
 NOW = datetime(2026, 8, 6, tzinfo=timezone.utc)

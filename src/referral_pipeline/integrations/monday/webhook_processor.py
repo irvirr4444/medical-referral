@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Callable, Mapping
 
-from referral_pipeline.integrations.monday.legacy import fetch_items_by_ids_readonly
+from referral_pipeline.integrations.monday.reader import fetch_items_by_ids
 from referral_pipeline.integrations.monday.webhook_contract import (
     MondayWebhookEvent,
     parse_webhook_payload,
@@ -25,7 +25,7 @@ def process_webhook_payload(
     store: WorkflowStore,
     config: MonitoringConfig,
     now: datetime | None = None,
-    fetch_items_fn: FetchItemsFn = fetch_items_by_ids_readonly,
+    fetch_items_fn: FetchItemsFn = fetch_items_by_ids,
     expected_board_id: str | None = None,
 ) -> dict[str, Any]:
     """Validate, deduplicate, fetch, and monitor one Monday delivery."""

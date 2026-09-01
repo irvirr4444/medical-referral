@@ -12,13 +12,11 @@ from pathlib import Path
 from typing import Any
 
 
-# Monday remains a scripts directory, so expose it only at this orchestration
-# boundary instead of coupling the Outlook adapter to its layout.
+# Keep src/ importable when this file is executed directly.
 SRC_ROOT = Path(__file__).resolve().parents[1]
 MONDAY_DIR = SRC_ROOT / "monday.com"
-for import_path in (SRC_ROOT, MONDAY_DIR):
-    if str(import_path) not in sys.path:
-        sys.path.insert(0, str(import_path))
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
 
 from Outlook.graph import OutlookGraphClient, OutlookGraphConfig
 from Outlook.mail import InboundPdfAttachment, materialize_attachments, read_eml_pdf_attachments

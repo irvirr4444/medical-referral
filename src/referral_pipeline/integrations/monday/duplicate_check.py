@@ -6,8 +6,8 @@ from collections.abc import Callable
 from pathlib import Path
 
 from intake_extractor.models.schema import ReferralIntake
-from intake_plan import DuplicateCheck
-from master_sheet_reader import (
+from referral_pipeline.intake_plan import DuplicateCheck
+from referral_pipeline.integrations.monday.reader import (
     DEFAULT_RESULT_FIELDS,
     fetch_items_by_name_search,
     find_patients,

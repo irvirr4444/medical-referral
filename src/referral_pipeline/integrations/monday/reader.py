@@ -15,7 +15,11 @@ import json
 from pathlib import Path
 from typing import Any
 
-from monday_api import DEFAULT_API_VERSION, DEFAULT_TIMEOUT_S, monday_graphql
+from referral_pipeline.integrations.monday.transport import (
+    DEFAULT_API_VERSION,
+    DEFAULT_TIMEOUT_S,
+    monday_graphql,
+)
 
 
 MASTER_SHEET_BOARD_ID = "5815942462"

@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from referral_pipeline.integrations.monday.legacy import monday_graphql
+from referral_pipeline.integrations.monday.transport import monday_graphql
 
 
 @dataclass(frozen=True)

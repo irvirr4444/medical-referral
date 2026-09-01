@@ -221,7 +221,7 @@ def _jwt_claims(token: str) -> dict[str, object]:
 
 
 def _check_monday() -> str:
-    from monday_api import monday_graphql
+    from referral_pipeline.integrations.monday.transport import monday_graphql
 
     payload = monday_graphql("query { me { id } }")
     if not (payload.get("data") or {}).get("me"):
@@ -230,14 +230,11 @@ def _check_monday() -> str:
 
 
 def _check_monday_board() -> str:
-    import sys
     from pathlib import Path
 
     monday_dir = Path(__file__).resolve().parents[2] / "monday.com"
-    if str(monday_dir) not in sys.path:
-        sys.path.insert(0, str(monday_dir))
-    from master_sheet_writer import load_master_sheet_write_config
-    from monday_api import monday_graphql
+    from referral_pipeline.integrations.monday.transport import monday_graphql
+    from referral_pipeline.integrations.monday.write_config import load_master_sheet_write_config
 
     config_path = Path(
         os.getenv("MASTER_SHEET_WRITE_CONFIG")

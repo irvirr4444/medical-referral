@@ -51,7 +51,7 @@ Read `src/monday.com/readme.md` before changing or calling the Monday.com integr
 
 ## Important implementation files
 
-- `src/monday.com/monday_api.py`: reusable GraphQL and multipart file-upload transport
+- `src/referral_pipeline/integrations/monday/transport.py`: reusable GraphQL and multipart file-upload transport
 - `src/monday.com/monday_client.py`: command-line GraphQL client
 - `src/monday.com/push_referral.py`: referral extractor -> Monday item bridge with upsert behavior
 - `src/monday.com/referral_board_config.py`: board/group/column mapping config loader

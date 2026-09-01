@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from intake_extractor.schema import ReferralIntake
-from intake_plan import DuplicateCheck, build_intake_plan, referral_missing_fields
+from referral_pipeline.intake_plan import DuplicateCheck, build_intake_plan, referral_missing_fields
 
 
 def _complete_referral(**changes: object) -> ReferralIntake:

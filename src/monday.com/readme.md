@@ -29,7 +29,7 @@ This project uses Monday.com via its **GraphQL API**, with a dedicated multipart
 #### Code layout
 | Path | Purpose |
 | --- | --- |
-| `src/monday.com/monday_api.py` | GraphQL + file-upload helpers (`monday_graphql`, `monday_file_upload`) |
+| `src/referral_pipeline/integrations/monday/transport.py` | GraphQL + file-upload helpers (`monday_graphql`, `monday_file_upload`) |
 | `src/monday.com/monday_client.py` | CLI for ad-hoc queries |
 | `src/monday.com/push_referral.py` | Extract one referral PDF and create/update a mapped Monday item |
 | `src/monday.com/referral_board_config.py` | Typed config loader for board/group/column mapping |
@@ -72,7 +72,7 @@ curl -sS https://api.monday.com/v2 \
 ### Quick-start: Python
 
 ```python
-from monday_api import monday_graphql, monday_file_upload
+from referral_pipeline.integrations.monday.transport import monday_graphql, monday_file_upload
 
 resp = monday_graphql("{ me { id name email } }")
 print(resp["data"])

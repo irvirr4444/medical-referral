@@ -1,7 +1,11 @@
 from __future__ import annotations
 
-import master_sheet_writer
-from master_sheet_writer import MasterSheetWriteConfig, apply_master_sheet_create, build_master_sheet_create_preview
+from referral_pipeline.integrations.monday import master_sheet_writer
+from referral_pipeline.integrations.monday.master_sheet_writer import (
+    apply_master_sheet_create,
+    build_master_sheet_create_preview,
+)
+from referral_pipeline.integrations.monday.write_config import MasterSheetWriteConfig
 
 
 def _config() -> MasterSheetWriteConfig:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from monday_api import monday_graphql
+from referral_pipeline.integrations.monday.transport import monday_graphql
 
 
 pytestmark = [pytest.mark.live_write]

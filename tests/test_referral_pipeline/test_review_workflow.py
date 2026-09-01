@@ -75,7 +75,7 @@ def test_human_confirmation_runs_dry_run_once_and_sends_success_reply(tmp_path, 
     )
     calls = []
     monkeypatch.setattr(
-        "master_sheet_writer.apply_master_sheet_create",
+        "referral_pipeline.integrations.monday.master_sheet_writer.apply_master_sheet_create",
         lambda value: calls.append(value) or {"item": {"id": "monday-123"}, "applied_actions": []},
     )
 
@@ -265,7 +265,7 @@ def test_execute_creates_monday_once_and_leaves_drk_pending(tmp_path, monkeypatc
         on_item_created(item)
         return {"item": item, "applied_actions": []}
 
-    monkeypatch.setattr("master_sheet_writer.apply_master_sheet_create", fake_apply)
+    monkeypatch.setattr("referral_pipeline.integrations.monday.master_sheet_writer.apply_master_sheet_create", fake_apply)
     mailbox = FakeMailbox([])
 
     first = ApprovalProcessor(state_db=state_db, mailbox=mailbox).poll(execute=True)
@@ -331,7 +331,7 @@ def test_execute_preserves_item_id_when_post_create_action_fails(tmp_path, monke
         on_item_created({"id": "monday-456"})
         raise RuntimeError("post-create update failed")
 
-    monkeypatch.setattr("master_sheet_writer.apply_master_sheet_create", partial_failure)
+    monkeypatch.setattr("referral_pipeline.integrations.monday.master_sheet_writer.apply_master_sheet_create", partial_failure)
     result = ApprovalProcessor(state_db=state_db, mailbox=FakeMailbox([])).poll(execute=True)
 
     assert result["executed"][0]["status"] == "monday_applied_drk_pending"

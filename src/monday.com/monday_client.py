@@ -4,7 +4,11 @@ import argparse
 import json
 from typing import Any
 
-from monday_api import DEFAULT_API_VERSION, DEFAULT_TIMEOUT_S, monday_graphql
+from referral_pipeline.integrations.monday.transport import (
+    DEFAULT_API_VERSION,
+    DEFAULT_TIMEOUT_S,
+    monday_graphql,
+)
 
 
 def main(argv: list[str] | None = None) -> int:

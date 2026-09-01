@@ -662,7 +662,7 @@ class ApprovalProcessor:
         if preview.get("blocked"):
             raise ReviewWorkflowError("confirmed Monday preview is blocked")
 
-        from master_sheet_writer import apply_master_sheet_create
+        from referral_pipeline.integrations.monday.master_sheet_writer import apply_master_sheet_create
 
         try:
             applied = apply_master_sheet_create(

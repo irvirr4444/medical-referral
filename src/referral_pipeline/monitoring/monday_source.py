@@ -2,20 +2,12 @@
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from referral_pipeline.integrations.monday.reader import fetch_items, item_values, load_export_items
 from referral_pipeline.monitoring.models import OperationalSnapshot
-
-
-SRC_ROOT = Path(__file__).resolve().parents[2]
-MONDAY_DIR = SRC_ROOT / "monday.com"
-if str(MONDAY_DIR) not in sys.path:
-    sys.path.insert(0, str(MONDAY_DIR))
-
-from master_sheet_reader import fetch_items, item_values, load_export_items  # noqa: E402
 
 
 def load_monday_snapshots(

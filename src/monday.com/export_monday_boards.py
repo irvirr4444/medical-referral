@@ -16,7 +16,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Iterable
 
-from monday_api import DEFAULT_API_VERSION, DEFAULT_TIMEOUT_S, MondayAPIError, monday_graphql
+from referral_pipeline.integrations.monday.transport import (
+    DEFAULT_API_VERSION,
+    DEFAULT_TIMEOUT_S,
+    MondayAPIError,
+    monday_graphql,
+)
 from monday_board_metadata import build_board_metadata, relation_targets
 
 

@@ -10,7 +10,7 @@ from typing import Any
 from intake_extractor.aligned_intake import to_master_sheet_referral_from_canonical
 from intake_extractor.canonical_referral import extract_referral_pdf
 from intake_extractor.models.schema import ReferralIntake
-from monday_api import monday_file_upload, monday_graphql
+from referral_pipeline.integrations.monday.transport import monday_file_upload, monday_graphql
 from referral_board_config import ReferralBoardConfig, load_referral_board_config
 
 

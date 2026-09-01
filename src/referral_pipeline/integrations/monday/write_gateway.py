@@ -12,7 +12,8 @@ import os
 from dataclasses import dataclass, field
 from typing import Any, Callable, Mapping
 
-from referral_pipeline.integrations.monday.legacy import FIELD_COLUMNS, monday_graphql
+from referral_pipeline.integrations.monday.reader import FIELD_COLUMNS
+from referral_pipeline.integrations.monday.transport import monday_graphql
 
 
 @dataclass(frozen=True)

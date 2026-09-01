@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-import monday_api
+from referral_pipeline.integrations.monday import transport
 
 
 pytestmark = pytest.mark.unit
@@ -39,11 +39,11 @@ def test_monday_graphql_success_sets_headers_and_parses_json() -> None:
         payload = {"data": {"me": {"id": "1"}}}
         return _FakeHTTPResponse(json.dumps(payload), status=200)
 
-    with patch("monday_api._get_api_key", return_value="KEY"), patch(
+    with patch("referral_pipeline.integrations.monday.transport._get_api_key", return_value="KEY"), patch(
         "urllib.request.urlopen",
         side_effect=fake_urlopen,
     ):
-        resp = monday_api.monday_graphql(
+        resp = transport.monday_graphql(
             "{ me { id } }",
             variables={"x": 1},
             api_version="2023-10",
@@ -51,7 +51,7 @@ def test_monday_graphql_success_sets_headers_and_parses_json() -> None:
         )
 
     assert resp["data"]["me"]["id"] == "1"
-    assert captured["url"] == monday_api.MONDAY_API_URL
+    assert captured["url"] == transport.MONDAY_API_URL
     assert captured["timeout"] == 7
     assert captured["headers"]["authorization"] == "KEY"
     assert captured["headers"]["content-type"] == "application/json"
@@ -64,12 +64,12 @@ def test_monday_graphql_graphql_errors_raise() -> None:
         payload = {"errors": [{"message": "nope"}]}
         return _FakeHTTPResponse(json.dumps(payload), status=200)
 
-    with patch("monday_api._get_api_key", return_value="KEY"), patch(
+    with patch("referral_pipeline.integrations.monday.transport._get_api_key", return_value="KEY"), patch(
         "urllib.request.urlopen",
         side_effect=fake_urlopen,
     ):
-        with pytest.raises(monday_api.MondayAPIError) as e:
-            monday_api.monday_graphql("{ me { id } }")
+        with pytest.raises(transport.MondayAPIError) as e:
+            transport.monday_graphql("{ me { id } }")
 
     assert "GraphQL errors" in str(e.value)
     assert isinstance(e.value.response, dict)
@@ -88,12 +88,12 @@ def test_monday_graphql_http_error_parses_json_body() -> None:
             fp=fp,
         )
 
-    with patch("monday_api._get_api_key", return_value="KEY"), patch(
+    with patch("referral_pipeline.integrations.monday.transport._get_api_key", return_value="KEY"), patch(
         "urllib.request.urlopen",
         side_effect=fake_urlopen,
     ):
-        with pytest.raises(monday_api.MondayAPIError) as e:
-            monday_api.monday_graphql("{ me { id } }")
+        with pytest.raises(transport.MondayAPIError) as e:
+            transport.monday_graphql("{ me { id } }")
 
     assert e.value.status == 401
     assert isinstance(e.value.response, dict)
@@ -111,11 +111,11 @@ def test_monday_file_upload_builds_multipart_and_posts_to_file_endpoint() -> Non
         payload = {"data": {"add_file_to_update": {"id": "asset-1"}}}
         return _FakeHTTPResponse(json.dumps(payload), status=200)
 
-    with patch("monday_api._get_api_key", return_value="KEY"), patch(
+    with patch("referral_pipeline.integrations.monday.transport._get_api_key", return_value="KEY"), patch(
         "urllib.request.urlopen",
         side_effect=fake_urlopen,
     ):
-        resp = monday_api.monday_file_upload(
+        resp = transport.monday_file_upload(
             query=(
                 "mutation ($file: File!, $updateId: ID!) {"
                 " add_file_to_update(update_id: $updateId, file: $file) { id } }"
@@ -127,7 +127,7 @@ def test_monday_file_upload_builds_multipart_and_posts_to_file_endpoint() -> Non
         )
 
     assert resp["data"]["add_file_to_update"]["id"] == "asset-1"
-    assert captured["url"] == monday_api.MONDAY_FILE_API_URL
+    assert captured["url"] == transport.MONDAY_FILE_API_URL
     assert captured["headers"]["authorization"] == "KEY"
     assert "multipart/form-data" in captured["headers"]["content-type"]
     body = captured["body"]

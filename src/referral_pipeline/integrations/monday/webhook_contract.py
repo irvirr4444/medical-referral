@@ -7,7 +7,7 @@ import json
 from dataclasses import dataclass
 from typing import Any, Mapping
 
-from referral_pipeline.integrations.monday.legacy import FIELD_COLUMNS
+from referral_pipeline.integrations.monday.reader import FIELD_COLUMNS
 
 
 # These are the fields whose changes can alter Stage 5 or Stage 6 monitoring.

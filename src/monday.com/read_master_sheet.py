@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from master_sheet_reader import (
+from referral_pipeline.integrations.monday.reader import (
     DEFAULT_RESULT_FIELDS,
     FIELD_COLUMNS,
     MASTER_SHEET_BOARD_ID,

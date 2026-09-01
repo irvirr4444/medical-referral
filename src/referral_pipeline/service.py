@@ -3,20 +3,9 @@
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 from typing import Any, Callable, Protocol
 
-
-# Monday is still a scripts directory rather than an importable package. Keep
-# that compatibility detail inside the orchestration layer.
-SRC_ROOT = Path(__file__).resolve().parents[1]
-MONDAY_DIR = SRC_ROOT / "monday.com"
-if str(MONDAY_DIR) not in sys.path:
-    sys.path.insert(0, str(MONDAY_DIR))
-
-from intake_duplicate_check import check_duplicates_disabled, check_duplicates_from_snapshot, check_duplicates_live
-from intake_plan import build_intake_plan
 from intake_extractor.aligned_intake import (
     to_drk_create_draft_from_canonical,
     to_master_sheet_referral,
@@ -27,12 +16,21 @@ from intake_extractor.drk_pdf_schema import DrkPdfExtraction
 from intake_extractor.monday_pdf import to_referral_intake
 from intake_extractor.monday_pdf_schema import MondayPdfIntakeContract
 from intake_extractor.models.schema import ReferralIntake
-from master_sheet_agency_lookup import find_agency_matches_from_snapshot, find_agency_matches_live
-from master_sheet_writer import (
+from referral_pipeline.intake_plan import build_intake_plan
+from referral_pipeline.integrations.monday.agency_lookup import (
+    find_agency_matches_from_snapshot,
+    find_agency_matches_live,
+)
+from referral_pipeline.integrations.monday.duplicate_check import (
+    check_duplicates_disabled,
+    check_duplicates_from_snapshot,
+    check_duplicates_live,
+)
+from referral_pipeline.integrations.monday.master_sheet_writer import (
     apply_master_sheet_create,
     build_master_sheet_create_preview,
-    load_master_sheet_write_config,
 )
+from referral_pipeline.integrations.monday.write_config import load_master_sheet_write_config
 from referral_pipeline.monitoring.observer import record_lifecycle_event
 from referral_pipeline.persistence_policy import SyntheticPersistencePolicy
 

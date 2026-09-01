@@ -92,13 +92,7 @@ def create_monday_record(
     if not confirm_write:
         result["would_create"] = True
         return result
-    import sys
-    from pathlib import Path
-
-    monday_dir = Path(__file__).resolve().parents[2] / "monday.com"
-    if str(monday_dir) not in sys.path:
-        sys.path.insert(0, str(monday_dir))
-    from master_sheet_writer import apply_master_sheet_create
+    from referral_pipeline.integrations.monday.master_sheet_writer import apply_master_sheet_create
 
     applied = apply_master_sheet_create(
         {**preview, "mode": "apply"},

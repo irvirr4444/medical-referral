@@ -12,11 +12,15 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from intake_duplicate_check import check_duplicates_disabled, check_duplicates_from_snapshot, check_duplicates_live
-from intake_plan import build_intake_plan
 from intake_extractor.aligned_intake import to_master_sheet_referral_from_canonical
 from intake_extractor.canonical_referral import extract_referral_pdf
 from intake_extractor.schema import ReferralIntake
+from referral_pipeline.intake_plan import build_intake_plan
+from referral_pipeline.integrations.monday.duplicate_check import (
+    check_duplicates_disabled,
+    check_duplicates_from_snapshot,
+    check_duplicates_live,
+)
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:

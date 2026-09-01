@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 import shutil
-import sys
 import threading
 import uuid
 from dataclasses import replace
@@ -16,12 +15,7 @@ from drk_emr.common.patient_search import search_patients_on_dashboard
 from drk_emr.live_reader.config import DrkLiveReaderConfig
 from drk_emr.live_reader.reader import DrkPatientReader
 from patient_profile.lookup import drk_profile_from_cards, is_chrome_session_error
-
-MONDAY_DIR = Path(__file__).resolve().parents[1] / "monday.com"
-if str(MONDAY_DIR) not in sys.path:
-    sys.path.insert(0, str(MONDAY_DIR))
-
-from master_sheet_reader import fetch_items_by_name_search  # noqa: E402
+from referral_pipeline.integrations.monday.reader import fetch_items_by_name_search
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 

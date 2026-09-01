@@ -13,15 +13,12 @@ from typing import Any
 from dotenv import load_dotenv
 
 
-# `monday.com` is a scripts directory rather than an importable package. Keep its
-# path handling at the cross-system orchestration boundary.
 SRC_ROOT = Path(__file__).resolve().parents[1]
 MONDAY_DIR = SRC_ROOT / "monday.com"
-for import_path in (SRC_ROOT, MONDAY_DIR):
-    if str(import_path) not in sys.path:
-        sys.path.insert(0, str(import_path))
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
 
-from master_sheet_writer import apply_master_sheet_create  # noqa: E402
+from referral_pipeline.integrations.monday.master_sheet_writer import apply_master_sheet_create  # noqa: E402
 from Outlook.graph import OutlookGraphClient, OutlookGraphConfig  # noqa: E402
 from Outlook.review_mail import OutlookReviewMailbox  # noqa: E402
 from referral_pipeline.review.workflow import ApprovalProcessor  # noqa: E402

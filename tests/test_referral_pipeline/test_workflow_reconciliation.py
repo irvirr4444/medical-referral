@@ -365,7 +365,7 @@ def test_preview_monday_then_real_write_invokes_executor_once(tmp_path, monkeypa
             on_item_created(item)
         return {"item": item, "applied_actions": []}
 
-    monkeypatch.setattr("master_sheet_writer.apply_master_sheet_create", fake_apply)
+    monkeypatch.setattr("referral_pipeline.integrations.monday.master_sheet_writer.apply_master_sheet_create", fake_apply)
     preview = service.execute_handoff_operation(
         case.case_id, "create-monday-record", confirm_monday_write=False
     )
@@ -424,7 +424,7 @@ def test_false_preview_success_is_reopened_for_a_real_monday_write(tmp_path, mon
             on_item_created(item)
         return {"item": item}
 
-    monkeypatch.setattr("master_sheet_writer.apply_master_sheet_create", fake_apply)
+    monkeypatch.setattr("referral_pipeline.integrations.monday.master_sheet_writer.apply_master_sheet_create", fake_apply)
     result = service.execute_handoff_operation(
         case.case_id, "create-monday-record", confirm_monday_write=True
     )
@@ -475,7 +475,7 @@ def test_expired_running_lease_becomes_uncertain_and_does_not_rerun(tmp_path, mo
     )
     writes = []
     monkeypatch.setattr(
-        "master_sheet_writer.apply_master_sheet_create",
+        "referral_pipeline.integrations.monday.master_sheet_writer.apply_master_sheet_create",
         lambda preview: writes.append(preview) or {"item": {"id": "x"}},
     )
     with pytest.raises(WorkflowExecutionError, match="uncertain"):
@@ -660,7 +660,7 @@ def test_crash_before_success_persist_does_not_repeat_while_lease_held(tmp_path,
             on_item_created(item)
         return {"item": item}
 
-    monkeypatch.setattr("master_sheet_writer.apply_master_sheet_create", fake_apply)
+    monkeypatch.setattr("referral_pipeline.integrations.monday.master_sheet_writer.apply_master_sheet_create", fake_apply)
 
     class CrashBeforeSuccess:
         def __init__(self, inner) -> None:
@@ -719,7 +719,7 @@ def test_uncertain_monday_reconciles_from_item_id_without_rewrite(tmp_path, monk
     )
     writes = []
     monkeypatch.setattr(
-        "master_sheet_writer.apply_master_sheet_create",
+        "referral_pipeline.integrations.monday.master_sheet_writer.apply_master_sheet_create",
         lambda preview: writes.append(preview) or {"item": {"id": "should-not-run"}},
     )
     result = service.execute_handoff_operation(

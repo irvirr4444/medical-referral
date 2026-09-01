@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import monday_board_metadata as metadata
-from monday_api import MondayAPIError
+from referral_pipeline.integrations.monday.transport import MondayAPIError
 from export_monday_boards import _board_directory_name, _is_retryable_graphql_error, _page_query
 
 
