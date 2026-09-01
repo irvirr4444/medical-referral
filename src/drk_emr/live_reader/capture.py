@@ -34,6 +34,11 @@ CARD_MARKERS: dict[str, tuple[str, ...]] = {
     "billing": ("/PatientDashboard/GetPatientBilling",),
     "pipeline": ("/PatientDashboard/API/GetBvPipelineStatus/",),
     "quick_notes": ("/PatientDashboard/GetQuickNotes/",),
+    "labs": (
+        "/PatientDashboard/GetLabResultCount/",
+        "/PatientDashboard/GetLabResultsInbox/",
+        "/PatientDashboard/GetLabResultsInboxRead/",
+    ),
 }
 
 # Same-origin XHR fallback when selenium-wire misses dashboard JSON.
@@ -50,6 +55,9 @@ CARD_FETCH_PATHS: tuple[tuple[str, str], ...] = (
     ("billing", "/PatientDashboard/GetPatientBilling?patientId={id}"),
     ("pipeline", "/PatientDashboard/API/GetBvPipelineStatus/{id}"),
     ("quick_notes", "/PatientDashboard/GetQuickNotes/{id}"),
+    ("labs", "/PatientDashboard/GetLabResultCount/{id}"),
+    ("labs", "/PatientDashboard/GetLabResultsInbox/{id}"),
+    ("labs", "/PatientDashboard/GetLabResultsInboxRead/{id}?page=1&pageSize=100"),
 )
 
 

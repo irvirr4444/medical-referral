@@ -12,9 +12,9 @@ from typing import Any
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-MONDAY_ROOT = REPO_ROOT / "src" / "monday.com"
-if str(MONDAY_ROOT) not in sys.path:
-    sys.path.insert(0, str(MONDAY_ROOT))
+SRC_ROOT = REPO_ROOT / "src"
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
 
 from dotenv import load_dotenv  # noqa: E402
 
@@ -106,7 +106,7 @@ def resolve_monday_users(payload: dict[str, Any]) -> dict[str, str]:
     if not os.getenv("MONDAY_DOT_COM_API_KEY"):
         return users
     try:
-        from monday_api import monday_graphql
+        from referral_pipeline.integrations.monday.transport import monday_graphql
 
         response = monday_graphql("query($ids:[ID!]){users(ids:$ids){id name}}", variables={"ids": ids})
         users.update(

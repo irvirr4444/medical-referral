@@ -21,10 +21,8 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC_ROOT = REPO_ROOT / "src"
-MONDAY_ROOT = SRC_ROOT / "monday.com"
-for path in (SRC_ROOT, MONDAY_ROOT):
-    if str(path) not in sys.path:
-        sys.path.insert(0, str(path))
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
 
 from dotenv import load_dotenv  # noqa: E402
 
@@ -34,12 +32,12 @@ from drk_emr.common.patient_search import (  # noqa: E402
     select_search_candidate,
 )
 from drk_emr.live_reader import DrkLiveReaderConfig, DrkPatientReader  # noqa: E402
-from master_sheet_reader import (  # noqa: E402
+from referral_pipeline.integrations.monday.reader import (  # noqa: E402
     fetch_items_by_column_value,
     fetch_items_by_name_search,
     find_patients,
 )
-from monday_api import monday_graphql  # noqa: E402
+from referral_pipeline.integrations.monday.transport import monday_graphql  # noqa: E402
 
 
 BOARD_ID = "5815942462"
@@ -73,6 +71,11 @@ def parse_args() -> argparse.Namespace:
         action="append",
         default=[],
         help="Export only this reviewed patient; repeat to select more than one.",
+    )
+    parser.add_argument(
+        "--allow-unreviewed",
+        action="store_true",
+        help="Allow explicit patient names outside eval/gold; matching must still be unique.",
     )
     parser.add_argument("--board-id", default=BOARD_ID)
     parser.add_argument(
@@ -111,6 +114,8 @@ def patient_slug(name: str) -> str:
 def select_identities(
     identities: list[dict[str, Any]],
     requested: list[str],
+    *,
+    allow_unreviewed: bool = False,
 ) -> list[dict[str, Any]]:
     if not requested:
         return identities
@@ -124,6 +129,9 @@ def select_identities(
             or patient_slug(query) == patient_slug(str(identity.get("name") or ""))
         ]
         if len(matches) != 1:
+            if allow_unreviewed and not matches:
+                selected.append({"source_gold": None, "source_pdf": None, "name": query})
+                continue
             names = ", ".join(str(item.get("name")) for item in identities)
             raise RuntimeError(
                 f"--patient {query!r} matched {len(matches)} reviewed patients; choose one of: {names}"
@@ -257,20 +265,31 @@ def drk_activity(
     identity: dict[str, Any],
 ) -> dict[str, Any]:
     assert reader.driver is not None
-    reader.driver.get(f"{emr_root(reader.config.emr_url)}{DASHBOARD_PATH}")
-    snapshot = search_patients_on_dashboard(reader.driver, identity["name"])
-    match = select_search_candidate(
-        snapshot.candidates,
-        name=identity["name"],
-        date_of_birth=identity.get("date_of_birth"),
-        phone=identity.get("phone"),
-        mrn=identity.get("mrn"),
-    )
+    raw_name = " ".join(str(identity["name"]).split())
+    variants = [raw_name]
+    if "," not in raw_name and len(raw_name.split()) >= 3:
+        tokens = raw_name.split()
+        variants.extend([f"{tokens[0]} {tokens[-1]}", f"{tokens[-1]} {tokens[0]}"])
+    match = None
+    last_snapshot = None
+    for query in dict.fromkeys(variants):
+        reader.driver.get(f"{emr_root(reader.config.emr_url)}{DASHBOARD_PATH}")
+        snapshot = search_patients_on_dashboard(reader.driver, query)
+        last_snapshot = snapshot
+        match = select_search_candidate(
+            snapshot.candidates,
+            name=identity["name"],
+            date_of_birth=identity.get("date_of_birth"),
+            phone=identity.get("phone"),
+            mrn=identity.get("mrn"),
+        )
+        if match is not None and match.patient_id:
+            break
     if match is None or not match.patient_id:
         return {
             "status": "not_uniquely_matched",
-            "candidate_count": len(snapshot.candidates),
-            "search_error": snapshot.error,
+            "candidate_count": len(last_snapshot.candidates) if last_snapshot else 0,
+            "search_error": last_snapshot.error if last_snapshot else None,
         }
 
     capture = reader.read_patient(match.patient_id)
@@ -333,7 +352,11 @@ def write_export(result: dict[str, Any], path: Path) -> None:
 def main() -> int:
     args = parse_args()
     load_dotenv(REPO_ROOT / ".env")
-    identities = select_identities(load_sample_identities(args.gold_dir), args.patient)
+    identities = select_identities(
+        load_sample_identities(args.gold_dir),
+        args.patient,
+        allow_unreviewed=args.allow_unreviewed,
+    )
     total = len(identities)
     results: list[dict[str, Any]] = []
     if args.monday_only:
